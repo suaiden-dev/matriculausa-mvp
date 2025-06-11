@@ -15,7 +15,6 @@ import SchoolDashboard from './pages/SchoolDashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
@@ -28,7 +27,6 @@ function App() {
             <Route path="/login" element={<Auth mode="login" />} />
             <Route path="/register" element={<Auth mode="register" />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/scholarships" element={<Scholarships />} />
             <Route path="/schools" element={<Universities />} />
             <Route path="/schools/:id" element={<UniversityDetail />} />
