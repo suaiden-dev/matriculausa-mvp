@@ -18,6 +18,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     phone: '',
     country: '',
     fieldOfInterest: '',
+    englishLevel: '',
     // University specific fields
     universityName: '',
     position: '',
@@ -58,7 +59,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           ...(activeTab === 'student' && {
             phone: formData.phone,
             country: formData.country,
-            fieldOfInterest: formData.fieldOfInterest
+            fieldOfInterest: formData.fieldOfInterest,
+            englishLevel: formData.englishLevel
           }),
           ...(activeTab === 'university' && {
             universityName: formData.universityName,
@@ -441,6 +443,32 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   <div>
+                    <label htmlFor="englishLevel" className="block text-sm font-bold text-slate-900 mb-2">
+                      English Level *
+                    </label>
+                    <div className="relative">
+                      <Globe className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <select
+                        id="englishLevel"
+                        name="englishLevel"
+                        required
+                        value={formData.englishLevel}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
+                      >
+                        <option value="">Select your English level</option>
+                        <option value="beginner">Beginner (A1-A2)</option>
+                        <option value="intermediate">Intermediate (B1-B2)</option>
+                        <option value="advanced">Advanced (C1-C2)</option>
+                        <option value="native">Native Speaker</option>
+                        <option value="toefl">TOEFL Certified</option>
+                        <option value="ielts">IELTS Certified</option>
+                        <option value="cambridge">Cambridge Certified</option>
+                        <option value="other">Other Certification</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
                     <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
                       Password *
                     </label>
@@ -500,7 +528,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                     <div className="flex items-center">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mr-3"></div>
-                      Visa and legal assistance
+                      English proficiency assessment
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mr-3"></div>
+                      Visa and immigration support
                     </div>
                   </div>
                 </div>
