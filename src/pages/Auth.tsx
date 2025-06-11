@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, BookOpen, Phone, MapPin } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -30,6 +30,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
+  // Global scroll-to-top on login/register page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.scrollTo(0, 0);
+      // console.log('Scroll position reset to top on login/register page load.');
+    }, 75);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -44,7 +53,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         const userData = {
           name: formData.name,
-          role: activeTab === 'student' ? 'student' : 'school',
+          role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
           // Add additional registration data
           ...(activeTab === 'student' && {
             phone: formData.phone,

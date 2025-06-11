@@ -153,70 +153,58 @@ export const mockSchools: School[] = [
   }
 ];
 
-export const mockScholarships: Scholarship[] = [
+export const mockScholarships = [
   {
     id: '1',
-    title: 'International Excellence Scholarship',
-    description: 'Merit-based scholarship for outstanding international students pursuing undergraduate degrees.',
-    schoolId: '1',
-    schoolName: 'Harvard University',
-    amount: 25000,
-    deadline: '2024-03-15',
-    requirements: ['GPA 3.8+', 'TOEFL 100+', 'SAT 1450+'],
-    isExclusive: false,
-    image: 'https://images.pexels.com/photos/267507/pexels-photo-267507.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-    fieldOfStudy: 'Any',
+    programName: 'International Excellence Program',
+    originalValue: {
+      perCredit: 1200,
+      annual: 36000
+    },
+    scholarshipValue: 25000,
+    scholarshipType: 'prata',
     level: 'undergraduate',
-    eligibility: ['International students', 'First-time applicants', 'Academic excellence'],
-    benefits: ['Tuition reduction', 'Academic mentorship', 'Career guidance']
+    needCPT: false,
+    visaAssistance: 'initial',
   },
   {
     id: '2',
-    title: 'STEM Innovation Grant',
-    description: 'Exclusive scholarship for international students in Science, Technology, Engineering, and Mathematics programs.',
-    schoolId: '2',
-    schoolName: 'Stanford University',
-    amount: 35000,
-    deadline: '2024-04-01',
-    requirements: ['STEM background', 'Research experience', 'GRE 320+'],
-    isExclusive: true,
-    image: 'https://images.pexels.com/photos/2280549/pexels-photo-2280549.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-    fieldOfStudy: 'STEM',
-    level: 'graduate',
-    eligibility: ['Graduate students', 'STEM majors', 'Research experience'],
-    benefits: ['Full tuition coverage', 'Research opportunities', 'Industry connections']
+    programName: 'STEM Innovation Grant',
+    originalValue: {
+      perCredit: 1500,
+      annual: 45000
+    },
+    scholarshipValue: 35000,
+    scholarshipType: 'ouro',
+    level: 'master',
+    needCPT: true,
+    visaAssistance: 'cos',
   },
   {
     id: '3',
-    title: 'Global Leadership Fellowship',
-    description: 'Premium scholarship program designed for future leaders from developing countries.',
-    schoolId: '3',
-    schoolName: 'MIT',
-    amount: 45000,
-    deadline: '2024-05-20',
-    requirements: ['Leadership experience', 'Community involvement', 'Academic excellence'],
-    isExclusive: true,
-    image: 'https://images.pexels.com/photos/1595391/pexels-photo-1595391.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-    fieldOfStudy: 'Engineering',
-    level: 'graduate',
-    eligibility: ['Developing countries', 'Leadership background', 'Graduate level'],
-    benefits: ['Full scholarship', 'Leadership training', 'Alumni network access']
+    programName: 'Global Leadership Fellowship',
+    originalValue: {
+      perCredit: 1800,
+      annual: 54000
+    },
+    scholarshipValue: 45000,
+    scholarshipType: 'platina',
+    level: 'doctor',
+    needCPT: true,
+    visaAssistance: 'initial',
   },
   {
     id: '4',
-    title: 'Business Excellence Award',
-    description: 'Comprehensive scholarship for international MBA candidates with entrepreneurial vision.',
-    schoolId: '1',
-    schoolName: 'Harvard University',
-    amount: 30000,
-    deadline: '2024-06-30',
-    requirements: ['Work experience 3+ years', 'GMAT 700+', 'Business plan'],
-    isExclusive: false,
-    image: 'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-    fieldOfStudy: 'Business',
-    level: 'graduate',
-    eligibility: ['MBA applicants', 'Professional experience', 'Entrepreneurial vision'],
-    benefits: ['Partial tuition', 'Internship placement', 'Networking events']
+    programName: 'Business Excellence Award',
+    originalValue: {
+      perCredit: 1000,
+      annual: 30000
+    },
+    scholarshipValue: 20000,
+    scholarshipType: 'especial',
+    level: 'transfer',
+    needCPT: false,
+    visaAssistance: 'cos',
   }
 ];
 

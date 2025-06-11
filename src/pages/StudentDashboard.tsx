@@ -177,11 +177,9 @@ const StudentDashboard: React.FC = () => {
   };
 
   const filteredScholarships = scholarships.filter(scholarship => {
-    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scholarship.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesLevel = selectedLevel === 'all' || scholarship.level === selectedLevel;
-
+    const matchesSearch = (scholarship.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (scholarship.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level === selectedLevel);
     return matchesSearch && matchesLevel;
   });
 

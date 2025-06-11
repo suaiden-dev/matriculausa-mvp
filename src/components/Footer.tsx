@@ -1,8 +1,19 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Zap, Shield, Award } from 'lucide-react';
 
 const Footer: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Scroll to top after navigation for login/register
+  const handleAuthLinkClick = (to: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(to);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }, 80);
+  };
+
   return (
     <footer className="bg-[#05294E] text-white relative overflow-hidden">
       <div className="absolute inset-0">
