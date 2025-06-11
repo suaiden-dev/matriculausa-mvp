@@ -108,13 +108,19 @@ const AdminRegistration: React.FC = () => {
 
       if (authData.user) {
         // Promover o usuário para admin usando a função do banco
-        const { error: promoteError } = await supabase.rpc('make_user_admin', {
+        const { data: promoteResult, error: promoteError } = await supabase.rpc('make_user_admin', {
           user_email: formData.email
         });
 
         if (promoteError) {
           console.error('Erro ao promover usuário:', promoteError);
-          // Não falhar aqui, pois o usuário foi criado com sucesso
+          throw new Error('Erro ao promover usuário para administrador: ' + promoteError.message);
+        }
+
+        // Verificar se a promoção foi bem-sucedida
+        if (promoteResult && !promoteResult.success) {
+          console.error('Falha na promoção:', promoteResult.message);
+          throw new Error('Falha ao promover usuário: ' + promoteResult.message);
         }
 
         setSuccess('Conta de administrador criada com sucesso! Você será redirecionado para o login.');
