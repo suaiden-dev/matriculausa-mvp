@@ -1,20 +1,49 @@
 import React, { useState } from 'react';
 import { Search, DollarSign, Calendar, Award, Zap, Filter, Clock, GraduationCap, MapPin, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, Target, Heart } from 'lucide-react';
 import { mockScholarships } from '../data/mockData';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
+  const [needCPT, setNeedCPT] = useState(false);
+  const [visaAssistance, setVisaAssistance] = useState('all');
+
+  // Get min and max scholarship values from data
+  const scholarshipValues = mockScholarships.map(s => s.scholarshipValue);
+  const minScholarshipValue = Math.min(...scholarshipValues);
+  const maxScholarshipValue = Math.max(...scholarshipValues);
+
+  // Range state
+  const [maxPrice, setMaxPrice] = useState(maxScholarshipValue);
+  const [minPrice, setMinPrice] = useState(0);
+
+  const levelOptions = [
+    { value: 'all', label: 'All Levels' },
+    { value: 'master', label: 'Master' },
+    { value: 'doctor', label: 'Doctor' },
+    { value: 'undergraduate', label: 'Undergraduate' },
+    { value: 'graduate', label: 'Graduate' },
+  ];
+
+  const visaOptions = [
+    { value: 'all', label: 'All Visa Assistance' },
+    { value: 'cos', label: 'COS' },
+    { value: 'initial', label: 'Initial' },
+  ];
+
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const filteredScholarships = mockScholarships.filter(scholarship => {
-    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scholarship.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesLevel = selectedLevel === 'all' || scholarship.level === selectedLevel;
-    const matchesField = selectedField === 'all' || scholarship.fieldOfStudy.toLowerCase().includes(selectedField.toLowerCase());
-
-    return matchesSearch && matchesLevel && matchesField;
+    const matchesSearch = scholarship.programName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRange = maxPrice > 0 ? scholarship.scholarshipValue <= maxPrice : false;
+    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
+    const matchesCPT = !needCPT || scholarship.needCPT === true;
+    const matchesVisa = visaAssistance === 'all' || (scholarship.visaAssistance && scholarship.visaAssistance.toLowerCase() === visaAssistance);
+    return matchesSearch && matchesRange && matchesLevel && matchesCPT && matchesVisa;
   });
 
   const formatAmount = (amount: number) => {
@@ -114,38 +143,79 @@ const Scholarships: React.FC = () => {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Search and Filters */}
-        <div className="bg-white shadow-xl rounded-3xl border border-slate-200 p-8 mb-12 backdrop-blur-sm">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+        {/* Modern Filter Bar */}
+        <div className="bg-white shadow-lg rounded-2xl border border-slate-200 p-6 mb-10 flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+          {/* Search Input */}
+          <div className="flex items-center flex-1 min-w-[220px] max-w-sm bg-slate-50 rounded-lg border border-slate-200 px-3 py-2 focus-within:ring-2 focus-within:ring-[#05294E]">
+            <Search className="h-5 w-5 text-slate-400 mr-2" aria-hidden="true" />
+            <input
+              type="text"
+              placeholder="Search scholarships..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-transparent outline-none border-none text-sm text-slate-900 placeholder-slate-400"
+              aria-label="Search scholarships"
+            />
+          </div>
+
+          {/* Price Range Filter */}
+          <div className="flex items-center gap-2 min-w-[260px]">
+            <label htmlFor="min-price" className="text-xs text-slate-500">Min</label>
+            <input
+              id="min-price"
+              type="number"
+              min={0}
+              max={maxScholarshipValue}
+              value={minPrice}
+              onChange={e => setMinPrice(Number(e.target.value))}
+              className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
+              placeholder="$0"
+              aria-label="Minimum scholarship value"
+            />
+            <span className="text-xs text-slate-400">-</span>
+            <label htmlFor="max-price" className="text-xs text-slate-500">Max</label>
+            <input
+              id="max-price"
+              type="number"
+              min={0}
+              max={maxScholarshipValue}
+              value={maxPrice}
+              onChange={e => setMaxPrice(Number(e.target.value))}
+              className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
+              placeholder={formatAmount(maxScholarshipValue)}
+              aria-label="Maximum scholarship value"
+            />
+            <div className="flex-1 mx-2">
               <input
-                type="text"
-                placeholder="Search scholarships..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm bg-slate-50 hover:bg-white"
+                type="range"
+                min={0}
+                max={maxScholarshipValue}
+                value={maxPrice}
+                onChange={e => setMaxPrice(Number(e.target.value))}
+                className="w-full accent-[#05294E]"
+                step={1000}
+                aria-label="Scholarship value range"
               />
             </div>
+          </div>
 
-            {/* Level Filter */}
+          {/* Dropdown Filters */}
+          <div className="flex items-center gap-2 min-w-[120px]">
             <select
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value)}
-              className="px-4 py-4 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm bg-slate-50 hover:bg-white"
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+              aria-label="Level"
             >
-              <option value="all">All Levels</option>
-              <option value="undergraduate">Undergraduate</option>
-              <option value="graduate">Graduate</option>
-              <option value="doctorate">Doctorate</option>
+              {levelOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
-
-            {/* Field Filter */}
             <select
               value={selectedField}
               onChange={(e) => setSelectedField(e.target.value)}
-              className="px-4 py-4 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm bg-slate-50 hover:bg-white"
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+              aria-label="Field"
             >
               <option value="all">All Fields</option>
               <option value="stem">STEM</option>
@@ -153,163 +223,94 @@ const Scholarships: React.FC = () => {
               <option value="engineering">Engineering</option>
               <option value="any">Any Field</option>
             </select>
+            <select
+              value={visaAssistance}
+              onChange={(e) => setVisaAssistance(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+              aria-label="Visa Assistance"
+            >
+              {visaOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
 
-            {/* Results Count */}
-            <div className="flex items-center justify-center bg-gradient-to-r from-[#05294E] to-[#05294E]/80 text-white rounded-2xl px-4 py-4 shadow-lg">
-              <span className="text-sm font-medium">
-                <span className="font-bold">{filteredScholarships.length}</span> scholarships found
-              </span>
-            </div>
+          {/* Checkbox Filters */}
+          <div className="flex items-center gap-2 min-w-[120px]">
+            <label className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
+              <input
+                id="need-cpt"
+                type="checkbox"
+                checked={needCPT}
+                onChange={() => setNeedCPT(!needCPT)}
+                className="accent-[#05294E]"
+                aria-label="Need CPT/PT"
+              />
+              <span>Need CPT/PT</span>
+            </label>
+          </div>
+
+          {/* Results Count */}
+          <div className="flex items-center justify-end flex-1 min-w-[120px]">
+            <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium">{filteredScholarships.length} scholarships found</span>
           </div>
         </div>
 
         {/* Scholarships Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredScholarships.map((scholarship) => {
-            const deadlineInfo = getDeadlineStatus(scholarship.deadline);
-            const daysLeft = getDaysUntilDeadline(scholarship.deadline);
-            
             return (
               <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
-                {/* Exclusive Badge */}
-                {scholarship.isExclusive && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide flex items-center shadow-lg">
-                      <Zap className="h-3 w-3 mr-1" />
-                      Exclusive
-                    </div>
-                  </div>
-                )}
-
-                {/* Header Image/Background */}
+                {/* Header/Background */}
                 <div className="relative h-48 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/10 to-[#D0151C]/10"></div>
-                  
-                  {/* University Logo/Icon */}
                   <div className="absolute top-4 left-4">
                     <div className="bg-white/90 backdrop-blur-sm p-3 rounded-2xl shadow-lg">
                       <Building className="h-6 w-6 text-[#05294E]" />
                     </div>
                   </div>
-
-                  {/* Amount Display */}
+                  {/* Valor original anual */}
                   <div className="absolute bottom-4 left-4">
                     <div className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-lg">
-                      <div className="text-xs font-medium text-slate-600 mb-1">Scholarship Value</div>
-                      <div className="text-2xl font-black text-[#05294E]">
-                        {formatAmount(scholarship.amount)}
+                      <div className="text-xs font-medium text-slate-600 mb-1">Valor original anual</div>
+                      <div className="text-lg font-black text-[#05294E]">
+                        {formatAmount(scholarship.originalValue.annual)}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Deadline Status */}
-                  <div className="absolute bottom-4 right-4">
-                    <div className={`${deadlineInfo.bg} ${deadlineInfo.color} px-3 py-2 rounded-2xl shadow-lg backdrop-blur-sm`}>
-                      <div className="flex items-center text-xs font-bold">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {daysLeft > 0 ? `${daysLeft} days left` : 'Expired'}
-                      </div>
+                      <div className="text-xs text-slate-500">({formatAmount(scholarship.originalValue.perCredit)} por crédito)</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Card Content */}
                 <div className="p-6">
-                  {/* Field Badge */}
-                  <div className="mb-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-xl text-white text-xs font-bold uppercase tracking-wide ${getFieldBadgeColor(scholarship.fieldOfStudy)} shadow-lg`}>
-                      <Target className="h-3 w-3 mr-1" />
-                      {scholarship.fieldOfStudy}
-                    </span>
-                  </div>
-
-                  {/* Title */}
+                  {/* Nome do Programa */}
                   <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                    {scholarship.title}
+                    {scholarship.programName}
                   </h3>
-
-                  {/* University */}
-                  <div className="flex items-center text-slate-600 mb-4">
-                    <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                    <span className="text-sm font-medium">{scholarship.schoolName}</span>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-slate-600 text-sm leading-relaxed mb-6 line-clamp-3">
-                    {scholarship.description}
-                  </p>
-
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-slate-50 p-4 rounded-2xl text-center group-hover:bg-slate-100 transition-colors">
-                      <div className="flex items-center justify-center mb-2">
-                        {getLevelIcon(scholarship.level)}
-                      </div>
-                      <div className="text-xs font-medium text-slate-600 mb-1">Level</div>
-                      <div className="text-sm font-bold text-slate-900 capitalize">
-                        {scholarship.level}
-                      </div>
-                    </div>
-                    
-                    <div className="bg-slate-50 p-4 rounded-2xl text-center group-hover:bg-slate-100 transition-colors">
-                      <Calendar className="h-4 w-4 mx-auto mb-2 text-[#05294E]" />
-                      <div className="text-xs font-medium text-slate-600 mb-1">Deadline</div>
-                      <div className="text-sm font-bold text-slate-900">
-                        {new Date(scholarship.deadline).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric'
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Requirements Preview */}
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-slate-700">Requirements</span>
-                      <span className="text-xs text-slate-500">{scholarship.requirements.length} criteria</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {scholarship.requirements.slice(0, 2).map((req, index) => (
-                        <span key={index} className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-xs font-medium">
-                          {req}
-                        </span>
-                      ))}
-                      {scholarship.requirements.length > 2 && (
-                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-lg text-xs font-medium">
-                          +{scholarship.requirements.length - 2} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Benefits Preview */}
-                  <div className="mb-6">
-                    <div className="flex items-center mb-3">
-                      <Heart className="h-4 w-4 mr-2 text-red-500" />
-                      <span className="text-sm font-medium text-slate-700">Benefits</span>
-                    </div>
-                    <div className="space-y-2">
-                      {scholarship.benefits.slice(0, 2).map((benefit, index) => (
-                        <div key={index} className="flex items-center text-xs text-slate-600">
-                          <CheckCircle className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
-                          <span>{benefit}</span>
-                        </div>
-                      ))}
-                    </div>
+                  {/* Valor da Bolsa Anual */}
+                  <div className="flex items-center mb-4">
+                    <DollarSign className="h-5 w-5 mr-2 text-green-500" />
+                    <span className="text-lg font-bold text-green-700">{formatAmount(scholarship.scholarshipValue)} <span className="text-xs font-normal text-slate-500">/ ano</span></span>
                   </div>
                 </div>
 
                 {/* Action Button */}
                 <div className="px-6 pb-6">
-                  <button className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105">
+                  <button
+                    className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        navigate('/login');
+                      } else {
+                        // TODO: Add normal apply logic here
+                      }
+                    }}
+                  >
                     <Award className="h-4 w-4 mr-2" />
-                    Apply Now
+                    Get Started
                     <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
-
-                {/* Hover Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
               </div>
             );
