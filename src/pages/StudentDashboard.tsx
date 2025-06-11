@@ -442,7 +442,7 @@ const StudentDashboard: React.FC = () => {
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-4">
                         <h3 className="font-semibold text-gray-900 line-clamp-2">{scholarship.title}</h3>
-                        {scholarship.isExclusive && (
+                        {scholarship.is_exclusive && (
                           <span className="bg-[#D0151C] text-white px-2 py-1 rounded-full text-xs font-bold">
                             Exclusive
                           </span>

@@ -9,7 +9,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Types
+// Database Types
 export interface University {
   id: string;
   name: string;
@@ -55,5 +55,47 @@ export interface Scholarship {
   university_id: string;
   created_at: string;
   updated_at: string;
-  university?: University;
+  universities?: University;
+}
+
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  full_name?: string;
+  phone?: string;
+  country?: string;
+  field_of_interest?: string;
+  academic_level?: string;
+  gpa?: number;
+  english_proficiency?: string;
+  status: 'active' | 'inactive' | 'suspended';
+  last_active: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScholarshipApplication {
+  id: string;
+  student_id: string;
+  scholarship_id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'under_review';
+  applied_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  notes?: string;
+  documents?: any;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminLog {
+  id: string;
+  admin_user_id: string;
+  action: string;
+  target_type: string;
+  target_id?: string;
+  details?: any;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
 }

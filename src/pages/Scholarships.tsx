@@ -12,7 +12,7 @@ const Scholarships: React.FC = () => {
   const [visaAssistance, setVisaAssistance] = useState('all');
 
   // Get min and max scholarship values from data
-  const scholarshipValues = mockScholarships.map(s => s.scholarshipValue);
+  const scholarshipValues = mockScholarships.map(s => s.amount);
   const minScholarshipValue = Math.min(...scholarshipValues);
   const maxScholarshipValue = Math.max(...scholarshipValues);
 
@@ -22,10 +22,9 @@ const Scholarships: React.FC = () => {
 
   const levelOptions = [
     { value: 'all', label: 'All Levels' },
-    { value: 'master', label: 'Master' },
-    { value: 'doctor', label: 'Doctor' },
-    { value: 'undergraduate', label: 'Undergraduate' },
     { value: 'graduate', label: 'Graduate' },
+    { value: 'doctorate', label: 'Doctorate' },
+    { value: 'undergraduate', label: 'Undergraduate' },
   ];
 
   const visaOptions = [
@@ -38,12 +37,11 @@ const Scholarships: React.FC = () => {
   const navigate = useNavigate();
 
   const filteredScholarships = mockScholarships.filter(scholarship => {
-    const matchesSearch = scholarship.programName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRange = maxPrice > 0 ? scholarship.scholarshipValue <= maxPrice : false;
+    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRange = maxPrice > 0 ? scholarship.amount <= maxPrice : false;
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
-    const matchesCPT = !needCPT || scholarship.needCPT === true;
-    const matchesVisa = visaAssistance === 'all' || (scholarship.visaAssistance && scholarship.visaAssistance.toLowerCase() === visaAssistance);
-    return matchesSearch && matchesRange && matchesLevel && matchesCPT && matchesVisa;
+    const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
+    return matchesSearch && matchesRange && matchesLevel && matchesField;
   });
 
   const formatAmount = (amount: number) => {
@@ -223,31 +221,6 @@ const Scholarships: React.FC = () => {
               <option value="engineering">Engineering</option>
               <option value="any">Any Field</option>
             </select>
-            <select
-              value={visaAssistance}
-              onChange={(e) => setVisaAssistance(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-              aria-label="Visa Assistance"
-            >
-              {visaOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Checkbox Filters */}
-          <div className="flex items-center gap-2 min-w-[120px]">
-            <label className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
-              <input
-                id="need-cpt"
-                type="checkbox"
-                checked={needCPT}
-                onChange={() => setNeedCPT(!needCPT)}
-                className="accent-[#05294E]"
-                aria-label="Need CPT/PT"
-              />
-              <span>Need CPT/PT</span>
-            </label>
           </div>
 
           {/* Results Count */}
@@ -259,6 +232,8 @@ const Scholarships: React.FC = () => {
         {/* Scholarships Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredScholarships.map((scholarship) => {
+            const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+            
             return (
               <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
                 {/* Header/Background */}
@@ -269,28 +244,69 @@ const Scholarships: React.FC = () => {
                       <Building className="h-6 w-6 text-[#05294E]" />
                     </div>
                   </div>
-                  {/* Valor original anual */}
+                  
+                  {/* Exclusive Badge */}
+                  {scholarship.is_exclusive && (
+                    <div className="absolute top-4 right-4">
+                      <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                        Exclusive
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Deadline Status */}
                   <div className="absolute bottom-4 left-4">
-                    <div className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-lg">
-                      <div className="text-xs font-medium text-slate-600 mb-1">Valor original anual</div>
-                      <div className="text-lg font-black text-[#05294E]">
-                        {formatAmount(scholarship.originalValue.annual)}
+                    <div className={`${deadlineStatus.bg} backdrop-blur-sm px-3 py-1 rounded-xl shadow-lg`}>
+                      <div className="flex items-center">
+                        <Clock className={`h-3 w-3 mr-1 ${deadlineStatus.color}`} />
+                        <span className={`text-xs font-medium ${deadlineStatus.color}`}>
+                          {getDaysUntilDeadline(scholarship.deadline)} days left
+                        </span>
                       </div>
-                      <div className="text-xs text-slate-500">({formatAmount(scholarship.originalValue.perCredit)} por crédito)</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Card Content */}
                 <div className="p-6">
-                  {/* Nome do Programa */}
+                  {/* Title */}
                   <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                    {scholarship.programName}
+                    {scholarship.title}
                   </h3>
-                  {/* Valor da Bolsa Anual */}
+                  
+                  {/* University */}
+                  <div className="flex items-center text-slate-600 mb-4">
+                    <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                    <span className="text-sm">{scholarship.schoolName}</span>
+                  </div>
+
+                  {/* Amount */}
                   <div className="flex items-center mb-4">
                     <DollarSign className="h-5 w-5 mr-2 text-green-500" />
-                    <span className="text-lg font-bold text-green-700">{formatAmount(scholarship.scholarshipValue)} <span className="text-xs font-normal text-slate-500">/ ano</span></span>
+                    <span className="text-2xl font-bold text-green-700">{formatAmount(scholarship.amount)}</span>
+                  </div>
+
+                  {/* Details */}
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">Level</span>
+                      <div className="flex items-center">
+                        {getLevelIcon(scholarship.level)}
+                        <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">Field</span>
+                      <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study || 'any')}`}>
+                        {scholarship.field_of_study}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">Deadline</span>
+                      <span className="text-slate-700">{new Date(scholarship.deadline).toLocaleDateString()}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -302,15 +318,18 @@ const Scholarships: React.FC = () => {
                       if (!isAuthenticated) {
                         navigate('/login');
                       } else {
-                        // TODO: Add normal apply logic here
+                        // TODO: Add apply logic here
+                        alert('Application feature coming soon!');
                       }
                     }}
                   >
                     <Award className="h-4 w-4 mr-2" />
-                    Get Started
+                    Apply Now
                     <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
+                
+                {/* Hover Effect Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
               </div>
             );
@@ -325,7 +344,16 @@ const Scholarships: React.FC = () => {
             </div>
             <h3 className="text-3xl font-bold text-slate-600 mb-4">No scholarships found</h3>
             <p className="text-slate-500 text-lg mb-8">Try adjusting your search criteria to discover more opportunities</p>
-            <button className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold">
+            <button 
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedLevel('all');
+                setSelectedField('all');
+                setMaxPrice(maxScholarshipValue);
+                setMinPrice(0);
+              }}
+              className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"
+            >
               Clear Filters
             </button>
           </div>
@@ -351,11 +379,17 @@ const Scholarships: React.FC = () => {
               Join thousands of international students who have secured their educational dreams through our exclusive scholarship opportunities.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <button className="bg-[#D0151C] text-white px-10 py-5 rounded-2xl hover:bg-[#B01218] transition-all duration-300 font-bold text-lg shadow-2xl transform hover:scale-105 flex items-center justify-center">
+              <button 
+                onClick={() => navigate('/register')}
+                className="bg-[#D0151C] text-white px-10 py-5 rounded-2xl hover:bg-[#B01218] transition-all duration-300 font-bold text-lg shadow-2xl transform hover:scale-105 flex items-center justify-center"
+              >
                 Get Started Today
                 <ArrowRight className="ml-3 h-5 w-5" />
               </button>
-              <button className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-10 py-5 rounded-2xl hover:bg-white/20 transition-all duration-300 font-bold text-lg flex items-center justify-center">
+              <button 
+                onClick={() => navigate('/how-it-works')}
+                className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-10 py-5 rounded-2xl hover:bg-white/20 transition-all duration-300 font-bold text-lg flex items-center justify-center"
+              >
                 <Award className="mr-3 h-5 w-5" />
                 Learn More
               </button>

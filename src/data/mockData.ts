@@ -153,58 +153,79 @@ export const mockSchools: School[] = [
   }
 ];
 
+// Updated mock scholarships to match database schema
 export const mockScholarships = [
   {
     id: '1',
-    programName: 'International Excellence Program',
-    originalValue: {
-      perCredit: 1200,
-      annual: 36000
-    },
-    scholarshipValue: 25000,
-    scholarshipType: 'prata',
-    level: 'undergraduate',
-    needCPT: false,
-    visaAssistance: 'initial',
+    title: 'International Excellence Scholarship',
+    description: 'Merit-based scholarship for outstanding international students pursuing undergraduate studies.',
+    amount: 25000,
+    deadline: '2024-12-31',
+    requirements: ['Minimum GPA 3.5', 'TOEFL 100+', 'Leadership experience'],
+    field_of_study: 'Any',
+    level: 'undergraduate' as const,
+    eligibility: ['International students', 'First-time applicants'],
+    benefits: ['Tuition coverage', 'Mentorship program'],
+    is_exclusive: true,
+    is_active: true,
+    university_id: '1',
+    schoolName: 'Harvard University',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
   },
   {
     id: '2',
-    programName: 'STEM Innovation Grant',
-    originalValue: {
-      perCredit: 1500,
-      annual: 45000
-    },
-    scholarshipValue: 35000,
-    scholarshipType: 'ouro',
-    level: 'master',
-    needCPT: true,
-    visaAssistance: 'cos',
+    title: 'STEM Innovation Grant',
+    description: 'Full scholarship for international students in STEM fields.',
+    amount: 35000,
+    deadline: '2024-11-30',
+    requirements: ['STEM major', 'Research experience', 'GRE 320+'],
+    field_of_study: 'STEM',
+    level: 'graduate' as const,
+    eligibility: ['Graduate students', 'STEM background'],
+    benefits: ['Full tuition', 'Research stipend', 'Conference funding'],
+    is_exclusive: true,
+    is_active: true,
+    university_id: '2',
+    schoolName: 'Stanford University',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
   },
   {
     id: '3',
-    programName: 'Global Leadership Fellowship',
-    originalValue: {
-      perCredit: 1800,
-      annual: 54000
-    },
-    scholarshipValue: 45000,
-    scholarshipType: 'platina',
-    level: 'doctor',
-    needCPT: true,
-    visaAssistance: 'initial',
+    title: 'Global Leadership Fellowship',
+    description: 'Prestigious fellowship for doctoral candidates with leadership potential.',
+    amount: 45000,
+    deadline: '2024-10-15',
+    requirements: ['Doctoral program', 'Leadership portfolio', 'Research proposal'],
+    field_of_study: 'Any',
+    level: 'doctorate' as const,
+    eligibility: ['PhD candidates', 'Leadership experience'],
+    benefits: ['Full funding', 'Leadership training', 'Networking opportunities'],
+    is_exclusive: true,
+    is_active: true,
+    university_id: '3',
+    schoolName: 'MIT',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
   },
   {
     id: '4',
-    programName: 'Business Excellence Award',
-    originalValue: {
-      perCredit: 1000,
-      annual: 30000
-    },
-    scholarshipValue: 20000,
-    scholarshipType: 'especial',
-    level: 'transfer',
-    needCPT: false,
-    visaAssistance: 'cos',
+    title: 'Business Excellence Award',
+    description: 'Scholarship for international students in business programs.',
+    amount: 20000,
+    deadline: '2024-09-30',
+    requirements: ['Business major', 'GMAT 650+', 'Work experience'],
+    field_of_study: 'Business',
+    level: 'graduate' as const,
+    eligibility: ['MBA candidates', 'Professional experience'],
+    benefits: ['Partial tuition', 'Internship placement'],
+    is_exclusive: false,
+    is_active: true,
+    university_id: '4',
+    schoolName: 'Yale University',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
   }
 ];
 
