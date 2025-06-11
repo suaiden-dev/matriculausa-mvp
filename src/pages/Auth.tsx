@@ -89,7 +89,32 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         }, 100);
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please try again.');
+      // Enhanced error handling with specific messages
+      let errorMessage = 'Authentication failed. Please try again.';
+      
+      if (err.message) {
+        const message = err.message.toLowerCase();
+        
+        if (message.includes('invalid_credentials') || message.includes('invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (message.includes('email_not_confirmed')) {
+          errorMessage = 'Please check your email and click the confirmation link before signing in.';
+        } else if (message.includes('too_many_requests')) {
+          errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
+        } else if (message.includes('user_not_found')) {
+          errorMessage = 'No account found with this email address. Please check your email or create a new account.';
+        } else if (message.includes('weak_password')) {
+          errorMessage = 'Password is too weak. Please choose a stronger password.';
+        } else if (message.includes('email_address_invalid')) {
+          errorMessage = 'Please enter a valid email address.';
+        } else if (message.includes('signup_disabled')) {
+          errorMessage = 'New registrations are currently disabled. Please contact support.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -137,6 +162,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           <form className="mt-8 space-y-6 bg-slate-50 p-8 rounded-3xl shadow-lg border border-slate-200" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
+                <div className="font-medium text-red-800 mb-1">Login Failed</div>
                 {error}
               </div>
             )}
@@ -202,6 +228,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 Forgot your password?
               </Link>
             </div>
+
+            {/* Login Help Section */}
+            {error && (
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl">
+                <h4 className="text-sm font-bold text-blue-900 mb-2">Having trouble signing in?</h4>
+                <ul className="text-xs text-blue-800 space-y-1">
+                  <li>• Double-check your email address and password</li>
+                  <li>• Make sure your account is confirmed (check your email)</li>
+                  <li>• Try resetting your password if you've forgotten it</li>
+                  <li>• Contact support if you continue having issues</li>
+                </ul>
+              </div>
+            )}
 
             {/* Trust Indicators */}
             <div className="flex justify-center items-center space-x-6 pt-6 border-t border-slate-200">
@@ -282,6 +321,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         <div className="bg-slate-50 rounded-3xl p-8 shadow-lg border border-slate-200">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-6">
+              <div className="font-medium text-red-800 mb-1">Registration Failed</div>
               {error}
             </div>
           )}
@@ -705,5 +745,3 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 };
 
 export default Auth;
-
-export default Auth
