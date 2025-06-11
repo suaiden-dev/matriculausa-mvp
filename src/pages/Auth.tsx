@@ -55,13 +55,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const userData = {
           name: formData.name,
           role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
-          // Add additional registration data
-          ...(activeTab === 'student' && {
-            phone: formData.phone,
-            country: formData.country,
-            fieldOfInterest: formData.fieldOfInterest,
-            englishLevel: formData.englishLevel
-          }),
+          // Add additional registration data only for universities
           ...(activeTab === 'university' && {
             universityName: formData.universityName,
             position: formData.position,
