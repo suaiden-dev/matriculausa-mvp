@@ -89,7 +89,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         }, 100);
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please try again.');
+      // Provide more specific error messages based on the error type
+      if (err.message?.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('Please check your email and click the confirmation link before signing in.');
+      } else if (err.message?.includes('Too many requests')) {
+        setError('Too many login attempts. Please wait a few minutes before trying again.');
+      } else if (err.message?.includes('User not found')) {
+        setError('No account found with this email address. Please check your email or create a new account.');
+      } else {
+        setError(err.message || 'Authentication failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -137,7 +148,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           <form className="mt-8 space-y-6 bg-slate-50 p-8 rounded-3xl shadow-lg border border-slate-200" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
-                {error}
+                <strong>Login Failed:</strong> {error}
               </div>
             )}
 
@@ -201,6 +212,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               <Link to="/forgot-password" className="text-sm text-[#D0151C] hover:text-[#B01218] font-medium transition-colors">
                 Forgot your password?
               </Link>
+            </div>
+
+            {/* Help Text */}
+            <div className="text-center text-sm text-slate-500 bg-slate-50 p-4 rounded-2xl">
+              <p className="mb-2"><strong>Having trouble signing in?</strong></p>
+              <p>• Make sure you're using the correct email and password</p>
+              <p>• Check if you've confirmed your email address</p>
+              <p>• Try resetting your password if you've forgotten it</p>
+              <p>• Contact support if you continue having issues</p>
             </div>
 
             {/* Trust Indicators */}
@@ -282,7 +302,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         <div className="bg-slate-50 rounded-3xl p-8 shadow-lg border border-slate-200">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-6">
-              {error}
+              <strong>Registration Failed:</strong> {error}
             </div>
           )}
 
@@ -633,75 +653,4 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                 {/* University Benefits */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 mt-8">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-                    <Users className="h-5 w-5 mr-2 text-[#D0151C]" />
-                    What you'll get as a university partner:
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      Access to qualified international students
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      AI-powered student matching
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      Scholarship program management
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      Analytics and reporting tools
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full flex justify-center py-4 px-4 border border-transparent text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                activeTab === 'student' 
-                  ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]' 
-                  : 'bg-[#D0151C] hover:bg-[#B01218] focus:ring-[#D0151C]'
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Creating Account...
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  Create {activeTab === 'student' ? 'Student' : 'University'} Account
-                  <Zap className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              )}
-            </button>
-
-            {/* Trust Indicators */}
-            <div className="flex justify-center items-center space-x-6 pt-6 border-t border-slate-200">
-              <div className="flex items-center text-xs text-slate-500">
-                <Shield className="h-4 w-4 mr-1 text-green-500" />
-                <span>Secure</span>
-              </div>
-              <div className="flex items-center text-xs text-slate-500">
-                <Award className="h-4 w-4 mr-1 text-yellow-500" />
-                <span>Trusted</span>
-              </div>
-              <div className="flex items-center text-xs text-slate-500">
-                <Zap className="h-4 w-4 mr-1 text-[#D0151C]" />
-                <span>Fast Setup</span>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Auth;
+                  <h3 className="text-lg font-bold text-
