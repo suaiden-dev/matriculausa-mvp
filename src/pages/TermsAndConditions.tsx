@@ -45,9 +45,9 @@ const TermsAndConditions: React.FC = () => {
       if (university && university.terms_accepted) {
         // User already accepted terms, redirect to appropriate page
         if (university.profile_completed) {
-          navigate('/school/dashboard');
+          window.location.href = '/school/dashboard';
         } else {
-          navigate('/school/setup-profile');
+          window.location.href = '/school/setup-profile';
         }
       }
     } catch (error) {
@@ -87,11 +87,10 @@ const TermsAndConditions: React.FC = () => {
 
         // Redirect based on profile completion status
         if (existingUniversity.profile_completed) {
-          navigate('/school/dashboard');
+          window.location.href = '/school/dashboard';
         } else {
-          navigate('/school/setup-profile');
+          window.location.href = '/school/setup-profile';
         }
-        navigate('/school/dashboard/');
       } else {
         // Create new university record if it doesn't exist
         const { error: insertError } = await supabase
@@ -109,7 +108,7 @@ const TermsAndConditions: React.FC = () => {
         if (insertError) throw insertError;
 
         // Redirect to profile setup
-        navigate('/school/setup-profile');
+        window.location.href = '/school/setup-profile';
       }
     } catch (error: any) {
       console.error('Error accepting terms:', error);

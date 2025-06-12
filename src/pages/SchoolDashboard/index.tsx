@@ -39,6 +39,7 @@ const SchoolDashboard: React.FC = () => {
           .from('scholarships')
           .select('*')
           .eq('university_id', universityData.id);
+         .order('created_at', { ascending: false });
 
         if (scholarshipsError) throw scholarshipsError;
         setScholarships(scholarshipsData || []);

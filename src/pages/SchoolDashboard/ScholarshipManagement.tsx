@@ -254,7 +254,10 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                               Edit
                             </button>
                             <button
-                              onClick={() => toggleScholarshipStatus(scholarship.id, scholarship.is_active)}
+                              onClick={() => {
+                                toggleScholarshipStatus(scholarship.id, scholarship.is_active);
+                                setShowActions(null);
+                              }}
                               className="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                             >
                               <CheckCircle className="h-4 w-4 mr-3" />
@@ -262,7 +265,10 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                             </button>
                             <div className="border-t border-slate-200 my-2"></div>
                             <button
-                              onClick={() => handleDeleteScholarship(scholarship.id)}
+                              onClick={() => {
+                                handleDeleteScholarship(scholarship.id);
+                                setShowActions(null);
+                              }}
                               className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                             >
                               <Trash2 className="h-4 w-4 mr-3" />

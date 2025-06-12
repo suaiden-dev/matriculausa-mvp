@@ -68,9 +68,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         // Redirect based on user type after successful registration
         if (activeTab === 'university') {
-          navigate('/school/terms'); // Schools go to terms first
+          window.location.href = '/school/terms'; // Schools go to terms first
         } else {
-          navigate('/student/dashboard/'); // Students go directly to dashboard
+          window.location.href = '/student/dashboard'; // Students go directly to dashboard
         }
       } else {
         // Login process
