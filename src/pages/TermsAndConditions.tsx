@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, FileText, Shield, Users, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -7,18 +7,65 @@ import { useAuth } from '../hooks/useAuth';
 const TermsAndConditions: React.FC = () => {
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  useEffect(() => {
+    // Check if user is authenticated and has the right role
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (user.role !== 'school') {
+      navigate('/');
+      return;
+    }
+
+    // Check if user already accepted terms
+    checkExistingTermsAcceptance();
+  }, [user, navigate]);
+
+  const checkExistingTermsAcceptance = async () => {
+    if (!user) return;
+
+    try {
+      const { data: university, error } = await supabase
+        .from('universities')
+        .select('terms_accepted, profile_completed')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking terms:', error);
+        return;
+      }
+
+      if (university && university.terms_accepted) {
+        // User already accepted terms, redirect to appropriate page
+        if (university.profile_completed) {
+          navigate('/school/dashboard');
+        } else {
+          navigate('/school/setup-profile');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking terms acceptance:', error);
+    }
+  };
 
   const handleAccept = async () => {
     if (!user || !accepted) return;
 
     setLoading(true);
+    setError('');
+
     try {
       // Check if university record exists
       const { data: existingUniversity, error: checkError } = await supabase
         .from('universities')
-        .select('id')
+        .select('id, terms_accepted, profile_completed')
         .eq('user_id', user.id)
         .single();
 
@@ -28,36 +75,57 @@ const TermsAndConditions: React.FC = () => {
 
       if (existingUniversity) {
         // Update existing record to accept terms
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from('universities')
-          .update({ terms_accepted: true })
+          .update({ 
+            terms_accepted: true,
+            updated_at: new Date().toISOString()
+          })
           .eq('user_id', user.id);
 
-        if (error) throw error;
+        if (updateError) throw updateError;
+
+        // Redirect based on profile completion status
+        if (existingUniversity.profile_completed) {
+          navigate('/school/dashboard');
+        } else {
+          navigate('/school/setup-profile');
+        }
       } else {
-        // Create new university record if somehow it doesn't exist
-        const { error } = await supabase
+        // Create new university record if it doesn't exist
+        const { error: insertError } = await supabase
           .from('universities')
           .insert({
-            name: '', // Will be filled in profile setup
+            name: user.name || 'New University', // Temporary name
             user_id: user.id,
             terms_accepted: true,
             profile_completed: false,
-            is_approved: false
+            is_approved: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           });
 
-        if (error) throw error;
-      }
+        if (insertError) throw insertError;
 
-      // Redirect to school dashboard after accepting terms
-      navigate('/school/dashboard');
-    } catch (error) {
+        // Redirect to profile setup
+        navigate('/school/setup-profile');
+      }
+    } catch (error: any) {
       console.error('Error accepting terms:', error);
-      alert('Error accepting terms. Please try again.');
+      setError(`Error accepting terms: ${error.message}. Please try again.`);
     } finally {
       setLoading(false);
     }
   };
+
+  // Show loading while checking authentication
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -76,6 +144,16 @@ const TermsAndConditions: React.FC = () => {
             Please review and accept our terms to become a partner university on Matrícula USA platform.
           </p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+              <p className="text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
 
         {/* Terms Content */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
@@ -174,14 +252,15 @@ const TermsAndConditions: React.FC = () => {
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Accept and Continue to Dashboard
+                    Accept and Continue
                   </>
                 )}
               </button>
               
               <button
                 onClick={() => navigate('/')}
-                className="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                disabled={loading}
+                className="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>

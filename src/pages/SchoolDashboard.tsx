@@ -13,9 +13,40 @@ const SchoolDashboard: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      // Check if user should be redirected to terms or profile setup
+      checkUserStatus();
       loadDashboardData();
     }
   }, [user]);
+
+  const checkUserStatus = async () => {
+    if (!user || user.role !== 'school') return;
+
+    try {
+      const { data: university, error } = await supabase
+        .from('universities')
+        .select('terms_accepted, profile_completed')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking user status:', error);
+        return;
+      }
+
+      if (!university || !university.terms_accepted) {
+        navigate('/school/terms');
+        return;
+      }
+
+      if (!university.profile_completed) {
+        navigate('/school/setup-profile');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking user status:', error);
+    }
+  };
 
   const loadDashboardData = async () => {
     if (!user) return;

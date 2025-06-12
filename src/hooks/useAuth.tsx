@@ -102,7 +102,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           window.location.href = '/student/dashboard';
           break;
         case 'school':
-          window.location.href = '/school/dashboard';
+          // Check if school has accepted terms first
+          checkSchoolTermsStatus();
           break;
         case 'admin':
           window.location.href = '/admin/dashboard';
@@ -110,6 +111,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         default:
           window.location.href = '/';
       }
+    }
+  };
+
+  const checkSchoolTermsStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: university, error } = await supabase
+        .from('universities')
+        .select('terms_accepted, profile_completed')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking school terms:', error);
+        window.location.href = '/school/terms';
+        return;
+      }
+
+      if (!university || !university.terms_accepted) {
+        window.location.href = '/school/terms';
+      } else if (!university.profile_completed) {
+        window.location.href = '/school/setup-profile';
+      } else {
+        window.location.href = '/school/dashboard';
+      }
+    } catch (error) {
+      console.error('Error checking school status:', error);
+      window.location.href = '/school/terms';
     }
   };
 
