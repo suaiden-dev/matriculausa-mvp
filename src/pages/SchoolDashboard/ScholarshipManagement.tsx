@@ -367,3 +367,5 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
 };
 
 export default ScholarshipManagement;
+
+export default ScholarshipManagement
