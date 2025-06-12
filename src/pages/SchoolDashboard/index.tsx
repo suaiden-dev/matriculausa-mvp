@@ -130,3 +130,5 @@ const SchoolDashboard: React.FC = () => {
 };
 
 export default SchoolDashboard;
+
+export default SchoolDashboard
