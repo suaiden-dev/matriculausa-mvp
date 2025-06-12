@@ -52,6 +52,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const handleLogout = () => {
     logout();
     navigate('/');
+    setSidebarOpen(false);
   };
 
   if (loading) {
@@ -261,7 +262,10 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                     <Link
                       to="/admin/dashboard/settings"
                       className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        setSidebarOpen(false);
+                      }}
                     >
                       <Settings className="h-4 w-4 mr-3 text-slate-400" />
                       System Settings
@@ -270,7 +274,10 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                     <Link
                       to="/admin/logs"
                       className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        setSidebarOpen(false);
+                      }}
                     >
                       <Activity className="h-4 w-4 mr-3 text-slate-400" />
                       Activity Logs

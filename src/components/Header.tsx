@@ -12,15 +12,16 @@ const Header: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+    setIsMenuOpen(false);
     setIsUserMenuOpen(false);
   };
 
   const getDashboardPath = () => {
     if (!user) return '/';
     switch (user.role) {
-      case 'student': return '/student/dashboard';
-      case 'school': return '/school/dashboard';
-      case 'admin': return '/admin/dashboard';
+      case 'student': return '/student/dashboard/';
+      case 'school': return '/school/dashboard/';
+      case 'admin': return '/admin/dashboard/';
       default: return '/';
     }
   };
@@ -163,13 +164,13 @@ const Header: React.FC = () => {
       {isMenuOpen && (
         <div className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/50">
           <div className="px-4 pt-4 pb-6 space-y-2">
-            <Link to="/" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200">Home</Link>
-            <Link to="/schools" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200">Universities</Link>
-            <Link to="/scholarships" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200 flex items-center">
+            <Link to="/" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>Home</Link>
+            <Link to="/schools" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>Universities</Link>
+            <Link to="/scholarships" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200 flex items-center" onClick={() => setIsMenuOpen(false)}>
               Scholarships
               <Zap className="ml-2 h-4 w-4 text-yellow-500" />
             </Link>
-            <Link to="/how-it-works" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200">How It Works</Link>
+            <Link to="/how-it-works" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>How It Works</Link>
             
             {isAuthenticated && user ? (
               <div className="border-t border-slate-200 pt-4 mt-4">
@@ -185,14 +186,14 @@ const Header: React.FC = () => {
                   </div>
                 </div>
 
-                <Link to={getDashboardPath()} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200">{getDashboardLabel()}</Link>
+                <Link to={getDashboardPath()} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{getDashboardLabel()}</Link>
                 
-                <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200">Logout</button>
+                <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>Logout</button>
               </div>
             ) : (
               <div className="border-t border-slate-200 pt-4 mt-4 space-y-2">
-                <Link to="/login" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200">Sign In</Link>
-                <Link to="/register" className="block px-4 py-3 bg-[#D0151C] text-white hover:bg-[#B01218] rounded-xl font-bold transition-all duration-200 text-center">Get Started</Link>
+                <Link to="/login" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
+                <Link to="/register" className="block px-4 py-3 bg-[#D0151C] text-white hover:bg-[#B01218] rounded-xl font-bold transition-all duration-200 text-center" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
               </div>
             )}
           </div>

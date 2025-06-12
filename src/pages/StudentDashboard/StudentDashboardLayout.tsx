@@ -52,6 +52,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const handleLogout = () => {
     logout();
     navigate('/');
+    setSidebarOpen(false);
   };
 
   if (loading) {
@@ -256,7 +257,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     <Link
                       to="/student/dashboard/profile"
                       className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        setSidebarOpen(false);
+                      }}
                     >
                       <User className="h-4 w-4 mr-3 text-slate-400" />
                       Edit Profile
@@ -265,7 +269,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     <Link
                       to="/settings"
                       className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        setSidebarOpen(false);
+                      }}
                     >
                       <Settings className="h-4 w-4 mr-3 text-slate-400" />
                       Settings

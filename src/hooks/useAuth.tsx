@@ -99,14 +99,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (window.location.pathname === '/login') {
       switch (userRole) {
         case 'student':
-          window.location.href = '/student/dashboard/';
+          window.location.href = '/student/dashboard';
           break;
         case 'school':
           // Check if school has accepted terms first
           checkSchoolTermsStatus();
           break;
         case 'admin':
-          window.location.href = '/admin/dashboard/';
+          window.location.href = '/admin/dashboard';
           break;
         default:
           window.location.href = '/';
@@ -135,7 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (!university.profile_completed) {
         window.location.href = '/school/setup-profile';
       } else {
-        window.location.href = '/school/dashboard/';
+        window.location.href = '/school/dashboard';
       }
     } catch (error) {
       console.error('Error checking school status:', error);

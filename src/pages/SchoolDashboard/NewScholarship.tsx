@@ -189,9 +189,8 @@ const NewScholarship: React.FC = () => {
 
       // Show success message and redirect
       setSuccess(true);
-      setTimeout(() => {
-        navigate('/school/dashboard/scholarships');
-      }, 2000);
+      // Redirect immediately to scholarships page
+      navigate('/school/dashboard/scholarships');
     } catch (error: any) {
       console.error('Error creating scholarship:', error);
       setError(`Error creating scholarship: ${error.message}`);
