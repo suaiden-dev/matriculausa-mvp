@@ -90,6 +90,7 @@ const TermsAndConditions: React.FC = () => {
           navigate('/school/dashboard');
         } else {
           navigate('/school/setup-profile');
+        }
         navigate('/school/dashboard/');
       } else {
         // Create new university record if it doesn't exist
