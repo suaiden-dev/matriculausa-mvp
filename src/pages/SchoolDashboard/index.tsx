@@ -38,8 +38,8 @@ const SchoolDashboard: React.FC = () => {
         const { data: scholarshipsData, error: scholarshipsError } = await supabase
           .from('scholarships')
           .select('*')
-          .eq('university_id', universityData.id);
-         .order('created_at', { ascending: false });
+          .eq('university_id', universityData.id)
+          .order('created_at', { ascending: false });
 
         if (scholarshipsError) throw scholarshipsError;
         setScholarships(scholarshipsData || []);
@@ -130,5 +130,3 @@ const SchoolDashboard: React.FC = () => {
 };
 
 export default SchoolDashboard;
-
-export default SchoolDashboard
