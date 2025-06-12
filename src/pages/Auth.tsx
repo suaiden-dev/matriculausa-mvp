@@ -496,7 +496,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                   <div>
                     <label htmlFor="position" className="block text-sm font-bold text-slate-900 mb-2">
-                      Position/Title *
+                      Role at University *
                     </label>
                     <div className="relative">
                       <UserCheck className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -508,7 +508,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.position}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="Your position at the university"
+                        placeholder="e.g., Admissions Officer, Program Director"
                       />
                     </div>
                   </div>
