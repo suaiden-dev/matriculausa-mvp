@@ -11,9 +11,9 @@ import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
 import TermsAndConditions from './pages/TermsAndConditions';
 import SchoolProfileSetup from './pages/SchoolProfileSetup';
-import SchoolDashboard from './pages/SchoolDashboard';
-import StudentDashboard from './pages/StudentDashboard';
-import AdminDashboard from './pages/AdminDashboard';
+import SchoolDashboard from './pages/SchoolDashboard/index';
+import StudentDashboard from './pages/StudentDashboard/index';
+import AdminDashboard from './pages/AdminDashboard/index';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
 
@@ -35,15 +35,15 @@ function App() {
             <Route path="/how-it-works" element={<HowItWorks />} />
             
             {/* Student Routes */}
-            <Route path="/student/dashboard" element={<StudentDashboard />} />
+            <Route path="/student/dashboard/*" element={<StudentDashboard />} />
             
             {/* School Routes */}
             <Route path="/school/terms" element={<TermsAndConditions />} />
             <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
-            <Route path="/school/dashboard" element={<SchoolDashboard />} />
+            <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
             
             {/* Admin Routes */}
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
             
             {/* Placeholder routes for other pages */}
             <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />

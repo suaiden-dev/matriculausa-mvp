@@ -61,7 +61,7 @@ const SchoolProfileSetup: React.FC = () => {
       }
 
       if (university && university.profile_completed) {
-        navigate('/school/dashboard');
+        navigate('/school/dashboard/');
       } else if (university && !university.terms_accepted) {
         navigate('/school/terms');
       }
@@ -173,7 +173,7 @@ const SchoolProfileSetup: React.FC = () => {
 
       if (error) throw error;
 
-      navigate('/school/dashboard');
+      navigate('/school/dashboard/');
     } catch (error) {
       console.error('Error saving profile:', error);
       alert('Error saving profile. Please try again.');

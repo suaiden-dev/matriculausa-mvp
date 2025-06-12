@@ -70,7 +70,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         if (activeTab === 'university') {
           navigate('/school/terms'); // Schools go to terms first
         } else {
-          navigate('/student/dashboard'); // Students go directly to dashboard
+          navigate('/student/dashboard/'); // Students go directly to dashboard
         }
       } else {
         // Login process
