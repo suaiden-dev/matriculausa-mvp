@@ -14,6 +14,7 @@ import SchoolProfileSetup from './pages/SchoolProfileSetup';
 import SchoolDashboard from './pages/SchoolDashboard/index';
 import StudentDashboard from './pages/StudentDashboard/index';
 import AdminDashboard from './pages/AdminDashboard/index';
+import NewScholarship from './pages/SchoolDashboard/NewScholarship';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
 
@@ -40,6 +41,7 @@ function App() {
             {/* School Routes */}
             <Route path="/school/terms" element={<TermsAndConditions />} />
             <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
+            <Route path="/school/scholarship/new" element={<NewScholarship />} />
             <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
             
             {/* Admin Routes */}

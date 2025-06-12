@@ -5,12 +5,13 @@ import {
   DollarSign, 
   Calendar, 
   CheckCircle, 
-  AlertCircle, 
-  ArrowLeft, 
+  AlertTriangle, 
   Save,
+  ArrowLeft,
   BookOpen,
-  Building,
-  Tag
+  Target,
+  Clock,
+  Info
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -25,45 +26,58 @@ const NewScholarship: React.FC = () => {
 
   const [formData, setFormData] = useState({
     title: '',
-    originalValuePerCredit: '',
-    originalAnnualValue: '',
-    amount: '', // Annual scholarship value
-    scholarshipType: 'Especial',
-    applicablePrograms: [] as string[],
-    deadline: '',
     description: '',
-    requirements: [] as string[],
-    benefits: [] as string[],
-    is_exclusive: false
+    amount: '',
+    deadline: '',
+    requirements: [''],
+    field_of_study: '',
+    level: 'undergraduate',
+    eligibility: [''],
+    benefits: [''],
+    is_exclusive: false,
+    is_active: true
   });
 
-  const [newRequirement, setNewRequirement] = useState('');
-  const [newBenefit, setNewBenefit] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   useEffect(() => {
+    // Check if user is authenticated and has a university
     if (user) {
       fetchUniversityId();
+    } else {
+      navigate('/login');
     }
-  }, [user]);
+  }, [user, navigate]);
 
   const fetchUniversityId = async () => {
-    if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('universities')
-        .select('id')
-        .eq('user_id', user.id)
+        .select('id, profile_completed, is_approved')
+        .eq('user_id', user?.id)
         .single();
 
       if (error) throw error;
-      if (data) {
-        setUniversityId(data.id);
+
+      if (!data) {
+        setError('University profile not found. Please complete your profile first.');
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching university ID:', error);
-      setError('Unable to fetch university information. Please try again later.');
+
+      if (!data.profile_completed) {
+        setError('Please complete your university profile before creating scholarships.');
+        setTimeout(() => {
+          navigate('/school/dashboard/profile');
+        }, 3000);
+        return;
+      }
+
+      if (!data.is_approved) {
+        setError('Your university profile is pending approval. You can create scholarships, but they will not be visible to students until your profile is approved.');
+      }
+
+      setUniversityId(data.id);
+    } catch (error: any) {
+      console.error('Error fetching university:', error);
+      setError('Error loading university data. Please try again later.');
     }
   };
 
@@ -73,11 +87,6 @@ const NewScholarship: React.FC = () => {
       ...prev,
       [name]: value
     }));
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,99 +97,66 @@ const NewScholarship: React.FC = () => {
     }));
   };
 
-  const handleProgramChange = (program: string) => {
+  const handleArrayInputChange = (index: number, field: 'requirements' | 'eligibility' | 'benefits', value: string) => {
     setFormData(prev => {
-      const updatedPrograms = prev.applicablePrograms.includes(program)
-        ? prev.applicablePrograms.filter(p => p !== program)
-        : [...prev.applicablePrograms, program];
-      
+      const newArray = [...prev[field]];
+      newArray[index] = value;
       return {
         ...prev,
-        applicablePrograms: updatedPrograms
+        [field]: newArray
       };
     });
-
-    // Clear error when user makes a selection
-    if (errors.applicablePrograms) {
-      setErrors(prev => ({ ...prev, applicablePrograms: '' }));
-    }
   };
 
-  const addRequirement = () => {
-    if (newRequirement.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        requirements: [...prev.requirements, newRequirement.trim()]
-      }));
-      setNewRequirement('');
-    }
-  };
-
-  const removeRequirement = (index: number) => {
+  const addArrayItem = (field: 'requirements' | 'eligibility' | 'benefits') => {
     setFormData(prev => ({
       ...prev,
-      requirements: prev.requirements.filter((_, i) => i !== index)
+      [field]: [...prev[field], '']
     }));
   };
 
-  const addBenefit = () => {
-    if (newBenefit.trim()) {
-      setFormData(prev => ({
+  const removeArrayItem = (index: number, field: 'requirements' | 'eligibility' | 'benefits') => {
+    setFormData(prev => {
+      const newArray = [...prev[field]];
+      newArray.splice(index, 1);
+      return {
         ...prev,
-        benefits: [...prev.benefits, newBenefit.trim()]
-      }));
-      setNewBenefit('');
-    }
-  };
-
-  const removeBenefit = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      benefits: prev.benefits.filter((_, i) => i !== index)
-    }));
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = 'Scholarship name is required';
-    }
-
-    if (!formData.originalValuePerCredit.trim()) {
-      newErrors.originalValuePerCredit = 'Original value per credit is required';
-    } else if (isNaN(parseFloat(formData.originalValuePerCredit))) {
-      newErrors.originalValuePerCredit = 'Must be a valid number';
-    }
-
-    if (!formData.originalAnnualValue.trim()) {
-      newErrors.originalAnnualValue = 'Original annual value is required';
-    } else if (isNaN(parseFloat(formData.originalAnnualValue))) {
-      newErrors.originalAnnualValue = 'Must be a valid number';
-    }
-
-    if (!formData.amount.trim()) {
-      newErrors.amount = 'Annual scholarship value is required';
-    } else if (isNaN(parseFloat(formData.amount))) {
-      newErrors.amount = 'Must be a valid number';
-    }
-
-    if (formData.applicablePrograms.length === 0) {
-      newErrors.applicablePrograms = 'At least one program must be selected';
-    }
-
-    if (!formData.deadline.trim()) {
-      newErrors.deadline = 'Application deadline is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+        [field]: newArray.length ? newArray : ['']
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm() || !universityId) {
+    if (!universityId) {
+      setError('University profile not found. Please complete your profile first.');
+      return;
+    }
+
+    // Validate form
+    if (!formData.title.trim()) {
+      setError('Scholarship title is required');
+      return;
+    }
+
+    if (!formData.amount.trim() || isNaN(Number(formData.amount))) {
+      setError('Valid scholarship amount is required');
+      return;
+    }
+
+    if (!formData.deadline.trim()) {
+      setError('Application deadline is required');
+      return;
+    }
+
+    // Filter out empty array items
+    const requirements = formData.requirements.filter(item => item.trim());
+    const eligibility = formData.eligibility.filter(item => item.trim());
+    const benefits = formData.benefits.filter(item => item.trim());
+
+    if (requirements.length === 0) {
+      setError('At least one requirement is required');
       return;
     }
 
@@ -188,49 +164,44 @@ const NewScholarship: React.FC = () => {
     setError(null);
 
     try {
-      // Prepare scholarship data
+      // Prepare data for submission
       const scholarshipData = {
         title: formData.title,
         description: formData.description,
-        amount: parseFloat(formData.amount),
+        amount: Number(formData.amount),
         deadline: formData.deadline,
-        requirements: formData.requirements,
-        field_of_study: formData.applicablePrograms.join(', '),
-        level: formData.applicablePrograms.includes('Undergraduate') ? 'undergraduate' : 
-               formData.applicablePrograms.includes('Master') ? 'graduate' : 'doctorate',
-        eligibility: formData.applicablePrograms,
-        benefits: formData.benefits,
+        requirements,
+        field_of_study: formData.field_of_study,
+        level: formData.level,
+        eligibility,
+        benefits,
         is_exclusive: formData.is_exclusive,
-        is_active: true,
-        university_id: universityId,
-        // Additional fields for the new requirements
-        original_value_per_credit: parseFloat(formData.originalValuePerCredit),
-        original_annual_value: parseFloat(formData.originalAnnualValue),
-        scholarship_type: formData.scholarshipType
+        is_active: formData.is_active,
+        university_id: universityId
       };
 
-      // Insert into database
-      const { error: insertError } = await supabase
+      // Submit to Supabase
+      const { error: submitError } = await supabase
         .from('scholarships')
         .insert(scholarshipData);
 
-      if (insertError) throw insertError;
+      if (submitError) throw submitError;
 
       // Show success message and redirect
       setSuccess(true);
       setTimeout(() => {
         navigate('/school/dashboard/scholarships');
       }, 2000);
-    } catch (err: any) {
-      console.error('Error creating scholarship:', err);
-      setError(err.message || 'Failed to create scholarship. Please try again.');
+    } catch (error: any) {
+      console.error('Error creating scholarship:', error);
+      setError(`Error creating scholarship: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
+    <div className="min-h-screen bg-slate-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -242,339 +213,367 @@ const NewScholarship: React.FC = () => {
             Back to Scholarships
           </button>
           
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create New Scholarship</h1>
-          <p className="text-slate-600">Define a new scholarship opportunity for international students</p>
+          <h1 className="text-3xl font-bold text-slate-900">Create New Scholarship</h1>
+          <p className="text-slate-600 mt-2">
+            Define a new scholarship opportunity for international students
+          </p>
         </div>
 
-        {/* Success Message */}
-        {success && (
-          <div className="mb-8 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start">
-            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
-            <div>
-              <h3 className="font-medium text-green-800">Scholarship Created Successfully</h3>
-              <p className="text-green-700 text-sm mt-1">
-                Your new scholarship has been created and is now available to students.
-                Redirecting to scholarships page...
-              </p>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
+              <p className="text-red-700">{error}</p>
             </div>
           </div>
         )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
-            <div>
-              <h3 className="font-medium text-red-800">Error Creating Scholarship</h3>
-              <p className="text-red-700 text-sm mt-1">{error}</p>
+        {/* Success Message */}
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+              <p className="text-green-700">Scholarship created successfully! Redirecting...</p>
             </div>
           </div>
         )}
 
         {/* Scholarship Form */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-          <div className="p-8">
-            <div className="space-y-8">
-              {/* Basic Information Section */}
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
-                  <Award className="h-5 w-5 mr-2 text-[#D0151C]" />
-                  Scholarship Information
-                </h2>
-                
-                <div className="grid grid-cols-1 gap-6">
-                  <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-2">
-                      Scholarship Program Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="title"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      className={`w-full px-4 py-3 bg-slate-50 border ${errors.title ? 'border-red-300' : 'border-slate-200'} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200`}
-                      placeholder="e.g., Academic Excellence Scholarship"
-                    />
-                    {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
-                  </div>
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+          <div className="space-y-8">
+            {/* Basic Information */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                <Award className="h-5 w-5 mr-2 text-[#05294E]" />
+                Basic Information
+              </h2>
+              
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Scholarship Title *
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., International Excellence Scholarship"
+                    required
+                  />
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <label htmlFor="originalValuePerCredit" className="block text-sm font-medium text-slate-700 mb-2">
-                        Original Value Per Credit *
-                      </label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                        <input
-                          type="text"
-                          id="originalValuePerCredit"
-                          name="originalValuePerCredit"
-                          value={formData.originalValuePerCredit}
-                          onChange={handleInputChange}
-                          className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${errors.originalValuePerCredit ? 'border-red-300' : 'border-slate-200'} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200`}
-                          placeholder="e.g., 1000"
-                        />
-                      </div>
-                      {errors.originalValuePerCredit && <p className="mt-1 text-sm text-red-600">{errors.originalValuePerCredit}</p>}
-                    </div>
-
-                    <div>
-                      <label htmlFor="originalAnnualValue" className="block text-sm font-medium text-slate-700 mb-2">
-                        Original Annual Program Value *
-                      </label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                        <input
-                          type="text"
-                          id="originalAnnualValue"
-                          name="originalAnnualValue"
-                          value={formData.originalAnnualValue}
-                          onChange={handleInputChange}
-                          className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${errors.originalAnnualValue ? 'border-red-300' : 'border-slate-200'} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200`}
-                          placeholder="e.g., 30000"
-                        />
-                      </div>
-                      {errors.originalAnnualValue && <p className="mt-1 text-sm text-red-600">{errors.originalAnnualValue}</p>}
-                    </div>
-
-                    <div>
-                      <label htmlFor="amount" className="block text-sm font-medium text-slate-700 mb-2">
-                        Annual Scholarship Value *
-                      </label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                        <input
-                          type="text"
-                          id="amount"
-                          name="amount"
-                          value={formData.amount}
-                          onChange={handleInputChange}
-                          className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${errors.amount ? 'border-red-300' : 'border-slate-200'} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200`}
-                          placeholder="e.g., 15000"
-                        />
-                      </div>
-                      {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="scholarshipType" className="block text-sm font-medium text-slate-700 mb-2">
-                        Scholarship Type *
-                      </label>
-                      <div className="relative">
-                        <Tag className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                        <select
-                          id="scholarshipType"
-                          name="scholarshipType"
-                          value={formData.scholarshipType}
-                          onChange={handleInputChange}
-                          className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                        >
-                          <option value="Especial">Especial</option>
-                          <option value="Prata">Prata (Silver)</option>
-                          <option value="Ouro">Ouro (Gold)</option>
-                          <option value="Platina">Platina (Platinum)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="deadline" className="block text-sm font-medium text-slate-700 mb-2">
-                        Application Deadline *
-                      </label>
-                      <div className="relative">
-                        <Calendar className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                        <input
-                          type="date"
-                          id="deadline"
-                          name="deadline"
-                          value={formData.deadline}
-                          onChange={handleInputChange}
-                          className={`w-full pl-12 pr-4 py-3 bg-slate-50 border ${errors.deadline ? 'border-red-300' : 'border-slate-200'} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200`}
-                        />
-                      </div>
-                      {errors.deadline && <p className="mt-1 text-sm text-red-600">{errors.deadline}</p>}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Applicable Programs *
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {['Undergraduate', 'Master', 'Doctor'].map((program) => (
-                        <div key={program} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`program-${program}`}
-                            checked={formData.applicablePrograms.includes(program)}
-                            onChange={() => handleProgramChange(program)}
-                            className="h-4 w-4 text-[#05294E] border-slate-300 rounded focus:ring-[#05294E]"
-                          />
-                          <label htmlFor={`program-${program}`} className="ml-2 text-sm text-slate-700">
-                            {program}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    {errors.applicablePrograms && <p className="mt-1 text-sm text-red-600">{errors.applicablePrograms}</p>}
-                  </div>
-
-                  <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      rows={4}
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="Describe this scholarship opportunity..."
-                    />
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="is_exclusive"
-                      name="is_exclusive"
-                      checked={formData.is_exclusive}
-                      onChange={handleCheckboxChange}
-                      className="h-4 w-4 text-[#D0151C] border-slate-300 rounded focus:ring-[#D0151C]"
-                    />
-                    <label htmlFor="is_exclusive" className="ml-2 text-sm text-slate-700">
-                      Mark as Exclusive Scholarship (only available through Matrícula USA)
-                    </label>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={4}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="Describe the scholarship, its purpose, and any special features"
+                  />
                 </div>
               </div>
+            </div>
 
-              {/* Requirements Section */}
-              <div>
-                <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
-                  <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                  Requirements & Benefits
-                </h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Requirements
-                    </label>
-                    <div className="flex mb-2">
-                      <input
-                        type="text"
-                        value={newRequirement}
-                        onChange={(e) => setNewRequirement(e.target.value)}
-                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-l-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                        placeholder="Add a requirement"
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRequirement())}
-                      />
-                      <button
-                        type="button"
-                        onClick={addRequirement}
-                        className="px-4 py-2 bg-[#05294E] text-white rounded-r-xl hover:bg-[#05294E]/90 transition-colors"
-                      >
-                        Add
-                      </button>
-                    </div>
-                    
-                    <div className="mt-3 space-y-2">
-                      {formData.requirements.length > 0 ? (
-                        formData.requirements.map((req, index) => (
-                          <div key={index} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg">
-                            <span className="text-sm text-slate-700">{req}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeRequirement(index)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              &times;
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-slate-500 italic">No requirements added yet</p>
-                      )}
-                    </div>
+            {/* Financial Details */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                <DollarSign className="h-5 w-5 mr-2 text-green-600" />
+                Financial Details
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Scholarship Amount (USD) *
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                    <input
+                      type="number"
+                      name="amount"
+                      value={formData.amount}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                      placeholder="10000"
+                      min="0"
+                      step="100"
+                      required
+                    />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Benefits
-                    </label>
-                    <div className="flex mb-2">
-                      <input
-                        type="text"
-                        value={newBenefit}
-                        onChange={(e) => setNewBenefit(e.target.value)}
-                        className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-l-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                        placeholder="Add a benefit"
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
-                      />
-                      <button
-                        type="button"
-                        onClick={addBenefit}
-                        className="px-4 py-2 bg-[#05294E] text-white rounded-r-xl hover:bg-[#05294E]/90 transition-colors"
-                      >
-                        Add
-                      </button>
-                    </div>
-                    
-                    <div className="mt-3 space-y-2">
-                      {formData.benefits.length > 0 ? (
-                        formData.benefits.map((benefit, index) => (
-                          <div key={index} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg">
-                            <span className="text-sm text-slate-700">{benefit}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeBenefit(index)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              &times;
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-slate-500 italic">No benefits added yet</p>
-                      )}
-                    </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Application Deadline *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                    <input
+                      type="date"
+                      name="deadline"
+                      value={formData.deadline}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                      required
+                    />
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Form Actions */}
-          <div className="bg-slate-50 px-8 py-6 border-t border-slate-200 flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => navigate('/school/dashboard/scholarships')}
-              className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-3 bg-[#D0151C] text-white rounded-xl hover:bg-[#B01218] transition-colors font-bold shadow-lg flex items-center"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Create Scholarship
-                </>
-              )}
-            </button>
+            {/* Eligibility & Requirements */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                <Target className="h-5 w-5 mr-2 text-[#D0151C]" />
+                Eligibility & Requirements
+              </h2>
+              
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Field of Study
+                  </label>
+                  <select
+                    name="field_of_study"
+                    value={formData.field_of_study}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                  >
+                    <option value="">Any Field</option>
+                    <option value="STEM">STEM</option>
+                    <option value="Business">Business</option>
+                    <option value="Arts & Humanities">Arts & Humanities</option>
+                    <option value="Social Sciences">Social Sciences</option>
+                    <option value="Health Sciences">Health Sciences</option>
+                    <option value="Engineering">Engineering</option>
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Law">Law</option>
+                    <option value="Medicine">Medicine</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Academic Level *
+                  </label>
+                  <select
+                    name="level"
+                    value={formData.level}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    required
+                  >
+                    <option value="undergraduate">Undergraduate</option>
+                    <option value="graduate">Graduate</option>
+                    <option value="doctorate">Doctorate</option>
+                  </select>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Requirements *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => addArrayItem('requirements')}
+                      className="text-sm text-[#05294E] hover:text-[#05294E]/80 font-medium"
+                    >
+                      + Add Requirement
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {formData.requirements.map((req, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={req}
+                          onChange={(e) => handleArrayInputChange(index, 'requirements', e.target.value)}
+                          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                          placeholder="e.g., Minimum GPA 3.5"
+                        />
+                        {formData.requirements.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem(index, 'requirements')}
+                            className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Eligibility Criteria
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => addArrayItem('eligibility')}
+                      className="text-sm text-[#05294E] hover:text-[#05294E]/80 font-medium"
+                    >
+                      + Add Criterion
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {formData.eligibility.map((item, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={item}
+                          onChange={(e) => handleArrayInputChange(index, 'eligibility', e.target.value)}
+                          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                          placeholder="e.g., International students only"
+                        />
+                        {formData.eligibility.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem(index, 'eligibility')}
+                            className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Benefits & Options */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
+                Benefits & Options
+              </h2>
+              
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Benefits
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => addArrayItem('benefits')}
+                      className="text-sm text-[#05294E] hover:text-[#05294E]/80 font-medium"
+                    >
+                      + Add Benefit
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {formData.benefits.map((benefit, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={benefit}
+                          onChange={(e) => handleArrayInputChange(index, 'benefits', e.target.value)}
+                          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                          placeholder="e.g., Full tuition coverage"
+                        />
+                        {formData.benefits.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeArrayItem(index, 'benefits')}
+                            className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="is_exclusive"
+                    name="is_exclusive"
+                    checked={formData.is_exclusive}
+                    onChange={handleCheckboxChange}
+                    className="h-5 w-5 rounded border-slate-300 text-[#D0151C] focus:ring-[#D0151C]"
+                  />
+                  <div>
+                    <label htmlFor="is_exclusive" className="font-medium text-slate-900">
+                      Exclusive Scholarship
+                    </label>
+                    <p className="text-sm text-slate-500">
+                      Mark this scholarship as exclusive to your university on our platform
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    name="is_active"
+                    checked={formData.is_active}
+                    onChange={handleCheckboxChange}
+                    className="h-5 w-5 rounded border-slate-300 text-green-600 focus:ring-green-600"
+                  />
+                  <div>
+                    <label htmlFor="is_active" className="font-medium text-slate-900">
+                      Active Scholarship
+                    </label>
+                    <p className="text-sm text-slate-500">
+                      Make this scholarship immediately visible to students
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Information Notice */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start">
+                <Info className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-blue-800 mb-1">Important Information</h4>
+                  <p className="text-sm text-blue-700">
+                    All scholarships are subject to review by our team. Please ensure all information is accurate and up-to-date. 
+                    You can edit or deactivate this scholarship at any time after creation.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end pt-6 border-t border-slate-200">
+              <button
+                type="submit"
+                disabled={loading || success}
+                className="bg-[#05294E] text-white px-8 py-3 rounded-xl hover:bg-[#05294E]/90 transition-colors font-bold flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Clock className="animate-spin h-5 w-5 mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-5 w-5 mr-2" />
+                    Create Scholarship
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>
