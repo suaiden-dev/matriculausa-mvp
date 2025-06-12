@@ -178,7 +178,7 @@ const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats, us
                 </div>
                 {university?.profile_completed && (
                   <Link
-                    to="/school/scholarship/new"
+                    to="/school/scholarship/new" 
                     className="bg-gradient-to-r from-[#05294E] to-blue-700 text-white px-4 py-2 rounded-xl hover:from-[#05294E]/90 hover:to-blue-600 transition-all duration-300 font-medium text-sm flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     <PlusCircle className="h-4 w-4 mr-2" />
@@ -211,7 +211,7 @@ const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats, us
                   <h3 className="text-xl font-bold text-slate-900 mb-3">No scholarships yet</h3>
                   <p className="text-slate-500 mb-6">Start by creating your first scholarship opportunity</p>
                   <Link
-                    to="/school/scholarship/new"
+                    to="/school/scholarship/new" 
                     className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     Create First Scholarship

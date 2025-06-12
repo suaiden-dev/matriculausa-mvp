@@ -185,7 +185,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
           <div className="px-4 py-4 border-t border-slate-200">
             {university?.profile_completed ? (
               <Link
-                to="/school/scholarship/new"
+                to="/school/scholarship/new" 
                 className="w-full bg-gradient-to-r from-[#D0151C] to-red-600 text-white py-3 px-4 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <Plus className="h-4 w-4 mr-2" />
