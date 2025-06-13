@@ -241,7 +241,7 @@ const ForgotPassword: React.FC = () => {
           {/* Step 2: Email Verification - REMOVIDO */}
           {emailSent && !showResetForm && (
             <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-2xl text-sm flex items-center mb-4">
-              <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
               A link to reset your password has been sent to your email. Please check your inbox (and spam/junk folder) to continue.
             </div>
           )}

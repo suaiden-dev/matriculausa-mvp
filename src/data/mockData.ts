@@ -10,7 +10,6 @@ export const mockSchools: School[] = [
     website: 'https://harvard.edu',
     programs: ['Business', 'Medicine', 'Law', 'Engineering', 'Liberal Arts'],
     accreditations: ['NEASC', 'AACSB', 'LCME'],
-    ranking: 1,
     type: 'Private',
     address: {
       street: 'Massachusetts Hall, Cambridge',
@@ -35,7 +34,6 @@ export const mockSchools: School[] = [
     website: 'https://stanford.edu',
     programs: ['Computer Science', 'Engineering', 'Business', 'Medicine', 'Education'],
     accreditations: ['WASC', 'AACSB', 'ABET'],
-    ranking: 2,
     type: 'Private',
     address: {
       street: '450 Serra Mall',
@@ -60,7 +58,6 @@ export const mockSchools: School[] = [
     website: 'https://mit.edu',
     programs: ['Engineering', 'Computer Science', 'Physics', 'Mathematics', 'Economics'],
     accreditations: ['NEASC', 'ABET', 'AACSB'],
-    ranking: 3,
     type: 'Private',
     address: {
       street: '77 Massachusetts Avenue',
@@ -85,7 +82,6 @@ export const mockSchools: School[] = [
     website: 'https://yale.edu',
     programs: ['Liberal Arts', 'Law', 'Medicine', 'Drama', 'Music'],
     accreditations: ['NEASC', 'AACSB', 'LCME'],
-    ranking: 4,
     type: 'Private',
     address: {
       street: '38 Hillhouse Avenue',
@@ -110,7 +106,6 @@ export const mockSchools: School[] = [
     website: 'https://princeton.edu',
     programs: ['Engineering', 'Public Policy', 'Economics', 'Physics', 'History'],
     accreditations: ['MSCHE', 'ABET', 'AACSB'],
-    ranking: 5,
     type: 'Private',
     address: {
       street: 'Princeton University',
@@ -135,7 +130,6 @@ export const mockSchools: School[] = [
     website: 'https://berkeley.edu',
     programs: ['Engineering', 'Business', 'Computer Science', 'Law', 'Public Health'],
     accreditations: ['WASC', 'ABET', 'AACSB'],
-    ranking: 6,
     type: 'Public',
     address: {
       street: '200 California Hall',

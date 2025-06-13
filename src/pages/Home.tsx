@@ -174,15 +174,6 @@ const Home: React.FC = () => {
                       {school.type}
                     </span>
                   </div>
-                  
-                  {/* Ranking Badge */}
-                  {school.ranking && (
-                    <div className="absolute top-4 right-4">
-                      <span className="bg-yellow-500 text-black px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
-                        #{school.ranking}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* University Info */}

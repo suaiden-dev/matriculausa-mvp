@@ -118,9 +118,7 @@ const UniversityDetail: React.FC = () => {
                   {university.type || (university.is_public ? 'Public' : 'Private')}
                 </span>
                 {university.ranking && (
-                  <span className="bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-bold">
-                    #{university.ranking} Ranked
-                  </span>
+                  null
                 )}
               </div>
               <h1 className="text-4xl md:text-5xl font-black mb-3">

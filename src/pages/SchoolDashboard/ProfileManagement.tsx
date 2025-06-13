@@ -31,6 +31,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | undefined>(university?.logo_url);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const profileCompleteness = university ? (
     (university.name ? 20 : 0) +
@@ -50,18 +51,20 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
   const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !university) return;
+    setImagePreview(URL.createObjectURL(file));
     setUploading(true);
     setUploadError(null);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `university_${university.id}_${Date.now()}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const fileName = `profile_${Date.now()}.${fileExt}`;
+      const filePath = `${university.user_id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage
         .from('university-profile-pictures')
-        .upload(fileName, file, { upsert: true });
+        .upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: publicUrlData } = supabase.storage
         .from('university-profile-pictures')
-        .getPublicUrl(fileName);
+        .getPublicUrl(filePath);
       const publicUrl = publicUrlData?.publicUrl;
       if (!publicUrl) throw new Error('Could not get image URL');
       // Update university record
@@ -71,6 +74,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
         .eq('id', university.id);
       if (updateError) throw updateError;
       setLogoUrl(publicUrl);
+      setImagePreview(null);
     } catch (err: any) {
       setUploadError('Failed to upload image. Please try again.');
     } finally {
@@ -116,9 +120,10 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
                 </div>
                 <button
                   type="button"
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg opacity-50 cursor-not-allowed"
-                  disabled
-                  title="Profile picture upload temporarily disabled"
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg hover:opacity-80 transition"
+                  onClick={handleProfilePicClick}
+                  disabled={uploading}
+                  title="Change profile picture"
                 >
                   <Camera className="h-4 w-4" />
                 </button>
@@ -137,6 +142,9 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
                 )}
                 {uploadError && (
                   <div className="absolute left-0 right-0 -bottom-8 text-red-200 text-xs mt-2 text-center">{uploadError}</div>
+                )}
+                {imagePreview && (
+                  <img src={imagePreview} alt="Preview" className="absolute left-24 top-0 w-24 h-24 object-cover rounded-2xl border-2 border-blue-400 z-10" style={{ pointerEvents: 'none' }} />
                 )}
               </div>
               <div className="flex-1 w-full">
