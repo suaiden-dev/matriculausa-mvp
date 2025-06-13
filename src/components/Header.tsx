@@ -188,7 +188,7 @@ const Header: React.FC = () => {
 
                 <Link to={getDashboardPath()} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{getDashboardLabel()}</Link>
                 
-                <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>Logout</button>
+                <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200">Logout</button>
               </div>
             ) : (
               <div className="border-t border-slate-200 pt-4 mt-4 space-y-2">

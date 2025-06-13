@@ -46,10 +46,13 @@ const Home: React.FC = () => {
                   Get Started
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <button className="group bg-white border-2 border-[#05294E] text-[#05294E] px-8 py-4 rounded-2xl text-lg font-bold hover:bg-[#05294E] hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg">
+                <Link
+                  to="/scholarships"
+                  className="group bg-white border-2 border-[#05294E] text-[#05294E] px-8 py-4 rounded-2xl text-lg font-bold hover:bg-[#05294E] hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg"
+                >
                   <Play className="mr-2 h-5 w-5" />
                   View Scholarships
-                </button>
+                </Link>
               </div>
 
               {/* Trust Indicators */}

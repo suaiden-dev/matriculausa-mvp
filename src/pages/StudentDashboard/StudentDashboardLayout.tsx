@@ -90,7 +90,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
               />
             </Link>
             <button
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
               className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
             >
               <X className="h-5 w-5" />
@@ -179,7 +179,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
         />
       )}
 
@@ -190,7 +190,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => { setSidebarOpen(true); setUserMenuOpen(false); }}
                 className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
                 <Menu className="h-5 w-5" />
@@ -234,7 +234,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
               {/* User Menu */}
               <div className="relative">
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  onClick={() => { setUserMenuOpen(!userMenuOpen); setSidebarOpen(false); }}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle, Shield, Zap, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -14,8 +14,26 @@ const ForgotPassword: React.FC = () => {
   const [error, setError] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [inputCode, setInputCode] = useState('');
+  const location = useLocation();
+
+  // Detect access_token in URL (Supabase reset link)
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace(/^#/, '?'));
+    const token = params.get('access_token');
+    const refresh = params.get('refresh_token');
+    if (token && refresh) {
+      setShowResetForm(true);
+      setAccessToken(token);
+      setRefreshToken(refresh);
+      setEmailVerified(true); // Skip to password reset step
+      setEmailSent(true);
+    }
+  }, [location]);
 
   const handleSendVerification = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +44,6 @@ const ForgotPassword: React.FC = () => {
     try {
       // Generate a simple 6-digit verification code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setVerificationCode(code);
-
-      // In a real implementation, you would send this code via email
-      // For now, we'll simulate it by showing the code in the console
-      console.log('Verification code:', code);
 
       // Send email with verification code (simulated)
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -47,16 +60,6 @@ const ForgotPassword: React.FC = () => {
       setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = () => {
-    if (inputCode === verificationCode) {
-      setEmailVerified(true);
-      setMessage('Email verified! Now you can set your new password.');
-      setError('');
-    } else {
-      setError('Invalid verification code. Please try again.');
     }
   };
 
@@ -235,69 +238,56 @@ const ForgotPassword: React.FC = () => {
             </form>
           )}
 
-          {/* Step 2: Email Verification */}
-          {emailSent && !emailVerified && (
-            <div className="space-y-6">
-              {/* Success Message */}
-              {message && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                  {message}
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                  {error}
-                </div>
-              )}
-
-              {/* Verification Code Input */}
-              <div>
-                <label htmlFor="code" className="block text-sm font-bold text-slate-900 mb-2">
-                  Verification Code
-                </label>
-                <input
-                  id="code"
-                  type="text"
-                  maxLength={6}
-                  value={inputCode}
-                  onChange={(e) => setInputCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-center text-2xl font-mono tracking-widest"
-                  placeholder="000000"
-                />
-              </div>
-
-              {/* Verify Button */}
-              <button
-                onClick={handleVerifyCode}
-                disabled={inputCode.length !== 6}
-                className="w-full bg-[#05294E] text-white py-4 px-4 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Verify Email
-              </button>
-
-              {/* Resend Code */}
-              <div className="text-center">
-                <button
-                  onClick={() => {
-                    setEmailSent(false);
-                    setInputCode('');
-                    setError('');
-                  }}
-                  className="text-[#05294E] hover:text-[#05294E]/80 font-medium text-sm transition-colors"
-                >
-                  Didn't receive the code? Try again
-                </button>
-              </div>
+          {/* Step 2: Email Verification - REMOVIDO */}
+          {emailSent && !showResetForm && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-2xl text-sm flex items-center mb-4">
+              <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+              A link to reset your password has been sent to your email. Please check your inbox (and spam/junk folder) to continue.
             </div>
           )}
 
           {/* Step 3: Password Reset */}
-          {emailVerified && (
-            <form onSubmit={handlePasswordReset} className="space-y-6">
+          {(emailVerified || showResetForm) && (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setLoading(true);
+              setError("");
+              // Validar senha
+              const passwordError = validatePassword(password);
+              if (passwordError) {
+                setError(passwordError);
+                setLoading(false);
+                return;
+              }
+              if (password !== confirmPassword) {
+                setError('Passwords do not match');
+                setLoading(false);
+                return;
+              }
+              try {
+                if (showResetForm && accessToken && refreshToken) {
+                  // Autentica sessão antes de atualizar senha
+                  const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                  });
+                  if (sessionError) throw sessionError;
+                  const { error } = await supabase.auth.updateUser({ password });
+                  if (error) throw error;
+                  setMessage('Password updated successfully! You can now sign in with your new password.');
+                  setTimeout(() => { window.location.href = '/login'; }, 3000);
+                } else {
+                  // Simulação local (fluxo antigo)
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  setMessage('Password updated successfully! You can now sign in with your new password.');
+                  setTimeout(() => { window.location.href = '/login'; }, 3000);
+                }
+              } catch (err: any) {
+                setError(err.message || 'An error occurred while updating your password. Please try again.');
+              } finally {
+                setLoading(false);
+              }
+            }} className="space-y-6">
               {/* Success Message */}
               {message && (
                 <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl text-sm flex items-center">

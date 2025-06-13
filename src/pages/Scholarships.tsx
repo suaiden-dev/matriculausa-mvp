@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, DollarSign, Calendar, Award, Zap, Filter, Clock, GraduationCap, MapPin, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, Target, Heart, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
+import type { Scholarship } from '../lib/supabase';
 
 const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,13 +14,18 @@ const Scholarships: React.FC = () => {
   const { scholarships, loading, error } = useScholarships();
 
   // Get min and max scholarship values from data
-  const scholarshipValues = scholarships.map(s => s.amount);
+  const scholarshipValues = scholarships.map((s: Scholarship) => s.amount);
   const minScholarshipValue = Math.min(...scholarshipValues);
   const maxScholarshipValue = Math.max(...scholarshipValues);
 
   // Range state
-  const [maxPrice, setMaxPrice] = useState(maxScholarshipValue);
+  const [maxPrice, setMaxPrice] = useState(() => maxScholarshipValue);
   const [minPrice, setMinPrice] = useState(0);
+
+  // Sempre que o valor máximo das bolsas mudar, atualize o filtro
+  useEffect(() => {
+    setMaxPrice(maxScholarshipValue);
+  }, [maxScholarshipValue]);
 
   const levelOptions = [
     { value: 'all', label: 'All Levels' },
@@ -37,7 +43,7 @@ const Scholarships: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const filteredScholarships = scholarships.filter(scholarship => {
+  const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRange = maxPrice > 0 ? scholarship.amount <= maxPrice : false;
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
@@ -254,7 +260,7 @@ const Scholarships: React.FC = () => {
 
         {/* Scholarships Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredScholarships.map((scholarship) => {
+          {filteredScholarships.map((scholarship: Scholarship) => {
             const deadlineStatus = getDeadlineStatus(scholarship.deadline);
             
             return (
@@ -271,7 +277,8 @@ const Scholarships: React.FC = () => {
                       {/* University */}
                       <div className="flex items-center text-slate-600 mb-4">
                         <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                        <span className="text-sm">{scholarship.universities?.name || 'Unknown University'}</span>
+                        <span className="text-xs font-semibold mr-1">University:</span>
+                        <span className="text-sm blur-sm select-none">{scholarship.universities?.name || 'Unknown University'}</span>
                       </div>
                     </div>
                     
@@ -355,7 +362,7 @@ const Scholarships: React.FC = () => {
                 setSearchTerm('');
                 setSelectedLevel('all');
                 setSelectedField('all');
-                setMaxPrice(maxScholarshipValue);
+                setMaxPrice(() => maxScholarshipValue);
                 setMinPrice(0);
               }}
               className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"

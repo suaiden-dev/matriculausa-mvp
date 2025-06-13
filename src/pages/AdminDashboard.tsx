@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { supabase, University, Scholarship } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { Dialog } from '@headlessui/react';
 
 interface AdminStats {
   totalUniversities: number;
@@ -106,6 +107,9 @@ const AdminDashboard: React.FC = () => {
     totalFunding: 0,
     monthlyGrowth: 12.5
   });
+
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   useEffect(() => {
     if (user && user.role === 'admin') {
@@ -844,14 +848,22 @@ const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div className="flex space-x-2">
+                        <button
+                          onClick={() => { setSelectedUser(userProfile); setIsUserModalOpen(true); }}
+                          className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors text-sm flex items-center justify-center"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </button>
                         {userProfile.role !== 'admin' && (
                           <button
                             onClick={() => handlePromoteToAdmin(userProfile.user_id)}
-                            className="flex-1 bg-purple-100 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-200 transition-colors text-sm flex items-center justify-center"
+                            className="flex-1 bg-purple-100 text-purple-700 py-2 px-3 rounded-lg hover:bg-purple-200 transition-colors text-sm flex items-center justify-center font-bold border border-purple-200 shadow-sm"
                             title="Promote to Admin"
                           >
                             <Crown className="h-4 w-4 mr-1" />
-                            Admin
+                            Promote to Admin
                           </button>
                         )}
                         {userProfile.status === 'active' && (
@@ -1051,6 +1063,67 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* User Details Modal */}
+      <Dialog open={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} className="fixed z-50 inset-0 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="fixed inset-0 bg-black opacity-30" />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-auto p-8 z-50">
+            <Dialog.Title className="text-xl font-bold mb-4 flex items-center">
+              <Crown className="h-5 w-5 mr-2 text-purple-600" />
+              User Details
+            </Dialog.Title>
+            {selectedUser && (
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <span className={`p-2 rounded-lg ${selectedUser.role === 'admin' ? 'bg-purple-100' : selectedUser.role === 'school' ? 'bg-blue-100' : 'bg-green-100'}`}>
+                    {getRoleIcon(selectedUser.role)({ className: `h-5 w-5 ${selectedUser.role === 'admin' ? 'text-purple-600' : selectedUser.role === 'school' ? 'text-blue-600' : 'text-green-600'}` })}
+                  </span>
+                  <span className="font-semibold text-gray-900">{selectedUser.full_name}</span>
+                </div>
+                <div className="text-sm text-gray-500">{selectedUser.email}</div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Joined {new Date(selectedUser.created_at).toLocaleDateString()}
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(selectedUser.role)}`}>{selectedUser.role}</span>
+                  <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedUser.status)}`}>{selectedUser.status}</span>
+                </div>
+                {selectedUser.country && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    {selectedUser.country}
+                  </div>
+                )}
+                {selectedUser.field_of_interest && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Star className="h-4 w-4 mr-2" />
+                    {selectedUser.field_of_interest}
+                  </div>
+                )}
+                {/* Promote to Admin button inside modal */}
+                {selectedUser.role !== 'admin' && (
+                  <button
+                    onClick={() => { handlePromoteToAdmin(selectedUser.user_id); setIsUserModalOpen(false); }}
+                    className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors font-bold flex items-center justify-center mt-4"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Promote to Admin
+                  </button>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => setIsUserModalOpen(false)}
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+              title="Close"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

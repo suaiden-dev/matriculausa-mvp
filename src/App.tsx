@@ -39,7 +39,7 @@ function App() {
             <Route path="/student/dashboard/*" element={<StudentDashboard />} />
             
             {/* School Routes */}
-            <Route path="/school/terms" element={<TermsAndConditions />} />
+            <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
             <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
             <Route path="/school/scholarship/new" element={<NewScholarship />} />
             <Route path="/school/dashboard/*" element={<SchoolDashboard />} />

@@ -102,8 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           window.location.href = '/student/dashboard';
           break;
         case 'school':
-          // Check if school has accepted terms first
-          checkSchoolTermsStatus();
+          window.location.href = '/school/dashboard';
           break;
         case 'admin':
           window.location.href = '/admin/dashboard';
@@ -126,12 +125,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error checking school terms:', error);
-        window.location.href = '/school/terms';
+        window.location.href = '/school/termsandconditions';
         return;
       }
 
       if (!university || !university.terms_accepted) {
-        window.location.href = '/school/terms';
+        window.location.href = '/school/termsandconditions';
       } else if (!university.profile_completed) {
         window.location.href = '/school/setup-profile';
       } else {
@@ -139,7 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error checking school status:', error);
-      window.location.href = '/school/terms';
+      window.location.href = '/school/termsandconditions';
     }
   };
 
@@ -184,10 +183,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       password,
       options: {
         data: {
+          ...userData,
           name: userData.name,
-          role: userData.role,
-          // Include additional registration data in user metadata
-          ...userData
+          role: userData.role
         }
       }
     });

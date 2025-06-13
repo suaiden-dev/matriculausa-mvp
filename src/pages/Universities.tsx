@@ -1,25 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, MapPin, Sparkles, Building, GraduationCap, ChevronRight, Globe, ArrowRight } from 'lucide-react';
 import { mockSchools } from '../data/mockData';
+import { supabase } from '../lib/supabase';
 
 const Universities: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
+  const [realUniversities, setRealUniversities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('universities')
+        .select('*')
+        .eq('is_approved', true);
+      if (!error && data) {
+        setRealUniversities(data);
+      } else {
+        setRealUniversities([]);
+      }
+      setLoading(false);
+    };
+    fetchUniversities();
+  }, []);
+
+  // Merge mock and real universities, prioritizing real if IDs overlap
+  const realIds = new Set(realUniversities.map(u => u.id));
+  const mergedUniversities = [
+    ...realUniversities,
+    ...mockSchools.filter(mock => !realIds.has(mock.id)),
+  ];
 
   // Get unique locations for filter
-  const locations = Array.from(new Set(mockSchools.map(school => school.location.split(', ')[1]))).sort();
+  const locations = Array.from(new Set(mergedUniversities.map(school => school.location?.split(', ')[1]))).filter(Boolean).sort();
 
-  const filteredSchools = mockSchools.filter(school => {
+  const filteredSchools = mergedUniversities.filter(school => {
     const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         school.location.toLowerCase().includes(searchTerm.toLowerCase());
-    
+                         (school.location || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || school.type === selectedType;
-    const matchesLocation = selectedLocation === 'all' || school.location.includes(selectedLocation);
-
+    const matchesLocation = selectedLocation === 'all' || (school.location || '').includes(selectedLocation);
     return matchesSearch && matchesType && matchesLocation;
   });
+
+  const handleAccept = async () => {
+    // ... update terms_accepted to true ...
+    window.location.href = '/school/dashboard';
+  };
 
   return (
     <div className="bg-white min-h-screen">
@@ -79,7 +109,7 @@ const Universities: React.FC = () => {
               className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
             >
               <option value="all">All States</option>
-              {locations.map(location => (
+              {locations.map((location: string) => (
                 <option key={location} value={location}>{location}</option>
               ))}
             </select>
@@ -95,12 +125,14 @@ const Universities: React.FC = () => {
 
         {/* Universities Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredSchools.map((school) => (
+          {loading ? (
+            <div className="col-span-full text-center py-12 text-slate-500">Loading universities...</div>
+          ) : filteredSchools.map((school) => (
             <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
               {/* University Image */}
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={school.image}
+                  src={school.image || school.logo_url || '/university-placeholder.png'}
                   alt={`${school.name} campus`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
@@ -110,7 +142,7 @@ const Universities: React.FC = () => {
                   <span className={`px-3 py-1 rounded-xl text-xs font-bold text-white shadow-lg ${
                     school.type === 'Private' ? 'bg-[#05294E]' : 'bg-green-600'
                   }`}>
-                    {school.type}
+                    {school.type || (school.is_public ? 'Public' : 'Private')}
                   </span>
                 </div>
                 
@@ -132,14 +164,14 @@ const Universities: React.FC = () => {
                 
                 {/* Location */}
                 <div className="flex items-center text-slate-600 mb-4">
-                  <Globe className="h-4 w-4 mr-2 text-[#05294E]" />
+                  <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
                   <span className="text-sm">{school.location}</span>
                 </div>
 
                 {/* Programs Preview */}
                 <div className="mb-6">
                   <div className="flex flex-wrap gap-2">
-                    {school.programs.slice(0, 3).map((program, index) => (
+                    {school.programs.slice(0, 3).map((program: string, index: number) => (
                       <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
                         {program}
                       </span>

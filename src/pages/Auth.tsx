@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, BookOpen, Phone, MapPin } from 'lucide-react';
+import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, BookOpen, Phone, MapPin, CheckCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface AuthProps {
@@ -27,6 +27,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -66,9 +67,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         await register(formData.email, formData.password, userData);
 
-        // Redirect based on user type after successful registration
+        // Show modal for university registration
         if (activeTab === 'university') {
-          window.location.href = '/school/terms'; // Schools go to terms first
+          setShowVerificationModal(true);
+          return;
         } else {
           window.location.href = '/student/dashboard'; // Students go directly to dashboard
         }
@@ -261,6 +263,27 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
   return (
     <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
+      {/* Modal for email verification after university registration */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-slate-200">
+            <div className="mb-4">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Registration successful!</h2>
+              <p className="text-slate-700 text-base mb-4">
+                A verification link has been sent to your email.<br />
+                Please check your inbox (and spam/junk folder) to complete your login and access the dashboard.
+              </p>
+            </div>
+            <button
+              className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
+              onClick={() => { setShowVerificationModal(false); window.location.href = '/school/termsandconditions'; }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">

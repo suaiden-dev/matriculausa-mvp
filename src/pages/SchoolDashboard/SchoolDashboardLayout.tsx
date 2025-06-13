@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Building, 
@@ -42,6 +42,13 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   
+  // Fechamento automático do userMenu ao abrir o sidebar
+  useEffect(() => {
+    if (sidebarOpen) {
+      setUserMenuOpen(false);
+    }
+  }, [sidebarOpen]);
+
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/scholarships')) return 'scholarships';
@@ -95,7 +102,10 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
               />
             </Link>
             <button
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => {
+                setSidebarOpen(false);
+                setUserMenuOpen(false);
+              }}
               className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
             >
               <X className="h-5 w-5" />
@@ -224,7 +234,10 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => {
+            setSidebarOpen(false);
+            setUserMenuOpen(false);
+          }}
         />
       )}
 
@@ -235,7 +248,10 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => {
+                  setSidebarOpen(true);
+                  setUserMenuOpen(false);
+                }}
                 className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
                 <Menu className="h-5 w-5" />
@@ -281,7 +297,10 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
               {/* User Menu */}
               <div className="relative">
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  onClick={() => {
+                    setUserMenuOpen(!userMenuOpen);
+                    if (!userMenuOpen) setSidebarOpen(false);
+                  }}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-[#05294E] to-blue-700 rounded-lg flex items-center justify-center">
@@ -393,7 +412,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
                   </Link>
                   {!university && (
                     <Link
-                      to="/school/terms"
+                      to="/school/termsandconditions"
                       className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-8 py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-bold text-center flex items-center justify-center"
                     >
                       <Shield className="h-5 w-5 mr-2" />

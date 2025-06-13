@@ -63,7 +63,7 @@ const SchoolProfileSetup: React.FC = () => {
       if (university && university.profile_completed) {
         window.location.href = '/school/dashboard';
       } else if (university && !university.terms_accepted) {
-        window.location.href = '/school/terms';
+        window.location.href = '/school/termsandconditions';
       }
     } catch (error) {
       console.error('Error checking profile:', error);

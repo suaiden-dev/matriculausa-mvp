@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Building, Users, DollarSign, Award, Plus, Edit, Trash2, Eye, Calendar, CheckCircle, Clock, AlertCircle, Settings, FileText, Zap } from 'lucide-react';
 import { supabase, University, Scholarship } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -10,6 +10,7 @@ const SchoolDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'scholarships' | 'profile'>('overview');
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -35,7 +36,7 @@ const SchoolDashboard: React.FC = () => {
       }
 
       if (!university || !university.terms_accepted) {
-        navigate('/school/terms');
+        navigate('/school/termsandconditions');
         return;
       }
 
@@ -250,7 +251,7 @@ const SchoolDashboard: React.FC = () => {
                 </Link>
                 {!university && (
                   <Link
-                    to="/school/terms"
+                    to="/school/termsandconditions"
                     className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium flex items-center justify-center"
                   >
                     <FileText className="h-4 w-4 mr-2" />

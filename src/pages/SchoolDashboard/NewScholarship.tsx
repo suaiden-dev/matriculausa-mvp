@@ -26,8 +26,8 @@ const NewScholarship: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [universityId, setUniversityId] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // const [imageFile, setImageFile] = useState<File | null>(null);
+  // const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -132,21 +132,21 @@ const NewScholarship: React.FC = () => {
   };
 
   // Image upload handler
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setError('Only JPG, PNG, or WEBP images are allowed.');
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-      setError('Image size must be less than 2MB.');
-      return;
-    }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-    setError(null);
-  };
+  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
+  //   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+  //     setError('Only JPG, PNG, or WEBP images are allowed.');
+  //     return;
+  //   }
+  //   if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+  //     setError('Image size must be less than 2MB.');
+  //     return;
+  //   }
+  //   setImageFile(file);
+  //   setImagePreview(URL.createObjectURL(file));
+  //   setError(null);
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,10 +172,10 @@ const NewScholarship: React.FC = () => {
       return;
     }
 
-    if (!imageFile) {
-      setError('Scholarship image is required.');
-      return;
-    }
+    // if (!imageFile) {
+    //   setError('Scholarship image is required.');
+    //   return;
+    // }
 
     // Filter out empty array items
     const requirements = formData.requirements.filter(item => item.trim());
@@ -191,19 +191,19 @@ const NewScholarship: React.FC = () => {
     setError(null);
 
     try {
-      // 1. Upload image to Supabase Storage
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `scholarship_${Date.now()}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('scholarship-images')
-        .upload(fileName, imageFile, { upsert: false });
-      if (uploadError) throw uploadError;
-      // 2. Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('scholarship-images')
-        .getPublicUrl(fileName);
-      const imageUrl = publicUrlData?.publicUrl;
-      if (!imageUrl) throw new Error('Could not get image URL');
+      // --- IMAGEM DESABILITADA TEMPORARIAMENTE ---
+      // const fileExt = imageFile.name.split('.').pop();
+      // const fileName = `scholarship_${Date.now()}.${fileExt}`;
+      // const { data: uploadData, error: uploadError } = await supabase.storage
+      //   .from('scholarship-images')
+      //   .upload(fileName, imageFile, { upsert: false });
+      // if (uploadError) throw uploadError;
+      // const { data: publicUrlData } = supabase.storage
+      //   .from('scholarship-images')
+      //   .getPublicUrl(fileName);
+      // const imageUrl = publicUrlData?.publicUrl;
+      // if (!imageUrl) throw new Error('Could not get image URL');
+      // --- FIM IMAGEM ---
       // 3. Prepare data for submission
       const scholarshipData = {
         title: formData.title,
@@ -218,7 +218,7 @@ const NewScholarship: React.FC = () => {
         is_exclusive: formData.is_exclusive,
         is_active: formData.is_active,
         university_id: universityId,
-        image_url: imageUrl,
+        image_url: null, // Imagem desabilitada
       };
       // 4. Submit to Supabase
       const { error: submitError } = await supabase
@@ -281,20 +281,21 @@ const NewScholarship: React.FC = () => {
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
                 <Award className="h-5 w-5 mr-2 text-[#05294E]" />
-                Scholarship Image <span className="text-red-500 ml-2">*</span>
+                Scholarship Image <span className="text-slate-400 ml-2">(optional)</span>
               </h2>
               <div className="flex flex-col items-start gap-4">
                 <label className="block text-sm font-medium text-slate-700 mb-2">Upload Image (JPG, PNG, WEBP, max 2MB)</label>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={handleImageChange}
-                  required
-                  className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#05294E] file:text-white hover:file:bg-[#02172b]"
+                  // onChange={handleImageChange}
+                  // required
+                  disabled
+                  className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#05294E] file:text-white opacity-50 cursor-not-allowed"
                 />
-                {imagePreview && (
+                {/* {imagePreview && (
                   <img src={imagePreview} alt="Preview" className="mt-2 rounded-xl border border-slate-200 max-h-48" />
-                )}
+                )} */}
               </div>
             </div>
 

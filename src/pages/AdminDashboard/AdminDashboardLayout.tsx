@@ -104,7 +104,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               />
             </Link>
             <button
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
               className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
             >
               <X className="h-5 w-5" />
@@ -182,7 +182,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
         />
       )}
 
@@ -193,7 +193,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => { setSidebarOpen(true); setUserMenuOpen(false); }}
                 className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
                 <Menu className="h-5 w-5" />
@@ -239,7 +239,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               {/* User Menu */}
               <div className="relative">
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  onClick={() => { setUserMenuOpen(!userMenuOpen); setSidebarOpen(false); }}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">

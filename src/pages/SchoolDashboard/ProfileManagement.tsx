@@ -19,7 +19,7 @@ import {
   EyeOff,
   ExternalLink
 } from 'lucide-react';
-import { University } from '../../lib/supabase';
+import { University, supabase } from '../../lib/supabase';
 
 interface ProfileManagementProps {
   university: University | null;
@@ -28,6 +28,9 @@ interface ProfileManagementProps {
 const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(university?.logo_url);
 
   const profileCompleteness = university ? (
     (university.name ? 20 : 0) +
@@ -38,6 +41,42 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
     (university.contact?.phone ? 10 : 0) +
     (university.programs && university.programs.length > 0 ? 10 : 0)
   ) : 0;
+
+  const handleProfilePicClick = () => {
+    if (uploading) return;
+    document.getElementById('university-profile-pic-input')?.click();
+  };
+
+  const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !university) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `university_${university.id}_${Date.now()}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('university-profile-pictures')
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: publicUrlData } = supabase.storage
+        .from('university-profile-pictures')
+        .getPublicUrl(fileName);
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) throw new Error('Could not get image URL');
+      // Update university record
+      const { error: updateError } = await supabase
+        .from('universities')
+        .update({ logo_url: publicUrl })
+        .eq('id', university.id);
+      if (updateError) throw updateError;
+      setLogoUrl(publicUrl);
+    } catch (err: any) {
+      setUploadError('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (!university) {
     return (
@@ -62,25 +101,49 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
   return (
     <div className="space-y-8">
       {/* Profile Header */}
-      <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-4 sm:p-8 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center space-x-6">
-              <div className="relative">
-                <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                  <Building className="h-12 w-12 text-white" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 w-full">
+              <div className="relative mb-4 sm:mb-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="University Logo" className="w-full h-full object-cover rounded-2xl" />
+                  ) : (
+                    <Building className="h-12 w-12 text-white" />
+                  )}
                 </div>
-                <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300">
+                <button
+                  type="button"
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg opacity-50 cursor-not-allowed"
+                  disabled
+                  title="Profile picture upload temporarily disabled"
+                >
                   <Camera className="h-4 w-4" />
                 </button>
+                <input
+                  id="university-profile-pic-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleProfilePicChange}
+                  disabled={uploading}
+                />
+                {uploading && (
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>
+                  </div>
+                )}
+                {uploadError && (
+                  <div className="absolute left-0 right-0 -bottom-8 text-red-200 text-xs mt-2 text-center">{uploadError}</div>
+                )}
               </div>
-              
-              <div>
-                <h1 className="text-3xl font-bold mb-2">{university.name}</h1>
-                <div className="flex items-center space-x-4 text-blue-100">
+              <div className="flex-1 w-full">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{university.name}</h1>
+                <div className="flex flex-wrap items-center gap-2 text-blue-100 text-sm">
                   <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-2" />
+                    <MapPin className="h-4 w-4 mr-1" />
                     {university.location}
                   </div>
                   {university.website && (
@@ -90,15 +153,14 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
                       rel="noopener noreferrer"
                       className="flex items-center hover:text-white transition-colors"
                     >
-                      <Globe className="h-4 w-4 mr-2" />
+                      <Globe className="h-4 w-4 mr-1" />
                       Website
                       <ExternalLink className="h-3 w-3 ml-1" />
                     </a>
                   )}
                 </div>
-                
-                <div className="flex items-center space-x-4 mt-4">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                     university.is_approved 
                       ? 'bg-green-500/20 text-green-100 border border-green-400/30' 
                       : 'bg-yellow-500/20 text-yellow-100 border border-yellow-400/30'
@@ -118,11 +180,10 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
                 </div>
               </div>
             </div>
-
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-6 py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-medium flex items-center shadow-lg"
+                className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-medium flex items-center shadow-lg justify-center"
               >
                 {isEditing ? (
                   <>
@@ -136,11 +197,10 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
                   </>
                 )}
               </button>
-              
               {!university.profile_completed && (
                 <Link
                   to="/school/setup-profile"
-                  className="bg-white text-[#05294E] px-6 py-3 rounded-xl hover:bg-slate-100 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="bg-white text-[#05294E] px-4 py-2 sm:px-6 sm:py-3 rounded-xl hover:bg-slate-100 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 text-center"
                 >
                   <Settings className="h-4 w-4 mr-2 inline" />
                   Complete Profile
@@ -148,10 +208,9 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
               )}
             </div>
           </div>
-
           {/* Profile Completeness */}
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 mt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-2 gap-2">
               <span className="font-medium">Profile Completeness</span>
               <span className="font-bold">{profileCompleteness}%</span>
             </div>

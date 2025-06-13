@@ -9,23 +9,23 @@ const TermsAndConditions: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     // Check if user is authenticated and has the right role
-    if (!user) {
+    if (!user && !authLoading) {
       navigate('/login');
       return;
     }
 
-    if (user.role !== 'school') {
+    if (user && user.role !== 'school') {
       navigate('/');
       return;
     }
 
     // Check if user already accepted terms
-    checkExistingTermsAcceptance();
-  }, [user, navigate]);
+    if (user) checkExistingTermsAcceptance();
+  }, [user, authLoading, navigate]);
 
   const checkExistingTermsAcceptance = async () => {
     if (!user) return;
@@ -45,7 +45,7 @@ const TermsAndConditions: React.FC = () => {
       if (university && university.terms_accepted) {
         // User already accepted terms, redirect to appropriate page
         if (university.profile_completed) {
-          window.location.href = '/school/dashboard';
+          window.location.href = '/school/termsandconditions';
         } else {
           window.location.href = '/school/setup-profile';
         }
@@ -87,7 +87,7 @@ const TermsAndConditions: React.FC = () => {
 
         // Redirect based on profile completion status
         if (existingUniversity.profile_completed) {
-          window.location.href = '/school/dashboard';
+          window.location.href = '/school/termsandconditions';
         } else {
           window.location.href = '/school/setup-profile';
         }
@@ -119,7 +119,7 @@ const TermsAndConditions: React.FC = () => {
   };
 
   // Show loading while checking authentication
-  if (!user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>
