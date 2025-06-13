@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Search, DollarSign, Calendar, Award, Zap, Filter, Clock, GraduationCap, MapPin, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, Target, Heart } from 'lucide-react';
-import { mockScholarships } from '../data/mockData';
+import { Search, DollarSign, Calendar, Award, Zap, Filter, Clock, GraduationCap, MapPin, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, Target, Heart, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useScholarships } from '../hooks/useScholarships';
 
 const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -10,9 +10,10 @@ const Scholarships: React.FC = () => {
   const [selectedField, setSelectedField] = useState('all');
   const [needCPT, setNeedCPT] = useState(false);
   const [visaAssistance, setVisaAssistance] = useState('all');
+  const { scholarships, loading, error } = useScholarships();
 
   // Get min and max scholarship values from data
-  const scholarshipValues = mockScholarships.map(s => s.amount);
+  const scholarshipValues = scholarships.map(s => s.amount);
   const minScholarshipValue = Math.min(...scholarshipValues);
   const maxScholarshipValue = Math.max(...scholarshipValues);
 
@@ -36,7 +37,7 @@ const Scholarships: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const filteredScholarships = mockScholarships.filter(scholarship => {
+  const filteredScholarships = scholarships.filter(scholarship => {
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRange = maxPrice > 0 ? scholarship.amount <= maxPrice : false;
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
@@ -52,17 +53,16 @@ const Scholarships: React.FC = () => {
     }).format(amount);
   };
 
-  const getFieldBadgeColor = (field: string) => {
-    switch (field.toLowerCase()) {
+  const getFieldBadgeColor = (field: string | undefined) => {
+    switch (field?.toLowerCase()) {
       case 'stem':
-      case 'engineering':
-        return 'bg-gradient-to-r from-blue-500 to-blue-600';
+        return 'bg-blue-600';
       case 'business':
-        return 'bg-gradient-to-r from-green-500 to-green-600';
-      case 'any':
-        return 'bg-gradient-to-r from-purple-500 to-purple-600';
+        return 'bg-green-600';
+      case 'engineering':
+        return 'bg-purple-600';
       default:
-        return 'bg-gradient-to-r from-[#05294E] to-slate-700';
+        return 'bg-slate-600';
     }
   };
 
@@ -94,6 +94,29 @@ const Scholarships: React.FC = () => {
     if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <p className="text-slate-600 font-medium">Loading scholarships...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Scholarships</h1>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen">
@@ -236,48 +259,28 @@ const Scholarships: React.FC = () => {
             
             return (
               <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
-                {/* Header/Background */}
-                <div className="relative h-48 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/10 to-[#D0151C]/10"></div>
-                  <div className="absolute top-4 left-4">
-                    <div className="bg-white/90 backdrop-blur-sm p-3 rounded-2xl shadow-lg">
-                      <Building className="h-6 w-6 text-[#05294E]" />
+                {/* Card Content */}
+                <div className="p-6">
+                  {/* Title and Badges */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                        {scholarship.title}
+                      </h3>
+                      
+                      {/* University */}
+                      <div className="flex items-center text-slate-600 mb-4">
+                        <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                        <span className="text-sm">{scholarship.universities?.name || 'Unknown University'}</span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Exclusive Badge */}
-                  {scholarship.is_exclusive && (
-                    <div className="absolute top-4 right-4">
+                    
+                    {/* Exclusive Badge */}
+                    {scholarship.is_exclusive && (
                       <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
                         Exclusive
                       </span>
-                    </div>
-                  )}
-                  
-                  {/* Deadline Status */}
-                  <div className="absolute bottom-4 left-4">
-                    <div className={`${deadlineStatus.bg} backdrop-blur-sm px-3 py-1 rounded-xl shadow-lg`}>
-                      <div className="flex items-center">
-                        <Clock className={`h-3 w-3 mr-1 ${deadlineStatus.color}`} />
-                        <span className={`text-xs font-medium ${deadlineStatus.color}`}>
-                          {getDaysUntilDeadline(scholarship.deadline)} days left
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Content */}
-                <div className="p-6">
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                    {scholarship.title}
-                  </h3>
-                  
-                  {/* University */}
-                  <div className="flex items-center text-slate-600 mb-4">
-                    <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                    <span className="text-sm">{scholarship.schoolName}</span>
+                    )}
                   </div>
 
                   {/* Amount */}
@@ -291,21 +294,24 @@ const Scholarships: React.FC = () => {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500">Level</span>
                       <div className="flex items-center">
-                        {getLevelIcon(scholarship.level)}
+                        {getLevelIcon(scholarship.level || 'undergraduate')}
                         <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500">Field</span>
-                      <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study || 'any')}`}>
-                        {scholarship.field_of_study}
+                      <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                        {scholarship.field_of_study || 'Any Field'}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500">Deadline</span>
-                      <span className="text-slate-700">{new Date(scholarship.deadline).toLocaleDateString()}</span>
+                      <div className="flex items-center">
+                        <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
+                        <span className="text-slate-700">{getDaysUntilDeadline(scholarship.deadline)} days left</span>
+                      </div>
                     </div>
                   </div>
                 </div>
