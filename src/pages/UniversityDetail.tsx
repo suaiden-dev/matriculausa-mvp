@@ -171,6 +171,20 @@ const UniversityDetail: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {scholarships.map((scholarship) => (
                     <div key={scholarship.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
+                      {/* Scholarship Image */}
+                      {scholarship.image_url ? (
+                        <div className="relative h-40 w-full overflow-hidden">
+                          <img
+                            src={scholarship.image_url}
+                            alt={scholarship.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      ) : (
+                        <div className="relative h-40 w-full bg-slate-100 flex items-center justify-center">
+                          <Award className="h-12 w-12 text-slate-300" />
+                        </div>
+                      )}
                       <div className="p-6">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">

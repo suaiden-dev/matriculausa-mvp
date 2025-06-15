@@ -31,7 +31,6 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | undefined>(university?.logo_url);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const profileCompleteness = university ? (
     (university.name ? 20 : 0) +
@@ -49,22 +48,49 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
   };
 
   const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('handleProfilePicChange triggered!');
     const file = e.target.files?.[0];
-    if (!file || !university) return;
-    setImagePreview(URL.createObjectURL(file));
+    if (!file || !university) {
+      console.log('Early exit: File or University is missing.');
+      return;
+    }
+    console.log('File received:', file);
+    console.log('University prop:', university);
     setUploading(true);
     setUploadError(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session || !session.user) {
+          console.error("No active Supabase session found for upload.");
+          setUploadError("Você precisa estar logado para fazer upload de imagens.");
+          setUploading(false);
+          return;
+      }
+
+      const userUid = session.user.id; // UID do usuário atualmente logado
+      console.log('Current session UID (from auth.getSession):', userUid);
+      console.log('university.user_id (from prop):', university.user_id); // Já existe
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `profile_${Date.now()}.${fileExt}`;
-      const filePath = `${university.user_id}/${fileName}`;
+      const fileName = `${userUid}/${Date.now()}.${fileExt}`;
+      // ... restante do código de upload
+
+      console.log('Supabase session:', session);
+      console.log('university.user_id:', university.user_id);
+      console.log('university.id:', university.id);
+      console.log('fileName:', fileName);
+
       const { error: uploadError } = await supabase.storage
         .from('university-profile-pictures')
-        .upload(filePath, file, { upsert: true });
-      if (uploadError) throw uploadError;
+        .upload(fileName, file, { upsert: false });
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
       const { data: publicUrlData } = supabase.storage
         .from('university-profile-pictures')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
       const publicUrl = publicUrlData?.publicUrl;
       if (!publicUrl) throw new Error('Could not get image URL');
       // Update university record
@@ -74,7 +100,6 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
         .eq('id', university.id);
       if (updateError) throw updateError;
       setLogoUrl(publicUrl);
-      setImagePreview(null);
     } catch (err: any) {
       setUploadError('Failed to upload image. Please try again.');
     } finally {
@@ -120,7 +145,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
                 </div>
                 <button
                   type="button"
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg hover:opacity-80 transition"
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200"
                   onClick={handleProfilePicClick}
                   disabled={uploading}
                   title="Change profile picture"
@@ -142,9 +167,6 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
                 )}
                 {uploadError && (
                   <div className="absolute left-0 right-0 -bottom-8 text-red-200 text-xs mt-2 text-center">{uploadError}</div>
-                )}
-                {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="absolute left-24 top-0 w-24 h-24 object-cover rounded-2xl border-2 border-blue-400 z-10" style={{ pointerEvents: 'none' }} />
                 )}
               </div>
               <div className="flex-1 w-full">

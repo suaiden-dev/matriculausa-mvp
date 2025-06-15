@@ -171,6 +171,11 @@ const NewScholarship: React.FC = () => {
       return;
     }
 
+    if (!imageFile) {
+      setError('Scholarship image is required.');
+      return;
+    }
+
     // Filter out empty array items
     const requirements = formData.requirements.filter(item => item.trim());
     const eligibility = formData.eligibility.filter(item => item.trim());
@@ -184,29 +189,30 @@ const NewScholarship: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    let imageUrl: string | null = null;
-    if (imageFile && user) {
-      try {
+    try {
+      let imageUrl = null;
+      if (imageFile && user) {
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `scholarship_${Date.now()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
-        const { error: uploadError } = await supabase.storage
+        const fileName = `${user.id}/scholarship_${Date.now()}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('university-profile-pictures')
-          .upload(filePath, imageFile, { upsert: true });
-        if (uploadError) throw uploadError;
+          .upload(fileName, imageFile, { upsert: false });
+        if (uploadError) {
+          setError('Failed to upload image.');
+          setLoading(false);
+          return;
+        }
         const { data: publicUrlData } = supabase.storage
           .from('university-profile-pictures')
-          .getPublicUrl(filePath);
-        imageUrl = publicUrlData?.publicUrl || null;
-        if (!imageUrl) throw new Error('Could not get image URL');
-      } catch (err: any) {
-        setError('Failed to upload image. Please try again.');
-        setLoading(false);
-        return;
+          .getPublicUrl(fileName);
+        imageUrl = publicUrlData?.publicUrl;
+        if (!imageUrl) {
+          setError('Could not get image URL.');
+          setLoading(false);
+          return;
+        }
       }
-    }
 
-    try {
       // 3. Prepare data for submission
       const scholarshipData = {
         title: formData.title,
@@ -292,6 +298,7 @@ const NewScholarship: React.FC = () => {
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={handleImageChange}
+                  required
                   className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#05294E] file:text-white"
                 />
                 {imagePreview && (

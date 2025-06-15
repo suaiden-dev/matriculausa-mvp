@@ -199,6 +199,20 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
               
               return (
                 <div key={scholarship.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                  {/* Scholarship Image */}
+                  {scholarship.image_url ? (
+                    <div className="relative h-40 w-full overflow-hidden">
+                      <img
+                        src={scholarship.image_url}
+                        alt={scholarship.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative h-40 w-full bg-slate-100 flex items-center justify-center">
+                      <Award className="h-12 w-12 text-slate-300" />
+                    </div>
+                  )}
                   {/* Header */}
                   <div className="p-6 pb-4">
                     <div className="flex items-start justify-between mb-4">

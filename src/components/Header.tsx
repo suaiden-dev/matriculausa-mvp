@@ -1,13 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, BookOpen, Zap, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [universityLogo, setUniversityLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUniversityLogo = async () => {
+      if (user?.role === 'school') {
+        const { data } = await supabase
+          .from('universities')
+          .select('logo_url')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        setUniversityLogo(data?.logo_url || null);
+      } else {
+        setUniversityLogo(null);
+      }
+    };
+    fetchUniversityLogo();
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -85,10 +103,14 @@ const Header: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-3 bg-gradient-to-r from-slate-100 to-slate-200 rounded-2xl px-4 py-3 hover:from-slate-200 hover:to-slate-300 transition-all duration-300 shadow-lg"
+                  className="flex items-center space-x-3 rounded-2xl px-4 py-3 transition-all duration-300 shadow-none bg-transparent hover:bg-gray-100 hover:shadow-md"
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${getRoleColor(user.role)}`}>
-                    <User className="h-4 w-4 text-white" />
+                    {user.role === 'school' && universityLogo ? (
+                      <img src={universityLogo} alt="University Logo" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      <User className="h-4 w-4 text-white" />
+                    )}
                   </div>
                   <div className="text-left">
                     <span className="text-sm font-bold text-slate-700 block">{user.name}</span>
@@ -176,7 +198,11 @@ const Header: React.FC = () => {
               <div className="border-t border-slate-200 pt-4 mt-4">
                 <div className="flex items-center px-4 py-3 mb-2">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center mr-3 ${getRoleColor(user.role)}`}>
-                    <User className="h-4 w-4 text-white" />
+                    {user.role === 'school' && universityLogo ? (
+                      <img src={universityLogo} alt="University Logo" className="w-full h-full object-cover rounded-xl" />
+                    ) : (
+                      <User className="h-4 w-4 text-white" />
+                    )}
                   </div>
                   <div>
                     <span className="font-bold text-slate-700 block">{user.name}</span>

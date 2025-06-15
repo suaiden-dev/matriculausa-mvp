@@ -56,6 +56,7 @@ export interface Scholarship {
   created_at: string;
   updated_at: string;
   universities?: University;
+  image_url?: string;
 }
 
 export interface UserProfile {
