@@ -1,0 +1,13 @@
+{
+  "name": "create-payment-intent",
+  "version": "1.0.0",
+  "description": "Supabase Edge Function to create Stripe Payment Intent",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "install:deps": "npm install"
+  },
+  "dependencies": {
+    "stripe": "^14.17.0"
+  }
+} 

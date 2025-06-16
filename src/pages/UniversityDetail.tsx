@@ -13,8 +13,10 @@ const UniversityDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [scholarshipsLoading, setScholarshipsLoading] = useState(true);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [hasPaidApplicationFee, setHasPaidApplicationFee] = useState<boolean | null>(null);
+  const [paymentStatusLoading, setPaymentStatusLoading] = useState(false);
 
   useEffect(() => {
     const fetchUniversity = async () => {
@@ -55,6 +57,29 @@ const UniversityDetail: React.FC = () => {
     };
     fetchScholarships();
   }, [id]);
+
+  useEffect(() => {
+    const fetchPaymentStatus = async () => {
+      if (!isAuthenticated || !user) {
+        setHasPaidApplicationFee(null);
+        return;
+      }
+      setPaymentStatusLoading(true);
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('is_application_fee_paid')
+        .eq('user_id', user.id)
+        .single();
+      if (profileError) {
+        setHasPaidApplicationFee(null);
+        setPaymentStatusLoading(false);
+        return;
+      }
+      setHasPaidApplicationFee(!!profile?.is_application_fee_paid);
+      setPaymentStatusLoading(false);
+    };
+    fetchPaymentStatus();
+  }, [isAuthenticated, user]);
 
   if (loading) {
     return (
@@ -224,16 +249,41 @@ const UniversityDetail: React.FC = () => {
                         <div className="px-0 pb-0">
                           <button
                             className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
-                            onClick={() => {
+                            onClick={async () => {
                               if (!isAuthenticated) {
                                 navigate('/login');
                               } else {
-                                alert('Application feature coming soon!');
+                                // Defensive: fetch user again if needed
+                                setPaymentStatusLoading(true);
+                                const { data: { user: currentUser } } = await supabase.auth.getUser();
+                                if (!currentUser) {
+                                  navigate('/login');
+                                  setPaymentStatusLoading(false);
+                                  return;
+                                }
+                                const { data: profile, error: profileError } = await supabase
+                                  .from('user_profiles')
+                                  .select('is_application_fee_paid')
+                                  .eq('user_id', currentUser.id)
+                                  .single();
+                                setPaymentStatusLoading(false);
+                                if (profileError) {
+                                  console.error("Error fetching user profile:", profileError);
+                                  alert("An error occurred while checking your application status. Please try again.");
+                                  return;
+                                }
+                                if (!profile.is_application_fee_paid) {
+                                  navigate('/student/payment');
+                                } else {
+                                  alert('You have paid the application fee. Proceeding to scholarship application!');
+                                  // TODO: Implement actual application process redirection here
+                                }
                               }
                             }}
+                            disabled={paymentStatusLoading}
                           >
                             <Award className="h-4 w-4 mr-2" />
-                            Apply Now
+                            {paymentStatusLoading ? 'Checking...' : 'Apply Now'}
                           </button>
                         </div>
                       </div>

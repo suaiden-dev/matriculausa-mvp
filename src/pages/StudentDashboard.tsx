@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   User, 
   Award, 
@@ -62,6 +62,7 @@ const StudentDashboard: React.FC = () => {
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -145,6 +146,7 @@ const StudentDashboard: React.FC = () => {
 
       setApplications(prev => [...prev, newApplication]);
       alert('Application submitted successfully!');
+      navigate('/student/dashboard/payment');
     } catch (error) {
       console.error('Error applying for scholarship:', error);
       alert('Error submitting application. Please try again.');
