@@ -1,14 +1,14 @@
 {
-  "name": "stripe-webhook",
+  "name": "get-user-payment-status",
   "version": "1.0.0",
-  "description": "Supabase Edge Function to handle Stripe webhooks",
+  "description": "Supabase Edge Function to fetch user payment status securely",
   "main": "index.ts",
   "type": "module",
   "scripts": {
     "install:deps": "npm install"
   },
   "dependencies": {
-    "stripe": "^14.17.0"
+    "@supabase/supabase-js": "^2.43.4"
   },
   "devDependencies": {
     "@types/node": "^20.0.0"

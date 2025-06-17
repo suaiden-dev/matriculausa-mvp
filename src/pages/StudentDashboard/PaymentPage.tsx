@@ -3,8 +3,8 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { supabase } from '../../lib/supabase'; // Your Supabase client
 
-// IMPORTANT: Replace 'YOUR_STRIPE_PUBLISHABLE_KEY_HERE' with the actual Stripe publishable key
-const stripePromise = loadStripe('YOUR_STRIPE_PUBLISHABLE_KEY_HERE');
+// Substituído pela chave publicável real
+const stripePromise = loadStripe('pk_test_51RWez34INoqapv5pnrw9uG6HV09WuQYdQej88mb84UM7z6Wtq7mtTfOQZXnFtp65mH5LpDWSrufWg07gJaJo6ni400zKbnqoaA');
 
 // Inner component for the checkout form
 const CheckoutForm = ({ clientSecret, studentId }: { clientSecret: string, studentId: string }) => {
@@ -40,7 +40,7 @@ const CheckoutForm = ({ clientSecret, studentId }: { clientSecret: string, stude
   };
 
   const paymentElementOptions = {
-    layout: "tabs", // Or "accordion", "auto"
+    layout: "tabs" as "tabs" | "accordion" | "auto"
     // Add appearance options here to customize the PaymentElement visual style
     // E.g.: appearance: { theme: 'stripe' }
   };
@@ -76,7 +76,7 @@ const PaymentPage = () => {
 
       // 2. Call the Edge Function to create the PaymentIntent
       // IMPORTANT: Replace <YOUR_PROJECT_REF> with your actual Supabase project ID
-      const edgeFunctionUrl = `https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/create-payment-intent`;
+      const edgeFunctionUrl = `https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-payment-intent`;
 
       try {
         const response = await fetch(edgeFunctionUrl, {

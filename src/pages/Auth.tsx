@@ -14,12 +14,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     email: '',
     password: '',
     confirmPassword: '',
-    // Student specific fields
     phone: '',
     country: '',
     fieldOfInterest: '',
     englishLevel: '',
-    // University specific fields
     universityName: '',
     position: '',
     website: '',
@@ -28,6 +26,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
   
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -45,6 +44,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setShowEmailVerificationMessage(false);
 
     try {
       if (mode === 'register') {
@@ -56,7 +56,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const userData = {
           name: formData.name,
           role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
-          // Add additional registration data only for universities
+          phone: formData.phone,
+          country: formData.country,
+          fieldOfInterest: formData.fieldOfInterest,
+          englishLevel: formData.englishLevel,
           ...(activeTab === 'university' && {
             universityName: formData.universityName,
             position: formData.position,
@@ -67,12 +70,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         await register(formData.email, formData.password, userData);
 
-        // Show modal for university registration
         if (activeTab === 'university') {
           setShowVerificationModal(true);
-          return;
         } else {
-          window.location.href = '/student/dashboard'; // Students go directly to dashboard
+          setShowEmailVerificationMessage(true);
         }
       } else {
         // Login process
@@ -433,6 +434,82 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       />
                     </div>
                   </div>
+
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
+                      Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 rounded-2xl"
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="country" className="block text-sm font-bold text-slate-900 mb-2">
+                      Country
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <input
+                        id="country"
+                        name="country"
+                        type="text"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 rounded-2xl"
+                        placeholder="Enter your country"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="fieldOfInterest" className="block text-sm font-bold text-slate-900 mb-2">
+                      Field of Interest
+                    </label>
+                    <div className="relative">
+                      <BookOpen className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <input
+                        id="fieldOfInterest"
+                        name="fieldOfInterest"
+                        type="text"
+                        value={formData.fieldOfInterest}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 rounded-2xl"
+                        placeholder="Enter your field of interest"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="englishLevel" className="block text-sm font-bold text-slate-900 mb-2">
+                      English Proficiency
+                    </label>
+                    <div className="relative">
+                      <Globe className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <select
+                        id="englishLevel"
+                        name="englishLevel"
+                        value={formData.englishLevel}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 rounded-2xl"
+                      >
+                        <option value="">Select your English level</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                        <option value="fluent">Fluent</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Student Benefits */}
@@ -700,6 +777,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           </form>
         </div>
       </div>
+      {showEmailVerificationMessage && (
+        <div className="mt-6 p-4 bg-blue-100 text-blue-800 rounded-lg text-center">
+          Please check your email to confirm your account and access the dashboard!
+        </div>
+      )}
     </div>
   );
 };

@@ -253,37 +253,66 @@ const UniversityDetail: React.FC = () => {
                               if (!isAuthenticated) {
                                 navigate('/login');
                               } else {
-                                // Defensive: fetch user again if needed
-                                setPaymentStatusLoading(true);
-                                const { data: { user: currentUser } } = await supabase.auth.getUser();
-                                if (!currentUser) {
-                                  navigate('/login');
-                                  setPaymentStatusLoading(false);
-                                  return;
-                                }
-                                const { data: profile, error: profileError } = await supabase
-                                  .from('user_profiles')
-                                  .select('is_application_fee_paid')
-                                  .eq('user_id', currentUser.id)
-                                  .single();
-                                setPaymentStatusLoading(false);
-                                if (profileError) {
-                                  console.error("Error fetching user profile:", profileError);
-                                  alert("An error occurred while checking your application status. Please try again.");
-                                  return;
-                                }
-                                if (!profile.is_application_fee_paid) {
-                                  navigate('/student/payment');
-                                } else {
-                                  alert('You have paid the application fee. Proceeding to scholarship application!');
-                                  // TODO: Implement actual application process redirection here
+                                try {
+                                  // --- START NEW LOGIC TO CALL EDGE FUNCTION ---
+                                  const { data: { user } } = await supabase.auth.getUser();
+                                  if (!user) {
+                                    console.error("User not found after getUser(), redirecting to login.");
+                                    navigate('/login');
+                                    return;
+                                  }
+
+                                  // Get the session first
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  if (!session) {
+                                    console.error("No active session found, redirecting to login.");
+                                    navigate('/login');
+                                    return;
+                                  }
+
+                                  const edgeFunctionUrl = `https://fitpynguasqqutuhzifx.supabase.co/functions/v1/get-user-payment-status`;
+                                  
+                                  // Add timeout to the fetch request
+                                  const controller = new AbortController();
+                                  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+                                  const response = await fetch(edgeFunctionUrl, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${session.access_token}`,
+                                      'apikey': ''
+                                    },
+                                    body: JSON.stringify({ userId: user.id }),
+                                    signal: controller.signal
+                                  });
+
+                                  clearTimeout(timeoutId);
+
+                                  if (!response.ok) {
+                                    const errorData = await response.json();
+                                    console.error("Error calling get-user-payment-status Edge Function:", errorData);
+                                    throw new Error(errorData.error || 'Failed to check payment status');
+                                  }
+
+                                  const data = await response.json();
+                                  const hasPaidApplicationFee = data.is_application_fee_paid;
+                                  
+                                  if (!hasPaidApplicationFee) {
+                                    navigate('/student/payment');
+                                  } else {
+                                    alert('You have paid the application fee. Proceeding to scholarship application!');
+                                    // TODO: Implement actual application process redirection here
+                                  }
+                                } catch (networkError) {
+                                  console.error("Network error calling get-user-payment-status Edge Function:", networkError);
+                                  alert("A network error occurred. Please check your connection and try again.");
                                 }
                               }
                             }}
-                            disabled={paymentStatusLoading}
                           >
                             <Award className="h-4 w-4 mr-2" />
-                            {paymentStatusLoading ? 'Checking...' : 'Apply Now'}
+                            Apply Now
                           </button>
                         </div>
                       </div>

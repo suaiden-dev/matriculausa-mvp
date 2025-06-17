@@ -4,53 +4,50 @@
 
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'stripe'
+
+// Inicializa o cliente Stripe com a chave secreta do Supabase Secret
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
+  apiVersion: '2022-11-15',
+});
 
 console.log("Hello from Functions!")
 
-// This function will not work until STRIPE_SECRET_KEY is set in Supabase Secrets.
-// @ts-expect-error Deno global is available at runtime in Supabase Edge Functions
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
-  apiVersion: '2023-10-16', // Use the latest Stripe API version
-});
-
-// @ts-expect-error Deno global is available at runtime in Supabase Edge Functions
 Deno.serve(async (req) => {
   try {
-    // Get the studentId from the JSON request body sent by the frontend
+    // Obtenha o studentId do corpo da requisição JSON enviada pelo frontend
     const { studentId } = await req.json();
 
-    // Validation: Check if studentId is provided
+    // Validação: Verificar se o studentId foi fornecido
     if (!studentId) {
-      return new Response(JSON.stringify({ error: 'studentId is required.' }), {
+      return new Response(JSON.stringify({ error: 'studentId é obrigatório.' }), {
         headers: { 'Content-Type': 'application/json' },
-        status: 400, // Bad Request
+        status: 400,
       });
     }
 
-    // 1. Create the PaymentIntent in Stripe for $350 USD
+    // Criar o PaymentIntent no Stripe para $350 USD
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: 35000, // Amount in cents (350 * 100)
-      currency: 'usd', // Currency
-      metadata: { student_id: studentId }, // Link the PaymentIntent to the student's ID for tracking
-      // payment_method_types: ['card'], // Optional: specify payment methods
+      amount: 35000, // $350.00 em centavos
+      currency: 'usd',
+      metadata: { student_id: studentId },
     });
 
-    // 2. Return the client_secret to the frontend
+    // Retornar o client_secret para o frontend
     return new Response(JSON.stringify({ clientSecret: paymentIntent.client_secret }), {
       headers: { 'Content-Type': 'application/json' },
-      status: 200, // OK
+      status: 200,
     });
 
   } catch (error) {
-    // Error handling: log the error and return an error response to the frontend
-    console.error('Error in create-payment-intent Edge Function:', error.message);
+    console.error('Erro na Edge Function create-payment-intent:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { 'Content-Type': 'application/json' },
-      status: 400, // Bad Request or specific error
+      status: 400,
     });
   }
-});
+})
 
 /* To invoke locally:
 

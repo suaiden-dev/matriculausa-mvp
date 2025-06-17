@@ -178,7 +178,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (email: string, password: string, userData: { name: string; role: 'student' | 'school'; [key: string]: any }) => {
-    const { error } = await supabase.auth.signUp({
+    // 1. Registrar o usuário no Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -190,10 +191,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
 
-    if (error) {
-      throw error;
+    if (authError) {
+      console.error('Auth signup error:', authError);
+      throw authError;
     }
-    // Registration redirection will be handled in the Auth component
+
+    console.log('User signed up successfully. Auth data:', authData);
+
+    // 2. Se o registro no Auth foi bem-sucedido e temos um objeto de usuário, CHAMAR A EDGE FUNCTION PARA CRIAR O PERFIL
+    if (authData.user) {
+      console.log('User signed up successfully. Auth data:', authData);
+      console.log('Attempting to call create-user-profile Edge Function for user ID:', authData.user.id);
+      console.log('User data sent for profile creation:', userData);
+
+      try {
+        // ATENÇÃO: Substitua <YOUR_PROJECT_REF> pelo ID real do seu projeto Supabase
+        const profileCreationResponse = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-user-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            user_id: authData.user.id,
+            full_name: userData.name,
+            phone: userData.phone || '',
+            country: userData.country || '',
+            field_of_interest: userData.fieldOfInterest || '',
+            english_level: userData.englishLevel || '',
+            role: userData.role,
+            // Certifique-se de que quaisquer outras colunas NOT NULL em user_profiles recebam um valor padrão ou sejam passadas aqui
+          }),
+        });
+
+        if (!profileCreationResponse.ok) {
+          const errorData = await profileCreationResponse.json();
+          console.error('Error calling create-user-profile Edge Function:', errorData);
+        } else {
+          console.log('User profile creation request sent to Edge Function successfully.');
+        }
+
+      } catch (efError) {
+        console.error('Network error calling create-user-profile Edge Function:', efError);
+      }
+    } else {
+      console.warn('Auth signup succeeded, but no user object returned to create profile. Profile creation skipped.');
+    }
+
+    return authData;
   };
 
   const value: AuthContextType = {

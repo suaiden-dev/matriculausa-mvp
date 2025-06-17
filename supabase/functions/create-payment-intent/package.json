@@ -8,6 +8,6 @@
     "install:deps": "npm install"
   },
   "dependencies": {
-    "stripe": "^14.17.0"
+    "stripe": "^14.23.0"
   }
 } 
