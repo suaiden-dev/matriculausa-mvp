@@ -1,4 +1,4 @@
-import { School, Scholarship, User, Application } from '../types';
+import { School, User, Application } from '../types';
 
 export const mockSchools: School[] = [
   {

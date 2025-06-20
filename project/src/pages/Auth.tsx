@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, BookOpen, Phone, MapPin, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface AuthProps {
@@ -29,7 +29,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   // Global scroll-to-top on login/register page load
@@ -41,6 +41,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (user.role === 'school') {
+        navigate('/school/dashboard', { replace: true });
+      } else {
+        navigate('/student/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -50,6 +62,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       if (mode === 'register') {
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match');
+          setLoading(false);
           return;
         }
         
@@ -67,24 +80,16 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         await register(formData.email, formData.password, userData);
 
-        // Show modal for university registration
+        // Se for registro de universidade, mostra modal e retorna
         if (activeTab === 'university') {
           setShowVerificationModal(true);
           return;
-        } else {
-          window.location.href = '/student/dashboard'; // Students go directly to dashboard
         }
+        // Para estudante, após o registro bem-sucedido, permite que o useEffect reaja.
+        return;
       } else {
-        // Login process
         await login(formData.email, formData.password);
-        
-        // After login, the useAuth hook will handle redirection based on user role
-        // We'll add a small delay to allow auth state to update
-        setTimeout(() => {
-          // The navigation will be handled by the useAuth hook's effect
-          // But we can add a fallback here
-          window.location.reload();
-        }, 100);
+        return;
       }
     } catch (err: any) {
       // Enhanced error handling with specific messages

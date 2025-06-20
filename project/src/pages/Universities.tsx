@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, MapPin, Sparkles, Building, GraduationCap, ChevronRight, Globe, ArrowRight } from 'lucide-react';
-import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
+
+const PAGE_SIZE = 20;
 
 const Universities: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -10,41 +11,47 @@ const Universities: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [realUniversities, setRealUniversities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     const fetchUniversities = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error, count } = await supabase
         .from('universities')
-        .select('*')
-        .eq('is_approved', true);
+        .select('id, name, location, logo_url, programs, description, website', { count: 'exact' })
+        .eq('is_approved', true)
+        .range(from, to);
       if (!error && data) {
         setRealUniversities(data);
+        setTotalCount(count || 0);
       } else {
         setRealUniversities([]);
+        setTotalCount(0);
       }
       setLoading(false);
     };
     fetchUniversities();
-  }, []);
-
-  // Merge mock and real universities, prioritizing real if IDs overlap
-  const realIds = new Set(realUniversities.map(u => u.id));
-  const mergedUniversities = [
-    ...realUniversities,
-    ...mockSchools.filter(mock => !realIds.has(mock.id)),
-  ];
+  }, [page]);
 
   // Get unique locations for filter
-  const locations = Array.from(new Set(mergedUniversities.map(school => school.location?.split(', ')[1]))).filter(Boolean).sort();
+  const locations = Array.from(new Set(realUniversities.map(school => school.location?.split(', ')[1]))).filter(Boolean).sort();
 
-  const filteredSchools = mergedUniversities.filter(school => {
+  const filteredSchools = realUniversities.filter(school => {
     const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (school.location || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || school.type === selectedType;
     const matchesLocation = selectedLocation === 'all' || (school.location || '').includes(selectedLocation);
     return matchesSearch && matchesType && matchesLocation;
   });
+
+  // Paginação só para dados reais
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  // Skeleton loader
+  const skeletonArray = Array.from({ length: PAGE_SIZE });
 
   const handleAccept = async () => {
     // ... update terms_accepted to true ...
@@ -126,7 +133,9 @@ const Universities: React.FC = () => {
         {/* Universities Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {loading ? (
-            <div className="col-span-full text-center py-12 text-slate-500">Loading universities...</div>
+            skeletonArray.map((_, idx) => (
+              <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-80" />
+            ))
           ) : filteredSchools.map((school) => (
             <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
               {/* University Image */}
@@ -195,6 +204,25 @@ const Universities: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Paginação */}
+        <div className="flex justify-center items-center gap-4 mt-8">
+          <button
+            className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0 || loading}
+          >
+            Previous
+          </button>
+          <span className="text-slate-600 font-medium">Page {page + 1} of {Math.max(1, totalPages)}</span>
+          <button
+            className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1 || loading}
+          >
+            Next
+          </button>
         </div>
 
         {filteredSchools.length === 0 && (

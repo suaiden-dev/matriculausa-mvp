@@ -10,7 +10,6 @@ import {
   Building, 
   Eye, 
   Search,
-  Filter,
   Award,
   ArrowRight
 } from 'lucide-react';
@@ -18,12 +17,10 @@ import { Link } from 'react-router-dom';
 
 interface MyApplicationsProps {
   applications: any[];
-  scholarships: any[];
 }
 
 const MyApplications: React.FC<MyApplicationsProps> = ({
-  applications,
-  scholarships
+  applications
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

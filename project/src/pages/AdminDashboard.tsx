@@ -6,31 +6,22 @@ import {
   BarChart3, 
   Settings, 
   Search, 
-  Filter, 
   CheckCircle, 
   XCircle, 
-  Clock, 
   Eye, 
   Edit, 
-  Trash2,
-  TrendingUp,
-  DollarSign,
-  FileText,
   Calendar,
-  Shield,
   AlertTriangle,
   Download,
-  Mail,
-  Phone,
-  MapPin,
   Star,
-  Plus,
   RefreshCw,
   Activity,
   Crown,
   UserX,
   Ban,
-  AlertCircle
+  FileText,
+  AlertCircle,
+  MapPin
 } from 'lucide-react';
 import { supabase, University, Scholarship } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -61,19 +52,6 @@ interface UserProfile {
   last_active: string;
 }
 
-interface Application {
-  id: string;
-  student_name: string;
-  student_email: string;
-  scholarship_title: string;
-  university_name: string;
-  amount: number;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review';
-  applied_at: string;
-  reviewed_at?: string;
-  notes?: string;
-}
-
 interface AdminLog {
   id: string;
   admin_user_name: string;
@@ -89,7 +67,6 @@ const AdminDashboard: React.FC = () => {
   const [universities, setUniversities] = useState<University[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -256,7 +233,6 @@ const AdminDashboard: React.FC = () => {
       setUniversities(processedUniversities);
       setUsers(usersData);
       setScholarships(processedScholarships);
-      setApplications(processedApplications);
       setAdminLogs(logsData || []);
 
       // Calculate statistics

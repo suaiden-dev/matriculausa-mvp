@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import Layout from './components/Layout';
@@ -17,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard/index';
 import NewScholarship from './pages/SchoolDashboard/NewScholarship';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
+import SuccessPage from './pages/SuccessPage';
 
 function App() {
   return (
@@ -34,22 +34,19 @@ function App() {
             <Route path="/schools" element={<Universities />} />
             <Route path="/schools/:id" element={<UniversityDetail />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
-            
-            {/* Student Routes */}
+            {/* Student/Admin Dashboard Switch - sempre renderize StudentDashboard por padrão */}
             <Route path="/student/dashboard/*" element={<StudentDashboard />} />
-            
             {/* School Routes */}
             <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
             <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
             <Route path="/school/scholarship/new" element={<NewScholarship />} />
             <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
-            
-            {/* Admin Routes */}
+            {/* Admin Dashboard Direct Route */}
             <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
-            
             {/* Placeholder routes for other pages */}
             <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
             <Route path="/contact" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Contact page coming soon...</div></div>} />
+            <Route path="/checkout/success" element={<SuccessPage />} />
           </Routes>
         </Layout>
       </Router>

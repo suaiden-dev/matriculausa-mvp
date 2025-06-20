@@ -42,11 +42,6 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
     (university.programs && university.programs.length > 0 ? 10 : 0)
   ) : 0;
 
-  const handleProfilePicClick = () => {
-    if (uploading) return;
-    document.getElementById('university-profile-pic-input')?.click();
-  };
-
   const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !university) return;
@@ -55,7 +50,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `university_${university.id}_${Date.now()}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('university-profile-pictures')
         .upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;

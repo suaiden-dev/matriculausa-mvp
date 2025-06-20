@@ -8,6 +8,7 @@ import ScholarshipBrowser from './ScholarshipBrowser';
 import MyApplications from './MyApplications';
 import ProfileManagement from './ProfileManagement';
 import { mockScholarships } from '../../data/mockData';
+import { Link } from 'react-router-dom';
 
 interface StudentProfile {
   id: string;
@@ -37,8 +38,11 @@ const StudentDashboard: React.FC = () => {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, userProfile, loading } = useAuth();
+
+  if (loading) {
+    return <div>Carregando...</div>;
+  }
 
   useEffect(() => {
     if (user) {
@@ -50,33 +54,38 @@ const StudentDashboard: React.FC = () => {
     if (!user) return;
 
     try {
-      // For now, using mock data for scholarships
+      // Buscar bolsas (mantém mock por enquanto)
       setScholarships(mockScholarships);
-      
-      // Mock profile data
-      const mockProfile: StudentProfile = {
-        id: user.id,
-        name: user.name || user.email?.split('@')[0] || '',
-        email: user.email,
-        phone: '',
-        country: '',
-        field_of_interest: '',
-        academic_level: '',
-        gpa: 0,
-        english_proficiency: '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      setProfile(mockProfile);
 
-      // Mock applications data
+      // Buscar perfil real do Supabase
+      const { data: profileData, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        setProfile(null);
+      } else if (profileData) {
+        setProfile({
+          id: profileData.id,
+          name: profileData.full_name || user.name || user.email?.split('@')[0] || '',
+          email: user.email,
+          phone: profileData.phone || '',
+          country: profileData.country || '',
+          field_of_interest: profileData.field_of_interest || '',
+          academic_level: profileData.academic_level || '',
+          gpa: profileData.gpa || 0,
+          english_proficiency: profileData.english_proficiency || '',
+          created_at: profileData.created_at,
+          updated_at: profileData.updated_at
+        });
+      }
+
+      // Buscar applications (mantém mock por enquanto)
       setApplications([]);
-      
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -113,12 +122,29 @@ const StudentDashboard: React.FC = () => {
     if (!user || !profile) return;
 
     try {
+      // Atualiza no Supabase
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: updatedData.name,
+          phone: updatedData.phone,
+          country: updatedData.country,
+          field_of_interest: updatedData.field_of_interest,
+          academic_level: updatedData.academic_level,
+          gpa: updatedData.gpa,
+          english_proficiency: updatedData.english_proficiency,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Atualiza localmente
       const updatedProfile = {
         ...profile,
         ...updatedData,
         updated_at: new Date().toISOString()
       };
-
       setProfile(updatedProfile);
       alert('Profile updated successfully!');
     } catch (error) {

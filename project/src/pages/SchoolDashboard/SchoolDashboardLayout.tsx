@@ -19,7 +19,6 @@ import {
   LogOut,
   User,
   ChevronDown,
-  Zap,
   Shield
 } from 'lucide-react';
 import { University } from '../../lib/supabase';

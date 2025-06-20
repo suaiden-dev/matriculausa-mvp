@@ -28,10 +28,9 @@ interface OverviewProps {
     totalFunding: number;
     avgAmount: number;
   };
-  user: any;
 }
 
-const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats, user }) => {
+const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

@@ -11,9 +11,33 @@ interface User {
   hasPaidProcess?: boolean;
 }
 
+// Definição completa do tipo para o perfil do usuário (incluindo todas as colunas do seu schema)
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  phone: string | null;
+  country: string | null;
+  field_of_interest: string | null;
+  academic_level: string | null;
+  gpa: number | null;
+  english_proficiency: string | null;
+  status: string | null;
+  last_active: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  is_application_fee_paid: boolean;
+  has_paid_selection_process_fee: boolean;
+  is_admin: boolean;
+  stripe_customer_id: string | null;
+  stripe_payment_intent_id: string | null;
+  // ... outras colunas se existirem
+}
+
 interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
+  userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (email: string, password: string, userData: { name: string; role: 'student' | 'school'; [key: string]: any }) => Promise<void>;
@@ -39,51 +63,77 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        // Set user data from metadata or default
-        const userData = {
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0],
-          role: session.user.user_metadata?.role || getDefaultRole(session.user.email!)
-        };
-        setUser(userData);
-      }
-      setLoading(false);
-    });
+    const fetchUserProfile = async (userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
 
-    // Listen for auth changes
+        if (error) {
+          setUserProfile(null);
+        } else if (data) {
+          setUserProfile(data as UserProfile);
+        }
+      } catch (err) {
+        setUserProfile(null);
+      }
+    };
+
+    const buildUser = (sessionUser: any, userProfile: UserProfile | null): User => {
+      // Busca o role nos metadados, depois no perfil, depois padrão
+      let role = sessionUser?.user_metadata?.role;
+      if (!role && userProfile) {
+        if (userProfile.is_admin) role = 'admin';
+        else if (userProfile.status === 'school') role = 'school';
+        else role = 'student';
+      }
+      if (!role) {
+        role = getDefaultRole(sessionUser?.email || '');
+      }
+      return {
+        id: sessionUser.id,
+        email: sessionUser.email,
+        name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || '',
+        role,
+        university_id: userProfile?.university_id,
+        hasPaidProcess: userProfile?.has_paid_selection_process_fee,
+      };
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          setSupabaseUser(session.user);
-          const userData = {
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0],
-            role: session.user.user_metadata?.role || getDefaultRole(session.user.email!)
-          };
-          setUser(userData);
-
-          // Handle login redirection based on user role
-          if (event === 'SIGNED_IN') {
-            redirectUserAfterLogin(userData.role);
-          }
+          await fetchUserProfile(session.user.id);
+          setTimeout(() => {
+            setUser(prev => buildUser(session.user, userProfile));
+          }, 0);
         } else {
-          setSupabaseUser(null);
           setUser(null);
+          setUserProfile(null);
         }
         setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getUser().then(async ({ data: { user: currentUser } }) => {
+      if (currentUser) {
+        await fetchUserProfile(currentUser.id);
+        setTimeout(() => {
+          setUser(prev => buildUser(currentUser, userProfile));
+        }, 0);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const getDefaultRole = (email: string): 'student' | 'school' | 'admin' => {
@@ -125,7 +175,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error checking school terms:', error);
         window.location.href = '/school/termsandconditions';
         return;
       }
@@ -138,7 +187,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         window.location.href = '/school/dashboard';
       }
     } catch (error) {
-      console.error('Error checking school status:', error);
       window.location.href = '/school/termsandconditions';
     }
   };
@@ -200,6 +248,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     supabaseUser,
+    userProfile,
     login,
     logout,
     register,

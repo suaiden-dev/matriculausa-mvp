@@ -189,3 +189,73 @@ async function syncCustomerFromStripe(customerId: string) {
     throw error;
   }
 }
+
+export default async function handler(req: Request) {
+  const signature = req.headers.get('stripe-signature');
+  const body = await req.text();
+
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(body, signature!, process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err);
+    return new Response('Webhook signature verification failed', { status: 400 });
+  }
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        // Verificar se é um pagamento da taxa de inscrição
+        if (session.metadata?.payment_type === 'application_fee') {
+          const userId = session.metadata?.user_id;
+          
+          if (userId) {
+            // Atualizar o status da taxa de inscrição no perfil do usuário
+            const { error } = await supabase
+              .from('user_profiles')
+              .update({ 
+                is_application_fee_paid: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', userId);
+
+            if (error) {
+              console.error('Error updating application fee status:', error);
+            } else {
+              console.log('Application fee payment processed successfully for user:', userId);
+            }
+          }
+        }
+        
+        // Processar outros tipos de pagamento (como a taxa de processo seletivo)
+        if (session.metadata?.payment_type === 'selection_process') {
+          const userId = session.metadata?.user_id;
+          
+          if (userId) {
+            const { error } = await supabase
+              .from('user_profiles')
+              .update({ 
+                has_paid_selection_process_fee: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', userId);
+
+            if (error) {
+              console.error('Error updating selection process fee status:', error);
+            }
+          }
+        }
+        break;
+
+      // ... handle other events as needed ...
+    }
+
+    return new Response(JSON.stringify({ received: true }), { status: 200 });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return new Response('Webhook error', { status: 500 });
+  }
+}

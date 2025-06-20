@@ -11,11 +11,9 @@ import {
   BookOpen,
   ArrowUpRight,
   Calendar,
-  DollarSign,
   Building,
   Star,
   Eye,
-  Plus,
   CreditCard
 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';

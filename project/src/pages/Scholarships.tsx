@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
 import type { Scholarship } from '../lib/supabase';
+import { StripeCheckout } from '../components/StripeCheckout';
 
 const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,8 +41,10 @@ const Scholarships: React.FC = () => {
     { value: 'initial', label: 'Initial' },
   ];
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userProfile } = useAuth();
   const navigate = useNavigate();
+
+  const isLocked = !userProfile?.has_paid_selection_process_fee;
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -101,28 +104,17 @@ const Scholarships: React.FC = () => {
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-          <p className="text-slate-600 font-medium">Loading scholarships...</p>
-        </div>
-      </div>
-    );
-  }
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Scholarships</h1>
-          <p className="text-gray-600">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  // Atualizar totalCount sempre que scholarships mudar
+  useEffect(() => {
+    setTotalCount(filteredScholarships.length);
+  }, [filteredScholarships]);
+
+  // Paginação dos resultados filtrados
+  const paginatedScholarships = filteredScholarships.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="bg-white min-h-screen">
@@ -182,6 +174,7 @@ const Scholarships: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-transparent outline-none border-none text-sm text-slate-900 placeholder-slate-400"
               aria-label="Search scholarships"
+              disabled={loading}
             />
           </div>
 
@@ -198,6 +191,7 @@ const Scholarships: React.FC = () => {
               className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
               placeholder="$0"
               aria-label="Minimum scholarship value"
+              disabled={loading}
             />
             <span className="text-xs text-slate-400">-</span>
             <label htmlFor="max-price" className="text-xs text-slate-500">Max</label>
@@ -211,19 +205,8 @@ const Scholarships: React.FC = () => {
               className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
               placeholder={formatAmount(maxScholarshipValue)}
               aria-label="Maximum scholarship value"
+              disabled={loading}
             />
-            <div className="flex-1 mx-2">
-              <input
-                type="range"
-                min={0}
-                max={maxScholarshipValue}
-                value={maxPrice}
-                onChange={e => setMaxPrice(Number(e.target.value))}
-                className="w-full accent-[#05294E]"
-                step={1000}
-                aria-label="Scholarship value range"
-              />
-            </div>
           </div>
 
           {/* Dropdown Filters */}
@@ -233,6 +216,7 @@ const Scholarships: React.FC = () => {
               onChange={(e) => setSelectedLevel(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
               aria-label="Level"
+              disabled={loading}
             >
               {levelOptions.map(option => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -243,6 +227,7 @@ const Scholarships: React.FC = () => {
               onChange={(e) => setSelectedField(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
               aria-label="Field"
+              disabled={loading}
             >
               <option value="all">All Fields</option>
               <option value="stem">STEM</option>
@@ -254,99 +239,161 @@ const Scholarships: React.FC = () => {
 
           {/* Results Count */}
           <div className="flex items-center justify-end flex-1 min-w-[120px]">
-            <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium">{filteredScholarships.length} scholarships found</span>
+            <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium">
+              {loading ? 'Loading...' : `${filteredScholarships.length} scholarships found`}
+            </span>
           </div>
         </div>
 
         {/* Scholarships Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredScholarships.map((scholarship: Scholarship) => {
-            const deadlineStatus = getDeadlineStatus(scholarship.deadline);
-            
-            return (
-              <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
-                {/* Card Content */}
-                <div className="p-6">
-                  {/* Title and Badges */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                        {scholarship.title}
-                      </h3>
-                      
-                      {/* University */}
-                      <div className="flex items-center text-slate-600 mb-4">
-                        <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                        <span className="text-xs font-semibold mr-1">University:</span>
-                        <span className="text-sm blur-sm select-none">{scholarship.universities?.name || 'Unknown University'}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Exclusive Badge */}
-                    {scholarship.is_exclusive && (
-                      <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
-                        Exclusive
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Amount */}
-                  <div className="flex items-center mb-4">
-                    <DollarSign className="h-5 w-5 mr-2 text-green-500" />
-                    <span className="text-2xl font-bold text-green-700">{formatAmount(scholarship.amount)}</span>
-                  </div>
-
-                  {/* Details */}
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Level</span>
-                      <div className="flex items-center">
-                        {getLevelIcon(scholarship.level || 'undergraduate')}
-                        <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Field</span>
-                      <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                        {scholarship.field_of_study || 'Any Field'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Deadline</span>
-                      <div className="flex items-center">
-                        <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
-                        <span className="text-slate-700">{getDaysUntilDeadline(scholarship.deadline)} days left</span>
-                      </div>
-                    </div>
-                  </div>
+          {loading ? (
+            // Skeleton cards durante o carregamento
+            Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <div key={i} className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 animate-pulse">
+                <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
+                <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
+                <div className="space-y-3">
+                  <div className="h-10 bg-slate-200 rounded"></div>
+                  <div className="h-10 bg-slate-200 rounded"></div>
+                  <div className="h-10 bg-slate-200 rounded"></div>
                 </div>
-
-                {/* Action Button */}
-                <div className="px-6 pb-6">
-                  <button
-                    className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        navigate('/login');
-                      } else {
-                        // TODO: Add apply logic here
-                        alert('Application feature coming soon!');
-                      }
-                    }}
-                  >
-                    <Award className="h-4 w-4 mr-2" />
-                    Apply Now
-                    <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
-                
-                {/* Hover Effect Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                <div className="mt-6 h-12 bg-slate-200 rounded-xl"></div>
               </div>
-            );
-          })}
+            ))
+          ) : error ? (
+            <div className="col-span-full text-center text-slate-500 py-12">
+              <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <p>{error}</p>
+            </div>
+          ) : paginatedScholarships.length === 0 ? (
+            <div className="col-span-full text-center text-slate-500 py-12">No scholarships found.</div>
+          ) : (
+            paginatedScholarships.map((scholarship: Scholarship) => {
+              const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+              
+              return (
+                <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
+                  {/* Card Content */}
+                  <div className="p-6">
+                    {/* Title and Badges */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                          {scholarship.title}
+                        </h3>
+                        
+                        {/* University */}
+                        <div className="flex items-center text-slate-600 mb-4">
+                          <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                          <span className="text-xs font-semibold mr-1">University:</span>
+                          <span className={`text-sm select-none ${isLocked ? 'blur-sm' : ''}`}>{scholarship.universities?.name || 'Unknown University'}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Exclusive Badge */}
+                      {scholarship.is_exclusive && (
+                        <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                          Exclusive
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Financial Values Section */}
+                    <div className="mb-4">
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-700">Original Annual Value</span>
+                          <span className="font-bold text-blue-700">{formatAmount(scholarship.original_annual_value ?? 0)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-700">Value Per Credit</span>
+                          <span className="font-bold text-blue-700">{formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-700">Annual Value With Scholarship</span>
+                          <span className="font-bold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-2 mb-6">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Level</span>
+                        <div className={`flex items-center ${isLocked ? 'blur-sm select-none' : ''}`}>
+                          {getLevelIcon(scholarship.level || 'undergraduate')}
+                          <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Field</span>
+                        <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)} ${isLocked ? 'blur-sm select-none' : ''}`}>
+                          {scholarship.field_of_study || 'Any Field'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Deadline</span>
+                        <div className={`flex items-center ${isLocked ? 'blur-sm select-none' : ''}`}>
+                          <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
+                          <span className="text-slate-700">{getDaysUntilDeadline(scholarship.deadline)} days left</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <div className="px-6 pb-6">
+                    <button
+                      className={`w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105 transition-all duration-300 ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:from-[#05294E]/90 hover:to-slate-600'}`}
+                      onClick={() => {
+                        if (isLocked) return;
+                        if (!isAuthenticated) {
+                          navigate('/login');
+                        } else {
+                          alert('Application feature coming soon!');
+                        }
+                      }}
+                      disabled={isLocked}
+                    >
+                      <Award className="h-4 w-4 mr-2" />
+                      {isLocked ? 'Unlock full details by paying the selection process fee.' : 'Apply Now'}
+                      {!isLocked && <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />}
+                    </button>
+                  </div>
+                  
+                  {/* Overlay for locked cards */}
+                  {isLocked && (
+                    <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-10">
+                      <span className="text-[#05294E] font-bold text-lg mb-2">Unlock full details</span>
+                      <span className="text-slate-600 text-sm text-center mb-4">Pay the selection process fee to view all scholarship information and apply.</span>
+                      {/* Botão de pagamento */}
+                      {!isAuthenticated ? (
+                        <button
+                          className="bg-[#D0151C] text-white px-6 py-3 rounded-xl hover:bg-[#B01218] transition-all duration-300 font-bold mt-2"
+                          onClick={() => navigate('/login')}
+                        >
+                          Sign in to pay selection fee
+                        </button>
+                      ) : (
+                        <StripeCheckout
+                          productId="SELECTION_PROCESS"
+                          buttonText="Pay Selection Fee to Unlock"
+                          className="mt-2"
+                          onSuccess={() => {}}
+                          onError={(err) => alert(err)}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {/* Hover Effect Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* No Results */}
@@ -408,6 +455,27 @@ const Scholarships: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Paginação */}
+        <div className="flex justify-center items-center gap-4 mt-10">
+          <button
+            className="px-4 py-2 rounded bg-slate-200 text-slate-700 font-semibold disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+          >
+            Previous
+          </button>
+          <span className="text-slate-600 font-medium">
+            Page {page + 1} of {Math.ceil(totalCount / PAGE_SIZE) || 1}
+          </span>
+          <button
+            className="px-4 py-2 rounded bg-[#05294E] text-white font-semibold disabled:opacity-50"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={(page + 1) * PAGE_SIZE >= totalCount}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

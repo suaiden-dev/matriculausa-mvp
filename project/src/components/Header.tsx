@@ -6,12 +6,11 @@ import { useAuth } from '../hooks/useAuth';
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, userProfile, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    navigate('/');
     setIsMenuOpen(false);
     setIsUserMenuOpen(false);
   };
@@ -19,9 +18,9 @@ const Header: React.FC = () => {
   const getDashboardPath = () => {
     if (!user) return '/';
     switch (user.role) {
-      case 'student': return '/student/dashboard/';
-      case 'school': return '/school/dashboard/';
-      case 'admin': return '/admin/dashboard/';
+      case 'student': return '/student/dashboard';
+      case 'school': return '/school/dashboard';
+      case 'admin': return '/admin/dashboard';
       default: return '/';
     }
   };
@@ -91,7 +90,7 @@ const Header: React.FC = () => {
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div className="text-left">
-                    <span className="text-sm font-bold text-slate-700 block">{user.name}</span>
+                    <span className="text-sm font-bold text-slate-700 block">{userProfile?.full_name || user.email}</span>
                     <span className="text-xs text-slate-500 capitalize">
                       {user.role}
                     </span>
@@ -100,14 +99,16 @@ const Header: React.FC = () => {
                 
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl py-2 border border-slate-200/50 backdrop-blur-lg">
-                    <Link
-                      to={getDashboardPath()}
-                      className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-[#05294E]/5 transition-all duration-200 mx-2 rounded-xl"
-                      onClick={() => setIsUserMenuOpen(false)}
+                    <button
+                      onClick={() => {
+                        navigate(getDashboardPath());
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-[#05294E]/5 transition-all duration-200 mx-2 rounded-xl w-full text-left"
                     >
                       <BookOpen className="h-4 w-4 mr-3 text-[#05294E]" />
                       {getDashboardLabel()}
-                    </Link>
+                    </button>
                     
                     {/* Admin Panel Quick Access */}
                     {user.role === 'admin' && (
@@ -179,7 +180,7 @@ const Header: React.FC = () => {
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <span className="font-bold text-slate-700 block">{user.name}</span>
+                    <span className="font-bold text-slate-700 block">{userProfile?.full_name || user.email}</span>
                     <span className="text-sm text-slate-500 capitalize">
                       {user.role}
                     </span>

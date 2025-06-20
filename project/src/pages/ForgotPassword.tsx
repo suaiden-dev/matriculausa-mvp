@@ -88,48 +88,6 @@ const ForgotPassword: React.FC = () => {
     return null;
   };
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    // Validate password
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      setError(passwordError);
-      setLoading(false);
-      return;
-    }
-
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // In a real implementation, you would update the password here
-      // For now, we'll simulate a successful password reset
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-
-      setMessage('Password updated successfully! You can now sign in with your new password.');
-      
-      // Reset form
-      setPassword('');
-      setConfirmPassword('');
-      
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 3000);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while updating your password. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const getPasswordStrength = (password: string) => {
     let strength = 0;
     if (password.length >= 8) strength++;

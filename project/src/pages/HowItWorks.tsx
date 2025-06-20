@@ -7,12 +7,10 @@ import {
   ArrowRight, 
   Sparkles, 
   Target, 
-  Zap, 
   Shield, 
   Award, 
   Clock, 
-  Users, 
-  Globe,
+  Users,
   FileText,
   Search,
   Heart,
@@ -20,7 +18,6 @@ import {
   TrendingUp,
   Rocket,
   BookOpen,
-  GraduationCap,
   DollarSign
 } from 'lucide-react';
 

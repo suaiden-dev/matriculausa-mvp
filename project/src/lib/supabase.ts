@@ -56,6 +56,10 @@ export interface Scholarship {
   created_at: string;
   updated_at: string;
   universities?: University;
+  original_value_per_credit?: number;
+  original_annual_value?: number;
+  annual_value_with_scholarship?: number;
+  scholarship_type?: string;
 }
 
 export interface UserProfile {

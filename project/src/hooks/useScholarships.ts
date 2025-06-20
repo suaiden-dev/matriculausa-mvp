@@ -11,12 +11,14 @@ export function useScholarships() {
       setLoading(true);
       const { data, error } = await supabase
         .from('scholarships')
-        .select('*, universities(name)');
+        .select(`id, title, description, amount, deadline, requirements, field_of_study, level, eligibility, benefits, is_exclusive, is_active, university_id, created_at, updated_at, needcpt, visaassistance, scholarshipvalue, image_url, original_value_per_credit, original_annual_value, annual_value_with_scholarship, scholarship_type, universities!inner(id, name, logo_url, location, is_approved)`)
+        .eq('is_active', true);
       if (error) {
         setError(error.message);
         setScholarships([]);
       } else {
-        setScholarships(data as Scholarship[]);
+        const filtered = (data || []).filter((s: any) => s.universities && s.universities.is_approved);
+        setScholarships(filtered as Scholarship[]);
       }
       setLoading(false);
     }

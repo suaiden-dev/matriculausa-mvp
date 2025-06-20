@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ExternalLink, Building, ArrowLeft, Sparkles, Phone, Mail, Fan as Fax, DollarSign, Award, Clock } from 'lucide-react';
+import { MapPin, ExternalLink, ArrowLeft, Sparkles, Phone, Mail, Fan as Fax, DollarSign, Award, Clock } from 'lucide-react';
 import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import type { Scholarship } from '../lib/supabase';
@@ -26,7 +26,7 @@ const UniversityDetail: React.FC = () => {
         return;
       }
       // Try Supabase
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('universities')
         .select('*')
         .eq('id', id)
@@ -45,12 +45,12 @@ const UniversityDetail: React.FC = () => {
     if (!id) return;
     const fetchScholarships = async () => {
       setScholarshipsLoading(true);
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('scholarships')
         .select('*')
         .eq('university_id', id)
         .eq('is_active', true);
-      setScholarships(error ? [] : (data as Scholarship[]));
+      setScholarships(data as Scholarship[]);
       setScholarshipsLoading(false);
     };
     fetchScholarships();

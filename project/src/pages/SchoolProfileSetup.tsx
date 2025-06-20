@@ -8,7 +8,6 @@ const SchoolProfileSetup: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -76,7 +75,7 @@ const SchoolProfileSetup: React.FC = () => {
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof typeof prev],
+          ...((prev[parent as keyof typeof prev] ?? {}) as object),
           [child]: value
         }
       }));

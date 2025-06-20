@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { supabase, University, Scholarship } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import SchoolDashboardLayout from './SchoolDashboardLayout';
-import Overview from './Overview';
-import ScholarshipManagement from './ScholarshipManagement';
-import ProfileManagement from './ProfileManagement';
+// Lazy load das páginas
+const Overview = React.lazy(() => import('./Overview'));
+const ScholarshipManagement = React.lazy(() => import('./ScholarshipManagement'));
+const ProfileManagement = React.lazy(() => import('./ProfileManagement'));
+
+const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
 const SchoolDashboard: React.FC = () => {
   const [university, setUniversity] = useState<University | null>(null);
@@ -101,28 +104,36 @@ const SchoolDashboard: React.FC = () => {
         <Route 
           index 
           element={
-            <Overview 
-              university={university} 
-              scholarships={scholarships} 
-              stats={stats} 
-              user={user}
-            />
+            <Suspense fallback={<SkeletonLoader />}>
+              <Overview 
+                university={university} 
+                scholarships={scholarships} 
+                stats={stats} 
+                user={user}
+              />
+            </Suspense>
           } 
         />
         <Route 
           path="scholarships" 
           element={
-            <ScholarshipManagement 
-              university={university} 
-              scholarships={scholarships} 
-              handleDeleteScholarship={handleDeleteScholarship}
-              toggleScholarshipStatus={toggleScholarshipStatus}
-            />
+            <Suspense fallback={<SkeletonLoader />}>
+              <ScholarshipManagement 
+                university={university} 
+                scholarships={scholarships} 
+                handleDeleteScholarship={handleDeleteScholarship}
+                toggleScholarshipStatus={toggleScholarshipStatus}
+              />
+            </Suspense>
           } 
         />
         <Route 
           path="profile" 
-          element={<ProfileManagement university={university} />} 
+          element={
+            <Suspense fallback={<SkeletonLoader />}>
+              <ProfileManagement university={university} />
+            </Suspense>
+          } 
         />
       </Route>
     </Routes>

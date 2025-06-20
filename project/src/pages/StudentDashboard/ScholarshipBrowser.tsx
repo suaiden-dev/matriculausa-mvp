@@ -242,6 +242,23 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     </div>
                   </div>
                 </div>
+
+                <div className="mb-4">
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col gap-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700">Original Annual Value</span>
+                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_annual_value)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700">Value Per Credit</span>
+                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_value_per_credit)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700">Annual Value With Scholarship</span>
+                      <span className="font-bold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Requirements Preview */}

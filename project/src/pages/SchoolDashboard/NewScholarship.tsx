@@ -40,7 +40,10 @@ const NewScholarship: React.FC = () => {
     eligibility: [''],
     benefits: [''],
     is_exclusive: false,
-    is_active: true
+    is_active: true,
+    original_annual_value: '',
+    original_value_per_credit: '',
+    annual_value_with_scholarship: '',
   });
 
   useEffect(() => {
@@ -162,8 +165,16 @@ const NewScholarship: React.FC = () => {
       return;
     }
 
-    if (!formData.amount.trim() || isNaN(Number(formData.amount))) {
-      setError('Valid scholarship amount is required');
+    if (!formData.original_annual_value.trim() || isNaN(Number(formData.original_annual_value))) {
+      setError('Valid original annual value is required');
+      return;
+    }
+    if (!formData.original_value_per_credit.trim() || isNaN(Number(formData.original_value_per_credit))) {
+      setError('Valid value per credit is required');
+      return;
+    }
+    if (!formData.annual_value_with_scholarship.trim() || isNaN(Number(formData.annual_value_with_scholarship))) {
+      setError('Valid annual value with scholarship is required');
       return;
     }
 
@@ -219,6 +230,9 @@ const NewScholarship: React.FC = () => {
         is_active: formData.is_active,
         university_id: universityId,
         image_url: null, // Imagem desabilitada
+        original_annual_value: Number(formData.original_annual_value),
+        original_value_per_credit: Number(formData.original_value_per_credit),
+        annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
       };
       // 4. Submit to Supabase
       const { error: submitError } = await supabase
@@ -344,28 +358,55 @@ const NewScholarship: React.FC = () => {
                 <DollarSign className="h-5 w-5 mr-2 text-green-600" />
                 Financial Details
               </h2>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Scholarship Amount (USD) *
+                    Original Annual Value (USD) *
                   </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                    <input
-                      type="number"
-                      name="amount"
-                      value={formData.amount}
-                      onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="10000"
-                      min="0"
-                      step="100"
-                      required
-                    />
-                  </div>
+                  <input
+                    type="number"
+                    name="original_annual_value"
+                    value={formData.original_annual_value}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 20000"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
                 </div>
-
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Value Per Credit (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    name="original_value_per_credit"
+                    value={formData.original_value_per_credit}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 500"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Annual Value With Scholarship (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    name="annual_value_with_scholarship"
+                    value={formData.annual_value_with_scholarship}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 12000"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Application Deadline *

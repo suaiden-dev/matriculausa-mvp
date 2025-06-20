@@ -1,19 +1,8 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Zap, Shield, Award } from 'lucide-react';
 
 const Footer: React.FC = () => {
-  const navigate = useNavigate();
-
-  // Scroll to top after navigation for login/register
-  const handleAuthLinkClick = (to: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    navigate(to);
-    setTimeout(() => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    }, 80);
-  };
-
   return (
     <footer className="bg-[#05294E] text-white relative overflow-hidden">
       <div className="absolute inset-0">
@@ -73,7 +62,7 @@ const Footer: React.FC = () => {
             <ul className="space-y-3">
               <li><Link to="/about" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">About Us</Link></li>
               <li><Link to="/schools" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Partner Universities</Link></li>
-              <li><Link to="/scholarships" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block flex items-center">
+              <li><Link to="/scholarships" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
                 Scholarships <Zap className="ml-1 h-3 w-3 text-yellow-400" />
               </Link></li>
               <li><Link to="/process" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Application Process</Link></li>
