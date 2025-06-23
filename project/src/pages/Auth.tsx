@@ -41,18 +41,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      if (user.role === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (user.role === 'school') {
-        navigate('/school/dashboard', { replace: true });
-      } else {
-        navigate('/student/dashboard', { replace: true });
-      }
-    }
-  }, [isAuthenticated, user, navigate]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -89,6 +77,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         return;
       } else {
         await login(formData.email, formData.password);
+        // Após login bem-sucedido, redireciona para o dashboard correto
+        if (user && user.role === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+        } else if (user && user.role === 'school') {
+          navigate('/school/dashboard', { replace: true });
+        } else if (user && user.role === 'student') {
+          navigate('/student/dashboard', { replace: true });
+        }
         return;
       }
     } catch (err: any) {
@@ -282,7 +278,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </div>
             <button
               className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
-              onClick={() => { setShowVerificationModal(false); window.location.href = '/school/termsandconditions'; }}
+              onClick={() => { setShowVerificationModal(false); navigate('/school/termsandconditions'); }}
             >
               Got it
             </button>

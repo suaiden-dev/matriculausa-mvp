@@ -18,7 +18,7 @@ import {
   Target,
   AlertTriangle
 } from 'lucide-react';
-import { University, Scholarship } from '../../lib/supabase';
+import type { University, Scholarship } from '../../types';
 
 interface ScholarshipManagementProps {
   university: University | null;

@@ -13,8 +13,15 @@ import {
   Star,
   Zap,
   Eye,
-  Heart
+  Heart,
+  GraduationCap,
+  Users,
+  ShoppingCart
 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { StripeCheckout } from '../../components/StripeCheckout';
+import { useCartStore } from '../../stores/applicationStore';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -31,15 +38,67 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
   const [sortBy, setSortBy] = useState('deadline');
+  const { isAuthenticated, userProfile, user } = useAuth();
+  const navigate = useNavigate();
+  const isLocked = !userProfile?.has_paid_selection_process_fee;
+  const { cart, addToCart, removeFromCart } = useCartStore();
+
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getFieldBadgeColor = (field: string | undefined) => {
+    switch (field?.toLowerCase()) {
+      case 'stem':
+        return 'bg-blue-600';
+      case 'business':
+        return 'bg-green-600';
+      case 'engineering':
+        return 'bg-purple-600';
+      default:
+        return 'bg-slate-600';
+    }
+  };
+
+  const getLevelIcon = (level: string) => {
+    switch (level) {
+      case 'undergraduate':
+        return <GraduationCap className="h-4 w-4" />;
+      case 'graduate':
+        return <Users className="h-4 w-4" />;
+      case 'doctorate':
+        return <Award className="h-4 w-4" />;
+      default:
+        return <GraduationCap className="h-4 w-4" />;
+    }
+  };
+
+  const getDaysUntilDeadline = (deadline: string) => {
+    const today = new Date();
+    const deadlineDate = new Date(deadline);
+    const diffTime = deadlineDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getDeadlineStatus = (deadline: string) => {
+    const days = getDaysUntilDeadline(deadline);
+    if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
+    if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50' };
+    if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50' };
+    return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
+  };
 
   const filteredScholarships = scholarships.filter(scholarship => {
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scholarship.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scholarship.schoolName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesLevel = selectedLevel === 'all' || scholarship.level === selectedLevel;
-    const matchesField = selectedField === 'all' || scholarship.fieldOfStudy.toLowerCase().includes(selectedField.toLowerCase());
-
+      scholarship.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (scholarship.universities?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level === selectedLevel);
+    const matchesField = selectedField === 'all' || (scholarship.field_of_study || '').toLowerCase().includes(selectedField.toLowerCase());
     return matchesSearch && matchesLevel && matchesField;
   }).sort((a, b) => {
     switch (sortBy) {
@@ -54,32 +113,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   });
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
-
-  const getDaysUntilDeadline = (deadline: string) => {
-    const today = new Date();
-    const deadlineDate = new Date(deadline);
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getDeadlineStatus = (deadline: string) => {
-    const days = getDaysUntilDeadline(deadline);
-    if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' };
-    if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' };
-    if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' };
-    return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' };
-  };
-
   const hasApplied = (scholarshipId: string) => {
     return applications.some(app => app.scholarship_id === scholarshipId);
+  };
+
+  const handleAddToCart = (scholarship: any) => {
+    if (user) {
+      addToCart(scholarship, user.id);
+    } else {
+      console.error("User not authenticated to add items to cart");
+    }
   };
 
   return (
@@ -166,176 +209,124 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       </div>
 
       {/* Scholarships Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredScholarships.map((scholarship) => {
-          const deadlineInfo = getDeadlineStatus(scholarship.deadline);
-          const daysLeft = getDaysUntilDeadline(scholarship.deadline);
-          const alreadyApplied = hasApplied(scholarship.id);
-          
+          const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+          const alreadyApplied = applications.some(app => app.scholarship_id === scholarship.id);
+          const inCart = cart.some((s) => s.scholarships.id === scholarship.id);
           return (
-            <div key={scholarship.id} className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              {/* Header */}
-              <div className="p-6 pb-4">
+            <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
+              {/* Card Content */}
+              <div className="p-6">
+                {/* Title and Badges */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-3">
-                      {scholarship.isExclusive && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                          <Zap className="h-3 w-3 mr-1" />
-                          Exclusive
-                        </span>
-                      )}
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {scholarship.fieldOfStudy}
-                      </span>
-                    </div>
-                    
-                    <h3 className="font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
                       {scholarship.title}
                     </h3>
-                    
-                    <div className="flex items-center text-sm text-slate-600 mb-3">
-                      <Building className="h-4 w-4 mr-2" />
-                      {scholarship.schoolName}
+                    {/* University */}
+                    <div className="flex items-center text-slate-600 mb-4">
+                      <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                      <span className="text-xs font-semibold mr-1">University:</span>
+                      <span className="text-sm select-none">{scholarship.universities?.name || 'Unknown University'}</span>
                     </div>
                   </div>
+                  {/* Exclusive Badge */}
+                  {scholarship.is_exclusive && (
+                    <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                      Exclusive
+                    </span>
+                  )}
                 </div>
-
-                {/* Amount */}
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500 mb-1">Scholarship Value</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {formatAmount(scholarship.amount)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-slate-500 mb-1">Level</p>
-                    <p className="text-sm font-bold text-slate-900 capitalize">
-                      {scholarship.level}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Deadline */}
-                <div className={`p-3 rounded-xl border ${deadlineInfo.bg} ${deadlineInfo.border}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Application Deadline</p>
-                      <p className="font-bold text-slate-900">
-                        {new Date(scholarship.deadline).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      {daysLeft > 0 ? (
-                        <>
-                          <p className={`text-2xl font-bold ${deadlineInfo.color}`}>
-                            {daysLeft}
-                          </p>
-                          <p className={`text-xs font-medium ${deadlineInfo.color}`}>
-                            day{daysLeft !== 1 ? 's' : ''} left
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-sm font-bold text-red-600">Expired</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
+                {/* Financial Values Section */}
                 <div className="mb-4">
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">Original Annual Value</span>
-                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_annual_value)}</span>
+                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_annual_value ?? 0)}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">Value Per Credit</span>
-                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_value_per_credit)}</span>
+                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">Annual Value With Scholarship</span>
-                      <span className="font-bold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship)}</span>
+                      <span className="font-bold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Details */}
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Level</span>
+                    <div className="flex items-center">
+                      {getLevelIcon(scholarship.level || 'undergraduate')}
+                      <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Field</span>
+                    <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                      {scholarship.field_of_study || 'Any Field'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Deadline</span>
+                    <div className="flex items-center">
+                      <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
+                      <span className="text-slate-700">{getDaysUntilDeadline(scholarship.deadline)} days left</span>
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Requirements Preview */}
-              <div className="px-6 pb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-slate-700">Requirements</span>
-                  <span className="text-xs text-slate-500">{scholarship.requirements.length} criteria</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {scholarship.requirements.slice(0, 2).map((req: string, index: number) => (
-                    <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
-                      {req}
-                    </span>
-                  ))}
-                  {scholarship.requirements.length > 2 && (
-                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-lg text-xs font-medium">
-                      +{scholarship.requirements.length - 2} more
-                    </span>
+              {/* Action Button */}
+              <div className="px-6 pb-6">
+                <button
+                  className={`w-full py-2 px-4 rounded-md transition-all duration-200 font-semibold ${
+                    inCart ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'
+                  } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : ''} ${isLocked ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : ''}`}
+                  onClick={() => {
+                    if (isLocked) return;
+                    if (inCart) {
+                      if (user) removeFromCart(scholarship.id, user.id);
+                    } else {
+                      handleAddToCart(scholarship);
+                    }
+                  }}
+                  disabled={alreadyApplied || isLocked}
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  {alreadyApplied ? 'Already Applied' : isLocked ? 'Unlock full details by paying the selection process fee.' : inCart ? 'Remove from Cart' : 'Add to Cart'}
+                  {!alreadyApplied && !isLocked && <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />}
+                </button>
+              </div>
+              {/* Overlay for locked cards */}
+              {isLocked && (
+                <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-10">
+                  <span className="text-[#05294E] font-bold text-lg mb-2">Unlock full details</span>
+                  <span className="text-slate-600 text-sm text-center mb-4">Pay the selection process fee to view all scholarship information and apply.</span>
+                  {/* Botão de pagamento */}
+                  {!isAuthenticated ? (
+                    <button
+                      className="bg-[#D0151C] text-white px-6 py-3 rounded-xl hover:bg-[#B01218] transition-all duration-300 font-bold mt-2"
+                      onClick={() => navigate('/login')}
+                    >
+                      Sign in to pay selection fee
+                    </button>
+                  ) : (
+                    <StripeCheckout
+                      productId="SELECTION_PROCESS"
+                      feeType="application_fee"
+                      buttonText="Pay Selection Fee to Unlock"
+                      className="mt-2"
+                      onSuccess={() => {}}
+                      onError={(err) => alert(err)}
+                    />
                   )}
                 </div>
-              </div>
-
-              {/* Benefits Preview */}
-              <div className="px-6 pb-6">
-                <div className="flex items-center mb-3">
-                  <Heart className="h-4 w-4 mr-2 text-red-500" />
-                  <span className="text-sm font-medium text-slate-700">Benefits</span>
-                </div>
-                <div className="space-y-2">
-                  {scholarship.benefits.slice(0, 2).map((benefit: string, index: number) => (
-                    <div key={index} className="flex items-center text-xs text-slate-600">
-                      <CheckCircle className="h-3 w-3 mr-2 text-green-500 flex-shrink-0" />
-                      <span>{benefit}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="px-6 pb-6">
-                <div className="flex space-x-2">
-                  <button className="flex-1 bg-slate-100 text-slate-700 py-3 px-4 rounded-xl hover:bg-slate-200 transition-colors font-medium text-sm flex items-center justify-center">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </button>
-                  
-                  <button
-                    onClick={() => onApplyScholarship(scholarship.id)}
-                    disabled={alreadyApplied || daysLeft <= 0}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center ${
-                      alreadyApplied
-                        ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                        : daysLeft <= 0
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105'
-                    }`}
-                  >
-                    {alreadyApplied ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Applied
-                      </>
-                    ) : daysLeft <= 0 ? (
-                      <>
-                        <Clock className="h-4 w-4 mr-2" />
-                        Expired
-                      </>
-                    ) : (
-                      <>
-                        <Award className="h-4 w-4 mr-2" />
-                        Apply Now
-                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+              )}
+              {/* Hover Effect Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             </div>
           );
         })}

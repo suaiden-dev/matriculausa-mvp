@@ -19,7 +19,8 @@ import {
   EyeOff,
   ExternalLink
 } from 'lucide-react';
-import { University, supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { University } from '../../types';
 
 interface ProfileManagementProps {
   university: University | null;
@@ -30,7 +31,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | undefined>(university?.logo_url);
+  const [imageUrl, setImageUrl] = useState<string | undefined>(university?.image_url);
 
   const profileCompleteness = university ? (
     (university.name ? 20 : 0) +
@@ -62,10 +63,10 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
       // Update university record
       const { error: updateError } = await supabase
         .from('universities')
-        .update({ logo_url: publicUrl })
+        .update({ image_url: publicUrl })
         .eq('id', university.id);
       if (updateError) throw updateError;
-      setLogoUrl(publicUrl);
+      setImageUrl(publicUrl);
     } catch (err: any) {
       setUploadError('Failed to upload image. Please try again.');
     } finally {
@@ -103,8 +104,8 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 w-full">
               <div className="relative mb-4 sm:mb-0">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
-                  {logoUrl ? (
-                    <img src={logoUrl} alt="University Logo" className="w-full h-full object-cover rounded-2xl" />
+                  {imageUrl ? (
+                    <img src={imageUrl} alt="University Logo" className="w-full h-full object-cover rounded-2xl" />
                   ) : (
                     <Building className="h-12 w-12 text-white" />
                   )}
@@ -419,7 +420,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
               <h3 className="text-xl font-bold text-slate-900 mb-6">Academic Programs</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {university.programs.map((program, index) => (
+                {university.programs.map((program: string, index: number) => (
                   <div
                     key={index}
                     className="bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200 px-4 py-3 rounded-xl text-sm font-medium text-slate-700 text-center hover:from-[#05294E]/5 hover:to-blue-50 hover:border-[#05294E]/20 transition-all duration-300"

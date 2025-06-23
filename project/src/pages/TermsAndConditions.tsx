@@ -45,9 +45,9 @@ const TermsAndConditions: React.FC = () => {
       if (university && university.terms_accepted) {
         // User already accepted terms, redirect to appropriate page
         if (university.profile_completed) {
-          window.location.href = '/school/termsandconditions';
+          navigate('/school/termsandconditions');
         } else {
-          window.location.href = '/school/setup-profile';
+          navigate('/school/setup-profile');
         }
       }
     } catch (error) {
@@ -87,9 +87,9 @@ const TermsAndConditions: React.FC = () => {
 
         // Redirect based on profile completion status
         if (existingUniversity.profile_completed) {
-          window.location.href = '/school/termsandconditions';
+          navigate('/school/termsandconditions');
         } else {
-          window.location.href = '/school/setup-profile';
+          navigate('/school/setup-profile');
         }
       } else {
         // Create new university record if it doesn't exist
@@ -108,7 +108,7 @@ const TermsAndConditions: React.FC = () => {
         if (insertError) throw insertError;
 
         // Redirect to profile setup
-        window.location.href = '/school/setup-profile';
+        navigate('/school/setup-profile');
       }
     } catch (error: any) {
       console.error('Error accepting terms:', error);

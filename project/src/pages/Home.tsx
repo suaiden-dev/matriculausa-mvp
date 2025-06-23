@@ -54,6 +54,8 @@ const Home: React.FC = () => {
                 
                 {isAuthenticated && !hasPaidProcess && !subscriptionLoading && (
                   <StripeCheckout 
+                    feeType="selection_process"
+                    paymentType="selection_process"
                     productId="SELECTION_PROCESS"
                     buttonText="Start Selection Process"
                     className="group px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
@@ -165,7 +167,7 @@ const Home: React.FC = () => {
                 {/* University Image */}
                 <div className="relative h-48 overflow-hidden">
                   <img
-                    src={school.image}
+                    src={school.image_url}
                     alt={`${school.name} campus`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -204,12 +206,12 @@ const Home: React.FC = () => {
                   {/* Programs Preview */}
                   <div className="mb-6">
                     <div className="flex flex-wrap gap-2">
-                      {school.programs.slice(0, 3).map((program, index) => (
+                      {school.programs?.slice(0, 3).map((program, index) => (
                         <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
                           {program}
                         </span>
                       ))}
-                      {school.programs.length > 3 && (
+                      {school.programs && school.programs.length > 3 && (
                         <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
                           +{school.programs.length - 3} more
                         </span>

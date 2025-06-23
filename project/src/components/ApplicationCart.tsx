@@ -29,16 +29,16 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
   };
 
   const handleCheckoutSuccess = () => {
-    // Limpar o carrinho após o pagamento bem-sucedido
+    // Clear the cart after successful payment
     clearScholarships();
     onClose();
-    // Redirecionar para a página de sucesso ou dashboard
+    // Redirect to success page or dashboard
     window.location.href = '/checkout/success';
   };
 
   const handleCheckoutError = (error: string) => {
     console.error('Checkout error:', error);
-    // Aqui você pode adicionar uma notificação de erro
+    // You can add an error notification here
   };
 
   if (!isOpen) return null;
@@ -80,13 +80,13 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          {scholarship.isExclusive && (
+                          {scholarship.is_exclusive && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-purple-600 text-white">
                               Exclusive
                             </span>
                           )}
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {scholarship.fieldOfStudy}
+                            {scholarship.field_of_study}
                           </span>
                         </div>
                         
@@ -96,7 +96,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                         
                         <div className="flex items-center text-sm text-slate-600 mb-2">
                           <Building className="h-4 w-4 mr-2" />
-                          {scholarship.schoolName}
+                          {scholarship.universities?.name || scholarship.university_id || 'Unknown University'}
                         </div>
 
                         <div className="flex items-center space-x-4 text-sm">
@@ -140,10 +140,11 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
 
       {showCheckout && (
         <StripeCheckout
-          productId="APPLICATION_FEE"
-          buttonText="Pay Application Fee"
+          productId="SELECTION_PROCESS"
+          buttonText="Pay Selection Process Fee"
           className="flex-1 py-3 px-4"
-          paymentType="application_fee"
+          paymentType="selection_process"
+          feeType="selection_process"
           onSuccess={handleCheckoutSuccess}
           onError={handleCheckoutError}
         />

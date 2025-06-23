@@ -1,21 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-interface Scholarship {
-  id: string;
-  title: string;
-  amount: number;
-  schoolName: string;
-  level: string;
-  fieldOfStudy: string;
-  deadline: string;
-  requirements: string[];
-  benefits: string[];
-  isExclusive?: boolean;
-  original_annual_value: number;
-  original_value_per_credit: number;
-  annual_value_with_scholarship: number;
-}
+import { Scholarship } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface ApplicationStore {
   selectedScholarships: Scholarship[];
@@ -26,6 +12,41 @@ interface ApplicationStore {
   getTotalAmount: () => number;
   getSelectedCount: () => number;
 }
+
+interface CartItem {
+  cart_id: string;
+  scholarships: Scholarship;
+}
+
+interface CartState {
+  cart: CartItem[];
+  isLoading: boolean;
+  fetchCart: (userId: string) => Promise<void>;
+  addToCart: (scholarship: Scholarship, userId: string) => Promise<void>;
+  removeFromCart: (scholarshipId: string, userId: string) => Promise<void>;
+  clearCart: (userId: string) => Promise<void>;
+}
+
+const getCartItemsFromDB = async (userId: string): Promise<CartItem[]> => {
+    const { data, error } = await supabase
+        .from('user_cart')
+        .select(`
+            id, 
+            scholarships (*)
+        `)
+        .eq('user_id', userId);
+
+    if (error) {
+        console.error('Error fetching cart:', error);
+        return [];
+    }
+
+    return data.map(item => ({
+        ...(item.scholarships as unknown as Scholarship),
+        cart_id: item.id,
+        scholarships: item.scholarships as unknown as Scholarship,
+    }));
+};
 
 export const useApplicationStore = create<ApplicationStore>()(
   persist(
@@ -72,3 +93,57 @@ export const useApplicationStore = create<ApplicationStore>()(
     }
   )
 );
+
+export const useCartStore = create<CartState>((set, get) => ({
+  cart: [],
+  isLoading: true,
+  fetchCart: async (userId) => {
+    set({ isLoading: true });
+    const cartItems = await getCartItemsFromDB(userId);
+    set({ cart: cartItems, isLoading: false });
+  },
+  addToCart: async (scholarship, userId) => {
+    const { cart } = get();
+    if (cart.some(item => item.scholarships.id === scholarship.id)) return;
+
+    const { data, error } = await supabase
+      .from('user_cart')
+      .insert({ user_id: userId, scholarship_id: scholarship.id })
+      .select('id')
+      .single();
+
+    if (error || !data) {
+      console.error('Error adding to cart:', error);
+      return;
+    }
+    
+    set((state) => ({ cart: [...state.cart, { cart_id: data.id, scholarships: scholarship }] }));
+  },
+  removeFromCart: async (scholarshipId, userId) => {
+    const { error } = await supabase
+      .from('user_cart')
+      .delete()
+      .eq('user_id', userId)
+      .eq('scholarship_id', scholarshipId);
+
+    if (error) {
+      console.error('Error removing from cart:', error);
+      return;
+    }
+
+    set((state) => ({ cart: state.cart.filter((s) => s.scholarships.id !== scholarshipId) }));
+  },
+  clearCart: async (userId: string) => {
+    const { error } = await supabase
+        .from('user_cart')
+        .delete()
+        .eq('user_id', userId);
+    
+    if (error) {
+        console.error('Error clearing cart:', error);
+        return;
+    }
+
+    set({ cart: [] });
+  },
+}));

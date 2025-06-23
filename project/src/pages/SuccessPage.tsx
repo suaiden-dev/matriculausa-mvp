@@ -75,7 +75,13 @@ const SuccessPage: React.FC = () => {
           }
           if (data.status === 'complete') {
             console.log('Sessão Stripe verificada e completa no backend:', data);
-            // Aqui você pode adicionar lógica para exibir detalhes do pedido
+            // Log detalhado
+            console.log('Payment Success:', {
+              sessionId: id,
+              status: data.status,
+              details: data
+            });
+            // Não redireciona automaticamente, só ao clicar no botão
           } else {
             setError(data.message || 'Sessão Stripe não está completa ou inválida.');
           }
@@ -94,7 +100,7 @@ const SuccessPage: React.FC = () => {
   }, []);
 
   const handleGoScholarships = () => {
-    navigate('/scholarships');
+    navigate('/student/dashboard/applications');
   };
 
   if (loading) {

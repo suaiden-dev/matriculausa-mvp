@@ -160,6 +160,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             ) : (
               <StripeCheckout
                 productId="SELECTION_PROCESS"
+                feeType="application_fee"
                 buttonText="Start Selection Process"
                 className="w-full bg-gradient-to-r from-[#D0151C] to-red-600 text-white py-3 px-4 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
               />
@@ -309,7 +310,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
           {children}
         </main>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   CheckCircle, 
@@ -14,20 +14,61 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
+import { Application, Scholarship } from '../../types';
+import { StripeCheckout } from '../../components/StripeCheckout';
 
-interface MyApplicationsProps {
-  applications: any[];
-}
+// Combine os tipos para incluir os detalhes da bolsa na aplicação
+type ApplicationWithScholarship = Application & {
+  scholarships: Scholarship | null;
+};
 
-const MyApplications: React.FC<MyApplicationsProps> = ({
-  applications
-}) => {
+const MyApplications: React.FC = () => {
+  const { user } = useAuth();
+  const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchApplications = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('scholarship_applications')
+          .select('*, scholarships(*)')
+          .eq('student_id', user.id)
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.error('Erro ao buscar aplicações:', error);
+          setError('Erro ao buscar aplicações.');
+        } else {
+          if (!data || data.length === 0) {
+            console.warn('Nenhuma aplicação encontrada para student_id:', user.id);
+          }
+          setApplications(data || []);
+        }
+      } catch (err) {
+        setError('Erro inesperado ao buscar aplicações.');
+        console.error(err);
+      }
+      setLoading(false);
+    };
+    if (user?.id) fetchApplications();
+  }, [user]);
+
 
   const filteredApplications = applications.filter(application => {
-    const matchesSearch = application.scholarship?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         application.scholarship?.schoolName.toLowerCase().includes(searchTerm.toLowerCase());
+    const scholarshipTitle = application.scholarships?.title || '';
+    const universityName = application.scholarships?.universities?.name || '';
+    
+    const matchesSearch = scholarshipTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         universityName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || application.status === statusFilter;
 
@@ -47,6 +88,7 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
       case 'approved': return 'bg-green-100 text-green-800 border-green-200';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'under_review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'pending_scholarship_fee': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -56,6 +98,7 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
       case 'approved': return CheckCircle;
       case 'rejected': return XCircle;
       case 'under_review': return AlertCircle;
+      case 'pending_scholarship_fee': return DollarSign;
       default: return Clock;
     }
   };
@@ -65,6 +108,7 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
       case 'approved': return 'Congratulations! Your application has been approved.';
       case 'rejected': return 'Unfortunately, your application was not selected.';
       case 'under_review': return 'Your application is currently being reviewed.';
+      case 'pending_scholarship_fee': return 'Pending scholarship fee payment.';
       default: return 'Your application is pending review.';
     }
   };
@@ -74,8 +118,17 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
     pending: applications.filter(app => app.status === 'pending').length,
     approved: applications.filter(app => app.status === 'approved').length,
     rejected: applications.filter(app => app.status === 'rejected').length,
-    under_review: applications.filter(app => app.status === 'under_review').length
+    under_review: applications.filter(app => app.status === 'under_review').length,
+    pending_scholarship_fee: applications.filter(app => app.status === 'pending_scholarship_fee').length,
   };
+
+  if (loading) {
+    return <div>Loading applications...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -218,7 +271,10 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
           {/* Applications List */}
           <div className="space-y-4">
             {filteredApplications.map((application) => {
-              const StatusIcon = getStatusIcon(application.status);
+              const Icon = getStatusIcon(application.status);
+              const scholarship = application.scholarships;
+
+              if (!scholarship) return null; // Skip rendering if scholarship data is missing
               
               return (
                 <div key={application.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300">
@@ -229,14 +285,35 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
                           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                             <Award className="h-6 w-6 text-white" />
                           </div>
-                          <div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-1">
-                              {application.scholarship?.title}
-                            </h3>
-                            <div className="flex items-center text-slate-600">
-                              <Building className="h-4 w-4 mr-2" />
-                              {application.scholarship?.schoolName}
+                          <div className="flex-1 flex items-center justify-between">
+                            <div>
+                              <h3 className="text-xl font-bold text-slate-900 mb-1">
+                                {scholarship.title}
+                              </h3>
+                              <div className="flex items-center text-slate-600">
+                                <Building className="h-4 w-4 mr-2" />
+                                {scholarship.universities?.name}
+                              </div>
                             </div>
+                            {(scholarship.id && (application.status === 'pending' || application.status === 'under_review')) && (
+                              <StripeCheckout
+                                productId="SCHOLARSHIPS_FEE"
+                                buttonText="Pay Scholarship Fee ($550)"
+                                className="ml-4"
+                                paymentType="scholarship_fee"
+                                feeType="scholarship_fee"
+                                scholarshipsIds={[scholarship.id]}
+                                studentProcessType={application.student_process_type}
+                                successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                                cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
+                                onSuccess={() => {
+                                  setApplications(prev => prev.map(app =>
+                                    app.id === application.id ? { ...app, status: 'approved' } : app
+                                  ));
+                                  setSuccessMessage('Scholarship fee paid successfully!');
+                                }}
+                              />
+                            )}
                           </div>
                         </div>
                         
@@ -244,18 +321,16 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
                           <div className="flex items-center">
                             <DollarSign className="h-4 w-4 mr-2 text-green-600" />
                             <span className="font-semibold text-green-600">
-                              {formatAmount(application.scholarship?.amount || 0)}
+                              {formatAmount(scholarship.amount || 0)}
                             </span>
                           </div>
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 mr-2 text-slate-500" />
-                            <span className="text-slate-600">
-                              Applied {new Date(application.applied_at).toLocaleDateString()}
-                            </span>
+                            <span className="text-slate-600">Applied on {new Date(application.applied_at).toLocaleDateString()}</span>
                           </div>
                           <div className="flex items-center">
                             <span className="text-slate-600 capitalize">
-                              Level: {application.scholarship?.level}
+                              Level: {scholarship.level}
                             </span>
                           </div>
                         </div>
@@ -263,10 +338,9 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
                       
                       <div className="ml-6 flex flex-col items-end space-y-3">
                         <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium border ${getStatusColor(application.status)}`}>
-                          <StatusIcon className="h-4 w-4 mr-2" />
+                          <Icon className="h-4 w-4 mr-2" />
                           {application.status.replace('_', ' ').toUpperCase()}
                         </span>
-                        
                         <button className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center">
                           <Eye className="h-4 w-4 mr-1" />
                           View Details
@@ -296,6 +370,53 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
                         </p>
                       )}
                     </div>
+
+                    {application.status === 'pending_scholarship_fee' && (
+                      <div className="mt-4 p-4 bg-blue-50 border-t border-blue-200">
+                        <p className="text-blue-800 font-semibold mb-2 text-center">
+                          To proceed with your application, please pay the scholarship fee.
+                        </p>
+                        {payingId === application.id && (
+                          <div className="mb-2 flex justify-center">
+                            <span className="text-blue-600 animate-pulse">Processing payment...</span>
+                          </div>
+                        )}
+                        <StripeCheckout
+                          productId="SCHOLARSHIP_FEE"
+                          paymentType="scholarship_fee"
+                          feeType="scholarship_fee"
+                          scholarshipsIds={[application.scholarship_id]}
+                          buttonText="Pay Scholarship Fee ($550)"
+                          successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                          cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          metadata={{ application_id: application.id }}
+                          onSuccess={() => {
+                            setSuccessMessage('Scholarship fee paid successfully!');
+                            setPayingId(null);
+                          }}
+                          onError={(err) => {
+                            setErrorMessage('Payment failed: ' + err);
+                            setPayingId(null);
+                          }}
+                          disabled={payingId === application.id}
+                        />
+                      </div>
+                    )}
+
+                    {/* Exibir documentos enviados */}
+                    {Array.isArray(application.documents) && application.documents.length > 0 && (
+                      <div className="mt-2">
+                        <div className="font-semibold text-slate-800 mb-1">Documents:</div>
+                        <ul className="list-disc ml-6">
+                          {application.documents.map((doc: any, idx: number) => (
+                            <li key={idx} className="mb-1">
+                              <span className="font-medium capitalize">{doc.type}:</span> <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -312,6 +433,38 @@ const MyApplications: React.FC<MyApplicationsProps> = ({
             </div>
           )}
         </>
+      )}
+
+      {/* Mensagem de sucesso/erro do pagamento */}
+      {successMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center max-w-sm w-full">
+            <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+            <h3 className="text-xl font-bold text-green-700 mb-2">Payment successful!</h3>
+            <p className="text-slate-700 mb-4">{successMessage}</p>
+            <button
+              className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-green-700 transition-all"
+              onClick={() => setSuccessMessage(null)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+      {errorMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center max-w-sm w-full">
+            <XCircle className="h-12 w-12 text-red-500 mb-4" />
+            <h3 className="text-xl font-bold text-red-700 mb-2">Payment failed</h3>
+            <p className="text-slate-700 mb-4">{errorMessage}</p>
+            <button
+              className="bg-red-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-700 transition-all"
+              onClick={() => setErrorMessage(null)}
+            >
+              Try again
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

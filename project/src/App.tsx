@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import Layout from './components/Layout';
@@ -17,11 +18,16 @@ import NewScholarship from './pages/SchoolDashboard/NewScholarship';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
 import SuccessPage from './pages/SuccessPage';
+import ScholarshipFeeSuccess from './pages/ScholarshipFeeSuccess';
+import ApplicationFeeSuccess from './pages/StudentDashboard/ApplicationFeeSuccess';
+import ApplicationFeeCancel from './pages/ApplicationFeeCancel';
+import PaymentErrorPage from './pages/PaymentErrorPage';
+import ApplicationFeeError from './pages/StudentDashboard/ApplicationFeeError';
 
 function App() {
   return (
+    <Router>
     <AuthProvider>
-      <Router>
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -47,10 +53,19 @@ function App() {
             <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
             <Route path="/contact" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Contact page coming soon...</div></div>} />
             <Route path="/checkout/success" element={<SuccessPage />} />
+            <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+            <Route path="/application-fee/success" element={<ApplicationFeeSuccess />} />
+            <Route path="/application-fee/cancel" element={<ApplicationFeeCancel />} />
+            <Route path="/student/dashboard/payment-success" element={<SuccessPage />} />
+            <Route path="/student/dashboard/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+            <Route path="/student/dashboard/enrollment-fee-success" element={<SuccessPage />} />
+            <Route path="/student/dashboard/payment-error" element={<PaymentErrorPage />} />
+            <Route path="/student/dashboard/application-fee-success" element={<ApplicationFeeSuccess />} />
+            <Route path="/student/dashboard/application-fee-error" element={<ApplicationFeeError />} />
           </Routes>
         </Layout>
+      </AuthProvider>
       </Router>
-    </AuthProvider>
   );
 }
 

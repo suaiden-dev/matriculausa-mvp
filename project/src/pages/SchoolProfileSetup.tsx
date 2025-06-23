@@ -9,6 +9,7 @@ const SchoolProfileSetup: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     // Basic Information
@@ -60,9 +61,9 @@ const SchoolProfileSetup: React.FC = () => {
       }
 
       if (university && university.profile_completed) {
-        window.location.href = '/school/dashboard';
+        navigate('/school/dashboard');
       } else if (university && !university.terms_accepted) {
-        window.location.href = '/school/termsandconditions';
+        navigate('/school/termsandconditions');
       }
     } catch (error) {
       console.error('Error checking profile:', error);
@@ -172,7 +173,7 @@ const SchoolProfileSetup: React.FC = () => {
 
       if (error) throw error;
 
-      window.location.href = '/school/dashboard';
+      navigate('/school/dashboard');
     } catch (error) {
       console.error('Error saving profile:', error);
       alert('Error saving profile. Please try again.');

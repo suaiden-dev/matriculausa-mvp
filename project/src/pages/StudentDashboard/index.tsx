@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { supabase, Scholarship } from '../../lib/supabase';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
@@ -9,6 +10,13 @@ import MyApplications from './MyApplications';
 import ProfileManagement from './ProfileManagement';
 import { mockScholarships } from '../../data/mockData';
 import { Link } from 'react-router-dom';
+import { ShoppingCart } from 'lucide-react';
+import { useCartStore } from '../../stores/applicationStore';
+import DocumentsAndScholarshipChoice from './DocumentsAndScholarshipChoice';
+import CollegeEnrollmentCheckout from './CollegeEnrollmentCheckout';
+import CartPage from './CartPage';
+import ScholarshipFeeSuccess from './ScholarshipFeeSuccess';
+import ScholarshipFeeError from './ScholarshipFeeError';
 
 interface StudentProfile {
   id: string;
@@ -39,23 +47,41 @@ const StudentDashboard: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const { user, userProfile, loading } = useAuth();
-
-  if (loading) {
-    return <div>Carregando...</div>;
-  }
+  const { cart } = useCartStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, loading]);
 
   const loadDashboardData = async () => {
     if (!user) return;
 
     try {
-      // Buscar bolsas (mantém mock por enquanto)
-      setScholarships(mockScholarships);
+      // Buscar bolsas reais do Supabase
+      const { data: realScholarships, error: scholarshipsError } = await supabase
+        .from('scholarships')
+        .select('*')
+        .eq('is_active', true);
+      if (scholarshipsError) {
+        setScholarships([]);
+      } else {
+        setScholarships(realScholarships || []);
+      }
+
+      // Buscar applications reais do Supabase
+      const { data: applicationsData, error: applicationsError } = await supabase
+        .from('scholarship_applications')
+        .select('*, scholarship:scholarships(*)')
+        .eq('student_id', user.id);
+
+      if (applicationsError) {
+        setApplications([]);
+      } else {
+        setApplications(applicationsData as Application[]);
+      }
 
       // Buscar perfil real do Supabase
       const { data: profileData, error } = await supabase
@@ -81,9 +107,6 @@ const StudentDashboard: React.FC = () => {
           updated_at: profileData.updated_at
         });
       }
-
-      // Buscar applications (mantém mock por enquanto)
-      setApplications([]);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -163,6 +186,16 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <StudentDashboardLayout user={user} profile={profile} loading={loading}>
+      {/* Cart Icon Button */}
+      <button
+        onClick={() => navigate('/student/dashboard/cart')}
+        className="fixed bottom-8 right-8 z-50 bg-[#05294E] text-white rounded-full shadow-lg p-4 flex items-center hover:bg-[#05294E]/90 transition-all"
+      >
+        <ShoppingCart className="h-6 w-6" />
+        {cart.length > 0 && (
+          <span className="ml-2 bg-red-600 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cart.length}</span>
+        )}
+      </button>
       <Routes>
         <Route 
           index 
@@ -176,6 +209,7 @@ const StudentDashboard: React.FC = () => {
             />
           } 
         />
+        <Route path="cart" element={<CartPage />} />
         <Route 
           path="scholarships" 
           element={
@@ -189,10 +223,7 @@ const StudentDashboard: React.FC = () => {
         <Route 
           path="applications" 
           element={
-            <MyApplications 
-              applications={applications}
-              scholarships={scholarships}
-            />
+            <MyApplications />
           } 
         />
         <Route 
@@ -204,6 +235,10 @@ const StudentDashboard: React.FC = () => {
             />
           } 
         />
+        <Route path="documents-and-scholarship-choice" element={<DocumentsAndScholarshipChoice />} />
+        <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
+        <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+        <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
       </Routes>
     </StudentDashboardLayout>
   );

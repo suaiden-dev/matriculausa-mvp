@@ -211,7 +211,7 @@ const AdminRegistration: React.FC = () => {
             {/* Name */}
             <div>
               <label htmlFor="name" className="block text-sm font-bold text-slate-900 mb-2">
-                Nome Completo *
+                Full Name *
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -223,7 +223,7 @@ const AdminRegistration: React.FC = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
-                  placeholder="Seu nome completo"
+                  placeholder="Your full name"
                 />
               </div>
             </div>
@@ -251,7 +251,7 @@ const AdminRegistration: React.FC = () => {
             {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
-                Senha *
+                Password *
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -263,7 +263,7 @@ const AdminRegistration: React.FC = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full pl-12 pr-12 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
-                  placeholder="Crie uma senha forte"
+                  placeholder="Create a strong password"
                 />
                 <button
                   type="button"
@@ -278,7 +278,7 @@ const AdminRegistration: React.FC = () => {
               {formData.password && (
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-slate-500">Força da senha:</span>
+                    <span className="text-xs text-slate-500">Password strength:</span>
                     <span className={`text-xs font-medium ${
                       passwordStrength.level === 'weak' ? 'text-red-600' :
                       passwordStrength.level === 'medium' ? 'text-yellow-600' :
@@ -303,7 +303,7 @@ const AdminRegistration: React.FC = () => {
             {/* Confirm Password */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-900 mb-2">
-                Confirmar Senha *
+                Confirm Password *
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -315,7 +315,7 @@ const AdminRegistration: React.FC = () => {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   className="w-full pl-12 pr-12 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
-                  placeholder="Confirme sua senha"
+                  placeholder="Confirm your password"
                 />
                 <button
                   type="button"
@@ -332,12 +332,12 @@ const AdminRegistration: React.FC = () => {
                   {formData.password === formData.confirmPassword ? (
                     <div className="flex items-center text-green-600">
                       <CheckCircle className="h-4 w-4 mr-1" />
-                      <span className="text-xs">Senhas coincidem</span>
+                      <span className="text-xs">Passwords match</span>
                     </div>
                   ) : (
                     <div className="flex items-center text-red-600">
                       <AlertCircle className="h-4 w-4 mr-1" />
-                      <span className="text-xs">Senhas não coincidem</span>
+                      <span className="text-xs">Passwords do not match</span>
                     </div>
                   )}
                 </div>
@@ -346,27 +346,27 @@ const AdminRegistration: React.FC = () => {
 
             {/* Password Requirements */}
             <div className="bg-slate-50 p-4 rounded-2xl">
-              <h4 className="text-sm font-bold text-slate-900 mb-2">Requisitos da Senha:</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-2">Password Requirements:</h4>
               <ul className="text-xs text-slate-600 space-y-1">
                 <li className={`flex items-center ${formData.password.length >= 8 ? 'text-green-600' : ''}`}>
                   <div className={`w-2 h-2 rounded-full mr-2 ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  Pelo menos 8 caracteres
+                  At least 8 characters
                 </li>
                 <li className={`flex items-center ${/[A-Z]/.test(formData.password) ? 'text-green-600' : ''}`}>
                   <div className={`w-2 h-2 rounded-full mr-2 ${/[A-Z]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  Uma letra maiúscula
+                  One uppercase letter
                 </li>
                 <li className={`flex items-center ${/[a-z]/.test(formData.password) ? 'text-green-600' : ''}`}>
                   <div className={`w-2 h-2 rounded-full mr-2 ${/[a-z]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  Uma letra minúscula
+                  One lowercase letter
                 </li>
                 <li className={`flex items-center ${/\d/.test(formData.password) ? 'text-green-600' : ''}`}>
                   <div className={`w-2 h-2 rounded-full mr-2 ${/\d/.test(formData.password) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  Um número
+                  One number
                 </li>
                 <li className={`flex items-center ${/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) ? 'text-green-600' : ''}`}>
                   <div className={`w-2 h-2 rounded-full mr-2 ${/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  Um caractere especial
+                  One special character
                 </li>
               </ul>
             </div>
@@ -380,12 +380,12 @@ const AdminRegistration: React.FC = () => {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Criando Conta...
+                  Creating Account...
                 </div>
               ) : (
                 <div className="flex items-center">
                   <Crown className="mr-2 h-5 w-5" />
-                  Criar Conta de Administrador
+                  Create Admin Account
                   <Zap className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </div>
               )}
@@ -398,12 +398,12 @@ const AdminRegistration: React.FC = () => {
               <div className="flex items-start">
                 <Shield className="h-5 w-5 text-purple-600 mr-3 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h4 className="text-sm font-bold text-purple-900 mb-1">Informações de Segurança</h4>
+                  <h4 className="text-sm font-bold text-purple-900 mb-1">Security Information</h4>
                   <ul className="text-xs text-purple-700 space-y-1">
-                    <li>• Esta conta terá acesso total ao sistema</li>
-                    <li>• Mantenha suas credenciais seguras</li>
-                    <li>• Use uma senha forte e única</li>
-                    <li>• A chave de administrador é necessária para validação</li>
+                    <li>• This account will have full access to the system</li>
+                    <li>• Keep your credentials secure</li>
+                    <li>• Use a strong and unique password</li>
+                    <li>• The admin key is required for validation</li>
                   </ul>
                 </div>
               </div>
@@ -417,7 +417,7 @@ const AdminRegistration: React.FC = () => {
             onClick={() => navigate('/login')}
             className="text-purple-200 hover:text-white font-medium text-sm transition-colors"
           >
-            ← Voltar para o Login
+            ← Back to Login
           </button>
         </div>
       </div>

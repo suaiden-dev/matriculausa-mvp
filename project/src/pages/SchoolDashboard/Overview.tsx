@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   PlusCircle
 } from 'lucide-react';
-import { University, Scholarship } from '../../lib/supabase';
+import type { University, Scholarship } from '../../types';
 
 interface OverviewProps {
   university: University | null;
@@ -28,9 +28,10 @@ interface OverviewProps {
     totalFunding: number;
     avgAmount: number;
   };
+  applications?: any[];
 }
 
-const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats }) => {
+const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats, applications = [] }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -65,6 +66,43 @@ const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats }) 
       enabled: false
     }
   ];
+
+  const renderApplicationsPanel = () => (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mt-10">
+      <div className="p-6 border-b border-slate-200">
+        <h3 className="text-xl font-bold text-slate-900">Applications Received</h3>
+        <p className="text-slate-500 text-sm">Track all student applications for your scholarships</p>
+      </div>
+      <div className="p-6 overflow-x-auto">
+        {applications.length === 0 ? (
+          <div className="text-slate-500 text-center py-8">No applications received yet.</div>
+        ) : (
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="px-4 py-2 text-left">Student</th>
+                <th className="px-4 py-2 text-left">Scholarship</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {applications.map((app) => (
+                <tr key={app.id} className="border-b">
+                  <td className="px-4 py-2">{app.user_profiles?.full_name || app.user_profiles?.email || 'Unknown'}</td>
+                  <td className="px-4 py-2">{app.scholarships?.title || '-'}</td>
+                  <td className="px-4 py-2">{app.status}</td>
+                  <td className="px-4 py-2">
+                    <a href={`/school/dashboard/applications/${app.id}`} className="text-blue-600 underline">View</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-8">
@@ -365,6 +403,8 @@ const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats }) 
           </div>
         </div>
       </div>
+
+      {renderApplicationsPanel()}
     </div>
   );
 };

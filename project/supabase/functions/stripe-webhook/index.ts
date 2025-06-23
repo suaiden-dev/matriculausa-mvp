@@ -14,6 +14,7 @@ const stripe = new Stripe(stripeSecret, {
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
 Deno.serve(async (req) => {
+  console.log('[stripe-webhook] Received a request.');
   try {
     // Handle OPTIONS request for CORS preflight
     if (req.method === 'OPTIONS') {
@@ -90,11 +91,65 @@ async function handleEvent(event: Stripe.Event) {
       console.info(`Starting subscription sync for customer: ${customerId}`);
       await syncCustomerFromStripe(customerId);
     } else if (mode === 'payment' && payment_status === 'paid') {
+      const session = stripeData as Stripe.Checkout.Session;
+      const { metadata, payment_intent, customer } = session;
+
+      if (metadata?.payment_type === 'application_fee') {
+        const userId = metadata.user_id;
+        const applicationId = metadata.application_id;
+
+        if (!userId || !applicationId) {
+          console.error('Missing user_id or application_id in metadata for application_fee payment.');
+          return;
+        }
+
+        // Atualizar status da aplicação existente para 'under_review'
+        const { error: updateError } = await supabase
+          .from('scholarship_applications')
+          .update({ status: 'under_review' })
+          .eq('id', applicationId)
+          .eq('student_id', userId);
+        if (updateError) {
+          console.error(`Failed to update application for user ${userId} and application ${applicationId}:`, updateError);
+        } else {
+          console.log(`Successfully updated application for user ${userId} for application ${applicationId}.`);
+        }
+
+        // Atualizar o perfil do usuário
+        const { error: profileUpdateError } = await supabase
+          .from('user_profiles')
+          .update({ is_application_fee_paid: true })
+          .eq('user_id', userId);
+        if (profileUpdateError) {
+          console.error(`Failed to update user_profile for user ${userId}:`, profileUpdateError);
+        } else {
+          console.log(`Successfully updated is_application_fee_paid for user ${userId}.`);
+        }
+      } else if (metadata?.payment_type === 'scholarship_fee') {
+        const applicationId = metadata.application_id;
+        const userId = metadata.user_id;
+
+        if (!applicationId) {
+            console.error('Missing application_id in metadata for scholarship_fee payment.');
+            return;
+        }
+
+        const { error: updateError } = await supabase
+            .from('scholarship_applications')
+            .update({ status: 'under_review' })
+            .eq('id', applicationId);
+
+        if (updateError) {
+            console.error(`Failed to update application status for application ${applicationId}:`, updateError);
+        } else {
+            console.log(`Successfully updated status for application ${applicationId} to under_review.`);
+        }
+      }
+
       try {
         // Extract the necessary information from the session
         const {
           id: checkout_session_id,
-          payment_intent,
           amount_subtotal,
           amount_total,
           currency,
@@ -211,21 +266,63 @@ export default async function handler(req: Request) {
         // Verificar se é um pagamento da taxa de inscrição
         if (session.metadata?.payment_type === 'application_fee') {
           const userId = session.metadata?.user_id;
+          const applicationId = session.metadata?.application_id;
+          
+          if (userId && applicationId) {
+            // Atualizar o status da aplicação existente para 'under_review'
+            const { error } = await supabase
+              .from('scholarship_applications')
+              .update({ 
+                status: 'under_review',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', applicationId)
+              .eq('student_id', userId);
+
+            if (error) {
+              console.error('Error updating application status:', error);
+            } else {
+              console.log('Application fee payment processed successfully for user:', userId);
+            }
+          }
+        }
+        
+        // Novo: Verificar se é um pagamento da scholarship fee
+        if (session.metadata?.payment_type === 'scholarship_fee') {
+          const userId = session.metadata?.user_id;
+          const scholarshipsIds = session.metadata?.scholarships_ids;
+          const paymentIntentId = session.payment_intent;
           
           if (userId) {
-            // Atualizar o status da taxa de inscrição no perfil do usuário
+            // Atualizar o status da scholarship fee no perfil do usuário
             const { error } = await supabase
               .from('user_profiles')
               .update({ 
-                is_application_fee_paid: true,
+                is_scholarship_fee_paid: true,
                 updated_at: new Date().toISOString()
               })
               .eq('user_id', userId);
 
             if (error) {
-              console.error('Error updating application fee status:', error);
+              console.error('Error updating scholarship fee status:', error);
             } else {
-              console.log('Application fee payment processed successfully for user:', userId);
+              console.log('Scholarship fee payment processed successfully for user:', userId);
+            }
+            // Se houver bolsas no metadata, registrar na tabela de pagamentos de scholarship fee
+            if (scholarshipsIds && paymentIntentId) {
+              const { error: insertError } = await supabase
+                .from('scholarship_fee_payments')
+                .insert({
+                  user_id: userId,
+                  scholarships_ids: scholarshipsIds,
+                  payment_intent_id: paymentIntentId,
+                  created_at: new Date().toISOString()
+                });
+              if (insertError) {
+                console.error('Error inserting scholarship fee payment record:', insertError);
+              } else {
+                console.log('Scholarship fee payment record inserted for user:', userId);
+              }
             }
           }
         }

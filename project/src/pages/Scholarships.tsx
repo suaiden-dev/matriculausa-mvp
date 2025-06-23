@@ -3,7 +3,7 @@ import { Search, DollarSign, Calendar, Award, Zap, Filter, Clock, GraduationCap,
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
-import type { Scholarship } from '../lib/supabase';
+import type { Scholarship } from '../types';
 import { StripeCheckout } from '../components/StripeCheckout';
 
 const Scholarships: React.FC = () => {
@@ -380,6 +380,8 @@ const Scholarships: React.FC = () => {
                       ) : (
                         <StripeCheckout
                           productId="SELECTION_PROCESS"
+                          feeType="selection_process"
+                          paymentType="selection_process"
                           buttonText="Pay Selection Fee to Unlock"
                           className="mt-2"
                           onSuccess={() => {}}

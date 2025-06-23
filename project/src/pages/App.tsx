@@ -14,8 +14,8 @@ import StudentDashboard from '../pages/StudentDashboard/index';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -32,8 +32,8 @@ function App() {
             <Route path="/student/dashboard/*" element={<StudentDashboard />} />
           </Routes>
         </Layout>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

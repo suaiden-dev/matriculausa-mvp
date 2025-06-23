@@ -23,7 +23,8 @@ import {
   AlertCircle,
   MapPin
 } from 'lucide-react';
-import { supabase, University, Scholarship } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import type { University, Scholarship } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { Dialog } from '@headlessui/react';
 

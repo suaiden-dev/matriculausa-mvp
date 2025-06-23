@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -31,6 +32,13 @@ export interface UserProfile {
   is_admin: boolean;
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
+  university_id?: string | null;
+  // Novos campos para progresso do aluno
+  documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected';
+  documents_uploaded?: boolean;
+  selected_scholarship_id?: string | null;
+  has_paid_college_enrollment_fee?: boolean;
+  has_paid_scholarship_fee?: boolean;
   // ... outras colunas se existirem
 }
 
@@ -44,6 +52,7 @@ interface AuthContextType {
   switchRole: (newRole: 'student' | 'school' | 'admin') => void;
   isAuthenticated: boolean;
   loading: boolean;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,76 +74,108 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
+
+  console.log('AUTH_DEBUG: AuthProvider renderizado.');
+  console.log('AUTH_DEBUG: Estado inicial: loading=', loading, 'user=', user?.id);
 
   useEffect(() => {
-    const fetchUserProfile = async (userId: string) => {
+    console.log('AUTH_DEBUG: useEffect disparado.');
+    setLoading(true);
+
+    const buildUser = (sessionUser: any, currentProfile: UserProfile | null): User => {
+      console.log('AUTH_DEBUG: buildUser - Iniciando construção de objeto User. sessionUser ID:', sessionUser?.id, 'currentProfile ID:', currentProfile?.id);
+    let role = sessionUser?.user_metadata?.role;
+      if (!role && currentProfile) {
+        if (currentProfile.is_admin) role = 'admin';
+        else if (currentProfile.status === 'school') role = 'school';
+      else role = 'student';
+    }
+    if (!role) {
+      role = getDefaultRole(sessionUser?.email || '');
+    }
+      const builtUser: User = {
+      id: sessionUser.id,
+      email: sessionUser.email,
+      name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || '',
+      role,
+        university_id: currentProfile?.university_id ?? undefined,
+        hasPaidProcess: currentProfile?.has_paid_selection_process_fee,
+    };
+      console.log('AUTH_DEBUG: buildUser - Objeto User construído:', builtUser);
+      return builtUser;
+    };
+
+    const fetchAndSetUser = async (session: any) => {
+      if (session?.user) {
+        let profile: UserProfile | null = null;
       try {
         const { data, error } = await supabase
           .from('user_profiles')
           .select('*')
-          .eq('user_id', userId)
+            .eq('user_id', session.user.id)
           .single();
-
-        if (error) {
-          setUserProfile(null);
-        } else if (data) {
-          setUserProfile(data as UserProfile);
+          if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+            throw error;
+          }
+          profile = data;
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
         }
-      } catch (err) {
-        setUserProfile(null);
+        setUserProfile(profile);
+        setUser(buildUser(session.user, profile));
+        setSupabaseUser(session.user);
+        console.log('AUTH_DEBUG: onAuthStateChange - User e UserProfile setados com sucesso.');
+      } else {
+        setUser(null);
+        setSupabaseUser(null);
+          setUserProfile(null);
+        console.log('AUTH_DEBUG: onAuthStateChange - User e UserProfile resetados para null.');
       }
     };
-
-    const buildUser = (sessionUser: any, userProfile: UserProfile | null): User => {
-      // Busca o role nos metadados, depois no perfil, depois padrão
-      let role = sessionUser?.user_metadata?.role;
-      if (!role && userProfile) {
-        if (userProfile.is_admin) role = 'admin';
-        else if (userProfile.status === 'school') role = 'school';
-        else role = 'student';
-      }
-      if (!role) {
-        role = getDefaultRole(sessionUser?.email || '');
-      }
-      return {
-        id: sessionUser.id,
-        email: sessionUser.email,
-        name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || '',
-        role,
-        university_id: userProfile?.university_id,
-        hasPaidProcess: userProfile?.has_paid_selection_process_fee,
-      };
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-          setTimeout(() => {
-            setUser(prev => buildUser(session.user, userProfile));
-          }, 0);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getUser().then(async ({ data: { user: currentUser } }) => {
-      if (currentUser) {
-        await fetchUserProfile(currentUser.id);
-        setTimeout(() => {
-          setUser(prev => buildUser(currentUser, userProfile));
-        }, 0);
-      }
+    
+    // Check for session on initial load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchAndSetUser(session);
       setLoading(false);
     });
 
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        fetchAndSetUser(session);
+      }
+    );
+
     return () => {
+      console.log('AUTH_DEBUG: useEffect cleanup.');
       subscription.unsubscribe();
     };
   }, []);
+
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
+    if (!supabaseUser) {
+      throw new Error("User must be logged in to update profile");
+    }
+    
+    // Remove user_id from updates if it exists, as it should not be updated.
+    const { user_id, ...updateData } = updates;
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(updateData)
+      .eq('user_id', supabaseUser.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    if (data) {
+      setUserProfile(data as UserProfile);
+    }
+  };
 
   const getDefaultRole = (email: string): 'student' | 'school' | 'admin' => {
     // Admin emails can be hardcoded or checked against a list
@@ -143,52 +184,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return 'admin';
     }
     return 'student';
-  };
-
-  const redirectUserAfterLogin = (userRole: string) => {
-    // Only redirect if we're on the login page
-    if (window.location.pathname === '/login') {
-      switch (userRole) {
-        case 'student':
-          window.location.href = '/student/dashboard';
-          break;
-        case 'school':
-          window.location.href = '/school/dashboard';
-          break;
-        case 'admin':
-          window.location.href = '/admin/dashboard';
-          break;
-        default:
-          window.location.href = '/';
-      }
-    }
-  };
-
-  const checkSchoolTermsStatus = async () => {
-    if (!user) return;
-    
-    try {
-      const { data: university, error } = await supabase
-        .from('universities')
-        .select('terms_accepted, profile_completed')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        window.location.href = '/school/termsandconditions';
-        return;
-      }
-
-      if (!university || !university.terms_accepted) {
-        window.location.href = '/school/termsandconditions';
-      } else if (!university.profile_completed) {
-        window.location.href = '/school/setup-profile';
-      } else {
-        window.location.href = '/school/dashboard';
-      }
-    } catch (error) {
-      window.location.href = '/school/termsandconditions';
-    }
   };
 
   const switchRole = (newRole: 'student' | 'school' | 'admin') => {
@@ -218,12 +213,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signOut();
     if (error) {
-      throw error;
+      console.error('Error logging out:', error);
+      // Opcional: notificar o usuário sobre o erro
     }
-    // Redirect to home page after logout
-    window.location.href = '/';
+    // Limpar o estado local independentemente do erro do Supabase
+    setUser(null);
+    setUserProfile(null); 
+    setLoading(false);
+    console.log("AUTH_DEBUG: User logged out, user and userProfile set to null.");
   };
 
   const register = async (email: string, password: string, userData: { name: string; role: 'student' | 'school'; [key: string]: any }) => {
@@ -231,11 +231,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       email,
       password,
       options: {
-        data: {
-          ...userData,
-          name: userData.name,
-          role: userData.role
-        }
+        data: userData,
       }
     });
 
@@ -253,9 +249,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     register,
     switchRole,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!supabaseUser,
     loading,
+    updateUserProfile,
   };
+
+  console.log('AUTH_DEBUG: AuthProvider renderizando com estados: user=', user?.id, 'userProfile=', userProfile, 'loading=', loading);
 
   return (
     <AuthContext.Provider value={value}>

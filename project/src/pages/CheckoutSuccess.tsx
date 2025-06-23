@@ -8,7 +8,7 @@ const CheckoutSuccess: React.FC = () => {
   const sessionId = searchParams.get('session_id');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, userProfile, updateUserProfile } = useAuth();
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -17,13 +17,10 @@ const CheckoutSuccess: React.FC = () => {
         setLoading(false);
         return;
       }
-
       try {
-        // Here you would typically verify the payment with your backend
-        // For now, we'll just simulate a successful verification
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // In a real implementation, you would update the user's status in your database
+        // Aguarda backend processar e força refresh do perfil
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await updateUserProfile({});
         setLoading(false);
       } catch (err: any) {
         console.error('Error verifying payment:', err);
@@ -31,7 +28,6 @@ const CheckoutSuccess: React.FC = () => {
         setLoading(false);
       }
     };
-
     verifyPayment();
   }, [sessionId]);
 
@@ -57,6 +53,29 @@ const CheckoutSuccess: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Payment Verification Failed</h2>
           <p className="text-slate-600 mb-6">{error}</p>
+          <Link
+            to="/"
+            className="bg-[#05294E] text-white px-6 py-3 rounded-xl hover:bg-[#05294E]/90 transition-colors font-bold inline-flex items-center"
+          >
+            Return Home
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loading && !error && !userProfile?.has_paid_selection_process_fee) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Payment Processing</h2>
+          <p className="text-slate-600 mb-6">We're still processing your payment. Please wait a few moments and refresh this page. If the problem persists, contact support.</p>
           <Link
             to="/"
             className="bg-[#05294E] text-white px-6 py-3 rounded-xl hover:bg-[#05294E]/90 transition-colors font-bold inline-flex items-center"

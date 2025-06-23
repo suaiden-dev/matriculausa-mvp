@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase, Scholarship } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import type { Scholarship } from '../types';
 
 export function useScholarships() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
@@ -18,7 +19,7 @@ export function useScholarships() {
         setScholarships([]);
       } else {
         const filtered = (data || []).filter((s: any) => s.universities && s.universities.is_approved);
-        setScholarships(filtered as Scholarship[]);
+        setScholarships(filtered as unknown as Scholarship[]);
       }
       setLoading(false);
     }

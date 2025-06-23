@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, ExternalLink, ArrowLeft, Sparkles, Phone, Mail, Fan as Fax, DollarSign, Award, Clock } from 'lucide-react';
 import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-import type { Scholarship } from '../lib/supabase';
+import type { Scholarship } from '../types';
 
 const UniversityDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

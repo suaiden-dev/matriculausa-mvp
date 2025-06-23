@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { supabase, University, Scholarship } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import type { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import SchoolDashboardLayout from './SchoolDashboardLayout';
 // Lazy load das páginas
@@ -13,6 +14,7 @@ const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rou
 const SchoolDashboard: React.FC = () => {
   const [university, setUniversity] = useState<University | null>(null);
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -46,6 +48,14 @@ const SchoolDashboard: React.FC = () => {
 
         if (scholarshipsError) throw scholarshipsError;
         setScholarships(scholarshipsData || []);
+
+        // Buscar todas as aplicações vinculadas às bolsas desta universidade
+        const { data: applicationsData, error: applicationsError } = await supabase
+          .from('scholarship_applications')
+          .select('*, scholarships(*), user_profiles:student_id(*)')
+          .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
+        if (applicationsError) throw applicationsError;
+        setApplications(applicationsData || []);
       }
     } catch (error) {
       console.error('Erro ao carregar dados do painel:', error);
@@ -109,7 +119,7 @@ const SchoolDashboard: React.FC = () => {
                 university={university} 
                 scholarships={scholarships} 
                 stats={stats} 
-                user={user}
+                applications={applications}
               />
             </Suspense>
           } 

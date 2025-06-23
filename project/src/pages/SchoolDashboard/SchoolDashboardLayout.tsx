@@ -21,7 +21,7 @@ import {
   ChevronDown,
   Shield
 } from 'lucide-react';
-import { University } from '../../lib/supabase';
+import { University } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 
 interface SchoolDashboardLayoutProps {

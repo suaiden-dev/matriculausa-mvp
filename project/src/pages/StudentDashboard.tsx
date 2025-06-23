@@ -24,37 +24,14 @@ import {
   Star,
   Zap
 } from 'lucide-react';
-import { supabase, Scholarship } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import type { Scholarship, Application, StudentProfile } from '../types';
 import { useAuth } from '../hooks/useAuth';
-import { mockScholarships } from '../data/mockData';
-
-interface StudentProfile {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  country?: string;
-  field_of_interest?: string;
-  academic_level?: string;
-  gpa?: number;
-  english_proficiency?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Application {
-  id: string;
-  scholarship_id: string;
-  student_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review';
-  applied_at: string;
-  notes?: string;
-  scholarship?: Scholarship;
-}
+import { useScholarships } from '../hooks/useScholarships';
 
 const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'scholarships' | 'applications' | 'profile'>('overview');
-  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const { scholarships: allScholarships, loading: scholarshipsLoading, error: scholarshipsError } = useScholarships();
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,38 +59,66 @@ const StudentDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     if (!user) return;
 
+    setLoading(true);
     try {
-      // For now, using mock data for scholarships
-      setScholarships(mockScholarships);
       
-      // Mock profile data
-      const mockProfile: StudentProfile = {
-        id: user.id,
-        name: user.name || user.email?.split('@')[0] || '',
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          full_name,
+          phone,
+          country,
+          field_of_interest,
+          academic_level,
+          gpa,
+          english_proficiency,
+          created_at,
+          updated_at
+        `)
+        .eq('user_id', user.id)
+        .single();
+      
+      if(profileError && profileError.code !== 'PGRST116') throw profileError;
+      
+      const studentProfile: StudentProfile = {
+        id: profileData?.id || user.id,
+        name: profileData?.full_name || user.name || user.email?.split('@')[0] || '',
         email: user.email,
-        phone: '',
-        country: '',
-        field_of_interest: '',
-        academic_level: '',
-        gpa: 0,
-        english_proficiency: '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        phone: profileData?.phone,
+        country: profileData?.country,
+        field_of_interest: profileData?.field_of_interest,
+        academic_level: profileData?.academic_level,
+        gpa: profileData?.gpa,
+        english_proficiency: profileData?.english_proficiency,
+        created_at: profileData?.created_at || new Date().toISOString(),
+        updated_at: profileData?.updated_at || new Date().toISOString()
       };
       
-      setProfile(mockProfile);
+      setProfile(studentProfile);
       setProfileForm({
-        name: mockProfile.name,
-        phone: mockProfile.phone || '',
-        country: mockProfile.country || '',
-        field_of_interest: mockProfile.field_of_interest || '',
-        academic_level: mockProfile.academic_level || '',
-        gpa: mockProfile.gpa?.toString() || '',
-        english_proficiency: mockProfile.english_proficiency || ''
+        name: studentProfile.name,
+        phone: studentProfile.phone || '',
+        country: studentProfile.country || '',
+        field_of_interest: studentProfile.field_of_interest || '',
+        academic_level: studentProfile.academic_level || '',
+        gpa: studentProfile.gpa?.toString() || '',
+        english_proficiency: studentProfile.english_proficiency || ''
       });
 
-      // Mock applications data
-      setApplications([]);
+      const { data: applicationsData, error: applicationsError } = await supabase
+        .from('scholarship_applications')
+        .select(`
+          *,
+          scholarships (
+            *
+          )
+        `)
+        .eq('student_id', user.id);
+
+      if (applicationsError) throw applicationsError;
+
+      setApplications(applicationsData || []);
       
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -133,17 +138,24 @@ const StudentDashboard: React.FC = () => {
     }
 
     try {
-      // Mock application creation
-      const newApplication: Application = {
-        id: Date.now().toString(),
+      const { data, error } = await supabase
+        .from('scholarship_applications')
+        .insert({
         scholarship_id: scholarshipId,
         student_id: user.id,
         status: 'pending',
-        applied_at: new Date().toISOString(),
-        scholarship: scholarships.find(s => s.id === scholarshipId)
-      };
+        })
+        .select( `
+          *,
+          scholarships (
+            *
+          )
+        `)
+        .single();
 
-      setApplications(prev => [...prev, newApplication]);
+      if (error) throw error;
+
+      setApplications(prev => [...prev, data as Application]);
       alert('Application submitted successfully!');
     } catch (error) {
       console.error('Error applying for scholarship:', error);
@@ -155,19 +167,25 @@ const StudentDashboard: React.FC = () => {
     if (!user || !profile) return;
 
     try {
-      const updatedProfile = {
-        ...profile,
-        name: profileForm.name,
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: profileForm.name,
         phone: profileForm.phone,
         country: profileForm.country,
         field_of_interest: profileForm.field_of_interest,
         academic_level: profileForm.academic_level,
-        gpa: parseFloat(profileForm.gpa) || 0,
+          gpa: parseFloat(profileForm.gpa) || null,
         english_proficiency: profileForm.english_proficiency,
         updated_at: new Date().toISOString()
-      };
+        })
+        .eq('user_id', user.id)
+        .select()
+        .single();
 
-      setProfile(updatedProfile);
+      if(error) throw error;
+
+      setProfile(prev => ({...prev, ...data} as StudentProfile));
       setShowProfileEdit(false);
       alert('Profile updated successfully!');
     } catch (error) {
@@ -176,7 +194,7 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
-  const filteredScholarships = scholarships.filter(scholarship => {
+  const filteredScholarships = allScholarships.filter(scholarship => {
     const matchesSearch = (scholarship.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (scholarship.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level === selectedLevel);
@@ -209,7 +227,7 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading || scholarshipsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>
@@ -220,8 +238,8 @@ const StudentDashboard: React.FC = () => {
   const stats = {
     totalApplications: applications.length,
     approvedApplications: applications.filter(app => app.status === 'approved').length,
-    pendingApplications: applications.filter(app => app.status === 'pending').length,
-    availableScholarships: scholarships.length
+    pendingApplications: applications.filter(app => app.status === 'pending' || app.status === 'under_review').length,
+    availableScholarships: allScholarships.length
   };
 
   return (
@@ -376,7 +394,7 @@ const StudentDashboard: React.FC = () => {
                         <div key={application.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                           <StatusIcon className="h-5 w-5 text-gray-600" />
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">{application.scholarship?.title}</p>
+                            <p className="font-medium text-gray-900">{application.scholarships?.title}</p>
                             <p className="text-sm text-gray-500">Applied {new Date(application.applied_at).toLocaleDateString()}</p>
                           </div>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
@@ -469,7 +487,7 @@ const StudentDashboard: React.FC = () => {
 
                         <div className="flex items-center text-sm text-gray-600">
                           <Building className="h-4 w-4 mr-2" />
-                          {scholarship.schoolName}
+                          {scholarship.university_id || 'N/A'}
                         </div>
                       </div>
 
@@ -529,17 +547,17 @@ const StudentDashboard: React.FC = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                            {application.scholarship?.title}
+                            {application.scholarships?.title}
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                             <div>
-                              <span className="font-medium">Amount:</span> {formatAmount(application.scholarship?.amount || 0)}
+                              <span className="font-medium">Amount:</span> {formatAmount(application.scholarships?.amount || 0)}
                             </div>
                             <div>
                               <span className="font-medium">Applied:</span> {new Date(application.applied_at).toLocaleDateString()}
                             </div>
                             <div>
-                              <span className="font-medium">University:</span> {application.scholarship?.schoolName}
+                              <span className="font-medium">University:</span> {application.scholarships?.university_id || 'N/A'}
                             </div>
                           </div>
                           {application.notes && (

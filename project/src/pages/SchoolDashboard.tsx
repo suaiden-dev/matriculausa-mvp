@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Building, Users, DollarSign, Award, Plus, Edit, Trash2, Eye, Calendar, CheckCircle, Clock, AlertCircle, Settings, FileText, Zap } from 'lucide-react';
-import { supabase, University, Scholarship } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import type { University, Scholarship } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
 const SchoolDashboard: React.FC = () => {
@@ -628,7 +629,7 @@ const SchoolDashboard: React.FC = () => {
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Academic Programs</h3>
                     <div className="flex flex-wrap gap-2">
-                      {university.programs.map((program, index) => (
+                      {university.programs.map((program: string, index: number) => (
                         <span
                           key={index}
                           className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700"

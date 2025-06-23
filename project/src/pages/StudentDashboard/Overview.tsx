@@ -17,6 +17,8 @@ import {
   CreditCard
 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';
+import { useAuth } from '../../hooks/useAuth';
+import DocumentUpload from '../../components/DocumentUpload';
 
 interface OverviewProps {
   profile: any;
@@ -91,6 +93,8 @@ const Overview: React.FC<OverviewProps> = ({
     }
   ];
 
+  const { user, userProfile } = useAuth();
+
   return (
     <div className="space-y-8">
       {/* Welcome Message */}
@@ -103,7 +107,7 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
             <div>
               <h2 className="text-3xl font-bold mb-2">
-                Welcome back, {profile?.name || 'Student'}!
+                Welcome back, {userProfile?.full_name || user?.email || 'Student'}!
               </h2>
               <p className="text-blue-100 text-lg">
                 Continue your journey to academic excellence
@@ -111,7 +115,7 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           </div>
 
-          {!profile?.hasPaidProcess && (
+          {userProfile && !userProfile.has_paid_selection_process_fee && (
             <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
@@ -128,6 +132,8 @@ const Overview: React.FC<OverviewProps> = ({
               </p>
               <StripeCheckout 
                 productId="SELECTION_PROCESS"
+                feeType="selection_process"
+                paymentType="selection_process"
                 buttonText="Start Selection Process"
               />
             </div>
@@ -429,6 +435,10 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {userProfile && userProfile.documents_status !== 'approved' && (
+        <DocumentUpload onUploadSuccess={() => {}} />
+      )}
     </div>
   );
 };
