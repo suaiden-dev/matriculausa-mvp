@@ -141,6 +141,8 @@ const CartPage: React.FC = () => {
               successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
               cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
               disabled={!selectedScholarship}
+              metadata={{ application_id: selectedScholarship }}
+              edgeFunction="stripe-checkout-application-fee"
             />
           </div>
         </div>

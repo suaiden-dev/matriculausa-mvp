@@ -1,8 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ScholarshipFeeSuccess: React.FC = () => {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    setSessionId(sessionId);
+    if (!sessionId) {
+      setError('Session ID not found.');
+      setLoading(false);
+      return;
+    }
+    const verifySession = async () => {
+      try {
+        const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
+        const response = await fetch(`${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-scholarship-fee`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        });
+        if (!response.ok) throw new Error('Failed to verify payment.');
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    verifySession();
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4">
       <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">

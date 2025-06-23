@@ -135,6 +135,8 @@ const Overview: React.FC<OverviewProps> = ({
                 feeType="selection_process"
                 paymentType="selection_process"
                 buttonText="Start Selection Process"
+                successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
               />
             </div>
           )}

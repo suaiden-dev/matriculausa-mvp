@@ -53,7 +53,14 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
     setLoading(true);
     try {
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
+      let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
+      if (feeType === 'selection_process') {
+        apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+      } else if (feeType === 'application_fee') {
+        apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-application-fee`;
+      } else if (feeType === 'scholarship_fee') {
+        apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
+      }
       const { data: sessionData } = await import('../lib/supabase').then(m => m.supabase.auth.getSession());
       const token = sessionData.session?.access_token;
       if (!token) {

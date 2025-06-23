@@ -160,9 +160,12 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             ) : (
               <StripeCheckout
                 productId="SELECTION_PROCESS"
-                feeType="application_fee"
+                feeType="selection_process"
+                paymentType="selection_process"
                 buttonText="Start Selection Process"
                 className="w-full bg-gradient-to-r from-[#D0151C] to-red-600 text-white py-3 px-4 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
               />
             )}
           </div>

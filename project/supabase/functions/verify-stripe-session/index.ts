@@ -53,97 +53,67 @@ Deno.serve(async (req) => {
 
       if (!userId) return corsResponse({ error: 'User ID (client_reference_id) missing in session.' }, 400);
 
-      if (!applicationId) {
-        console.error('application_id ausente no metadata ao verificar sessão Stripe:', session.metadata);
-        return corsResponse({ error: 'application_id ausente no metadata.' }, 400);
-      }
-
       // --- Lógica Condicional de Pagamento ---
 
       if (feeType === 'application_fee') {
+        if (!applicationId) {
+          console.error('application_id ausente no metadata ao verificar sessão Stripe:', session.metadata);
+          return corsResponse({ error: 'application_id ausente no metadata.' }, 400);
+        }
         console.log('Processing: Application Fee');
-        
-        // 1. Atualizar perfil do usuário
+        // Atualiza perfil e aplicação, limpa carrinho
         const { error: profileError } = await supabase
           .from('user_profiles')
           .update({ is_application_fee_paid: true })
           .eq('user_id', userId);
         if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
-        console.log(`User profile updated for user: ${userId}`);
-        
-        // 2. Atualizar a aplicação existente para 'under_review'
         const { error: appError } = await supabase
           .from('scholarship_applications')
           .update({ status: 'under_review' })
           .eq('id', applicationId)
           .eq('student_id', userId);
         if (appError) throw new Error(`Failed to update scholarship_application: ${appError.message}`);
-        console.log(`Application status updated to under_review for application: ${applicationId}`);
-        
-        // 3. Limpar o carrinho do usuário
         const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
         if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
-        console.log(`Cart cleared for user: ${userId}`);
-
-        // Resposta de sucesso padronizada
-        return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
-      } else if (feeType === 'enrollment_fee') {
-        console.log('Processing: Enrollment Fee');
-        
-        // Atualizar o status da aplicação existente
-        const { error: updateError } = await supabase
-          .from('scholarship_applications')
-          .update({ status: 'enrollment_fee_paid' })
-          .eq('student_id', userId)
-          .eq('id', applicationId);
-        if (updateError) throw new Error(`Failed to update application status: ${updateError.message}`);
-        console.log(`Application status updated for enrollment: ${applicationId}`);
-
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'scholarship_fee') {
+        if (!applicationId) {
+          console.error('application_id ausente no metadata ao verificar sessão Stripe:', session.metadata);
+          return corsResponse({ error: 'application_id ausente no metadata.' }, 400);
+        }
         console.log('Processing: Scholarship Fee');
-
-        // Atualizar o status da aplicação existente
         const { error: updateError } = await supabase
           .from('scholarship_applications')
           .update({ status: 'approved' })
           .eq('student_id', userId)
           .eq('id', applicationId);
         if (updateError) throw new Error(`Failed to update application status for scholarship fee: ${updateError.message}`);
-        console.log(`Application status updated for scholarship fee: ${applicationId}`);
-
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'selection_process') {
         console.log('Processing: Selection Process Fee');
-
-        // Atualizar o perfil do usuário, mesmo que não haja applicationId
+        // Atualiza perfil do usuário
         const { error: profileError } = await supabase
           .from('user_profiles')
           .update({ has_paid_selection_process_fee: true })
           .eq('user_id', userId);
         if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
-        console.log(`User profile updated for user: ${userId}`);
-
-        // Se houver applicationId, atualiza o status da aplicação
-        const { error: updateError } = await supabase
-          .from('scholarship_applications')
-          .update({ status: 'selection_process_paid' })
-          .eq('student_id', userId)
-          .eq('id', applicationId);
-        if (updateError) throw new Error(`Failed to update application status for selection process fee: ${updateError.message}`);
-        console.log(`Application status updated for selection process fee: ${applicationId}`);
-
-        // Limpar o carrinho do usuário
+        // Se houver applicationId, atualiza a aplicação
+        if (applicationId) {
+          const { error: updateError } = await supabase
+            .from('scholarship_applications')
+            .update({ status: 'selection_process_paid' })
+            .eq('student_id', userId)
+            .eq('id', applicationId);
+          if (updateError) throw new Error(`Failed to update application status for selection process fee: ${updateError.message}`);
+        }
+        // Limpa carrinho
         const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
         if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
-        console.log(`Cart cleared for user: ${userId}`);
-
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else {
         console.warn(`Unhandled fee_type: ${feeType}`);
+        return corsResponse({ error: `fee_type inválido: ${feeType}` }, 400);
       }
-
-      return corsResponse({ message: 'Session verified and processed successfully.' }, 200);
     } else {
       console.log('Session not paid or complete.');
       return corsResponse({ message: 'Session not ready.', status: session.status }, 202);

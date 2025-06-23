@@ -306,12 +306,7 @@ const MyApplications: React.FC = () => {
                                 studentProcessType={application.student_process_type}
                                 successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                                 cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
-                                onSuccess={() => {
-                                  setApplications(prev => prev.map(app =>
-                                    app.id === application.id ? { ...app, status: 'approved' } : app
-                                  ));
-                                  setSuccessMessage('Scholarship fee paid successfully!');
-                                }}
+                                metadata={{ scholarships_ids: String(scholarship.id) }}
                               />
                             )}
                           </div>
@@ -390,7 +385,7 @@ const MyApplications: React.FC = () => {
                           successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                           cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
                           className="w-full bg-blue-600 hover:bg-blue-700"
-                          metadata={{ application_id: application.id }}
+                          metadata={{ scholarships_ids: String(application.scholarship_id), application_id: application.id }}
                           onSuccess={() => {
                             setSuccessMessage('Scholarship fee paid successfully!');
                             setPayingId(null);

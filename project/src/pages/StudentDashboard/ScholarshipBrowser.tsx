@@ -284,20 +284,19 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 <button
                   className={`w-full py-2 px-4 rounded-md transition-all duration-200 font-semibold ${
                     inCart ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'
-                  } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : ''} ${isLocked ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : ''}`}
+                  } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : ''}`}
                   onClick={() => {
-                    if (isLocked) return;
                     if (inCart) {
                       if (user) removeFromCart(scholarship.id, user.id);
                     } else {
                       handleAddToCart(scholarship);
                     }
                   }}
-                  disabled={alreadyApplied || isLocked}
+                  disabled={alreadyApplied}
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  {alreadyApplied ? 'Already Applied' : isLocked ? 'Unlock full details by paying the selection process fee.' : inCart ? 'Remove from Cart' : 'Add to Cart'}
-                  {!alreadyApplied && !isLocked && <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />}
+                  {alreadyApplied ? 'Already Applied' : inCart ? 'Remove from Cart' : 'Add to Cart'}
+                  {!alreadyApplied && <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />}
                 </button>
               </div>
               {/* Overlay for locked cards */}
@@ -316,11 +315,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   ) : (
                     <StripeCheckout
                       productId="SELECTION_PROCESS"
-                      feeType="application_fee"
+                      feeType="selection_process"
+                      paymentType="selection_process"
                       buttonText="Pay Selection Fee to Unlock"
                       className="mt-2"
                       onSuccess={() => {}}
                       onError={(err) => alert(err)}
+                      successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                      cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
                     />
                   )}
                 </div>

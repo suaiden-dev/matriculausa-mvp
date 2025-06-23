@@ -31,7 +31,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
       const verifySession = async (sId: string) => {
         try {
           const SUPABASE_PROJECT_URL = 'https://fitpynguasqqutuhzifx.supabase.co';
-          const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session`;
+          const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-scholarship-fee`;
 
           // Recupera o token JWT do usuário autenticado do localStorage
           let token = null;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const ApplicationFeeSuccess: React.FC = () => {
+const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -18,7 +18,7 @@ const ApplicationFeeSuccess: React.FC = () => {
       }
       try {
         const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
-        const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-application-fee`;
+        const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-selection-process-fee`;
         let token = null;
         try {
           const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
@@ -62,13 +62,13 @@ const ApplicationFeeSuccess: React.FC = () => {
   if (error) {
     return (
       <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-        <h1 className="text-3xl font-bold text-red-700 mb-4">Application Fee Payment Error</h1>
+        <h1 className="text-3xl font-bold text-red-700 mb-4">Selection Process Fee Payment Error</h1>
         <p className="text-slate-700 mb-4">{error}</p>
         <button
           className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition"
-          onClick={() => navigate('/student/dashboard/applications')}
+          onClick={() => navigate('/student/dashboard/scholarships')}
         >
-          Back to My Applications
+          Back to Scholarships
         </button>
       </div>
     );
@@ -76,20 +76,20 @@ const ApplicationFeeSuccess: React.FC = () => {
 
   return (
     <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-      <h1 className="text-3xl font-bold text-green-700 mb-4">Application Fee payment successful!</h1>
-      <p className="text-slate-700 mb-4">Your application has been processed and is under review. You will receive updates by email.</p>
+      <h1 className="text-3xl font-bold text-green-700 mb-4">Selection Process Fee payment successful!</h1>
+      <p className="text-slate-700 mb-4">Your selection process fee has been received. You now have access to all scholarships and can apply freely.</p>
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
         <div className="text-sm text-slate-600 mb-1">Session ID:</div>
         <div className="font-mono text-green-800 text-xs break-all">{sessionId}</div>
       </div>
       <button
         className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition"
-        onClick={() => navigate('/student/dashboard/applications')}
+        onClick={() => navigate('/student/dashboard/scholarships')}
       >
-        Go to My Applications
+        Go to Scholarships
       </button>
     </div>
   );
 };
 
-export default ApplicationFeeSuccess; 
+export default SelectionProcessFeeSuccess; 

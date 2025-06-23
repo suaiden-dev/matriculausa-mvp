@@ -60,6 +60,8 @@ const Home: React.FC = () => {
                     buttonText="Start Selection Process"
                     className="group px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
                     onError={(error) => console.error('Checkout error:', error)}
+                    successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                    cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
                   />
                 )}
                 

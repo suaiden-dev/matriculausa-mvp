@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, MapPin, Sparkles, Building, GraduationCap, ChevronRight, Globe, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import Header from '../components/Header';
 
 const PAGE_SIZE = 20;
 
@@ -59,6 +60,8 @@ const Universities: React.FC = () => {
   };
 
   return (
+    <>
+      <Header />
     <div className="bg-white min-h-screen">
       {/* Header */}
       <section className="bg-[#05294E] text-white py-16">
@@ -260,6 +263,7 @@ const Universities: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

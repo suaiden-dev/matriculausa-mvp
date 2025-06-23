@@ -52,11 +52,21 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout] Received payload:', { price_id, success_url, cancel_url, mode, fee_type, metadata });
 
-    // NOVA LÓGICA: criar/atualizar aplicação antes do pagamento
-    const selectedScholarshipId = metadata?.selected_scholarship_id;
-    const studentProcessType = metadata?.student_process_type;
     let applicationId = null;
-    if (selectedScholarshipId) {
+    let sessionMetadata = {
+      student_id: user.id,
+      fee_type: fee_type,
+      payment_type: fee_type,
+      ...metadata,
+    };
+
+    if (fee_type === 'application_fee' || fee_type === 'scholarship_fee') {
+      // --- Application/Scholarship Fee: exige selected_scholarship_id ---
+      const selectedScholarshipId = metadata?.selected_scholarship_id;
+      const studentProcessType = metadata?.student_process_type;
+      if (!selectedScholarshipId) {
+        return corsResponse({ error: 'selected_scholarship_id é obrigatório para application_fee e scholarship_fee' }, 400);
+      }
       // Verifica se já existe uma aplicação para este usuário e bolsa
       const { data: existingApp, error: findError } = await supabase
         .from('scholarship_applications')
@@ -69,7 +79,7 @@ Deno.serve(async (req) => {
         return corsResponse({ error: 'Erro ao buscar aplicação existente' }, 500);
       }
       if (!existingApp) {
-        // Cria nova aplicação independentemente do is_application_fee_paid
+        // Cria nova aplicação
         const { data: newApp, error: insertError } = await supabase
           .from('scholarship_applications')
           .insert([
@@ -100,31 +110,18 @@ Deno.serve(async (req) => {
             return corsResponse({ error: 'Erro ao atualizar tipo de processo' }, 500);
           }
         }
-        // Atualiza status se for selection_process
-        if (fee_type === 'selection_process') {
-          const { error: updateStatusError } = await supabase
-            .from('scholarship_applications')
-            .update({ status: 'pending_selection_process_fee' })
-            .eq('id', applicationId);
-          if (updateStatusError) {
-            console.error('Erro ao atualizar status para selection_process:', updateStatusError);
-            return corsResponse({ error: 'Erro ao atualizar status da aplicação' }, 500);
-          }
-        }
       }
+      // Garante que application_id sempre vai para o metadata
+      sessionMetadata = {
+        ...sessionMetadata,
+        application_id: applicationId,
+      };
+    } else if (fee_type === 'selection_process') {
+      // --- Selection Process Fee: não exige application, só marca o usuário ---
+      // Nenhuma lógica extra aqui, apenas segue para criar a sessão Stripe
+    } else {
+      return corsResponse({ error: `fee_type inválido: ${fee_type}` }, 400);
     }
-    // Garante que application_id sempre vai para o metadata se houver selectedScholarshipId
-    if (!applicationId) {
-      console.error('applicationId não definido! Não é possível criar sessão Stripe sem application_id.');
-      return corsResponse({ error: 'Falha ao criar ou localizar aplicação. Tente novamente.' }, 500);
-    }
-    const sessionMetadata = {
-      student_id: user.id,
-      fee_type: fee_type,
-      payment_type: fee_type,
-      ...metadata,
-      application_id: applicationId,
-    };
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

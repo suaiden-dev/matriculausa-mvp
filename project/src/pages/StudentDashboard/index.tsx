@@ -17,6 +17,10 @@ import CollegeEnrollmentCheckout from './CollegeEnrollmentCheckout';
 import CartPage from './CartPage';
 import ScholarshipFeeSuccess from './ScholarshipFeeSuccess';
 import ScholarshipFeeError from './ScholarshipFeeError';
+import SelectionProcessFeeSuccess from './SelectionProcessFeeSuccess';
+import SelectionProcessFeeError from './SelectionProcessFeeError';
+import ApplicationFeeSuccess from './ApplicationFeeSuccess';
+import ApplicationFeeError from './ApplicationFeeError';
 
 interface StudentProfile {
   id: string;
@@ -239,6 +243,10 @@ const StudentDashboard: React.FC = () => {
         <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
         <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
         <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
+        <Route path="/selection-process-fee-success" element={<SelectionProcessFeeSuccess />} />
+        <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
+        <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
+        <Route path="/application-fee-error" element={<ApplicationFeeError />} />
       </Routes>
     </StudentDashboardLayout>
   );
