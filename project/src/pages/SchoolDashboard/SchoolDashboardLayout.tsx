@@ -162,7 +162,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
               
               // Don't disable the students tab anymore
               const finalIsDisabled = isDisabled && item.id !== 'students';
-
+              
               return (
                 <Link
                   key={item.id}

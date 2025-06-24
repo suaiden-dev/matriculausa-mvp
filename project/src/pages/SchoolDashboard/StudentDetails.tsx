@@ -5,6 +5,7 @@ import type { ScholarshipApplication, UserProfile, Scholarship } from '../../typ
 import ApplicationChat from '../../components/ApplicationChat';
 import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { useAuth } from '../../hooks/useAuth';
+import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 
 interface ApplicationDetails extends ScholarshipApplication {
   user_profiles: UserProfile;
@@ -113,30 +114,22 @@ const StudentDetails: React.FC = () => {
           <div className="bg-white p-6 rounded-xl shadow-md">
             <h2 className="text-xl font-bold text-[#05294E] mb-4">Scholarship Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><strong>Scholarship:</strong> {scholarship.name}</div>
+              <div><strong>Scholarship:</strong> {scholarship.title || scholarship.name}</div>
               <div><strong>Amount:</strong> ${Number(scholarship.amount).toLocaleString()}</div>
-              <div><strong>Course:</strong> {scholarship.course}</div>
-              <div><strong>Country:</strong> {scholarship.country}</div>
+              {scholarship.course && <div><strong>Course:</strong> {scholarship.course}</div>}
+              {scholarship.country && <div><strong>Country:</strong> {scholarship.country}</div>}
               <div className="md:col-span-2"><strong>Description:</strong> {scholarship.description}</div>
             </div>
           </div>
         </div>
-        
-        {/* Actions & Documents */}
-        <div className="lg:col-span-1 space-y-6">
-           <div className="bg-white p-6 rounded-xl shadow-md">
-             <h2 className="text-xl font-bold text-[#05294E] mb-4">Application Actions</h2>
-             <p className="text-sm text-gray-600 mb-4">Manage the student's application status.</p>
-             <div className="flex space-x-2">
-                <button className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-green-300">
-                  Approve
-                </button>
-                <button className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-red-300">
-                  Reject
-                </button>
-             </div>
-           </div>
-        </div>
+      </div>
+      {/* Card de Solicitações de Documentos */}
+      <div className="mt-10">
+        <DocumentRequestsCard 
+          applicationId={application.id} 
+          isSchool={true} 
+          currentUserId={user?.id || ''} 
+        />
       </div>
       {/* Chat Section */}
       <div className="mt-10">

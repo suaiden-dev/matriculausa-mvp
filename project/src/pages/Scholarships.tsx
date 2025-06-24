@@ -355,14 +355,14 @@ const Scholarships: React.FC = () => {
                         Apply Now
                       </button>
                     ) : (
-                      <button
+                    <button
                         className={`w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#05294E]/90 hover:to-slate-600`}
                         onClick={() => alert('Application feature coming soon!')}
-                      >
-                        <Award className="h-4 w-4 mr-2" />
+                    >
+                      <Award className="h-4 w-4 mr-2" />
                         Apply Now
                         <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </button>
+                    </button>
                     )}
                   </div>
                   

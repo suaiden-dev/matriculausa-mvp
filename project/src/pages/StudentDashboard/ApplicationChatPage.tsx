@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import ApplicationChat from '../../components/ApplicationChat';
 import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { useAuth } from '../../hooks/useAuth';
+import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 
 const ApplicationChatPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -20,7 +21,14 @@ const ApplicationChatPage: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
           Application Chat
         </h2>
-        
+        {/* Card de Solicitações de Documentos */}
+        {applicationId && (
+          <DocumentRequestsCard 
+            applicationId={applicationId} 
+            isSchool={false} 
+            currentUserId={user.id} 
+          />
+        )}
         <ApplicationChat
           messages={messages}
           onSend={sendMessage}
@@ -29,11 +37,9 @@ const ApplicationChatPage: React.FC = () => {
           error={error}
           currentUserId={user.id}
         />
-
         {loading && messages.length === 0 && (
             <div className="text-center text-gray-500 py-10">Loading Chat...</div>
         )}
-
         {error && !loading && (
           <div className="text-center text-red-500 py-10">
             Failed to load chat. Please try refreshing the page.

@@ -114,8 +114,8 @@ Deno.serve(async (req) => {
       // Garante que application_id sempre vai para o metadata
       sessionMetadata = {
         ...sessionMetadata,
-        application_id: applicationId,
-      };
+      application_id: applicationId,
+    };
     } else if (fee_type === 'selection_process') {
       // --- Selection Process Fee: não exige application, só marca o usuário ---
       // Nenhuma lógica extra aqui, apenas segue para criar a sessão Stripe

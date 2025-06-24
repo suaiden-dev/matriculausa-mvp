@@ -342,9 +342,9 @@ const MyApplications: React.FC = () => {
                             className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
                             onClick={() => navigate(`/student/dashboard/application/${application.id}/chat`)}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View Details
-                          </button>
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </button>
                         )}
                       </div>
                     </div>
