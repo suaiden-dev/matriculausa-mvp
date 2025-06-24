@@ -9,6 +9,8 @@ import ScholarshipManagement from './ScholarshipManagement';
 import NewScholarship from './NewScholarship';
 import ProfileManagement from './ProfileManagement';
 import StudentManagement from './StudentManagement';
+import StudentDetails from './StudentDetails';
+import PaymentManagement from './PaymentManagement';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
@@ -122,10 +124,10 @@ const SchoolDashboard: React.FC = () => {
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
     </div>;
   }
-  
+
   return (
     <div className="bg-slate-50">
-      <Routes>
+    <Routes>
         <Route 
           path="/" 
           element={
@@ -145,28 +147,36 @@ const SchoolDashboard: React.FC = () => {
                 stats={stats} 
                 applications={applications}
               />
-            } 
-          />
-          <Route 
-            path="scholarships" 
-            element={
+          } 
+        />
+        <Route 
+          path="scholarships" 
+          element={
               <ScholarshipManagement 
                 university={university} 
                 scholarships={scholarships} 
                 handleDeleteScholarship={handleDeleteScholarship}
                 toggleScholarshipStatus={toggleScholarshipStatus}
               />
-            } 
-          />
-          <Route 
-            path="profile" 
-            element={
+          } 
+        />
+        <Route 
+          path="profile" 
+          element={
               <ProfileManagement university={university} setUniversity={setUniversity} />
             } 
           />
           <Route 
             path="students" 
             element={<StudentManagement applications={applications} />}
+          />
+          <Route
+            path="student/:applicationId"
+            element={<StudentDetails />}
+          />
+          <Route 
+            path="analytics" 
+            element={<PaymentManagement />} 
           />
         </Route>
         <Route 
@@ -175,7 +185,7 @@ const SchoolDashboard: React.FC = () => {
             <NewScholarship universityId={university?.id} />
           } 
         />
-      </Routes>
+    </Routes>
     </div>
   );
 };

@@ -80,7 +80,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/school/dashboard/scholarships', badge: university?.profile_completed ? null : 'Setup' },
     { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/school/dashboard/analytics', badge: 'Coming Soon' },
+    { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null }
   ];
 
