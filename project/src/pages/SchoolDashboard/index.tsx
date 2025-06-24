@@ -1,13 +1,14 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import SchoolDashboardLayout from './SchoolDashboardLayout';
-// Lazy load das páginas
-const Overview = React.lazy(() => import('./Overview'));
-const ScholarshipManagement = React.lazy(() => import('./ScholarshipManagement'));
-const ProfileManagement = React.lazy(() => import('./ProfileManagement'));
+import Overview from './Overview';
+import ScholarshipManagement from './ScholarshipManagement';
+import NewScholarship from './NewScholarship';
+import ProfileManagement from './ProfileManagement';
+import StudentManagement from './StudentManagement';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
@@ -52,9 +53,17 @@ const SchoolDashboard: React.FC = () => {
         // Buscar todas as aplicações vinculadas às bolsas desta universidade
         const { data: applicationsData, error: applicationsError } = await supabase
           .from('scholarship_applications')
-          .select('*, scholarships(*), user_profiles:student_id(*)')
+          .select(`
+            *,
+            scholarships(*),
+            user_profiles!student_id(id, user_id, full_name, phone, country)
+          `)
           .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
-        if (applicationsError) throw applicationsError;
+
+        if (applicationsError) {
+          console.error('Erro detalhado da consulta:', applicationsError);
+          throw applicationsError;
+        }
         setApplications(applicationsData || []);
       }
     } catch (error) {
@@ -108,45 +117,66 @@ const SchoolDashboard: React.FC = () => {
     avgAmount: scholarships.length > 0 ? scholarships.reduce((sum, s) => sum + Number(s.amount), 0) / scholarships.length : 0
   };
 
+  if (loading) {
+    return <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
+    </div>;
+  }
+  
   return (
-    <Routes>
-      <Route path="/" element={<SchoolDashboardLayout university={university} user={user} loading={loading} />}>
+    <div className="bg-slate-50">
+      <Routes>
         <Route 
-          index 
+          path="/" 
           element={
-            <Suspense fallback={<SkeletonLoader />}>
+            <SchoolDashboardLayout 
+              university={university} 
+              user={user}
+              loading={loading}
+            />
+          }
+        >
+          <Route 
+            index 
+            element={
               <Overview 
                 university={university} 
                 scholarships={scholarships} 
                 stats={stats} 
                 applications={applications}
               />
-            </Suspense>
-          } 
-        />
-        <Route 
-          path="scholarships" 
-          element={
-            <Suspense fallback={<SkeletonLoader />}>
+            } 
+          />
+          <Route 
+            path="scholarships" 
+            element={
               <ScholarshipManagement 
                 university={university} 
                 scholarships={scholarships} 
                 handleDeleteScholarship={handleDeleteScholarship}
                 toggleScholarshipStatus={toggleScholarshipStatus}
               />
-            </Suspense>
-          } 
-        />
+            } 
+          />
+          <Route 
+            path="profile" 
+            element={
+              <ProfileManagement university={university} setUniversity={setUniversity} />
+            } 
+          />
+          <Route 
+            path="students" 
+            element={<StudentManagement applications={applications} />}
+          />
+        </Route>
         <Route 
-          path="profile" 
+          path="/scholarship/new" 
           element={
-            <Suspense fallback={<SkeletonLoader />}>
-              <ProfileManagement university={university} />
-            </Suspense>
+            <NewScholarship universityId={university?.id} />
           } 
         />
-      </Route>
-    </Routes>
+      </Routes>
+    </div>
   );
 };
 

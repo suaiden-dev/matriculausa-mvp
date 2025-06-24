@@ -79,7 +79,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/school/dashboard/scholarships', badge: university?.profile_completed ? null : 'Setup' },
-    { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: 'Coming Soon' },
+    { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/school/dashboard/analytics', badge: 'Coming Soon' },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null }
   ];
@@ -160,24 +160,27 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
               const isActive = activeTab === item.id;
               const isDisabled = item.badge === 'Coming Soon';
               
+              // Don't disable the students tab anymore
+              const finalIsDisabled = isDisabled && item.id !== 'students';
+
               return (
                 <Link
                   key={item.id}
-                  to={isDisabled ? '#' : item.path}
+                  to={finalIsDisabled ? '#' : item.path}
                   className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                     isActive
                       ? 'bg-[#05294E] text-white shadow-lg'
-                      : isDisabled
+                      : finalIsDisabled
                       ? 'text-slate-400 cursor-not-allowed'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
-                  onClick={(e) => isDisabled && e.preventDefault()}
+                  onClick={(e) => finalIsDisabled && e.preventDefault()}
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : isDisabled ? 'text-slate-400' : 'text-slate-500'}`} />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : finalIsDisabled ? 'text-slate-400' : 'text-slate-500'}`} />
                     <span className="text-sm">{item.label}</span>
                   </div>
-                  {item.badge && (
+                  {item.badge && item.id !== 'students' && (
                     <span className={`px-2 py-1 text-xs font-medium rounded-lg ${
                       item.badge === 'Coming Soon' 
                         ? 'bg-slate-100 text-slate-500'

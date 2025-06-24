@@ -21,12 +21,15 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { University } from '../../types';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ProfileManagementProps {
   university: University | null;
+  setUniversity: React.Dispatch<React.SetStateAction<University | null>>;
 }
 
-const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => {
+const ProfileManagement: React.FC<ProfileManagementProps> = ({ university, setUniversity }) => {
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -72,6 +75,10 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({ university }) => 
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    // ... existing code ...
   };
 
   if (!university) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Award, 
@@ -19,15 +19,16 @@ import { useAuth } from '../../hooks/useAuth';
 const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-const NewScholarship: React.FC = () => {
+interface NewScholarshipProps {
+  universityId: string | undefined;
+}
+
+const NewScholarship: React.FC<NewScholarshipProps> = ({ universityId }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [universityId, setUniversityId] = useState<string | null>(null);
-  // const [imageFile, setImageFile] = useState<File | null>(null);
-  // const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -45,49 +46,6 @@ const NewScholarship: React.FC = () => {
     original_value_per_credit: '',
     annual_value_with_scholarship: '',
   });
-
-  useEffect(() => {
-    // Check if user is authenticated and has a university
-    if (user) {
-      fetchUniversityId();
-    } else {
-      navigate('/login');
-    }
-  }, [user, navigate]);
-
-  const fetchUniversityId = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('universities')
-        .select('id, profile_completed, is_approved')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) throw error;
-
-      if (!data) {
-        setError('University profile not found. Please complete your profile first.');
-        return;
-      }
-
-      if (!data.profile_completed) {
-        setError('Please complete your university profile before creating scholarships.');
-        setTimeout(() => {
-          navigate('/school/dashboard/profile');
-        }, 3000);
-        return;
-      }
-
-      if (!data.is_approved) {
-        setError('Your university profile is pending approval. You can create scholarships, but they will not be visible to students until your profile is approved.');
-      }
-
-      setUniversityId(data.id);
-    } catch (error: any) {
-      console.error('Error fetching university:', error);
-      setError('Error loading university data. Please try again later.');
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -134,59 +92,45 @@ const NewScholarship: React.FC = () => {
     });
   };
 
-  // Image upload handler
-  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = e.target.files?.[0];
-  //   if (!file) return;
-  //   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-  //     setError('Only JPG, PNG, or WEBP images are allowed.');
-  //     return;
-  //   }
-  //   if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-  //     setError('Image size must be less than 2MB.');
-  //     return;
-  //   }
-  //   setImageFile(file);
-  //   setImagePreview(URL.createObjectURL(file));
-  //   setError(null);
-  // };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
     
     if (!universityId) {
       setError('University profile not found. Please complete your profile first.');
+      setLoading(false);
       return;
     }
 
     // Validate form
     if (!formData.title.trim()) {
       setError('Scholarship title is required');
+      setLoading(false);
       return;
     }
 
     if (!formData.original_annual_value.trim() || isNaN(Number(formData.original_annual_value))) {
       setError('Valid original annual value is required');
+      setLoading(false);
       return;
     }
     if (!formData.original_value_per_credit.trim() || isNaN(Number(formData.original_value_per_credit))) {
       setError('Valid value per credit is required');
+      setLoading(false);
       return;
     }
     if (!formData.annual_value_with_scholarship.trim() || isNaN(Number(formData.annual_value_with_scholarship))) {
       setError('Valid annual value with scholarship is required');
+      setLoading(false);
       return;
     }
 
     if (!formData.deadline.trim()) {
       setError('Application deadline is required');
+      setLoading(false);
       return;
     }
-
-    // if (!imageFile) {
-    //   setError('Scholarship image is required.');
-    //   return;
-    // }
 
     // Filter out empty array items
     const requirements = formData.requirements.filter(item => item.trim());
@@ -195,26 +139,11 @@ const NewScholarship: React.FC = () => {
 
     if (requirements.length === 0) {
       setError('At least one requirement is required');
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
     try {
-      // --- IMAGEM DESABILITADA TEMPORARIAMENTE ---
-      // const fileExt = imageFile.name.split('.').pop();
-      // const fileName = `scholarship_${Date.now()}.${fileExt}`;
-      // const { data: uploadData, error: uploadError } = await supabase.storage
-      //   .from('scholarship-images')
-      //   .upload(fileName, imageFile, { upsert: false });
-      // if (uploadError) throw uploadError;
-      // const { data: publicUrlData } = supabase.storage
-      //   .from('scholarship-images')
-      //   .getPublicUrl(fileName);
-      // const imageUrl = publicUrlData?.publicUrl;
-      // if (!imageUrl) throw new Error('Could not get image URL');
-      // --- FIM IMAGEM ---
       // 3. Prepare data for submission
       const scholarshipData = {
         title: formData.title,
@@ -302,14 +231,9 @@ const NewScholarship: React.FC = () => {
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  // onChange={handleImageChange}
-                  // required
                   disabled
                   className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#05294E] file:text-white opacity-50 cursor-not-allowed"
                 />
-                {/* {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="mt-2 rounded-xl border border-slate-200 max-h-48" />
-                )} */}
               </div>
             </div>
 

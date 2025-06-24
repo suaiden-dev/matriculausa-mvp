@@ -13,7 +13,7 @@ import {
   Award,
   ArrowRight
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
@@ -34,6 +34,7 @@ const MyApplications: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -336,10 +337,15 @@ const MyApplications: React.FC = () => {
                           <Icon className="h-4 w-4 mr-2" />
                           {application.status.replace('_', ' ').toUpperCase()}
                         </span>
-                        <button className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View Details
-                        </button>
+                        {application.status === 'approved' && (
+                          <button
+                            className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
+                            onClick={() => navigate(`/student/dashboard/application/${application.id}/chat`)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </button>
+                        )}
                       </div>
                     </div>
 

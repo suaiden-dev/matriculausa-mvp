@@ -21,6 +21,7 @@ import SelectionProcessFeeSuccess from './SelectionProcessFeeSuccess';
 import SelectionProcessFeeError from './SelectionProcessFeeError';
 import ApplicationFeeSuccess from './ApplicationFeeSuccess';
 import ApplicationFeeError from './ApplicationFeeError';
+import ApplicationChatPage from './ApplicationChatPage';
 
 interface StudentProfile {
   id: string;
@@ -228,6 +229,12 @@ const StudentDashboard: React.FC = () => {
           path="applications" 
           element={
             <MyApplications />
+          } 
+        />
+        <Route 
+          path="application/:applicationId/chat" 
+          element={
+            <ApplicationChatPage />
           } 
         />
         <Route 
