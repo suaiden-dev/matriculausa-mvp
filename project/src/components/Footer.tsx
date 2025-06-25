@@ -22,32 +22,20 @@ const Footer: React.FC = () => {
               />
             </div>
             <p className="text-slate-300 leading-relaxed">
-              Revolutionary SaaS platform connecting international students with American educational opportunities through AI-powered matching and exclusive scholarship programs.
+              MatriculaUSA is the leading platform for international students who want to study in the United States. We make the entire application, enrollment, and scholarship process easier at American universities, offering technology, expert support, and exclusive opportunities to turn your international dream into reality.
             </p>
             
-            {/* Trust Badges */}
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
-                <Shield className="h-4 w-4 mr-2 text-[#D0151C]" />
-                <span className="text-xs font-medium text-slate-300">Verified Platform</span>
-              </div>
-              <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
-                <Award className="h-4 w-4 mr-2 text-yellow-400" />
-                <span className="text-xs font-medium text-slate-300">Award Winning</span>
-              </div>
-            </div>
-            
             <div className="flex space-x-4">
-              <a href="#" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://facebook.com/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Facebook className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
-              <a href="#" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://twitter.com/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Twitter className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
-              <a href="#" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://instagram.com/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Instagram className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
-              <a href="#" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://linkedin.com/company/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Linkedin className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
             </div>
@@ -96,29 +84,13 @@ const Footer: React.FC = () => {
                 <div className="bg-green-600/20 p-2 rounded-lg group-hover:bg-green-600/30 transition-colors">
                   <Phone className="h-5 w-5 text-green-400" />
                 </div>
-                <span className="text-slate-300">+1 (555) 123-4567</span>
+                <span className="text-slate-300">+1 (213) 676-2544</span>
               </div>
               <div className="flex items-center space-x-3 group">
                 <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
                   <MapPin className="h-5 w-5 text-[#D0151C]" />
                 </div>
-                <span className="text-slate-300">New York, NY, USA</span>
-              </div>
-            </div>
-            
-            {/* Newsletter */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-              <h4 className="font-bold text-white mb-2">Stay Updated</h4>
-              <p className="text-sm text-slate-300 mb-3">Get the latest scholarship opportunities</p>
-              <div className="flex">
-                <input 
-                  type="email" 
-                  placeholder="Your email"
-                  className="flex-1 bg-white/10 border border-white/20 rounded-l-lg px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#D0151C]"
-                />
-                <button className="bg-[#D0151C] px-4 py-2 rounded-r-lg text-sm font-bold hover:bg-[#B01218] transition-all duration-300">
-                  Subscribe
-                </button>
+                <span className="text-slate-300">Los Angeles - CA - USA.</span>
               </div>
             </div>
           </div>
@@ -129,16 +101,6 @@ const Footer: React.FC = () => {
             <p className="text-slate-400 text-sm">
               © 2024 Matrícula USA. All rights reserved. | Empowering international education through technology.
             </p>
-            <div className="flex items-center space-x-6 text-sm text-slate-400">
-              <span className="flex items-center">
-                <Shield className="h-4 w-4 mr-1 text-green-400" />
-                SSL Secured
-              </span>
-              <span className="flex items-center">
-                <Award className="h-4 w-4 mr-1 text-yellow-400" />
-                Trusted Platform
-              </span>
-            </div>
           </div>
         </div>
       </div>

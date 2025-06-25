@@ -58,6 +58,43 @@ Deno.serve(async (req) => {
       ...metadata,
     };
 
+    // Garantir que existe registro em scholarship_applications
+    let applicationId = metadata?.selected_scholarship_id;
+    if (applicationId) {
+      // Verifica se já existe aplicação para o aluno e bolsa
+      const { data: existing, error: fetchError } = await supabase
+        .from('scholarship_applications')
+        .select('id')
+        .eq('student_id', user.id)
+        .eq('scholarship_id', applicationId)
+        .maybeSingle();
+      if (fetchError) {
+        console.error('[stripe-checkout-application-fee] Erro ao buscar aplicação:', fetchError);
+      }
+      if (!existing) {
+        // Cria nova aplicação
+        const { data: created, error: insertError } = await supabase
+          .from('scholarship_applications')
+          .insert({
+            student_id: user.id,
+            scholarship_id: applicationId,
+            status: 'pending',
+            applied_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+        if (insertError) {
+          console.error('[stripe-checkout-application-fee] Erro ao criar aplicação:', insertError);
+        } else {
+          console.log('[stripe-checkout-application-fee] Aplicação criada:', created);
+        }
+      } else {
+        console.log('[stripe-checkout-application-fee] Aplicação já existe:', existing);
+      }
+    } else {
+      console.warn('[stripe-checkout-application-fee] selected_scholarship_id não informado no metadata.');
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       client_reference_id: user.id,

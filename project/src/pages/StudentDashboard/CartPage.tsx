@@ -127,7 +127,6 @@ const CartPage: React.FC = () => {
                     <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
                   </div>
                 </label>
-                <span className="font-bold text-green-700 text-lg">${SCHOLARSHIP_PRICE}</span>
               </li>
             ))}
           </ul>
@@ -154,33 +153,32 @@ const CartPage: React.FC = () => {
         <ul className="divide-y divide-slate-200 mb-8">
           {cart.map((item) => (
             <li key={item.scholarships.id} className="flex items-center justify-between py-4">
-              <div>
-                <div className="font-bold text-slate-900">{item.scholarships.title}</div>
-                <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="font-bold text-green-700 text-lg">${total}</span>
-                <button
-                  onClick={() => handleRemoveFromCart(item.scholarships.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
+              <label className="flex items-center gap-4 cursor-pointer w-full">
+                <input
+                  type="radio"
+                  name="scholarship"
+                  value={item.scholarships.id}
+                  checked={selectedScholarship === item.scholarships.id}
+                  onChange={() => setSelectedScholarship(item.scholarships.id)}
+                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-full"
+                />
+                <div>
+                  <div className="font-bold text-slate-900">{item.scholarships.title}</div>
+                  <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
+                </div>
+              </label>
             </li>
           ))}
         </ul>
         <div className="flex items-center justify-between mb-6">
-          <span className="font-bold text-slate-700 text-lg">Total</span>
-          <span className="font-bold text-blue-700 text-2xl">${total * cart.length}</span>
+          <button
+            onClick={handleNextStep}
+            disabled={isProcessing}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300"
+          >
+            {isProcessing ? 'Processing...' : 'Next Step'}
+          </button>
         </div>
-        <button
-          onClick={handleNextStep}
-          disabled={isProcessing}
-          className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300"
-        >
-          {isProcessing ? 'Processing...' : 'Next Step'}
-        </button>
         <button
           onClick={handleClearCart}
           className="w-full bg-slate-100 text-slate-700 py-3 px-6 rounded-2xl font-medium text-sm hover:bg-slate-200 transition-all duration-300"

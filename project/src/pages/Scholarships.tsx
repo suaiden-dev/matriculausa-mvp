@@ -287,7 +287,7 @@ const Scholarships: React.FC = () => {
                         <div className="flex items-center text-slate-600 mb-4">
                           <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                           <span className="text-xs font-semibold mr-1">University:</span>
-                          <span className={`text-sm select-none`}>{scholarship.universities?.name || 'Unknown University'}</span>
+                          <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.universities?.name || 'Unknown University'}</span>
                         </div>
                       </div>
                       
@@ -355,14 +355,43 @@ const Scholarships: React.FC = () => {
                         Apply Now
                       </button>
                     ) : (
-                    <button
+                      <button
                         className={`w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#05294E]/90 hover:to-slate-600`}
-                        onClick={() => alert('Application feature coming soon!')}
-                    >
-                      <Award className="h-4 w-4 mr-2" />
+                        onClick={async () => {
+                          if (!userProfile?.has_paid_selection_process_fee) {
+                            // Acionar StripeCheckout para selection_process com o price_id correto
+                            const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+                            const { data: sessionData } = await import('../lib/supabase').then(m => m.supabase.auth.getSession());
+                            const token = sessionData.session?.access_token;
+                            const response = await fetch(apiUrl, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                              },
+                              body: JSON.stringify({
+                                price_id: 'price_1Rb5w8KdCh3y3bmYqSmUyW2Z',
+                                success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+                                cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
+                                mode: 'payment',
+                                payment_type: 'selection_process',
+                                fee_type: 'selection_process',
+                              })
+                            });
+                            const data = await response.json();
+                            if (data.session_url) {
+                              window.location.href = data.session_url;
+                              return;
+                            }
+                            return;
+                          }
+                          navigate('/student/dashboard/scholarships');
+                        }}
+                      >
+                        <Award className="h-4 w-4 mr-2" />
                         Apply Now
                         <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                    </button>
+                      </button>
                     )}
                   </div>
                   

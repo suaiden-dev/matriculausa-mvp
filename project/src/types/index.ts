@@ -96,3 +96,33 @@ export interface AuthContextType {
   register: (userData: Omit<User, 'id'>) => Promise<void>;
   isAuthenticated: boolean;
 }
+
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  phone: string | null;
+  country: string | null;
+  field_of_interest: string | null;
+  academic_level: string | null;
+  gpa: number | null;
+  english_proficiency: string | null;
+  status: string | null;
+  last_active: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  is_application_fee_paid: boolean;
+  has_paid_selection_process_fee: boolean;
+  is_admin: boolean;
+  stripe_customer_id: string | null;
+  stripe_payment_intent_id: string | null;
+  university_id?: string | null;
+  documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected';
+  documents_uploaded?: boolean;
+  selected_scholarship_id?: string | null;
+  has_paid_college_enrollment_fee?: boolean;
+  has_paid_scholarship_fee?: boolean;
+  has_paid_i20_control_fee?: boolean;
+  i20_control_fee_due_date?: string | null;
+  i20_control_fee_payment_intent_id?: string | null;
+}

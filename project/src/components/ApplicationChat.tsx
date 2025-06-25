@@ -21,13 +21,102 @@ interface ApplicationChatProps {
   currentUserId: string;
 }
 
-const ApplicationChat: React.FC<ApplicationChatProps> = ({
+interface I20ControlFeeCardProps {
+  hasPaid: boolean;
+  dueDate: string | null;
+  onPay: () => void;
+  isExpired: boolean;
+  isLoading: boolean;
+  paymentDate?: string | null;
+}
+
+const I20ControlFeeCard: React.FC<I20ControlFeeCardProps> = ({ hasPaid, dueDate, onPay, isExpired, isLoading, paymentDate }) => {
+  const [now, setNow] = React.useState<Date>(new Date());
+  React.useEffect(() => {
+    if (!dueDate || hasPaid) return;
+    const interval = setInterval(() => setNow(new Date()), 1000 * 60);
+    return () => clearInterval(interval);
+  }, [dueDate, hasPaid]);
+
+  let content = null;
+  let badge = null;
+  let cardColor = 'border-red-200';
+  let titleColor = 'text-red-700';
+  let buttonColor = 'bg-red-500 hover:bg-red-600';
+  let badgeColor = 'bg-red-100 text-red-700';
+
+  if (hasPaid) {
+    badge = <span className="mt-2 inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">Paid</span>;
+    cardColor = 'border-green-200';
+    titleColor = 'text-green-700';
+    buttonColor = 'bg-green-500 hover:bg-green-600';
+    badgeColor = 'bg-green-100 text-green-700';
+    content = (
+      <>
+        <span className={`font-semibold text-lg ${titleColor}`}>I-20 Control Fee Paid</span>
+        {paymentDate && <span className="text-xs text-gray-500 mt-1">Paid on {new Date(paymentDate).toLocaleDateString()}</span>}
+        {badge}
+      </>
+    );
+  } else if (isExpired) {
+    badge = <span className="mt-2 inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">Expired</span>;
+    content = (
+      <>
+        <span className="font-semibold text-lg text-red-700">I-20 Control Fee Expired</span>
+        {badge}
+      </>
+    );
+  } else {
+    let timeLeft = '';
+    if (dueDate) {
+      const due = new Date(dueDate);
+      const diff = due.getTime() - now.getTime();
+      if (diff > 0) {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        timeLeft = `${days}d ${hours}h left`;
+      }
+    }
+    badge = <span className={`mt-2 inline-block ${badgeColor} px-3 py-1 rounded-full text-xs font-bold`}>Pending</span>;
+    content = (
+      <>
+        <span className={`font-semibold text-lg ${titleColor}`}>I-20 Control Fee Pending</span>
+        {dueDate && <span className="text-xs text-gray-500 mt-1">Due: {new Date(dueDate).toLocaleDateString()} {timeLeft && `(${timeLeft})`}</span>}
+        <button
+          className={`mt-3 ${buttonColor} text-white px-5 py-2 rounded-full text-base font-bold disabled:opacity-60 transition`}
+          onClick={onPay}
+          disabled={isLoading}
+        >
+          {isLoading ? 'Redirecting...' : 'Pay I-20 Control Fee'}
+        </button>
+        {badge}
+      </>
+    );
+  }
+  return (
+    <div className={`w-full max-w-md mx-auto mb-8 p-6 bg-white ${cardColor} border-2 rounded-2xl shadow flex flex-col items-center justify-center`}>
+      {content}
+    </div>
+  );
+};
+
+const ApplicationChat: React.FC<ApplicationChatProps & {
+  i20ControlFee?: {
+    hasPaid: boolean;
+    dueDate: string | null;
+    isExpired: boolean;
+    isLoading: boolean;
+    onPay: () => void;
+    paymentDate?: string | null;
+  }
+}> = ({
   messages,
   onSend,
   loading = false,
   isSending = false,
   error = null,
   currentUserId,
+  i20ControlFee,
 }) => {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -51,6 +140,16 @@ const ApplicationChat: React.FC<ApplicationChatProps> = ({
 
   return (
     <>
+      {i20ControlFee && (
+        <I20ControlFeeCard
+          hasPaid={i20ControlFee.hasPaid}
+          dueDate={i20ControlFee.dueDate}
+          isExpired={i20ControlFee.isExpired}
+          isLoading={i20ControlFee.isLoading}
+          onPay={i20ControlFee.onPay}
+          paymentDate={i20ControlFee.paymentDate}
+        />
+      )}
       <div className="flex flex-col h-full max-h-[80vh] w-full bg-gray-50 rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-white">

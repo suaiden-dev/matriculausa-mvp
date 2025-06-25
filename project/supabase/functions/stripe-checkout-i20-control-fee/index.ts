@@ -35,8 +35,10 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { success_url, cancel_url, mode, metadata } = await req.json();
-    
+    const { success_url, cancel_url } = await req.json();
+    const price_id = 'price_1RbSjQKdCh3y3bmYQdmGvtpk'; // fixo para I-20 Control Fee
+    const mode = 'payment';
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return corsResponse({ error: 'No authorization header' }, 401);
@@ -44,18 +46,14 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
     if (authError || !user) {
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
-    // Price ID fixo para I-20 Control Fee
-    const price_id = 'price_1RbSjQKdCh3y3bmYQdmGvtpk';
-
+    // Metadata para rastreamento
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'i20_control_fee',
-      ...metadata,
     };
 
     const session = await stripe.checkout.sessions.create({
@@ -68,9 +66,9 @@ Deno.serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: mode || 'payment',
-      success_url: success_url,
-      cancel_url: cancel_url,
+      mode,
+      success_url,
+      cancel_url,
       metadata: sessionMetadata,
     });
 

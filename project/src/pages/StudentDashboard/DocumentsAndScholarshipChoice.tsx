@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCartStore } from '../../stores/applicationStore';
-import DocumentUploadModal from '../../components/DocumentUploadModal';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -37,7 +36,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       }
       setProcessType(type);
       window.localStorage.setItem('studentProcessType', type);
-      setShowUploadModal(true);
+      // Redireciona para a nova página de upload de documentos
+      navigate('/student/dashboard/upload-documents');
     } catch (e) {
       alert('Failed to save student type. Please try again.');
     } finally {
@@ -107,20 +107,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           </div>
         </div>
       )}
-      {showUploadModal && (
-        <DocumentUploadModal
-          onSuccess={handleUploadSuccess}
-          onClose={() => setShowUploadModal(false)}
-        />
-      )}
       {processType && !documentsApproved && !showUploadModal && (
         <div className="text-center mt-8">
-          <button
-            className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
-            onClick={() => setShowUploadModal(true)}
-          >
-            Upload Required Documents
-          </button>
+          {/* Redirecionamento já ocorre após o Next, então não precisa mais do botão aqui */}
         </div>
       )}
       {processType && documentsApproved && (
@@ -144,17 +133,48 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             ))}
           </ul>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (selectedScholarshipId && processType) {
-                window.localStorage.setItem('selectedScholarshipId', selectedScholarshipId);
-                window.localStorage.setItem('studentProcessType', processType);
-                navigate('/student/dashboard/college-enrollment-checkout');
+                try {
+                  // Verifica se já existe aplicação para o aluno e bolsa
+                  const { data: existing, error: fetchError } = await supabase
+                    .from('scholarship_applications')
+                    .select('id')
+                    .eq('student_id', userProfile.id)
+                    .eq('scholarship_id', selectedScholarshipId)
+                    .maybeSingle();
+                  if (fetchError) throw fetchError;
+                  if (!existing) {
+                    // Cria nova aplicação
+                    const { data, error } = await supabase
+                      .from('scholarship_applications')
+                      .insert({
+                        student_id: userProfile.id,
+                        scholarship_id: selectedScholarshipId,
+                        status: 'pending',
+                        applied_at: new Date().toISOString(),
+                        student_process_type: processType,
+                      })
+                      .select('id')
+                      .single();
+                    if (error) {
+                      alert('Erro ao criar aplicação: ' + error.message);
+                      return;
+                    }
+                  }
+                  // Salva escolhas no localStorage e redireciona
+                  window.localStorage.setItem('selectedScholarshipId', selectedScholarshipId);
+                  window.localStorage.setItem('studentProcessType', processType);
+                  navigate('/student/dashboard/college-enrollment-checkout');
+                } catch (e: any) {
+                  alert('Erro ao processar sua escolha. Detalhes: ' + (e?.message || e));
+                }
               }
             }}
             disabled={!selectedScholarshipId}
             className="w-full bg-blue-600 text-white py-4 rounded-xl font-extrabold text-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 shadow-lg"
           >
-            Continue to College Enrollment Payment
+            Continue to Application Fee Payment
           </button>
         </div>
       )}

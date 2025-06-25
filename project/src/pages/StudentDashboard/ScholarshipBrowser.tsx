@@ -40,7 +40,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [sortBy, setSortBy] = useState('deadline');
   const { isAuthenticated, userProfile, user } = useAuth();
   const navigate = useNavigate();
-  const isLocked = !userProfile?.has_paid_selection_process_fee;
   const { cart, addToCart, removeFromCart } = useCartStore();
 
   const formatAmount = (amount: number) => {
@@ -228,7 +227,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     <div className="flex items-center text-slate-600 mb-4">
                       <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                       <span className="text-xs font-semibold mr-1">University:</span>
-                      <span className="text-sm select-none">{scholarship.universities?.name || 'Unknown University'}</span>
+                      <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.universities?.name || 'Unknown University'}</span>
                     </div>
                   </div>
                   {/* Exclusive Badge */}
@@ -285,50 +284,49 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   className={`w-full py-2 px-4 rounded-md transition-all duration-200 font-semibold ${
                     inCart ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'
                   } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : ''}`}
-                  onClick={() => {
-                    if (inCart) {
-                      if (user) removeFromCart(scholarship.id, user.id);
+                  onClick={async () => {
+                    if (!userProfile?.has_paid_selection_process_fee) {
+                      // Acionar StripeCheckout para selection_process com o price_id correto
+                      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+                      const { data: sessionData } = await import('../../lib/supabase').then(m => m.supabase.auth.getSession());
+                      const token = sessionData.session?.access_token;
+                      const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                          price_id: 'price_1Rb5w8KdCh3y3bmYqSmUyW2Z',
+                          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+                          cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
+                          mode: 'payment',
+                          payment_type: 'selection_process',
+                          fee_type: 'selection_process',
+                        })
+                      });
+                      const data = await response.json();
+                      if (data.session_url) {
+                        window.location.href = data.session_url;
+                        return;
+                      }
+                      return;
                     } else {
-                      handleAddToCart(scholarship);
+                      // Comportamento normal: adicionar/remover do carrinho
+                      if (inCart) {
+                        if (user) removeFromCart(scholarship.id, user.id);
+                      } else {
+                        handleAddToCart(scholarship);
+                      }
                     }
                   }}
                   disabled={alreadyApplied}
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  {alreadyApplied ? 'Already Applied' : inCart ? 'Remove from Cart' : 'Add to Cart'}
+                  {alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : 'Select Scholarship'}
                   {!alreadyApplied && <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />}
                 </button>
               </div>
-              {/* Overlay for locked cards */}
-              {isLocked && (
-                <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-10">
-                  <span className="text-[#05294E] font-bold text-lg mb-2">Unlock full details</span>
-                  <span className="text-slate-600 text-sm text-center mb-4">Pay the selection process fee to view all scholarship information and apply.</span>
-                  {/* Botão de pagamento */}
-                  {!isAuthenticated ? (
-                    <button
-                      className="bg-[#D0151C] text-white px-6 py-3 rounded-xl hover:bg-[#B01218] transition-all duration-300 font-bold mt-2"
-                      onClick={() => navigate('/login')}
-                    >
-                      Sign in to pay selection fee
-                    </button>
-                  ) : (
-                    <StripeCheckout
-                      productId="SELECTION_PROCESS"
-                      feeType="selection_process"
-                      paymentType="selection_process"
-                      buttonText="Pay Selection Fee to Unlock"
-                      className="mt-2"
-                      onSuccess={() => {}}
-                      onError={(err) => alert(err)}
-                      successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                      cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-                    />
-                  )}
-                </div>
-              )}
-              {/* Hover Effect Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             </div>
           );
         })}

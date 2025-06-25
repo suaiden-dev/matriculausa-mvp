@@ -60,6 +60,23 @@ Deno.serve(async (req) => {
         .eq('id', applicationId);
       if (updateError) throw new Error(`Failed to update application status for application fee: ${updateError.message}`);
 
+      // NOVO: Buscar documentos do user_profiles e vincular à application
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('user_profiles')
+        .select('documents')
+        .eq('user_id', userId)
+        .single();
+      if (userProfileError) throw new Error(`Failed to fetch user profile documents: ${userProfileError.message}`);
+      const documents = Array.isArray(userProfile?.documents) ? userProfile.documents : [];
+      if (documents.length > 0) {
+        const { error: docUpdateError } = await supabase
+          .from('scholarship_applications')
+          .update({ documents })
+          .eq('id', applicationId)
+          .eq('student_id', userId);
+        if (docUpdateError) throw new Error(`Failed to update application documents: ${docUpdateError.message}`);
+      }
+
       // Atualiza perfil do usuário para marcar que pagou a application fee
       const { error: profileError } = await supabase
         .from('user_profiles')

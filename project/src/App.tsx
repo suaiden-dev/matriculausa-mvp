@@ -23,6 +23,8 @@ import ApplicationFeeSuccess from './pages/StudentDashboard/ApplicationFeeSucces
 import ApplicationFeeCancel from './pages/ApplicationFeeCancel';
 import PaymentErrorPage from './pages/PaymentErrorPage';
 import ApplicationFeeError from './pages/StudentDashboard/ApplicationFeeError';
+import I20ControlFeeSuccess from './pages/StudentDashboard/I20ControlFeeSuccess';
+import I20ControlFeeError from './pages/StudentDashboard/I20ControlFeeError';
 
 function App() {
   return (
@@ -38,7 +40,7 @@ function App() {
             <Route path="/admin/register" element={<AdminRegistration />} />
             <Route path="/scholarships" element={<Scholarships />} />
             <Route path="/schools" element={<Universities />} />
-            <Route path="/schools/:id" element={<UniversityDetail />} />
+            <Route path="/schools/:slug" element={<UniversityDetail />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             {/* Student/Admin Dashboard Switch - sempre renderize StudentDashboard por padrão */}
             <Route path="/student/dashboard/*" element={<StudentDashboard />} />
@@ -62,6 +64,8 @@ function App() {
             <Route path="/student/dashboard/payment-error" element={<PaymentErrorPage />} />
             <Route path="/student/dashboard/application-fee-success" element={<ApplicationFeeSuccess />} />
             <Route path="/student/dashboard/application-fee-error" element={<ApplicationFeeError />} />
+            <Route path="/student/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
+            <Route path="/student/i20-control-fee-error" element={<I20ControlFeeError />} />
           </Routes>
         </Layout>
       </AuthProvider>

@@ -8,53 +8,35 @@ import { supabase } from '../lib/supabase';
 import type { Scholarship } from '../types';
 
 const UniversityDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [university, setUniversity] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [scholarshipsLoading, setScholarshipsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUniversity = async () => {
       // Try mock first
-      let uni = mockSchools.find(school => school.id === id);
+      let uni = mockSchools.find(school => slugify(school.name) === slug);
       if (uni) {
         setUniversity(uni);
         setLoading(false);
         return;
       }
       // Try Supabase
-      const { data } = await supabase
+      let { data } = await supabase
         .from('universities')
         .select('*')
-        .eq('id', id)
-        .maybeSingle();
-      if (data) {
-        setUniversity(data);
+        .ilike('name', slugToName(slug));
+      if (data && data.length > 0) {
+        setUniversity(data[0]);
       } else {
         setUniversity(null);
       }
       setLoading(false);
     };
     fetchUniversity();
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
-    const fetchScholarships = async () => {
-      setScholarshipsLoading(true);
-      const { data } = await supabase
-        .from('scholarships')
-        .select('*')
-        .eq('university_id', id)
-        .eq('is_active', true);
-      setScholarships(data as Scholarship[]);
-      setScholarshipsLoading(false);
-    };
-    fetchScholarships();
-  }, [id]);
+  }, [slug]);
 
   if (loading) {
     return (
@@ -161,75 +143,6 @@ const UniversityDetail: React.FC = () => {
                 )) : <div className="text-gray-400 col-span-2 md:col-span-3">No programs listed</div>}
               </div>
             </section>
-
-            {/* Scholarships */}
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 mt-10">Scholarships</h2>
-              {scholarshipsLoading ? (
-                <div className="text-center text-slate-500 py-8">Loading scholarships...</div>
-              ) : scholarships.length === 0 ? (
-                <div className="text-center text-slate-400 py-8">No scholarships available for this university.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {scholarships.map((scholarship) => (
-                    <div key={scholarship.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                              {scholarship.title}
-                            </h3>
-                            <div className="flex items-center text-slate-600 mb-4">
-                              <Award className="h-4 w-4 mr-2 text-[#05294E]" />
-                              <span className="text-xs font-semibold mr-1">Scholarship</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center mb-4">
-                          <DollarSign className="h-5 w-5 mr-2 text-green-500" />
-                          <span className="text-2xl font-bold text-green-700">{
-                            scholarship.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })
-                          }</span>
-                        </div>
-                        <div className="space-y-2 mb-6">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-500">Level</span>
-                            <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-500">Field</span>
-                            <span className="px-2 py-1 rounded-lg text-xs font-medium text-white bg-slate-600">{scholarship.field_of_study || 'Any Field'}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-500">Deadline</span>
-                            <div className="flex items-center">
-                              <Clock className="h-3 w-3 mr-1 text-slate-500" />
-                              <span className="text-slate-700">{scholarship.deadline}</span>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Botão Apply Now */}
-                        <div className="px-0 pb-0">
-                          <button
-                            className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
-                            onClick={() => {
-                              if (!isAuthenticated) {
-                                navigate('/login');
-                              } else {
-                                alert('Application feature coming soon!');
-                              }
-                            }}
-                          >
-                            <Award className="h-4 w-4 mr-2" />
-                            Apply Now
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
           </div>
 
           {/* Sidebar */}
@@ -328,3 +241,12 @@ const UniversityDetail: React.FC = () => {
 };
 
 export default UniversityDetail;
+
+function slugToName(slug: string | undefined) {
+  if (!slug) return '';
+  return slug.replace(/-/g, ' ');
+}
+
+function slugify(str: string) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}

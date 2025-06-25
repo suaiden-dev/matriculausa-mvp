@@ -6,6 +6,11 @@ import Header from '../components/Header';
 
 const PAGE_SIZE = 20;
 
+// Função utilitária para transformar nome em slug
+function slugify(str: string) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
 const Universities: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -14,10 +19,32 @@ const Universities: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     const fetchUniversities = async () => {
       setLoading(true);
+      // Se estiver pesquisando, buscar todas as universidades que correspondem ao termo
+      if (searchTerm.trim() !== '') {
+        setSearching(true);
+        const { data, error } = await supabase
+          .from('universities')
+          .select('id, name, location, logo_url, programs, description, website')
+          .eq('is_approved', true)
+          .ilike('name', `%${searchTerm}%`);
+        if (!error && data) {
+          setRealUniversities(data);
+          setTotalCount(data.length);
+        } else {
+          setRealUniversities([]);
+          setTotalCount(0);
+        }
+        setLoading(false);
+        setSearching(false);
+        return;
+      }
+      // Caso contrário, busca paginada normal
+      setSearching(false);
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       const { data, error, count } = await supabase
@@ -35,7 +62,7 @@ const Universities: React.FC = () => {
       setLoading(false);
     };
     fetchUniversities();
-  }, [page]);
+  }, [page, searchTerm]);
 
   // Get unique locations for filter
   const locations = Array.from(new Set(realUniversities.map(school => school.location?.split(', ')[1]))).filter(Boolean).sort();
@@ -140,9 +167,9 @@ const Universities: React.FC = () => {
               <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-80" />
             ))
           ) : filteredSchools.map((school) => (
-            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
+            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px]">
               {/* University Image */}
-              <div className="relative h-48 overflow-hidden">
+              <div className="relative h-48 overflow-hidden flex-shrink-0">
                 <img
                   src={school.image || school.logo_url || '/university-placeholder.png'}
                   alt={`${school.name} campus`}
@@ -169,7 +196,7 @@ const Universities: React.FC = () => {
               </div>
 
               {/* University Info */}
-              <div className="p-6">
+              <div className="flex flex-col flex-1 p-6">
                 <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
                   {school.name}
                 </h3>
@@ -181,7 +208,7 @@ const Universities: React.FC = () => {
                 </div>
 
                 {/* Programs Preview */}
-                <div className="mb-6">
+                <div className="mb-6 flex-1">
                   <div className="flex flex-wrap gap-2">
                     {school.programs.slice(0, 3).map((program: string, index: number) => (
                       <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
@@ -196,14 +223,16 @@ const Universities: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Learn More Button */}
-                <Link
-                  to={`/schools/${school.id}`}
-                  className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
-                >
-                  Learn More
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                {/* Learn More Button alinhado na base */}
+                <div className="mt-auto">
+                  <Link
+                    to={`/schools/${slugify(school.name)}`}
+                    className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
+                  >
+                    Learn More
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
               </div>
             </div>
           ))}

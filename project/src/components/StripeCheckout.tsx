@@ -17,6 +17,7 @@ interface StripeCheckoutProps {
   disabled?: boolean;
   metadata?: { [key: string]: any };
   studentProcessType?: string | null;
+  beforeCheckout?: () => Promise<{ applicationId: string } | undefined>;
 }
 
 export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
@@ -33,6 +34,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   disabled = false,
   studentProcessType,
   metadata = {},
+  beforeCheckout,
 }) => {
   const [loading, setLoading] = useState(false);
   const { isAuthenticated, updateUserProfile } = useAuth();
@@ -53,6 +55,17 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
     setLoading(true);
     try {
+      let applicationId = metadata?.application_id;
+      if (beforeCheckout) {
+        const result = await beforeCheckout();
+        if (result?.applicationId) {
+          applicationId = result.applicationId;
+        } else {
+          setLoading(false);
+          setError('Não foi possível criar a aplicação. Tente novamente.');
+          return;
+        }
+      }
       let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
       if (feeType === 'selection_process') {
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
@@ -83,6 +96,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
             ...metadata,
             selected_scholarship_id: scholarshipsIds?.[0] ?? undefined,
             student_process_type: studentProcessType ?? undefined,
+            application_id: applicationId,
           },
         })
       });

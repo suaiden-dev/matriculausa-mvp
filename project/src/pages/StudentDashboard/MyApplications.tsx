@@ -25,7 +25,7 @@ type ApplicationWithScholarship = Application & {
 };
 
 const MyApplications: React.FC = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,17 +40,22 @@ const MyApplications: React.FC = () => {
     const fetchApplications = async () => {
       setLoading(true);
       try {
+        if (!userProfile?.id) {
+          setApplications([]);
+          setLoading(false);
+          return;
+        }
         const { data, error } = await supabase
           .from('scholarship_applications')
           .select('*, scholarships(*)')
-          .eq('student_id', user.id)
+          .eq('student_id', userProfile.id)
           .order('created_at', { ascending: false });
         if (error) {
           console.error('Erro ao buscar aplicações:', error);
           setError('Erro ao buscar aplicações.');
         } else {
           if (!data || data.length === 0) {
-            console.warn('Nenhuma aplicação encontrada para student_id:', user.id);
+            console.warn('Nenhuma aplicação encontrada para student_id:', userProfile.id);
           }
           setApplications(data || []);
         }
@@ -60,8 +65,8 @@ const MyApplications: React.FC = () => {
       }
       setLoading(false);
     };
-    if (user?.id) fetchApplications();
-  }, [user]);
+    if (userProfile?.id) fetchApplications();
+  }, [userProfile]);
 
 
   const filteredApplications = applications.filter(application => {
@@ -121,6 +126,31 @@ const MyApplications: React.FC = () => {
     rejected: applications.filter(app => app.status === 'rejected').length,
     under_review: applications.filter(app => app.status === 'under_review').length,
     pending_scholarship_fee: applications.filter(app => app.status === 'pending_scholarship_fee').length,
+  };
+
+  const createOrGetApplication = async (scholarshipId: string, studentProfileId: string) => {
+    // Verifica se já existe aplicação
+    const { data: existing, error: fetchError } = await supabase
+      .from('scholarship_applications')
+      .select('id')
+      .eq('student_id', studentProfileId)
+      .eq('scholarship_id', scholarshipId)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (existing) return { applicationId: existing.id };
+    // Cria nova aplicação
+    const { data, error } = await supabase
+      .from('scholarship_applications')
+      .insert({
+        student_id: studentProfileId,
+        scholarship_id: scholarshipId,
+        status: 'pending_scholarship_fee',
+        applied_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    if (error) throw error;
+    return { applicationId: data.id };
   };
 
   if (loading) {
@@ -275,7 +305,7 @@ const MyApplications: React.FC = () => {
               const Icon = getStatusIcon(application.status);
               const scholarship = application.scholarships;
 
-              if (!scholarship) return null; // Skip rendering if scholarship data is missing
+              if (!scholarship) return null;
               
               return (
                 <div key={application.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300">
@@ -308,6 +338,9 @@ const MyApplications: React.FC = () => {
                                 successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                                 cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
                                 metadata={{ scholarships_ids: String(scholarship.id) }}
+                                beforeCheckout={async () => {
+                                  return await createOrGetApplication(scholarship.id, userProfile.id);
+                                }}
                               />
                             )}
                           </div>
@@ -392,6 +425,9 @@ const MyApplications: React.FC = () => {
                           cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
                           className="w-full bg-blue-600 hover:bg-blue-700"
                           metadata={{ scholarships_ids: String(application.scholarship_id), application_id: application.id }}
+                          beforeCheckout={async () => {
+                            return await createOrGetApplication(application.scholarship_id, userProfile.id);
+                          }}
                           onSuccess={() => {
                             setSuccessMessage('Scholarship fee paid successfully!');
                             setPayingId(null);
@@ -404,68 +440,12 @@ const MyApplications: React.FC = () => {
                         />
                       </div>
                     )}
-
-                    {/* Exibir documentos enviados */}
-                    {Array.isArray(application.documents) && application.documents.length > 0 && (
-                      <div className="mt-2">
-                        <div className="font-semibold text-slate-800 mb-1">Documents:</div>
-                        <ul className="list-disc ml-6">
-                          {application.documents.map((doc: any, idx: number) => (
-                            <li key={idx} className="mb-1">
-                              <span className="font-medium capitalize">{doc.type}:</span> <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 </div>
               );
             })}
           </div>
-
-          {filteredApplications.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No applications found</h3>
-              <p className="text-slate-500">
-                {searchTerm ? `No applications match "${searchTerm}"` : 'No applications with the selected status'}
-              </p>
-            </div>
-          )}
         </>
-      )}
-
-      {/* Mensagem de sucesso/erro do pagamento */}
-      {successMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center max-w-sm w-full">
-            <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-            <h3 className="text-xl font-bold text-green-700 mb-2">Payment successful!</h3>
-            <p className="text-slate-700 mb-4">{successMessage}</p>
-            <button
-              className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-green-700 transition-all"
-              onClick={() => setSuccessMessage(null)}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center max-w-sm w-full">
-            <XCircle className="h-12 w-12 text-red-500 mb-4" />
-            <h3 className="text-xl font-bold text-red-700 mb-2">Payment failed</h3>
-            <p className="text-slate-700 mb-4">{errorMessage}</p>
-            <button
-              className="bg-red-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-700 transition-all"
-              onClick={() => setErrorMessage(null)}
-            >
-              Try again
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );

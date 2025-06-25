@@ -28,6 +28,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showStudentVerificationNotice, setShowStudentVerificationNotice] = useState(false);
   
   const { login, register, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -73,7 +74,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setShowVerificationModal(true);
           return;
         }
-        // Para estudante, após o registro bem-sucedido, permite que o useEffect reaja.
+        // Para estudante, mostrar aviso de verificação
+        if (activeTab === 'student') {
+          setShowStudentVerificationNotice(true);
+          return;
+        }
         return;
       } else {
         await login(formData.email, formData.password);
@@ -83,7 +88,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         } else if (user && user.role === 'school') {
           navigate('/school/dashboard', { replace: true });
         } else if (user && user.role === 'student') {
-          navigate('/student/dashboard', { replace: true });
+          navigate('/', { replace: true });
         }
         return;
       }
@@ -217,7 +222,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               ) : (
                 <div className="flex items-center">
                   Sign In
-                  <Zap className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </div>
               )}
             </button>
@@ -240,22 +244,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 </ul>
               </div>
             )}
-
-            {/* Trust Indicators */}
-            <div className="flex justify-center items-center space-x-6 pt-6 border-t border-slate-200">
-              <div className="flex items-center text-xs text-slate-500">
-                <Shield className="h-4 w-4 mr-1 text-green-500" />
-                <span>Secure Login</span>
-              </div>
-              <div className="flex items-center text-xs text-slate-500">
-                <Award className="h-4 w-4 mr-1 text-yellow-500" />
-                <span>Trusted Platform</span>
-              </div>
-              <div className="flex items-center text-xs text-slate-500">
-                <Zap className="h-4 w-4 mr-1 text-[#D0151C]" />
-                <span>Fast Access</span>
-              </div>
-            </div>
           </form>
         </div>
       </div>
@@ -435,36 +423,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
                 </div>
-
-                {/* Student Benefits */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 mt-8">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-                    <Award className="h-5 w-5 mr-2 text-[#05294E]" />
-                    What you'll get as a student:
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mr-3"></div>
-                      AI-powered scholarship matching
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mr-3"></div>
-                      Access to exclusive opportunities
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mr-3"></div>
-                      Personal application support
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mr-3"></div>
-                      English proficiency assessment
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mr-3"></div>
-                      Visa and immigration support
-                    </div>
-                  </div>
-                </div>
               </>
             )}
 
@@ -631,32 +589,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
                 </div>
-
-                {/* University Benefits */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 mt-8">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-                    <Users className="h-5 w-5 mr-2 text-[#D0151C]" />
-                    What you'll get as a university partner:
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      Access to qualified international students
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      AI-powered student matching
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      Scholarship program management
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-2 h-2 bg-[#D0151C] rounded-full mr-3"></div>
-                      Analytics and reporting tools
-                    </div>
-                  </div>
-                </div>
               </>
             )}
 
@@ -678,27 +610,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               ) : (
                 <div className="flex items-center">
                   Create {activeTab === 'student' ? 'Student' : 'University'} Account
-                  <Zap className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </div>
               )}
             </button>
-
-            {/* Trust Indicators */}
-            <div className="flex justify-center items-center space-x-6 pt-6 border-t border-slate-200">
-              <div className="flex items-center text-xs text-slate-500">
-                <Shield className="h-4 w-4 mr-1 text-green-500" />
-                <span>Secure</span>
-              </div>
-              <div className="flex items-center text-xs text-slate-500">
-                <Award className="h-4 w-4 mr-1 text-yellow-500" />
-                <span>Trusted</span>
-              </div>
-              <div className="flex items-center text-xs text-slate-500">
-                <Zap className="h-4 w-4 mr-1 text-[#D0151C]" />
-                <span>Fast Setup</span>
-              </div>
-            </div>
           </form>
+
+          {/* Formulário de registro de estudante */}
+          {showStudentVerificationNotice && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-2xl text-sm mb-4 mt-4">
+              <div className="font-bold mb-1">Check your email!</div>
+              A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.
+            </div>
+          )}
         </div>
       </div>
     </div>

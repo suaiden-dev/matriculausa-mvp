@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 interface DocumentUploadProps {
   onUploadSuccess: () => void;
@@ -17,7 +18,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
+  const navigate = useNavigate();
 
   const handleFileChange = (type: string, file: File | null) => {
     setFiles((prev) => ({ ...prev, [type]: file }));
@@ -28,11 +30,23 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
     setError(null);
     try {
       if (!user) throw new Error('User not authenticated');
-      let uploadedDocs: { type: string, url: string }[] = [];
+      let uploadedDocs: { name: string; url: string; type: string; uploaded_at: string }[] = [];
       for (const doc of DOCUMENT_TYPES) {
         const file = files[doc.key];
         if (!file) throw new Error(`Missing file for ${doc.label}`);
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+          const [resource, config] = args;
+          if (typeof resource === 'string' && resource.includes('/storage/v1/object')) {
+            console.log('[DocumentUpload] Requisição de upload:', resource, config);
+            if (config && config.headers) {
+              console.log('[DocumentUpload] Headers enviados:', config.headers);
+            }
+          }
+          return originalFetch.apply(this, args);
+        };
         const { data: storageData, error: storageError } = await supabase.storage.from('student-documents').upload(`${user.id}/${doc.key}-${Date.now()}-${file.name}`, file, { upsert: true });
+        window.fetch = originalFetch;
         if (storageError) throw storageError;
         const file_url = storageData?.path ? supabase.storage.from('student-documents').getPublicUrl(storageData.path).data.publicUrl : null;
         if (!file_url) throw new Error('Failed to get file URL');
@@ -43,29 +57,33 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
           status: 'pending',
         });
         if (insertError) throw insertError;
-        uploadedDocs.push({ type: doc.key, url: file_url });
+        uploadedDocs.push({ name: file.name, url: file_url, type: doc.key, uploaded_at: new Date().toISOString() });
       }
-      // Atualiza o campo documents da aplicação de bolsa mais recente
-      const { data: application, error: appError } = await supabase
-        .from('scholarship_applications')
-        .select('id, documents')
-        .eq('student_id', user.id)
-        .order('applied_at', { ascending: false })
-        .limit(1)
+      // Atualiza o campo documents do user_profiles
+      // Busca documentos atuais
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('user_profiles')
+        .select('documents')
+        .eq('user_id', user.id)
         .single();
-      if (!appError && application) {
-        const newDocuments = Array.isArray(application.documents) ? [...application.documents, ...uploadedDocs] : uploadedDocs;
+      if (userProfileError) throw userProfileError;
+      const currentDocs = Array.isArray(userProfile.documents) ? userProfile.documents : [];
+      const newDocs = [...currentDocs, ...uploadedDocs];
+      if (typeof updateUserProfile === 'function') {
+        await updateUserProfile({ documents: newDocs });
+      } else {
         await supabase
-          .from('scholarship_applications')
-          .update({ documents: newDocuments })
-          .eq('id', application.id);
+          .from('user_profiles')
+          .update({ documents: newDocs })
+          .eq('user_id', user.id);
       }
       setUploading(false);
       setAnalyzing(true);
       setTimeout(() => {
         setAnalyzing(false);
         onUploadSuccess();
-      }, 40000); // 40 segundos
+        navigate('/student/dashboard/documents-and-scholarship-choice');
+      }, 40000);
     } catch (e: any) {
       setUploading(false);
       setError(e.message || 'Upload failed');

@@ -1,16 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Target, Heart, Brain, Rocket, Clock, CreditCard } from 'lucide-react';
-import { mockSchools } from '../data/mockData';
+import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Heart, Brain, Rocket, Clock, CreditCard } from 'lucide-react';
+import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
 import { useSubscription } from '../hooks/useSubscription';
+import { supabase } from '../lib/supabase';
 
 const Home: React.FC = () => {
-  // Get featured schools (first 6 schools)
-  const featuredSchools = mockSchools.slice(0, 6);
+  const { universities, loading: universitiesLoading } = useUniversities();
+  const featuredSchools = universities.slice(0, 6);
   const { isAuthenticated } = useAuth();
   const { hasPaidProcess, loading: subscriptionLoading } = useSubscription();
+  const [universitiesState, setUniversitiesState] = useState<any[]>([]);
+  const [loadingState, setLoadingState] = useState(true);
+
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      setLoadingState(true);
+      const { data, error } = await supabase
+        .from('universities')
+        .select('id, name, logo_url, location, programs')
+        .eq('is_approved', true)
+        .eq('profile_completed', true)
+        .order('created_at', { ascending: false })
+        .limit(6);
+      if (!error && data) {
+        setUniversitiesState(data);
+      }
+      setLoadingState(false);
+    };
+    fetchUniversities();
+  }, []);
 
   return (
     <div className="bg-white">
@@ -163,67 +184,30 @@ const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {featuredSchools.map((school) => (
-              <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
-                {/* University Image */}
-                <div className="relative h-48 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
+            {universitiesState.map((school) => (
+              <div key={school.id} className="bg-white rounded-3xl shadow-lg p-6 flex flex-col h-full min-h-[340px] border border-slate-200">
+                <div className="flex items-center mb-4">
                   <img
-                    src={school.image_url}
-                    alt={`${school.name} campus`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    src={school.logo_url || '/university-default.png'}
+                    alt={school.name}
+                    className="h-14 w-14 rounded-xl object-cover bg-slate-100 border mr-4"
                   />
-                  
-                  {/* Type Badge */}
-                  <div className="absolute top-4 left-4">
-                    <span className={`px-3 py-1 rounded-xl text-xs font-bold text-white shadow-lg ${
-                      school.type === 'Private' ? 'bg-[#05294E]' : 'bg-green-600'
-                    }`}>
-                      {school.type}
-                    </span>
+                  <div>
+                    <h3 className="text-xl font-bold text-[#05294E]">{school.name}</h3>
+                    <div className="text-slate-500 text-sm">{school.location}</div>
                   </div>
-                  
-                  {/* Ranking Badge */}
-                  {school.ranking && (
-                    <div className="absolute top-4 right-4">
-                      <span className="bg-yellow-500 text-black px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
-                        #{school.ranking}
-                      </span>
                     </div>
+                <div className="flex-1 text-slate-600 text-sm mb-4 overflow-hidden">
+                  {school.programs && school.programs.length > 0 ? (
+                    <span>{school.programs[0]}</span>
+                  ) : (
+                    <span>No program info</span>
                   )}
                 </div>
-
-                {/* University Info */}
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                    {school.name}
-                  </h3>
-                  
-                  {/* Location */}
-                  <div className="flex items-center text-slate-600 mb-4">
-                    <Globe className="h-4 w-4 mr-2 text-[#05294E]" />
-                    <span className="text-sm">{school.location}</span>
-                  </div>
-
-                  {/* Programs Preview */}
-                  <div className="mb-6">
-                    <div className="flex flex-wrap gap-2">
-                      {school.programs?.slice(0, 3).map((program, index) => (
-                        <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
-                          {program}
-                        </span>
-                      ))}
-                      {school.programs && school.programs.length > 3 && (
-                        <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
-                          +{school.programs.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Learn More Button */}
+                <div className="mt-auto">
                   <Link
-                    to={`/schools/${school.id}`}
+                    to={`/schools/${school.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
                     className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
                   >
                     Learn More
@@ -253,7 +237,6 @@ const Home: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <div className="inline-flex items-center bg-white rounded-full px-6 py-2 mb-6 shadow-lg border border-slate-200">
-              <Target className="h-4 w-4 mr-2 text-[#05294E]" />
               <span className="text-sm font-bold text-slate-700">Why Choose MatriculaUSA</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
@@ -486,113 +469,130 @@ const Home: React.FC = () => {
               Everything You Need to <span className="text-[#05294E]">Know</span>
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Get answers to the most common questions about studying in the United States through MatriculaUSA.
+              Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA.
             </p>
           </div>
-
           <div className="space-y-6">
-            {/* FAQ Item 1 */}
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
-                  <span className="text-white font-bold text-sm">?</span>
+                  <span className="text-white font-bold text-sm">1</span>
                 </div>
-                How does MatriculaUSA help international students?
+                What fees or payments are required to use MatriculaUSA?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                MatriculaUSA is a comprehensive platform that connects international students with American universities and exclusive scholarship opportunities. We provide AI-powered matching, application support, visa assistance, and comprehensive guidance throughout your entire educational journey to the United States.
+                MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment.
               </p>
             </div>
-
-            {/* FAQ Item 2 */}
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-[#D0151C] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <DollarSign className="h-4 w-4 text-white" />
                 </div>
-                What types of scholarships are available?
+                What is the Selection Process Fee?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                We offer access to over $50 million in scholarships including merit-based awards, need-based financial aid, field-specific grants, and exclusive scholarships available only through our platform. Scholarships range from partial tuition coverage to full-ride opportunities covering tuition, housing, and living expenses.
+                The Selection Process Fee (US$350) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.
               </p>
             </div>
-
-            {/* FAQ Item 3 */}
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
-                  <Clock className="h-4 w-4 text-white" />
+                  <Award className="h-4 w-4 text-white" />
                 </div>
-                How long does the application process take?
+                What is the Scholarship Fee?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                The timeline varies depending on your chosen programs and scholarship applications. Typically, the process takes 3-6 months from initial application to enrollment. Our platform streamlines many steps, and our support team works to expedite your applications while ensuring quality and completeness.
+                The Scholarship Fee (US$550) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications.
               </p>
             </div>
-
-            {/* FAQ Item 4 */}
-            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
-                <div className="bg-purple-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
-                  <Globe className="h-4 w-4 text-white" />
-                </div>
-                Do you provide visa and immigration support?
-              </h3>
-              <p className="text-slate-600 leading-relaxed pl-11">
-                Yes! We provide comprehensive visa and immigration support including F-1 student visa guidance, document preparation assistance, interview preparation, and ongoing support throughout your studies. Our legal team ensures you have all necessary documentation for a successful visa application.
-              </p>
-            </div>
-
-            {/* FAQ Item 5 */}
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-yellow-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
-                  <Award className="h-4 w-4 text-white" />
+                  <CheckCircle className="h-4 w-4 text-white" />
                 </div>
-                What are the requirements to apply?
+                What is the University Enrollment Fee?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                Requirements vary by program and scholarship, but generally include academic transcripts, English proficiency test scores (TOEFL/IELTS), standardized test scores (SAT/GRE/GMAT as applicable), letters of recommendation, and a personal statement. Our platform guides you through specific requirements for each opportunity.
+                The University Enrollment Fee (US$350) is a payment required by some universities to formally process your enrollment after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.
               </p>
             </div>
-
-            {/* FAQ Item 6 */}
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                <div className="bg-purple-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
+                  <CreditCard className="h-4 w-4 text-white" />
+                </div>
+                What is the I-20 Control Fee?
+              </h3>
+              <p className="text-slate-600 leading-relaxed pl-11">
+                The I-20 Control Fee (US$900) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents.
+              </p>
+            </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <Shield className="h-4 w-4 text-white" />
                 </div>
-                Is there a cost to use MatriculaUSA?
+                Are there any other fees I should be aware of?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                Creating your profile and accessing basic scholarship matching is completely free. We offer premium services for comprehensive application support, personalized counseling, and expedited processing. Our success-based model means we're invested in your success - we only succeed when you do.
+                All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance.
               </p>
             </div>
-          </div>
-
-          {/* Contact CTA */}
-          <div className="mt-16 text-center">
-            <div className="bg-gradient-to-r from-[#05294E] to-slate-700 rounded-3xl p-8 text-white">
-              <h3 className="text-2xl font-bold mb-4">Still have questions?</h3>
-              <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-                Our expert counselors are here to help you navigate your path to American education. Get personalized answers to your specific questions.
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
+                  <CreditCard className="h-4 w-4 text-white" />
+                </div>
+                How can I pay these fees?
+              </h3>
+              <p className="text-slate-600 leading-relaxed pl-11">
+                You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  to="/contact"
-                  className="bg-[#D0151C] text-white px-8 py-3 rounded-2xl hover:bg-[#B01218] transition-all duration-300 font-bold flex items-center justify-center"
-                >
-                  <Users className="mr-2 h-5 w-5" />
-                  Contact Our Team
-                </Link>
-                <Link
-                  to="/register"
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-3 rounded-2xl hover:bg-white hover:text-[#05294E] transition-all duration-300 font-bold flex items-center justify-center"
-                >
-                  <Rocket className="mr-2 h-5 w-5" />
-                  Get Started Now
-                </Link>
+            </div>
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
+                  <Shield className="h-4 w-4 text-white" />
+                </div>
+                Is my payment information secure?
+              </h3>
+              <p className="text-slate-600 leading-relaxed pl-11">
+                Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection.
+              </p>
+            </div>
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                <div className="bg-yellow-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+                Can I get a refund?
+              </h3>
+              <p className="text-slate-600 leading-relaxed pl-11">
+                You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun.
+              </p>
+            </div>
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
+                  <DollarSign className="h-4 w-4 text-white" />
+          </div>
+                Do I have to pay all fees at once?
+              </h3>
+              <p className="text-slate-600 leading-relaxed pl-11">
+                No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the University Enrollment Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously.
+              </p>
+            </div>
+            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
+                  <Users className="h-4 w-4 text-white" />
               </div>
+                Who can I contact if I have questions about fees or payments?
+              </h3>
+              <p className="text-slate-600 leading-relaxed pl-11">
+                Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!
+              </p>
             </div>
           </div>
         </div>
@@ -654,3 +654,7 @@ const Home: React.FC = () => {
 };
 
 export default Home;
+
+function slugify(str: string) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}

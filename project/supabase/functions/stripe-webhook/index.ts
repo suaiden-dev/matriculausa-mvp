@@ -126,23 +126,35 @@ async function handleEvent(event: Stripe.Event) {
           console.log(`Successfully updated is_application_fee_paid for user ${userId}.`);
         }
       } else if (metadata?.payment_type === 'scholarship_fee') {
+        // Log detalhado do metadata recebido
+        console.log('[stripe-webhook] Metadata recebido:', metadata);
         const applicationId = metadata.application_id;
-        const userId = metadata.user_id;
+        const userId = metadata.user_id || metadata.student_id;
+        console.log('[stripe-webhook] applicationId extraído:', applicationId);
+        console.log('[stripe-webhook] userId/studentId extraído:', userId);
 
         if (!applicationId) {
-            console.error('Missing application_id in metadata for scholarship_fee payment.');
+            console.error('Missing application_id in metadata for scholarship_fee payment. Metadata:', metadata);
             return;
         }
 
-        const { error: updateError } = await supabase
+        // Log para depuração
+        console.log(`[stripe-webhook] Atualizando status para approved. applicationId: ${applicationId}, userId/studentId: ${userId}`);
+
+        // Atualiza com ou sem userId/studentId
+        let updateQuery = supabase
             .from('scholarship_applications')
-            .update({ status: 'under_review' })
+            .update({ status: 'approved' })
             .eq('id', applicationId);
+        if (userId) {
+          updateQuery = updateQuery.eq('student_id', userId);
+        }
+        const { error: updateError } = await updateQuery;
 
         if (updateError) {
-            console.error(`Failed to update application status for application ${applicationId}:`, updateError);
+            console.error(`[stripe-webhook] Failed to update application status for application ${applicationId}:`, updateError);
         } else {
-            console.log(`Successfully updated status for application ${applicationId} to under_review.`);
+            console.log(`[stripe-webhook] Successfully updated status for application ${applicationId} to approved.`);
         }
       }
 
