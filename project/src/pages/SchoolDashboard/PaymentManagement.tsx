@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useUniversity } from '../../context/UniversityContext';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 interface StudentProfile {
@@ -34,43 +35,108 @@ const FEE_TYPES = [
 
 const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
+  const { university, applications, loading: universityLoading } = useUniversity();
   const [students, setStudents] = useState<any[]>([]);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    if (university && applications.length >= 0) {
+      fetchStudents();
+    }
+  }, [university, applications]);
 
   const fetchStudents = async () => {
-    setLoading(true);
-    const { data: profiles, error } = await supabase
-      .from('user_profiles')
-      .select('*');
-    if (error) {
+    if (!university) {
       setLoading(false);
       return;
     }
-    setStudents(profiles || []);
-    setLoading(false);
+
+    setLoading(true);
+    try {
+      // Buscar apenas estudantes que se aplicaram para bolsas desta universidade
+      const { data: profiles, error } = await supabase
+        .from('scholarship_applications')
+        .select(`
+          user_profiles!student_id(
+            id,
+            user_id,
+            full_name,
+            phone,
+            country,
+            has_paid_selection_process_fee,
+            is_application_fee_paid,
+            is_scholarship_fee_paid,
+            email
+          ),
+          scholarships!inner(university_id)
+        `)
+        .eq('scholarships.university_id', university.id);
+
+      if (error) {
+        console.error('Error fetching students:', error);
+        setLoading(false);
+        return;
+      }
+
+      // Extrair perfis únicos dos estudantes (evitar duplicatas)
+      const uniqueStudents = new Map();
+      profiles?.forEach((application: any) => {
+        const profile = application.user_profiles;
+        if (profile && !uniqueStudents.has(profile.user_id)) {
+          uniqueStudents.set(profile.user_id, profile);
+        }
+      });
+
+      setStudents(Array.from(uniqueStudents.values()));
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filtered = students.filter((s) =>
     s.full_name?.toLowerCase().includes(filter.toLowerCase())
   );
 
+  // Mostrar loading se ainda está carregando dados da universidade
+  if (universityLoading) {
+    return (
+      <div className="p-4 md:p-6">
+        <div className="text-center py-10">Loading university data...</div>
+      </div>
+    );
+  }
+
+  // Verificar se a universidade existe
+  if (!university) {
+    return (
+      <div className="p-4 md:p-6">
+        <div className="text-center py-10">
+          <p className="text-gray-500">University information not found.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Payment Management</h1>
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <p>Here you can view all student payments for selection process, application, scholarship, and I-20 control fees.</p>
-        <input
-          type="text"
-          placeholder="Filter by student name..."
-          className="mt-4 border rounded px-3 py-2 w-full max-w-xs"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-        />
+        <p>Here you can view student payments for your university's scholarships - selection process, application, scholarship, and I-20 control fees.</p>
+        <div className="mt-4 flex items-center justify-between">
+          <input
+            type="text"
+            placeholder="Filter by student name..."
+            className="border rounded px-3 py-2 w-full max-w-xs"
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+          />
+          <span className="text-sm text-gray-500 ml-4">
+            Showing {filtered.length} students from {university.name}
+          </span>
+        </div>
       </div>
       {loading ? (
         <div className="text-center py-10">Loading payments...</div>
