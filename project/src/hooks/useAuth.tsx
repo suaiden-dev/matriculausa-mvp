@@ -330,14 +330,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => {
+    // Garantir que full_name não seja undefined
+    if (!userData.full_name || userData.full_name.trim() === '') {
+      throw new Error('Nome completo é obrigatório');
+    }
+    
     localStorage.setItem('pending_full_name', userData.full_name);
+    
+    // Filtrar valores undefined/null do userData
+    const cleanUserData = Object.fromEntries(
+      Object.entries(userData).filter(([key, value]) => value !== undefined && value !== null)
+    );
+    
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          ...userData,
-          name: userData.full_name, // redundância para garantir compatibilidade
+          ...cleanUserData,
+          name: cleanUserData.full_name, // redundância para garantir compatibilidade
         },
       }
     });
