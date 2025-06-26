@@ -18,21 +18,10 @@ import {
   Target,
   AlertTriangle
 } from 'lucide-react';
-import type { University, Scholarship } from '../../types';
+import { useUniversity } from '../../context/UniversityContext';
 
-interface ScholarshipManagementProps {
-  university: University | null;
-  scholarships: Scholarship[];
-  handleDeleteScholarship: (scholarshipId: string) => Promise<void>;
-  toggleScholarshipStatus: (scholarshipId: string, currentStatus: boolean) => Promise<void>;
-}
-
-const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
-  university,
-  scholarships,
-  handleDeleteScholarship,
-  toggleScholarshipStatus
-}) => {
+const ScholarshipManagement: React.FC = () => {
+  const { university, scholarships, handleDeleteScholarship, toggleScholarshipStatus } = useUniversity();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showActions, setShowActions] = useState<string | null>(null);
@@ -104,7 +93,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
         </div>
         
         <Link
-          to="/school/scholarship/new"
+          to="/school/dashboard/scholarship/new"
           className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           <Plus className="h-5 w-5 mr-2" />
@@ -141,7 +130,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
           </div>
           
           <Link
-            to="/school/scholarship/new"
+            to="/school/dashboard/scholarship/new"
             className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-8 py-4 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             Create First Scholarship
@@ -198,8 +187,20 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
               
               return (
                 <div key={scholarship.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                  {/* Image */}
+                  {scholarship.image_url && (
+                    <div className="relative h-48 overflow-hidden">
+                      <img
+                        src={scholarship.image_url}
+                        alt={scholarship.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    </div>
+                  )}
+                  
                   {/* Header */}
-                  <div className="p-6 pb-4">
+                  <div className={`p-6 ${scholarship.image_url ? 'pb-4' : 'pb-4'}`}>
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-[#05294E] transition-colors">
@@ -283,7 +284,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                       <div>
                         <p className="text-sm font-medium text-slate-500 mb-1">Scholarship Amount</p>
                         <p className="text-2xl font-bold text-green-600">
-                          {formatCurrency(Number(scholarship.amount))}
+                          {formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}
                         </p>
                       </div>
                       <div className="text-right">

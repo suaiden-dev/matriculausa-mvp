@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShoppingCart, DollarSign, Calendar, Building } from 'lucide-react';
+import { X, GraduationCap, DollarSign, Calendar, Building } from 'lucide-react';
 import { useApplicationStore } from '../stores/applicationStore';
 import { StripeCheckout } from './StripeCheckout';
 
@@ -49,7 +49,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div className="flex items-center space-x-3">
-            <ShoppingCart className="h-6 w-6 text-blue-600" />
+            <GraduationCap className="h-6 w-6 text-blue-600" />
             <h2 className="text-2xl font-bold text-slate-900">Application Cart</h2>
             <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
               {getSelectedCount()} {getSelectedCount() === 1 ? 'scholarship' : 'scholarships'}
@@ -67,7 +67,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
         <div className="flex-1 overflow-y-auto p-6">
           {selectedScholarships.length === 0 ? (
             <div className="text-center py-12">
-              <ShoppingCart className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+              <GraduationCap className="h-16 w-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-slate-600 mb-2">Your cart is empty</h3>
               <p className="text-slate-500">Add scholarships to your cart to get started</p>
             </div>
@@ -102,7 +102,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                         <div className="flex items-center space-x-4 text-sm">
                           <div className="flex items-center text-green-600">
                             <DollarSign className="h-4 w-4 mr-1" />
-                            <span className="font-bold">{formatAmount(scholarship.amount)}</span>
+                            <span className="font-bold">{formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span>
                           </div>
                           <div className="flex items-center text-slate-600">
                             <Calendar className="h-4 w-4 mr-1" />

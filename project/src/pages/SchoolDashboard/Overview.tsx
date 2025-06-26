@@ -17,21 +17,19 @@ import {
   AlertTriangle,
   PlusCircle
 } from 'lucide-react';
-import type { University, Scholarship } from '../../types';
+import { useUniversity } from '../../context/UniversityContext';
 
-interface OverviewProps {
-  university: University | null;
-  scholarships: Scholarship[];
-  stats: {
-    totalScholarships: number;
-    activeScholarships: number;
-    totalFunding: number;
-    avgAmount: number;
+const Overview: React.FC = () => {
+  const { university, scholarships, applications } = useUniversity();
+
+  // Calculate stats
+  const stats = {
+    totalScholarships: scholarships.length,
+    activeScholarships: scholarships.filter(s => s.is_active).length,
+    totalFunding: scholarships.reduce((sum, s) => sum + Number(s.amount), 0),
+    avgAmount: scholarships.length > 0 ? scholarships.reduce((sum, s) => sum + Number(s.amount), 0) / scholarships.length : 0
   };
-  applications?: any[];
-}
 
-const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats, applications = [] }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -46,7 +44,7 @@ const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats, ap
       description: 'Create a new scholarship opportunity',
       icon: Award,
       color: 'bg-gradient-to-r from-[#D0151C] to-red-600',
-      link: '/school/scholarship/new',
+      link: '/school/dashboard/scholarship/new',
       enabled: university?.profile_completed
     },
     {
@@ -273,7 +271,7 @@ const Overview: React.FC<OverviewProps> = ({ university, scholarships, stats, ap
                           <div className="flex items-center space-x-4 text-sm text-slate-500">
                             <div className="flex items-center">
                               <DollarSign className="h-4 w-4 mr-1" />
-                              {formatCurrency(Number(scholarship.amount))}
+                              {formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}
                             </div>
                             <div className="flex items-center">
                               <Calendar className="h-4 w-4 mr-1" />

@@ -80,7 +80,7 @@ export const useApplicationStore = create<ApplicationStore>()(
       
       getTotalAmount: () => {
         const { selectedScholarships } = get();
-        return selectedScholarships.reduce((total, scholarship) => total + scholarship.amount, 0);
+        return selectedScholarships.reduce((total, scholarship) => total + (scholarship.annual_value_with_scholarship ?? 0), 0);
       },
 
       getSelectedCount: () => {

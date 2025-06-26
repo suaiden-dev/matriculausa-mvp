@@ -208,7 +208,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   <div>
                     <p className="text-sm font-medium text-slate-500 mb-1">Scholarship Amount</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {formatCurrency(Number(scholarship.amount))}
+                                              {formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}
                     </p>
                   </div>
                   <div className="text-right">

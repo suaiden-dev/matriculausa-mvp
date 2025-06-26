@@ -18,9 +18,9 @@ export const PRODUCTS: Record<string, StripeProduct> = {
     description: 'Fee for processing the student application after document analysis',
     mode: 'payment'
   },
-  SCHOLARSHIPS_FEE: {
+  SCHOLARSHIP_FEE: {
     priceId: 'price_1RbSh9KdCh3y3bmYrklG84hH',
-    name: 'Scholarships Fee',
+    name: 'Scholarship Fee',
     description: 'One-time fee for applying to scholarships',
     mode: 'payment'
   }

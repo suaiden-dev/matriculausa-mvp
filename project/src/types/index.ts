@@ -121,7 +121,6 @@ export interface UserProfile {
   documents_uploaded?: boolean;
   selected_scholarship_id?: string | null;
   has_paid_college_enrollment_fee?: boolean;
-  has_paid_scholarship_fee?: boolean;
   has_paid_i20_control_fee?: boolean;
   i20_control_fee_due_date?: string | null;
   i20_control_fee_payment_intent_id?: string | null;

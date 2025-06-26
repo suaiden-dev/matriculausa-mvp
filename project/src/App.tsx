@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import Layout from './components/Layout';
+import AuthRedirect from './components/AuthRedirect';
 import Home from './pages/Home';
 import About from './pages/About';
 import Auth from './pages/Auth';
@@ -30,8 +31,9 @@ function App() {
   return (
     <Router>
     <AuthProvider>
-        <Layout>
-          <Routes>
+        <AuthRedirect>
+          <Layout>
+            <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Auth mode="login" />} />
@@ -66,8 +68,9 @@ function App() {
             <Route path="/student/dashboard/application-fee-error" element={<ApplicationFeeError />} />
             <Route path="/student/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
             <Route path="/student/i20-control-fee-error" element={<I20ControlFeeError />} />
-          </Routes>
-        </Layout>
+            </Routes>
+          </Layout>
+        </AuthRedirect>
       </AuthProvider>
       </Router>
   );

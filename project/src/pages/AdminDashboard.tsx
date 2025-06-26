@@ -897,7 +897,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">Amount</span>
-                      <span className="font-semibold text-green-600">{formatAmount(Number(scholarship.amount))}</span>
+                                              <span className="font-semibold text-green-600">{formatAmount(Number(scholarship.annual_value_with_scholarship ?? 0))}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-500">University</span>

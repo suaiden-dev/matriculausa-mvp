@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Trash2, CheckCircle, Loader2 } from 'lucide-react';
+import { GraduationCap, Trash2, CheckCircle, Loader2 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import DocumentUpload from '../../components/DocumentUpload';
@@ -41,14 +41,15 @@ const CartPage: React.FC = () => {
     // Tenta salvar no banco na aplicação ativa
     if (userProfile) {
       try {
-        const { data: application, error } = await supabase
+        const { data: applications, error } = await supabase
           .from('scholarship_applications')
           .select('id')
           .eq('student_id', userProfile.user_id)
           .order('applied_at', { ascending: false })
-          .limit(1)
-          .single();
-        if (!error && application) {
+          .limit(1);
+        
+        if (!error && applications && applications.length > 0) {
+          const application = applications[0];
           await supabase
             .from('scholarship_applications')
             .update({ student_process_type: type })
@@ -58,7 +59,8 @@ const CartPage: React.FC = () => {
         // Se der erro, só salva no localStorage mesmo
       }
     }
-    setShowUploadModal(true);
+    // Redireciona para a página de upload de documentos
+    navigate('/student/dashboard/documents-and-scholarship-choice');
   };
 
   const handleUploadSuccess = async () => {
@@ -92,6 +94,55 @@ const CartPage: React.FC = () => {
   const handleClearCart = () => {
     if (user) {
       clearCart(user.id);
+    }
+  };
+
+  const createOrGetApplication = async (): Promise<{ applicationId: string } | undefined> => {
+    if (!selectedScholarship || !user) {
+      throw new Error('Scholarship e usuário são obrigatórios');
+    }
+
+    try {
+      // Busca aplicação existente
+      const { data: existingApp, error: findError } = await supabase
+        .from('scholarship_applications')
+        .select('id')
+        .eq('student_id', user.id)
+        .eq('scholarship_id', selectedScholarship)
+        .maybeSingle();
+
+      if (findError) {
+        console.error('Erro ao buscar aplicação existente:', findError);
+        throw new Error('Erro ao buscar aplicação existente');
+      }
+
+      if (existingApp) {
+        return { applicationId: existingApp.id };
+      }
+
+      // Cria nova aplicação
+      const { data: newApp, error: insertError } = await supabase
+        .from('scholarship_applications')
+        .insert([
+          {
+            student_id: user.id,
+            scholarship_id: selectedScholarship,
+            status: 'pending',
+            student_process_type: studentType || null,
+          },
+        ])
+        .select('id')
+        .single();
+
+      if (insertError || !newApp) {
+        console.error('Erro ao criar aplicação:', insertError);
+        throw new Error('Erro ao criar aplicação');
+      }
+
+      return { applicationId: newApp.id };
+    } catch (error) {
+      console.error('Erro em createOrGetApplication:', error);
+      throw error;
     }
   };
 
@@ -140,8 +191,8 @@ const CartPage: React.FC = () => {
               successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
               cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
               disabled={!selectedScholarship}
-              metadata={{ application_id: selectedScholarship }}
-              edgeFunction="stripe-checkout-application-fee"
+              beforeCheckout={createOrGetApplication}
+              metadata={{ selected_scholarship_id: selectedScholarship }}
             />
           </div>
         </div>
@@ -192,7 +243,7 @@ const CartPage: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-        <ShoppingCart className="h-7 w-7 text-[#05294E]" /> Cart
+        <GraduationCap className="h-7 w-7 text-[#05294E]" /> Cart
       </h1>
       {cart.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">

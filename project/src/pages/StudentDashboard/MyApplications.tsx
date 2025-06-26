@@ -47,7 +47,13 @@ const MyApplications: React.FC = () => {
         }
         const { data, error } = await supabase
           .from('scholarship_applications')
-          .select('*, scholarships(*)')
+          .select(`
+            *, 
+            scholarships(
+              *,
+              universities!inner(id, name, logo_url, location, is_approved)
+            )
+          `)
           .eq('student_id', userProfile.id)
           .order('created_at', { ascending: false });
         if (error) {
@@ -328,7 +334,7 @@ const MyApplications: React.FC = () => {
                             </div>
                             {(scholarship.id && (application.status === 'pending' || application.status === 'under_review')) && (
                               <StripeCheckout
-                                productId="SCHOLARSHIPS_FEE"
+                                productId="SCHOLARSHIP_FEE"
                                 buttonText="Pay Scholarship Fee ($550)"
                                 className="ml-4"
                                 paymentType="scholarship_fee"
@@ -350,7 +356,7 @@ const MyApplications: React.FC = () => {
                           <div className="flex items-center">
                             <DollarSign className="h-4 w-4 mr-2 text-green-600" />
                             <span className="font-semibold text-green-600">
-                              {formatAmount(scholarship.amount || 0)}
+                              {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
                             </span>
                           </div>
                           <div className="flex items-center">

@@ -16,11 +16,11 @@ const CollegeEnrollmentCheckout: React.FC = () => {
   useEffect(() => {
     if (!userProfile) return;
     if (userProfile.documents_status !== 'approved') {
-      navigate('/student/dashboard/documents-and-scholarship-choice');
+      navigate('/student/dashboard/application-fee');
       return;
     }
     if (!selectedScholarshipId) {
-      navigate('/student/dashboard/documents-and-scholarship-choice');
+      navigate('/student/dashboard/application-fee');
       return;
     }
   }, [userProfile, selectedScholarshipId, navigate]);

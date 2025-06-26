@@ -15,20 +15,21 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useUniversity } from '../../context/UniversityContext';
 
 const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-interface NewScholarshipProps {
-  universityId: string | undefined;
-}
-
-const NewScholarship: React.FC<NewScholarshipProps> = ({ universityId }) => {
+const NewScholarship: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { university, loading: universityLoading, refreshData } = useUniversity();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -92,12 +93,78 @@ const NewScholarship: React.FC<NewScholarshipProps> = ({ universityId }) => {
     });
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError('Please select a JPG, PNG, or WEBP image file.');
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      setError(`Image size must be less than ${MAX_IMAGE_SIZE_MB}MB.`);
+      return;
+    }
+
+    setImageFile(file);
+    setError(null);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const uploadImageToStorage = async (scholarshipId: string): Promise<string | null> => {
+    if (!imageFile || !user) return null;
+
+    try {
+      setUploadingImage(true);
+      
+      // Create unique filename
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `scholarship-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      // Upload to scholarship-images bucket
+      const { data, error } = await supabase.storage
+        .from('scholarship-images')
+        .upload(fileName, imageFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('scholarship-images')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     
-    if (!universityId) {
+    if (!university?.id) {
       setError('University profile not found. Please complete your profile first.');
       setLoading(false);
       return;
@@ -157,18 +224,46 @@ const NewScholarship: React.FC<NewScholarshipProps> = ({ universityId }) => {
         benefits,
         is_exclusive: formData.is_exclusive,
         is_active: formData.is_active,
-        university_id: universityId,
-        image_url: null, // Imagem desabilitada
+        university_id: university.id,
+        image_url: null, // Will be updated after image upload
         original_annual_value: Number(formData.original_annual_value),
         original_value_per_credit: Number(formData.original_value_per_credit),
         annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
       };
-      // 4. Submit to Supabase
-      const { error: submitError } = await supabase
+
+      // 4. Insert scholarship first
+      const { data: newScholarship, error: submitError } = await supabase
         .from('scholarships')
-        .insert(scholarshipData);
+        .insert(scholarshipData)
+        .select('id')
+        .single();
+
       if (submitError) throw submitError;
+
+      // 5. Upload image if provided
+      if (imageFile && newScholarship) {
+        try {
+          const imageUrl = await uploadImageToStorage(newScholarship.id);
+          if (imageUrl) {
+            // Update scholarship with image URL
+            const { error: updateError } = await supabase
+              .from('scholarships')
+              .update({ image_url: imageUrl })
+              .eq('id', newScholarship.id);
+            
+            if (updateError) {
+              console.error('Error updating scholarship with image URL:', updateError);
+              // Don't fail the whole process if image update fails
+            }
+          }
+        } catch (imageError) {
+          console.error('Error uploading image:', imageError);
+          // Don't fail the whole process if image upload fails
+        }
+      }
+
       setSuccess(true);
+      await refreshData(); // Refresh university data to include new scholarship
       navigate('/school/dashboard/scholarships');
     } catch (error: any) {
       console.error('Error creating scholarship:', error);
@@ -177,6 +272,37 @@ const NewScholarship: React.FC<NewScholarshipProps> = ({ universityId }) => {
       setLoading(false);
     }
   };
+
+  // Show loading screen until university is available
+  if (universityLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E] mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading university information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no university found
+  if (!university) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-8 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-900 mb-2">University Profile Not Found</h2>
+          <p className="text-slate-600 mb-4">Please complete your university profile before creating scholarships.</p>
+          <button
+            onClick={() => navigate('/school/dashboard/profile')}
+            className="bg-[#05294E] text-white px-6 py-3 rounded-xl hover:bg-[#05294E]/90 transition-colors"
+          >
+            Complete Profile
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -226,15 +352,45 @@ const NewScholarship: React.FC<NewScholarshipProps> = ({ universityId }) => {
                 <Award className="h-5 w-5 mr-2 text-[#05294E]" />
                 Scholarship Image <span className="text-slate-400 ml-2">(optional)</span>
               </h2>
-              <div className="flex flex-col items-start gap-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Upload Image (JPG, PNG, WEBP, max 2MB)</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled
-                  className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#05294E] file:text-white opacity-50 cursor-not-allowed"
-                />
-              </div>
+              
+              {!imagePreview ? (
+                <div className="flex flex-col items-start gap-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Upload Image (JPG, PNG, WEBP, max 2MB)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageUpload}
+                    className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#05294E] file:text-white hover:file:bg-[#05294E]/90 transition-colors"
+                  />
+                  <p className="text-xs text-slate-500">
+                    A good image helps attract more students to your scholarship opportunity.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Scholarship preview"
+                      className="w-full max-w-md h-48 object-cover rounded-xl border border-slate-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Image selected: {imageFile?.name}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Basic Information */}
@@ -580,13 +736,13 @@ const NewScholarship: React.FC<NewScholarshipProps> = ({ universityId }) => {
             <div className="flex justify-end pt-6 border-t border-slate-200">
               <button
                 type="submit"
-                disabled={loading || success}
+                disabled={loading || uploadingImage || success}
                 className="bg-[#05294E] text-white px-8 py-3 rounded-xl hover:bg-[#05294E]/90 transition-colors font-bold flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? (
+                {loading || uploadingImage ? (
                   <>
                     <Clock className="animate-spin h-5 w-5 mr-2" />
-                    Creating...
+                    {uploadingImage ? 'Uploading Image...' : 'Creating...'}
                   </>
                 ) : (
                   <>

@@ -94,6 +94,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           fee_type: feeType,
           metadata: {
             ...metadata,
+            scholarships_ids: scholarshipsIds?.join(',') ?? undefined,
             selected_scholarship_id: scholarshipsIds?.[0] ?? undefined,
             student_process_type: studentProcessType ?? undefined,
             application_id: applicationId,

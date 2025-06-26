@@ -20,15 +20,11 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import type { University } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useUniversity } from '../../context/UniversityContext';
 
-interface ProfileManagementProps {
-  university: University | null;
-  setUniversity: React.Dispatch<React.SetStateAction<University | null>>;
-}
-
-const ProfileManagement: React.FC<ProfileManagementProps> = ({ university, setUniversity }) => {
+const ProfileManagement: React.FC = () => {
+  const { university, refreshData } = useUniversity();
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);

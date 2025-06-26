@@ -32,7 +32,7 @@ const Footer: React.FC = () => {
               <a href="https://twitter.com/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Twitter className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
-              <a href="https://instagram.com/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://www.instagram.com/matriculausa?igsh=MWJram91MGhxMXloOQ==" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Instagram className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
               <a href="https://linkedin.com/company/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">

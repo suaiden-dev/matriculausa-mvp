@@ -10,7 +10,7 @@ import MyApplications from './MyApplications';
 import ProfileManagement from './ProfileManagement';
 import { mockScholarships } from '../../data/mockData';
 import { Link } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { useCartStore } from '../../stores/applicationStore';
 import DocumentsAndScholarshipChoice from './DocumentsAndScholarshipChoice';
 import CollegeEnrollmentCheckout from './CollegeEnrollmentCheckout';
@@ -22,6 +22,7 @@ import SelectionProcessFeeError from './SelectionProcessFeeError';
 import ApplicationFeeSuccess from './ApplicationFeeSuccess';
 import ApplicationFeeError from './ApplicationFeeError';
 import ApplicationChatPage from './ApplicationChatPage';
+import ApplicationFeePage from './ApplicationFeePage';
 
 interface StudentProfile {
   id: string;
@@ -52,37 +53,53 @@ const StudentDashboard: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const { user, userProfile, loading } = useAuth();
-  const { cart } = useCartStore();
+  const cart = useCartStore((state) => state.cart);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (user) {
       loadDashboardData();
     }
-  }, [user, loading]);
+  }, [user]);
 
   const loadDashboardData = async () => {
     if (!user) return;
 
     try {
-      // Buscar bolsas reais do Supabase
+      // Buscar bolsas reais do Supabase com informações da universidade
       const { data: realScholarships, error: scholarshipsError } = await supabase
         .from('scholarships')
-        .select('*')
+        .select(`
+          *,
+          universities!inner(id, name, logo_url, location, is_approved)
+        `)
         .eq('is_active', true);
+      
       if (scholarshipsError) {
+        console.error('Error fetching scholarships:', scholarshipsError);
         setScholarships([]);
       } else {
-        setScholarships(realScholarships || []);
+        // Filtrar apenas scholarships de universidades aprovadas
+        const approvedScholarships = (realScholarships || []).filter(
+          (s: any) => s.universities && s.universities.is_approved
+        );
+        setScholarships(approvedScholarships);
       }
 
-      // Buscar applications reais do Supabase
+      // Buscar applications reais do Supabase com informações da scholarship e universidade
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('scholarship_applications')
-        .select('*, scholarship:scholarships(*)')
+        .select(`
+          *,
+          scholarship:scholarships(
+            *,
+            universities!inner(id, name, logo_url, location, is_approved)
+          )
+        `)
         .eq('student_id', user.id);
 
       if (applicationsError) {
+        console.error('Error fetching applications:', applicationsError);
         setApplications([]);
       } else {
         setApplications(applicationsData as Application[]);
@@ -191,16 +208,78 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <StudentDashboardLayout user={user} profile={profile} loading={loading}>
-      {/* Cart Icon Button */}
-      <button
-        onClick={() => navigate('/student/dashboard/cart')}
-        className="fixed bottom-8 right-8 z-50 bg-[#05294E] text-white rounded-full shadow-lg p-4 flex items-center hover:bg-[#05294E]/90 transition-all"
+      {/* Área de proteção para o botão */}
+      <div className="floating-cart-area" />
+      
+      {/* Botão flutuante super robusto - sempre visível */}
+      <div 
+        className="floating-cart-button"
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 99999,
+          pointerEvents: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
       >
-        <ShoppingCart className="h-6 w-6" />
-        {cart.length > 0 && (
-          <span className="ml-2 bg-red-600 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cart.length}</span>
-        )}
-      </button>
+        <button
+          onClick={() => navigate('/student/dashboard/cart')}
+          style={{
+            backgroundColor: '#05294E',
+            color: 'white',
+            borderRadius: '50%',
+            width: '60px',
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '3px solid white',
+            boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            position: 'relative',
+            zIndex: 99999,
+            minWidth: '60px',
+            minHeight: '60px',
+            outline: 'none'
+          }}
+          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+          onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          aria-label={`Cart with ${cart.length} items`}
+        >
+          <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
+          {cart.length > 0 && (
+            <span 
+              style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-8px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                borderRadius: '50%',
+                width: '28px',
+                height: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                border: '2px solid white',
+                zIndex: 100000
+              }}
+            >
+              {cart.length > 99 ? '99+' : cart.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       <Routes>
         <Route 
           index 
@@ -254,6 +333,7 @@ const StudentDashboard: React.FC = () => {
         <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
         <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
         <Route path="/application-fee-error" element={<ApplicationFeeError />} />
+        <Route path="application-fee" element={<ApplicationFeePage />} />
       </Routes>
     </StudentDashboardLayout>
   );

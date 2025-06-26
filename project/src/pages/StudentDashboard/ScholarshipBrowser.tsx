@@ -15,8 +15,7 @@ import {
   Eye,
   Heart,
   GraduationCap,
-  Users,
-  ShoppingCart
+  Users
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -190,20 +189,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           <span>
             <span className="font-medium text-blue-600">{filteredScholarships.length}</span> scholarships found
           </span>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-              <span className="text-xs">Urgent</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-              <span className="text-xs">Soon</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-              <span className="text-xs">Normal</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -214,29 +199,49 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           const alreadyApplied = applications.some(app => app.scholarship_id === scholarship.id);
           const inCart = cart.some((s) => s.scholarships.id === scholarship.id);
           return (
-            <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
-              {/* Card Content */}
-              <div className="p-6">
-                {/* Title and Badges */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                      {scholarship.title}
-                    </h3>
-                    {/* University */}
-                    <div className="flex items-center text-slate-600 mb-4">
-                      <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                      <span className="text-xs font-semibold mr-1">University:</span>
-                      <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.universities?.name || 'Unknown University'}</span>
-                    </div>
+            <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full">
+              {/* Scholarship Image - Container com altura fixa para uniformidade */}
+              <div className="relative h-48 overflow-hidden flex-shrink-0">
+                {scholarship.image_url ? (
+                  <>
+                    <img
+                      src={scholarship.image_url}
+                      alt={scholarship.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                  </>
+                ) : (
+                  // Placeholder para cards sem imagem com mesmo tamanho
+                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                    <GraduationCap className="h-16 w-16 text-slate-400" />
                   </div>
-                  {/* Exclusive Badge */}
-                  {scholarship.is_exclusive && (
+                )}
+                {/* Exclusive Badge sempre no mesmo lugar */}
+                {scholarship.is_exclusive && (
+                  <div className="absolute top-4 right-4">
                     <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
                       Exclusive
                     </span>
-                  )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Card Content - Flexível para ocupar espaço disponível */}
+              <div className="p-6 flex-1 flex flex-col">
+                {/* Title and University - Seção fixa no topo */}
+                <div className="mb-4">
+                  <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                    {scholarship.title}
+                  </h3>
+                  {/* University */}
+                  <div className="flex items-center text-slate-600">
+                    <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                    <span className="text-xs font-semibold mr-1">University:</span>
+                    <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.universities?.name || 'Unknown University'}</span>
+                  </div>
                 </div>
+
                 {/* Financial Values Section */}
                 <div className="mb-4">
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col gap-1">
@@ -254,8 +259,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     </div>
                   </div>
                 </div>
-                {/* Details */}
-                <div className="space-y-2 mb-6">
+
+                {/* Details - Conteúdo flexível que ocupa espaço disponível */}
+                <div className="space-y-2 flex-1">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Level</span>
                     <div className="flex items-center">
@@ -277,55 +283,56 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     </div>
                   </div>
                 </div>
-              </div>
-              {/* Action Button */}
-              <div className="px-6 pb-6">
-                <button
-                  className={`w-full py-2 px-4 rounded-md transition-all duration-200 font-semibold ${
-                    inCart ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'
-                  } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : ''}`}
-                  onClick={async () => {
-                    if (!userProfile?.has_paid_selection_process_fee) {
-                      // Acionar StripeCheckout para selection_process com o price_id correto
-                      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-                      const { data: sessionData } = await import('../../lib/supabase').then(m => m.supabase.auth.getSession());
-                      const token = sessionData.session?.access_token;
-                      const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                          price_id: 'price_1Rb5w8KdCh3y3bmYqSmUyW2Z',
-                          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-                          cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
-                          mode: 'payment',
-                          payment_type: 'selection_process',
-                          fee_type: 'selection_process',
-                        })
-                      });
-                      const data = await response.json();
-                      if (data.session_url) {
-                        window.location.href = data.session_url;
+
+                {/* Action Button - Sempre na parte inferior */}
+                <div className="mt-6 pt-4 border-t border-slate-100">
+                  <button
+                    className={`w-full py-3 px-4 rounded-xl transition-all duration-200 font-semibold flex items-center justify-center ${
+                      inCart ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'
+                    } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : ''}`}
+                    onClick={async () => {
+                      if (!userProfile?.has_paid_selection_process_fee) {
+                        // Acionar StripeCheckout para selection_process com o price_id correto
+                        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+                        const { data: sessionData } = await import('../../lib/supabase').then(m => m.supabase.auth.getSession());
+                        const token = sessionData.session?.access_token;
+                        const response = await fetch(apiUrl, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            price_id: 'price_1Rb5w8KdCh3y3bmYqSmUyW2Z',
+                            success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+                            cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
+                            mode: 'payment',
+                            payment_type: 'selection_process',
+                            fee_type: 'selection_process',
+                          })
+                        });
+                        const data = await response.json();
+                        if (data.session_url) {
+                          window.location.href = data.session_url;
+                          return;
+                        }
                         return;
-                      }
-                      return;
-                    } else {
-                      // Comportamento normal: adicionar/remover do carrinho
-                      if (inCart) {
-                        if (user) removeFromCart(scholarship.id, user.id);
                       } else {
-                        handleAddToCart(scholarship);
+                        // Comportamento normal: adicionar/remover do carrinho
+                        if (inCart) {
+                          if (user) removeFromCart(scholarship.id, user.id);
+                        } else {
+                          handleAddToCart(scholarship);
+                        }
                       }
-                    }
-                  }}
-                  disabled={alreadyApplied}
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  {alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : 'Select Scholarship'}
-                  {!alreadyApplied && <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />}
-                </button>
+                    }}
+                    disabled={alreadyApplied}
+                  >
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    <span>{alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : 'Select Scholarship'}</span>
+                    {!alreadyApplied && <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />}
+                  </button>
+                </div>
               </div>
             </div>
           );

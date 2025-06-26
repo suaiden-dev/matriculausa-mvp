@@ -48,7 +48,7 @@ const Scholarships: React.FC = () => {
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRange = maxPrice > 0 ? scholarship.amount <= maxPrice : false;
+    const matchesRange = maxPrice > 0 ? (scholarship.annual_value_with_scholarship ?? 0) <= maxPrice : false;
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
     return matchesSearch && matchesRange && matchesLevel && matchesField;
@@ -274,8 +274,28 @@ const Scholarships: React.FC = () => {
               
               return (
                 <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
+                  {/* Scholarship Image */}
+                  {scholarship.image_url && (
+                    <div className="relative h-48 overflow-hidden">
+                      <img
+                        src={scholarship.image_url}
+                        alt={scholarship.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                      {/* Exclusive Badge on Image */}
+                      {scholarship.is_exclusive && (
+                        <div className="absolute top-4 right-4">
+                          <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                            Exclusive
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {/* Card Content */}
-                  <div className="p-6">
+                  <div className={`p-6 ${scholarship.image_url ? '' : ''}`}>
                     {/* Title and Badges */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -291,8 +311,8 @@ const Scholarships: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* Exclusive Badge */}
-                      {scholarship.is_exclusive && (
+                      {/* Exclusive Badge - only show when no image */}
+                      {scholarship.is_exclusive && !scholarship.image_url && (
                         <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
                           Exclusive
                         </span>

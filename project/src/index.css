@@ -12,3 +12,99 @@
     font-family: 'Lato', sans-serif;
   }
 }
+
+@layer utilities {
+  /* Garantir que o botão flutuante seja sempre visível */
+  .floating-cart-button {
+    position: fixed !important;
+    z-index: 99999 !important;
+    pointer-events: auto !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Força a área do botão a sempre estar livre */
+  .floating-cart-area {
+    position: fixed !important;
+    bottom: 10px !important;
+    right: 10px !important;
+    width: 80px !important;
+    height: 80px !important;
+    z-index: 99998 !important;
+    pointer-events: none !important;
+  }
+
+  /* Garantir que o botão flutuante WhatsApp seja sempre visível */
+  .floating-whatsapp-button {
+    position: fixed !important;
+    z-index: 99999 !important;
+    pointer-events: auto !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Força a área do botão WhatsApp a sempre estar livre */
+  .floating-whatsapp-area {
+    position: fixed !important;
+    bottom: 10px !important;
+    right: 10px !important;
+    width: 80px !important;
+    height: 80px !important;
+    z-index: 99998 !important;
+    pointer-events: none !important;
+  }
+  
+  /* CSS específico para mobile */
+  @media (max-width: 640px) {
+    .floating-cart-button {
+      bottom: 20px !important;
+      right: 20px !important;
+      position: fixed !important;
+      z-index: 99999 !important;
+      transform: translateZ(0) !important;
+      -webkit-transform: translateZ(0) !important;
+      will-change: transform !important;
+    }
+    
+    .floating-cart-button button {
+      width: 60px !important;
+      height: 60px !important;
+      min-width: 60px !important;
+      min-height: 60px !important;
+      display: flex !important;
+      position: relative !important;
+      z-index: 99999 !important;
+    }
+
+    .floating-whatsapp-button {
+      bottom: 20px !important;
+      right: 20px !important;
+      position: fixed !important;
+      z-index: 99999 !important;
+      transform: translateZ(0) !important;
+      -webkit-transform: translateZ(0) !important;
+      will-change: transform !important;
+    }
+    
+    .floating-whatsapp-button a {
+      width: 60px !important;
+      height: 60px !important;
+      min-width: 60px !important;
+      min-height: 60px !important;
+      display: flex !important;
+      position: relative !important;
+      z-index: 99999 !important;
+    }
+  }
+  
+  /* Força hardware acceleration */
+  .floating-cart-button * {
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    -webkit-perspective: 1000 !important;
+    perspective: 1000 !important;
+  }
+}
+

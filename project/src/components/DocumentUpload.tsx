@@ -21,6 +21,16 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
   const { user, updateUserProfile } = useAuth();
   const navigate = useNavigate();
 
+  // Função para sanitizar nome do arquivo removendo caracteres especiais
+  const sanitizeFileName = (fileName: string): string => {
+    return fileName
+      .normalize('NFD') // Normaliza acentos
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Substitui caracteres especiais por underscore
+      .replace(/_+/g, '_') // Remove underscores duplos
+      .replace(/^_|_$/g, ''); // Remove underscores no início e fim
+  };
+
   const handleFileChange = (type: string, file: File | null) => {
     setFiles((prev) => ({ ...prev, [type]: file }));
   };
@@ -45,7 +55,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
           }
           return originalFetch.apply(this, args);
         };
-        const { data: storageData, error: storageError } = await supabase.storage.from('student-documents').upload(`${user.id}/${doc.key}-${Date.now()}-${file.name}`, file, { upsert: true });
+        const sanitizedFileName = sanitizeFileName(file.name);
+        const { data: storageData, error: storageError } = await supabase.storage.from('student-documents').upload(`${user.id}/${doc.key}-${Date.now()}-${sanitizedFileName}`, file, { upsert: true });
         window.fetch = originalFetch;
         if (storageError) throw storageError;
         const file_url = storageData?.path ? supabase.storage.from('student-documents').getPublicUrl(storageData.path).data.publicUrl : null;
@@ -82,7 +93,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
       setTimeout(() => {
         setAnalyzing(false);
         onUploadSuccess();
-        navigate('/student/dashboard/documents-and-scholarship-choice');
+        navigate('/student/dashboard/application-fee');
       }, 40000);
     } catch (e: any) {
       setUploading(false);

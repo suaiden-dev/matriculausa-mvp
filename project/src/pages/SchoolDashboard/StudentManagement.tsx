@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Application, Scholarship } from '../../types';
+import { useUniversity } from '../../context/UniversityContext';
 
 interface StudentProfile {
   id: string;
@@ -18,11 +19,8 @@ interface Application {
   scholarships?: Scholarship;
 }
 
-interface StudentManagementProps {
-  applications: Application[];
-}
-
-const StudentManagement: React.FC<StudentManagementProps> = ({ applications }) => {
+const StudentManagement: React.FC = () => {
+  const { applications } = useUniversity();
   // Extrai bolsas únicas das aplicações
   const scholarships: Scholarship[] = Array.from(
     applications

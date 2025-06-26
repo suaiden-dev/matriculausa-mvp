@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Heart, Brain, Rocket, Clock, CreditCard } from 'lucide-react';
+import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Heart, Brain, Rocket, Clock, CreditCard, MapPin } from 'lucide-react';
 import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
 import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
+import WhatsAppFloatingButton from '../components/WhatsAppFloatingButton';
 
 const Home: React.FC = () => {
   const { universities, loading: universitiesLoading } = useUniversities();
@@ -184,35 +185,82 @@ const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {universitiesState.map((school) => (
-              <div key={school.id} className="bg-white rounded-3xl shadow-lg p-6 flex flex-col h-full min-h-[340px] border border-slate-200">
-                <div className="flex items-center mb-4">
+              <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px]">
+                {/* University Image */}
+                <div className="relative h-48 overflow-hidden flex-shrink-0">
                   <img
-                    src={school.logo_url || '/university-default.png'}
-                    alt={school.name}
-                    className="h-14 w-14 rounded-xl object-cover bg-slate-100 border mr-4"
+                    src={school.image || school.logo_url || '/university-placeholder.png'}
+                    alt={`${school.name} campus`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div>
-                    <h3 className="text-xl font-bold text-[#05294E]">{school.name}</h3>
-                    <div className="text-slate-500 text-sm">{school.location}</div>
+                  
+                  {/* Type Badge */}
+                  <div className="absolute top-4 left-4">
+                    <span className={`px-3 py-1 rounded-xl text-xs font-bold text-white shadow-lg ${
+                      school.type === 'Private' ? 'bg-[#05294E]' : 'bg-green-600'
+                    }`}>
+                      {school.type || (school.is_public ? 'Public' : 'Private')}
+                    </span>
                   </div>
+                  
+                  {/* Ranking Badge */}
+                  {school.ranking && (
+                    <div className="absolute top-4 right-4">
+                      <span className="bg-yellow-500 text-black px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                        #{school.ranking}
+                      </span>
                     </div>
-                <div className="flex-1 text-slate-600 text-sm mb-4 overflow-hidden">
-                  {school.programs && school.programs.length > 0 ? (
-                    <span>{school.programs[0]}</span>
-                  ) : (
-                    <span>No program info</span>
                   )}
                 </div>
-                <div className="mt-auto">
-                  <Link
-                    to={`/schools/${school.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
-                    className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
-                  >
-                    Learn More
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
+
+                {/* University Info */}
+                <div className="flex flex-col flex-1 p-6">
+                  <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                    {school.name}
+                  </h3>
+                  
+                  {/* Location */}
+                  <div className="flex items-center text-slate-600 mb-4">
+                    <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
+                    <span className="text-sm">{school.location}</span>
+                  </div>
+
+                  {/* Programs Preview */}
+                  <div className="mb-6 flex-1">
+                    <div className="flex flex-wrap gap-2">
+                      {school.programs && school.programs.length > 0 ? (
+                        <>
+                          {school.programs.slice(0, 3).map((program: string, index: number) => (
+                            <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
+                              {program}
+                            </span>
+                          ))}
+                          {school.programs.length > 3 && (
+                            <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
+                              +{school.programs.length - 3} more
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
+                          No program info
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Learn More Button alinhado na base */}
+                  <div className="mt-auto">
+                    <Link
+                      to={`/schools/${school.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
+                      className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
+                    >
+                      Learn More
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
@@ -649,6 +697,9 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppFloatingButton />
     </div>
   );
 };

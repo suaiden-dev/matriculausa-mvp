@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
-import DocumentUpload from '../../components/DocumentUpload';
 
 interface OverviewProps {
   profile: any;
@@ -389,7 +388,7 @@ const Overview: React.FC<OverviewProps> = ({
                   </h4>
                   <div className="flex items-center justify-between text-sm text-slate-600 mb-3">
                     <span className="font-semibold text-green-600">
-                      {formatAmount(scholarship.amount)}
+                      {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
                     </span>
                     <span>{scholarship.schoolName}</span>
                   </div>
@@ -438,9 +437,6 @@ const Overview: React.FC<OverviewProps> = ({
         </div>
       </div>
 
-      {userProfile && userProfile.documents_status !== 'approved' && (
-        <DocumentUpload onUploadSuccess={() => {}} />
-      )}
     </div>
   );
 };

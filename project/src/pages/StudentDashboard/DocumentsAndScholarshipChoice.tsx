@@ -3,10 +3,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import DocumentUploadModal from '../../components/DocumentUploadModal';
 
 const DocumentsAndScholarshipChoice: React.FC = () => {
   const { userProfile } = useAuth();
-  const { cart, clearCart } = useCartStore();
+  const { cart } = useCartStore();
   const [documentsApproved, setDocumentsApproved] = useState(userProfile?.documents_status === 'approved');
   const [selectedScholarshipId, setSelectedScholarshipId] = useState<string | null>(null);
   const [processType, setProcessType] = useState<string | null>(window.localStorage.getItem('studentProcessType'));
@@ -20,15 +21,18 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     setIsSavingType(true);
     try {
       // Buscar a aplicação ativa do usuário
-      const { data: application, error } = await supabase
+      const { data: applications, error } = await supabase
         .from('scholarship_applications')
         .select('id')
         .eq('student_id', userProfile?.user_id)
         .order('applied_at', { ascending: false })
-        .limit(1)
-        .single();
-      if (error) throw error;
-      if (application) {
+        .limit(1);
+      
+      if (error) {
+        console.error('Error fetching applications:', error);
+        // Continua mesmo com erro, salva só no localStorage
+      } else if (applications && applications.length > 0) {
+        const application = applications[0];
         await supabase
           .from('scholarship_applications')
           .update({ student_process_type: type })
@@ -48,6 +52,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const handleUploadSuccess = () => {
     setDocumentsApproved(true);
     setShowUploadModal(false);
+    // Redireciona para a nova página de pagamento
+    navigate('/student/dashboard/application-fee');
   };
 
   if (!userProfile) return null;
@@ -107,75 +113,25 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           </div>
         </div>
       )}
-      {processType && !documentsApproved && !showUploadModal && (
+      {processType && !documentsApproved && (
         <div className="text-center mt-8">
-          {/* Redirecionamento já ocorre após o Next, então não precisa mais do botão aqui */}
+          <p className="mb-6 text-slate-700 text-lg font-medium">
+            To continue, please upload the required documents using the button below.
+          </p>
+          <button
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
+            onClick={() => setShowUploadModal(true)}
+          >
+            Upload Documents
+          </button>
+          {showUploadModal && (
+            <DocumentUploadModal onSuccess={handleUploadSuccess} onClose={() => setShowUploadModal(false)} />
+          )}
         </div>
       )}
       {processType && documentsApproved && (
-        <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-8 animate-fade-in">
-          <h2 className="text-2xl font-bold mb-6 text-slate-800 text-center">Select Your Scholarship</h2>
-          <p className="text-slate-600 text-center mb-4">Choose one scholarship to continue your application process.</p>
-          <ul className="mb-6 space-y-4">
-            {cart.map((item) => (
-              <li key={item.scholarships.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${selectedScholarshipId === item.scholarships.id ? 'border-blue-600 bg-blue-50 shadow-lg' : 'border-slate-200 bg-slate-50'}`}>
-                <div>
-                  <div className="font-bold text-slate-900 text-lg">{item.scholarships.title}</div>
-                  <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
-                </div>
-                <button
-                  onClick={() => setSelectedScholarshipId(item.scholarships.id)}
-                  className={`px-5 py-2 rounded-xl font-bold transition-all duration-200 ${selectedScholarshipId === item.scholarships.id ? 'bg-blue-600 text-white shadow' : 'bg-slate-200 text-slate-700 hover:bg-blue-100'}`}
-                >
-                  {selectedScholarshipId === item.scholarships.id ? 'Selected' : 'Select'}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={async () => {
-              if (selectedScholarshipId && processType) {
-                try {
-                  // Verifica se já existe aplicação para o aluno e bolsa
-                  const { data: existing, error: fetchError } = await supabase
-                    .from('scholarship_applications')
-                    .select('id')
-                    .eq('student_id', userProfile.id)
-                    .eq('scholarship_id', selectedScholarshipId)
-                    .maybeSingle();
-                  if (fetchError) throw fetchError;
-                  if (!existing) {
-                    // Cria nova aplicação
-                    const { data, error } = await supabase
-                      .from('scholarship_applications')
-                      .insert({
-                        student_id: userProfile.id,
-                        scholarship_id: selectedScholarshipId,
-                        status: 'pending',
-                        applied_at: new Date().toISOString(),
-                        student_process_type: processType,
-                      })
-                      .select('id')
-                      .single();
-                    if (error) {
-                      alert('Erro ao criar aplicação: ' + error.message);
-                      return;
-                    }
-                  }
-                  // Salva escolhas no localStorage e redireciona
-                  window.localStorage.setItem('selectedScholarshipId', selectedScholarshipId);
-                  window.localStorage.setItem('studentProcessType', processType);
-                  navigate('/student/dashboard/college-enrollment-checkout');
-                } catch (e: any) {
-                  alert('Erro ao processar sua escolha. Detalhes: ' + (e?.message || e));
-                }
-              }
-            }}
-            disabled={!selectedScholarshipId}
-            className="w-full bg-blue-600 text-white py-4 rounded-xl font-extrabold text-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 shadow-lg"
-          >
-            Continue to Application Fee Payment
-          </button>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-green-800 font-semibold text-center animate-fade-in">
+          Documents uploaded successfully! Now select your scholarship to continue.
         </div>
       )}
     </div>

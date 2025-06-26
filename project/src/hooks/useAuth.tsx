@@ -38,7 +38,6 @@ export interface UserProfile {
   documents_uploaded?: boolean;
   selected_scholarship_id?: string | null;
   has_paid_college_enrollment_fee?: boolean;
-  has_paid_scholarship_fee?: boolean;
   // ... outras colunas se existirem
 }
 
@@ -48,7 +47,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { name: string; role: 'student' | 'school'; [key: string]: any }) => Promise<void>;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => Promise<void>;
   switchRole: (newRole: 'student' | 'school' | 'admin') => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -85,15 +84,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const buildUser = (sessionUser: any, currentProfile: UserProfile | null): User => {
       console.log('AUTH_DEBUG: buildUser - Iniciando construção de objeto User. sessionUser ID:', sessionUser?.id, 'currentProfile ID:', currentProfile?.id);
-    let role = sessionUser?.user_metadata?.role;
+      
+      // Priorizar role do metadata do usuário
+      let role = sessionUser?.user_metadata?.role;
+      
+      // Se não tem role no metadata, verificar perfil
       if (!role && currentProfile) {
         if (currentProfile.is_admin) role = 'admin';
-        else if (currentProfile.status === 'school') role = 'school';
-      else role = 'student';
-    }
-    if (!role) {
-      role = getDefaultRole(sessionUser?.email || '');
-    }
+        else role = 'student'; // Default para student se não for admin
+      }
+      
+      // Se ainda não tem role, usar default baseado no email
+      if (!role) {
+        role = getDefaultRole(sessionUser?.email || '');
+      }
+      
+      console.log('AUTH_DEBUG: Role detectado:', role);
       const builtUser: User = {
       id: sessionUser.id,
       email: sessionUser.email,
@@ -109,27 +115,122 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const fetchAndSetUser = async (session: any) => {
       if (session?.user) {
         let profile: UserProfile | null = null;
-      try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('*')
+        
+        // Primeiro, tentar buscar o perfil existente
+        try {
+          const { data, error } = await supabase
+            .from('user_profiles')
+            .select('*')
             .eq('user_id', session.user.id)
-          .single();
-          if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-            throw error;
+            .single();
+            
+          if (error) {
+            if (error.code === 'PGRST116') {
+              // Perfil não encontrado - isso é normal
+              console.log('AUTH_DEBUG: Perfil não encontrado, será criado');
+            } else {
+              console.log("Error fetching user profile:", error);
+            }
           }
-          profile = data;
+          
+          profile = data || null;
         } catch (error) {
-          console.error("Error fetching user profile:", error);
+          console.log("Error fetching user profile:", error);
         }
+        
+        // Se não existe perfil, criar um novo
+        if (!profile) {
+          console.log('AUTH_DEBUG: Perfil não encontrado, criando novo...');
+          try {
+            const pendingFullName = localStorage.getItem('pending_full_name');
+            const fullName = pendingFullName || 
+                            session.user.user_metadata?.full_name || 
+                            session.user.user_metadata?.name || 
+                            session.user.email?.split('@')[0] || 
+                            'User';
+            
+            const { data: newProfile, error: insertError } = await supabase
+              .from('user_profiles')
+              .insert({
+                user_id: session.user.id,
+                full_name: fullName,
+                status: 'active'
+              })
+              .select()
+              .single();
+              
+            if (insertError) {
+              if (insertError.code === '23505') { // Duplicate key error
+                console.log('AUTH_DEBUG: Perfil já existe, tentando buscar novamente...');
+                // Se já existe, tentar buscar novamente
+                try {
+                  const { data: existingProfile } = await supabase
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .single();
+                  profile = existingProfile;
+                } catch (retryError) {
+                  console.log("Error fetching existing profile:", retryError);
+                }
+              } else {
+                console.error("Error creating user profile:", insertError);
+              }
+            } else {
+              profile = newProfile;
+              console.log('AUTH_DEBUG: Perfil criado com sucesso:', profile);
+              
+              // Se é uma escola, criar registro na tabela universities
+              if (session.user.user_metadata?.role === 'school') {
+                console.log('AUTH_DEBUG: Criando registro de universidade...');
+                try {
+                  const { error: universityError } = await supabase
+                    .from('universities')
+                    .insert({
+                      user_id: session.user.id,
+                      name: session.user.user_metadata?.universityName || 'New University',
+                      description: 'University profile created during registration',
+                      location: session.user.user_metadata?.location || '',
+                      website: session.user.user_metadata?.website || '',
+                      contact: {
+                        name: fullName,
+                        position: session.user.user_metadata?.position || '',
+                        email: session.user.email
+                      },
+                      is_approved: false,
+                      profile_completed: false,
+                      terms_accepted: false
+                    });
+                    
+                  if (universityError) {
+                    console.error('Error creating university:', universityError);
+                  } else {
+                    console.log('AUTH_DEBUG: Universidade criada com sucesso');
+                  }
+                } catch (error) {
+                  console.error('Error creating university:', error);
+                }
+              }
+              
+              // Limpar localStorage se foi usado
+              if (pendingFullName) {
+                localStorage.removeItem('pending_full_name');
+              }
+            }
+          } catch (error) {
+            console.error("Error creating user profile:", error);
+            // Continuar mesmo se falhar
+          }
+        }
+        
         setUserProfile(profile);
         setUser(buildUser(session.user, profile));
         setSupabaseUser(session.user);
-        console.log('AUTH_DEBUG: onAuthStateChange - User e UserProfile setados com sucesso.');
+        console.log('AUTH_DEBUG: onAuthStateChange - User e UserProfile setados. Profile:', profile?.id || 'null');
       } else {
         setUser(null);
         setSupabaseUser(null);
-          setUserProfile(null);
+        setUserProfile(null);
         console.log('AUTH_DEBUG: onAuthStateChange - User e UserProfile resetados para null.');
       }
     };
@@ -209,6 +310,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (error) {
       throw error;
     }
+    // O user_profile será criado automaticamente pelo listener de auth state change
+    console.log('Login realizado com sucesso');
     // Redirection will be handled by the auth state change listener
   };
 
@@ -226,17 +329,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log("AUTH_DEBUG: User logged out, user and userProfile set to null.");
   };
 
-  const register = async (email: string, password: string, userData: { name: string; role: 'student' | 'school'; [key: string]: any }) => {
-    const { error } = await supabase.auth.signUp({
+  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => {
+    localStorage.setItem('pending_full_name', userData.full_name);
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userData,
+        data: {
+          ...userData,
+          name: userData.full_name, // redundância para garantir compatibilidade
+        },
       }
     });
 
     if (error) {
       throw error;
+    }
+    // O user_profile será criado naturalmente quando o usuário fizer login
+    // Salvar dados no localStorage para uso posterior
+    if (data?.user) {
+      console.log('Usuário registrado com sucesso. userData:', userData);
+    } else {
+      console.log('Usuário criado, mas precisa confirmar o e-mail antes de ativar a conta. userData:', userData);
     }
     // Registration redirection will be handled in the Auth component
   };

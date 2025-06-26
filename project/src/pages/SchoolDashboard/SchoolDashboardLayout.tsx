@@ -21,23 +21,18 @@ import {
   ChevronDown,
   Shield
 } from 'lucide-react';
-import { University } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useUniversity } from '../../context/UniversityContext';
 
 interface SchoolDashboardLayoutProps {
-  university: University | null;
   user: any;
-  loading: boolean;
 }
 
-const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
-  university,
-  user,
-  loading
-}) => {
+const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { university, loading } = useUniversity();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   
@@ -194,26 +189,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({
             })}
           </nav>
 
-          {/* Quick Actions */}
-          <div className="px-4 py-4 border-t border-slate-200">
-            {university?.profile_completed ? (
-              <Link
-                to="/school/scholarship/new" 
-                className="w-full bg-gradient-to-r from-[#D0151C] to-red-600 text-white py-3 px-4 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Scholarship
-              </Link>
-            ) : (
-              <Link
-                to="/school/setup-profile"
-                className="w-full bg-gradient-to-r from-[#05294E] to-blue-700 text-white py-3 px-4 rounded-xl hover:from-[#05294E]/90 hover:to-blue-600 transition-all duration-300 font-bold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Complete Profile
-              </Link>
-            )}
-          </div>
+
 
           {/* Support */}
           <div className="px-4 py-4 border-t border-slate-200">

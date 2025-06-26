@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
+    console.log('Session metadata:', session.metadata);
     
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
@@ -52,29 +53,71 @@ Deno.serve(async (req) => {
       if (!userId) return corsResponse({ error: 'User ID (client_reference_id) missing in session.' }, 400);
       if (!applicationId) return corsResponse({ error: 'Application ID missing in session metadata.' }, 400);
 
-      // Atualiza a aplicação para status 'under_review' (valor permitido)
+      // Verifica se a aplicação existe e pertence ao usuário
+      const { data: application, error: fetchError } = await supabase
+        .from('scholarship_applications')
+        .select('id, student_id, scholarship_id')
+        .eq('id', applicationId)
+        .eq('student_id', userId)
+        .single();
+
+      if (fetchError || !application) {
+        console.error('Application not found:', fetchError);
+        return corsResponse({ error: 'Application not found or access denied' }, 404);
+      }
+
+      console.log('Application found:', application);
+
+      // Atualiza a aplicação para status 'under_review'
       const { error: updateError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'under_review' })
-        .eq('student_id', userId)
-        .eq('id', applicationId);
-      if (updateError) throw new Error(`Failed to update application status for application fee: ${updateError.message}`);
+        .eq('id', applicationId)
+        .eq('student_id', userId);
 
-      // NOVO: Buscar documentos do user_profiles e vincular à application
+      if (updateError) {
+        console.error('Failed to update application status:', updateError);
+        throw new Error(`Failed to update application status: ${updateError.message}`);
+      }
+
+      console.log('Application status updated to under_review');
+
+      // Buscar documentos do user_profiles e vincular à application
       const { data: userProfile, error: userProfileError } = await supabase
         .from('user_profiles')
         .select('documents')
         .eq('user_id', userId)
         .single();
-      if (userProfileError) throw new Error(`Failed to fetch user profile documents: ${userProfileError.message}`);
-      const documents = Array.isArray(userProfile?.documents) ? userProfile.documents : [];
-      if (documents.length > 0) {
-        const { error: docUpdateError } = await supabase
-          .from('scholarship_applications')
-          .update({ documents })
-          .eq('id', applicationId)
-          .eq('student_id', userId);
-        if (docUpdateError) throw new Error(`Failed to update application documents: ${docUpdateError.message}`);
+
+      if (userProfileError) {
+        console.error('Failed to fetch user profile documents:', userProfileError);
+      } else if (userProfile?.documents) {
+        const documents = Array.isArray(userProfile.documents) ? userProfile.documents : [];
+        let formattedDocuments = documents;
+
+        // Se for array de strings (URLs), converter para array de objetos completos
+        if (documents.length > 0 && typeof documents[0] === 'string') {
+          const docTypes = ['passport', 'diploma', 'funds_proof'];
+          formattedDocuments = documents.map((url: string, idx: number) => ({
+            type: docTypes[idx] || `doc${idx+1}`,
+            url,
+            uploaded_at: new Date().toISOString()
+          }));
+        }
+
+        if (formattedDocuments.length > 0) {
+          const { error: docUpdateError } = await supabase
+            .from('scholarship_applications')
+            .update({ documents: formattedDocuments })
+            .eq('id', applicationId)
+            .eq('student_id', userId);
+
+          if (docUpdateError) {
+            console.error('Failed to update application documents:', docUpdateError);
+          } else {
+            console.log('Application documents updated');
+          }
+        }
       }
 
       // Atualiza perfil do usuário para marcar que pagou a application fee
@@ -82,12 +125,27 @@ Deno.serve(async (req) => {
         .from('user_profiles')
         .update({ is_application_fee_paid: true })
         .eq('user_id', userId);
-      if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
-      // Limpa carrinho (opcional)
+      if (profileError) {
+        console.error('Failed to update user_profiles:', profileError);
+        throw new Error(`Failed to update user_profiles: ${profileError.message}`);
+      }
+
+      console.log('User profile updated - application fee paid');
+
+      // Limpa carrinho
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
-      if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
-      return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
+      if (cartError) {
+        console.error('Failed to clear user_cart:', cartError);
+      } else {
+        console.log('User cart cleared');
+      }
+
+      return corsResponse({ 
+        status: 'complete', 
+        message: 'Session verified and processed successfully.',
+        applicationId: applicationId
+      }, 200);
     } else {
       console.log('Session not paid or complete.');
       return corsResponse({ message: 'Session not ready.', status: session.status }, 202);

@@ -6,11 +6,30 @@ import ApplicationChat from '../../components/ApplicationChat';
 import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { useAuth } from '../../hooks/useAuth';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
+import ImagePreviewModal from '../../components/ImagePreviewModal';
 
 interface ApplicationDetails extends ScholarshipApplication {
   user_profiles: UserProfile;
   scholarships: Scholarship;
 }
+
+const DOCUMENTS_INFO = [
+  {
+    key: 'passport',
+    label: 'Passport',
+    description: 'A valid copy of the student\'s passport. Used for identification and visa purposes.'
+  },
+  {
+    key: 'diploma',
+    label: 'High School Diploma',
+    description: 'Proof of high school graduation. Required for university admission.'
+  },
+  {
+    key: 'funds_proof',
+    label: 'Proof of Funds',
+    description: 'A bank statement or financial document showing sufficient funds for study.'
+  }
+];
 
 const StudentDetails: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -19,6 +38,7 @@ const StudentDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const chat = useApplicationChat(applicationId);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (applicationId) {
@@ -115,11 +135,62 @@ const StudentDetails: React.FC = () => {
             <h2 className="text-xl font-bold text-[#05294E] mb-4">Scholarship Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><strong>Scholarship:</strong> {scholarship.title || scholarship.name}</div>
-              <div><strong>Amount:</strong> ${Number(scholarship.amount).toLocaleString()}</div>
+                                      <div><strong>Amount:</strong> ${Number(scholarship.annual_value_with_scholarship ?? 0).toLocaleString()}</div>
               {scholarship.course && <div><strong>Course:</strong> {scholarship.course}</div>}
               {scholarship.country && <div><strong>Country:</strong> {scholarship.country}</div>}
               <div className="md:col-span-2"><strong>Description:</strong> {scholarship.description}</div>
             </div>
+          </div>
+
+          {/* Student Documents Section */}
+          <div className="bg-white p-6 rounded-xl shadow-md">
+            <h2 className="text-xl font-bold text-[#05294E] mb-4">Student Documents</h2>
+            <ul className="space-y-6">
+              {DOCUMENTS_INFO.map((doc) => {
+                let docData = Array.isArray(application.documents)
+                  ? application.documents.find((d: any) => d.type === doc.key)
+                  : null;
+                if (!docData && Array.isArray(student.documents)) {
+                  docData = student.documents.find((d: any) => d.type === doc.key);
+                }
+                return (
+                  <li key={doc.key} className="border-b last:border-0 pb-4">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      <div>
+                        <div className="font-semibold text-slate-800 text-base">{doc.label}</div>
+                        <div className="text-xs text-slate-500 mb-1">{doc.description}</div>
+                        {docData && (
+                          <div className="text-xs text-slate-600 mb-1">Uploaded: {new Date(docData.uploaded_at).toLocaleDateString()}</div>
+                        )}
+                      </div>
+                      <div className="flex gap-2 mt-2 md:mt-0">
+                        {docData ? (
+                          <>
+                            <button
+                              className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
+                              onClick={() => setPreviewUrl(docData.url)}
+                            >
+                              View
+                            </button>
+                            <a
+                              href={docData.url}
+                              download
+                              className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xs font-medium"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Download
+                            </a>
+                          </>
+                        ) : (
+                          <span className="text-xs text-red-500">Not uploaded</span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </div>
       </div>
@@ -143,6 +214,9 @@ const StudentDetails: React.FC = () => {
           currentUserId={user?.id}
         />
       </div>
+      {previewUrl && (
+        <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
     </div>
   );
 };

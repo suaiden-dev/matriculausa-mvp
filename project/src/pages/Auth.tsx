@@ -10,7 +10,7 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [activeTab, setActiveTab] = useState<'student' | 'university'>('student');
   const [formData, setFormData] = useState({
-    name: '',
+    full_name: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -42,6 +42,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (user.role === 'school') {
+        navigate('/school/dashboard', { replace: true });
+      } else if (user.role === 'student') {
+        navigate('/student/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -56,7 +68,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         }
         
         const userData = {
-          name: formData.name,
+          full_name: formData.full_name,
           role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
           // Add additional registration data only for universities
           ...(activeTab === 'university' && {
@@ -125,9 +137,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value || '' // Garantir que nunca seja undefined
     }));
   };
 
@@ -182,7 +195,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   name="email"
                   type="email"
                   required
-                  value={formData.email}
+                  value={formData.email || ''}
                   onChange={handleInputChange}
                   className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                   placeholder="Enter your email"
@@ -201,7 +214,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   name="password"
                   type="password"
                   required
-                  value={formData.password}
+                  value={formData.password || ''}
                   onChange={handleInputChange}
                   className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                   placeholder="Enter your password"
@@ -209,41 +222,29 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-lg font-black rounded-2xl text-white bg-[#D0151C] hover:bg-[#B01218] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D0151C] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-xl"
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Processing...
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  Sign In
-                </div>
-              )}
-            </button>
-
-            <div className="text-center">
-              <Link to="/forgot-password" className="text-sm text-[#D0151C] hover:text-[#B01218] font-medium transition-colors">
+            <div className="flex items-center justify-between">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-[#D0151C] hover:text-[#B01218] font-medium transition-colors"
+              >
                 Forgot your password?
               </Link>
             </div>
 
-            {/* Login Help Section */}
-            {error && (
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl">
-                <h4 className="text-sm font-bold text-blue-900 mb-2">Having trouble signing in?</h4>
-                <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• Double-check your email address and password</li>
-                  <li>• Make sure your account is confirmed (check your email)</li>
-                  <li>• Try resetting your password if you've forgotten it</li>
-                  <li>• Contact support if you continue having issues</li>
-                </ul>
-              </div>
-            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-sm font-bold rounded-2xl text-white bg-[#05294E] hover:bg-[#041f3a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Signing In...
+                </div>
+              ) : (
+                'Sign In'
+              )}
+            </button>
           </form>
         </div>
       </div>
@@ -348,17 +349,17 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-bold text-slate-900 mb-2">
+                    <label htmlFor="full_name" className="block text-sm font-bold text-slate-900 mb-2">
                       Full Name *
                     </label>
                     <div className="relative">
                       <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                       <input
-                        id="name"
-                        name="name"
+                        id="full_name"
+                        name="full_name"
                         type="text"
                         required
-                        value={formData.name}
+                        value={formData.full_name || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Enter your full name"
@@ -377,7 +378,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="email"
                         type="email"
                         required
-                        value={formData.email}
+                        value={formData.email || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Enter your email"
@@ -396,7 +397,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="password"
                         type="password"
                         required
-                        value={formData.password}
+                        value={formData.password || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Create a password"
@@ -415,7 +416,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="confirmPassword"
                         type="password"
                         required
-                        value={formData.confirmPassword}
+                        value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Confirm your password"
@@ -449,7 +450,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="universityName"
                         type="text"
                         required
-                        value={formData.universityName}
+                        value={formData.universityName || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="Enter university name"
@@ -468,7 +469,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="name"
                         type="text"
                         required
-                        value={formData.name}
+                        value={formData.name || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="Your full name"
@@ -487,7 +488,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="position"
                         type="text"
                         required
-                        value={formData.position}
+                        value={formData.position || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="e.g., Admissions Officer, Program Director"
@@ -506,7 +507,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="email"
                         type="email"
                         required
-                        value={formData.email}
+                        value={formData.email || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="Official university email"
@@ -524,7 +525,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         id="website"
                         name="website"
                         type="url"
-                        value={formData.website}
+                        value={formData.website || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="https://university.edu"
@@ -543,7 +544,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="location"
                         type="text"
                         required
-                        value={formData.location}
+                        value={formData.location || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="City, State"
@@ -562,7 +563,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="password"
                         type="password"
                         required
-                        value={formData.password}
+                        value={formData.password || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="Create a password"
@@ -581,7 +582,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="confirmPassword"
                         type="password"
                         required
-                        value={formData.confirmPassword}
+                        value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="Confirm your password"

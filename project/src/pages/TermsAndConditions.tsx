@@ -45,7 +45,7 @@ const TermsAndConditions: React.FC = () => {
       if (university && university.terms_accepted) {
         // User already accepted terms, redirect to appropriate page
         if (university.profile_completed) {
-          navigate('/school/termsandconditions');
+          navigate('/school/dashboard');
         } else {
           navigate('/school/setup-profile');
         }
@@ -87,7 +87,7 @@ const TermsAndConditions: React.FC = () => {
 
         // Redirect based on profile completion status
         if (existingUniversity.profile_completed) {
-          navigate('/school/termsandconditions');
+          navigate('/school/dashboard');
         } else {
           navigate('/school/setup-profile');
         }
