@@ -47,6 +47,13 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     }
 
     const currentPath = location.pathname;
+    // Detectar fluxo de recuperação de senha
+    const isPasswordResetFlow = currentPath.startsWith('/forgot-password') ||
+      window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
+    if (isPasswordResetFlow) {
+      // Não redirecionar durante o fluxo de recuperação de senha
+      return;
+    }
     
     // Páginas públicas que não precisam de verificação
     const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];

@@ -224,7 +224,7 @@ const ForgotPassword: React.FC = () => {
               }
               try {
                 if (showResetForm && accessToken && refreshToken) {
-                  // Autentica sessão antes de atualizar senha
+                  // Só autentica e atualiza senha agora
                   const { error: sessionError } = await supabase.auth.setSession({
                     access_token: accessToken,
                     refresh_token: refreshToken,
@@ -232,6 +232,8 @@ const ForgotPassword: React.FC = () => {
                   if (sessionError) throw sessionError;
                   const { error } = await supabase.auth.updateUser({ password });
                   if (error) throw error;
+                  // Desloga imediatamente após atualizar senha
+                  await supabase.auth.signOut();
                   setMessage('Password updated successfully! You can now sign in with your new password.');
                   setTimeout(() => { window.location.href = '/login'; }, 3000);
                 } else {

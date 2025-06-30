@@ -73,10 +73,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-
-
   useEffect(() => {
     setLoading(true);
+
+    // Detectar fluxo de recuperação de senha
+    const isPasswordResetFlow =
+      window.location.pathname.startsWith('/forgot-password') &&
+      (window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token'));
+    if (isPasswordResetFlow) {
+      setUser(null);
+      setSupabaseUser(null);
+      setUserProfile(null);
+      setLoading(false);
+      return;
+    }
 
     const buildUser = (sessionUser: any, currentProfile: UserProfile | null): User => {
       // Priorizar role do metadata do usuário
