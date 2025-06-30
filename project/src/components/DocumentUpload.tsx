@@ -40,10 +40,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
     setError(null);
     try {
       if (!user) throw new Error('User not authenticated');
-      let uploadedDocs: { name: string; url: string; type: string; uploaded_at: string }[] = [];
+      const uploadedDocs: { name: string; url: string; type: string; uploaded_at: string }[] = [];
+      
       for (const doc of DOCUMENT_TYPES) {
         const file = files[doc.key];
         if (!file) throw new Error(`Missing file for ${doc.label}`);
+        
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
           const [resource, config] = args;
@@ -55,12 +57,18 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
           }
           return originalFetch.apply(this, args);
         };
+        
         const sanitizedFileName = sanitizeFileName(file.name);
-        const { data: storageData, error: storageError } = await supabase.storage.from('student-documents').upload(`${user.id}/${doc.key}-${Date.now()}-${sanitizedFileName}`, file, { upsert: true });
+        const { data: storageData, error: storageError } = await supabase.storage
+          .from('student-documents')
+          .upload(`${user.id}/${doc.key}-${Date.now()}-${sanitizedFileName}`, file, { upsert: true });
+        
         window.fetch = originalFetch;
         if (storageError) throw storageError;
+        
         const file_url = storageData?.path ? supabase.storage.from('student-documents').getPublicUrl(storageData.path).data.publicUrl : null;
         if (!file_url) throw new Error('Failed to get file URL');
+        
         const { error: insertError } = await supabase.from('student_documents').insert({
           user_id: user.id,
           type: doc.key,
@@ -68,9 +76,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
           status: 'pending',
         });
         if (insertError) throw insertError;
+        
         uploadedDocs.push({ name: file.name, url: file_url, type: doc.key, uploaded_at: new Date().toISOString() });
       }
-      // Atualiza o campo documents do user_profiles
+      
       // Busca documentos atuais
       const { data: userProfile, error: userProfileError } = await supabase
         .from('user_profiles')
@@ -78,22 +87,46 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
         .eq('user_id', user.id)
         .single();
       if (userProfileError) throw userProfileError;
+      
       const currentDocs = Array.isArray(userProfile.documents) ? userProfile.documents : [];
       const newDocs = [...currentDocs, ...uploadedDocs];
-      if (typeof updateUserProfile === 'function') {
-        await updateUserProfile({ documents: newDocs });
-      } else {
-        await supabase
-          .from('user_profiles')
-          .update({ documents: newDocs })
-          .eq('user_id', user.id);
-      }
+      
+      // Atualiza TODAS as colunas relacionadas a documentos
+      const updateData = {
+        documents: newDocs,
+        documents_uploaded: true,
+        documents_status: 'analyzing' as const
+      };
+      
+      // Atualiza diretamente no banco para evitar problemas de tipo
+      await supabase
+        .from('user_profiles')
+        .update(updateData)
+        .eq('user_id', user.id);
+      
       setUploading(false);
       setAnalyzing(true);
-      setTimeout(() => {
-        setAnalyzing(false);
-        onUploadSuccess();
-        navigate('/student/dashboard/application-fee');
+      
+      // Simula análise por 40 segundos e depois marca como aprovado
+      setTimeout(async () => {
+        try {
+          const finalUpdateData = {
+            documents_status: 'approved' as const
+          };
+          
+          await supabase
+            .from('user_profiles')
+            .update(finalUpdateData)
+            .eq('user_id', user.id);
+          
+          setAnalyzing(false);
+          onUploadSuccess();
+          navigate('/student/dashboard/application-fee');
+        } catch (e) {
+          console.error('Erro ao atualizar status final:', e);
+          setAnalyzing(false);
+          onUploadSuccess();
+        }
       }, 40000);
     } catch (e: any) {
       setUploading(false);
@@ -124,6 +157,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
                 accept="application/pdf,image/*"
                 onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
                 disabled={uploading || analyzing}
+                placeholder={`Select ${doc.label} file`}
                 className="border border-slate-200 rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition text-sm"
               />
               {files[doc.key] && <span className="text-xs text-slate-500 mt-1 truncate max-w-full">{files[doc.key]?.name}</span>}

@@ -153,11 +153,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             value={selectedLevel}
             onChange={(e) => setSelectedLevel(e.target.value)}
             className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+            title="Filter by academic level"
           >
             <option value="all">All Levels</option>
             <option value="undergraduate">Undergraduate</option>
             <option value="graduate">Graduate</option>
-            <option value="doctorate">Doctorate</option>
+            <option value="postgraduate">Postgraduate</option>
           </select>
 
           {/* Field Filter */}
@@ -165,6 +166,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             value={selectedField}
             onChange={(e) => setSelectedField(e.target.value)}
             className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+            title="Filter by field of study"
           >
             <option value="all">All Fields</option>
             <option value="stem">STEM</option>
@@ -178,6 +180,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
             className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+            title="Sort scholarships by"
           >
             <option value="deadline">Sort by Deadline</option>
             <option value="amount">Sort by Amount</option>
@@ -234,6 +237,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
                     {scholarship.title}
                   </h3>
+                  
+                  {/* Programs */}
+                  <div className="flex items-center mb-3">
+                    <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                      {scholarship.field_of_study || 'Any Field'}
+                    </span>
+                  </div>
+                  
                   {/* University */}
                   <div className="flex items-center text-slate-600">
                     <Building className="h-4 w-4 mr-2 text-[#05294E]" />
@@ -268,12 +279,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       {getLevelIcon(scholarship.level || 'undergraduate')}
                       <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">Field</span>
-                    <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                      {scholarship.field_of_study || 'Any Field'}
-                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Deadline</span>

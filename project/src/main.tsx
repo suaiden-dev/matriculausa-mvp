@@ -4,7 +4,8 @@ import App from './App.tsx';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  // StrictMode removido para evitar renderizações duplas desnecessárias
+  // <StrictMode>
     <App />
-  </StrictMode>
+  // </StrictMode>
 );

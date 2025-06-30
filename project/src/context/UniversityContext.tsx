@@ -28,11 +28,17 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  // Track se já carregamos dados uma vez para cache inteligente
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+
   const loadData = async () => {
     if (!user) return;
 
     try {
-      setLoading(true);
+      // CACHE INTELIGENTE: Só mostrar loading se não temos dados ainda
+      if (!hasLoadedData) {
+        setLoading(true);
+      }
       setError(null);
       
       // Load university data
@@ -72,6 +78,9 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
         }
         setApplications(applicationsData || []);
       }
+      
+      // Marcar que já carregamos dados uma vez
+      setHasLoadedData(true);
     } catch (error: any) {
       console.error('Error loading university data:', error);
       setError(error.message || 'Failed to load university data');

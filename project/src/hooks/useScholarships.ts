@@ -4,12 +4,17 @@ import type { Scholarship } from '../types';
 
 export function useScholarships() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchScholarships() {
-      setLoading(true);
+      // Only show loading on first data fetch
+      if (!hasLoadedData) {
+        setLoading(true);
+      }
+      
       const { data, error } = await supabase
         .from('scholarships')
         .select(`id, title, description, amount, deadline, requirements, field_of_study, level, eligibility, benefits, is_exclusive, is_active, university_id, created_at, updated_at, needcpt, visaassistance, scholarshipvalue, image_url, original_value_per_credit, original_annual_value, annual_value_with_scholarship, scholarship_type, universities!inner(id, name, logo_url, location, is_approved)`)
@@ -22,9 +27,10 @@ export function useScholarships() {
         setScholarships(filtered as unknown as Scholarship[]);
       }
       setLoading(false);
+      setHasLoadedData(true);
     }
     fetchScholarships();
-  }, []);
+  }, [hasLoadedData]);
 
   return { scholarships, loading, error };
 } 

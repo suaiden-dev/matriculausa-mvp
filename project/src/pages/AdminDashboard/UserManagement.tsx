@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Crown, 
@@ -14,7 +14,9 @@ import {
   MapPin,
   Calendar,
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  List,
+  Grid3X3
 } from 'lucide-react';
 
 interface UserManagementProps {
@@ -37,6 +39,18 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Carregar preferência do localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('user-view-mode') as 'grid' | 'list';
+    if (saved) setViewMode(saved);
+  }, []);
+
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('user-view-mode', mode);
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,6 +163,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
               className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all duration-200"
+              aria-label="Filter by role"
+              title="Filter by role"
             >
               <option value="all">All Roles</option>
               <option value="student">Students</option>
@@ -160,12 +176,35 @@ const UserManagement: React.FC<UserManagementProps> = ({
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all duration-200"
+              aria-label="Filter by status"
+              title="Filter by status"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="suspended">Suspended</option>
             </select>
+
+            <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1">
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                  viewMode === 'grid' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="Grid view"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                  viewMode === 'list' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="List view"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -177,84 +216,140 @@ const UserManagement: React.FC<UserManagementProps> = ({
         </div>
       </div>
 
-      {/* Users Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredUsers.map((user) => {
-          const RoleIcon = getRoleIcon(user.role);
-          
-          return (
-            <div key={user.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-lg transition-all duration-300">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    user.role === 'admin' ? 'bg-purple-100' : 
-                    user.role === 'school' ? 'bg-blue-100' : 'bg-green-100'
-                  }`}>
-                    <RoleIcon className={`h-6 w-6 ${
-                      user.role === 'admin' ? 'text-purple-600' : 
-                      user.role === 'school' ? 'text-blue-600' : 'text-green-600'
-                    }`} />
+      {/* Users Grid/List */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredUsers.map((user) => {
+            const RoleIcon = getRoleIcon(user.role);
+            
+            return (
+              <div key={user.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-lg transition-all duration-300">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      user.role === 'admin' ? 'bg-purple-100' : 
+                      user.role === 'school' ? 'bg-blue-100' : 'bg-green-100'
+                    }`}>
+                      <RoleIcon className={`h-6 w-6 ${
+                        user.role === 'admin' ? 'text-purple-600' : 
+                        user.role === 'school' ? 'text-blue-600' : 'text-green-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{user.full_name}</h3>
+                      <p className="text-sm text-slate-500">{user.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{user.full_name}</h3>
-                    <p className="text-sm text-slate-500">{user.email}</p>
-                  </div>
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
-                  {user.status}
-                </span>
-              </div>
-              
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">Role</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                    {user.role}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
+                    {user.status}
                   </span>
                 </div>
                 
-                {user.country && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {user.country}
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Role</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                      {user.role}
+                    </span>
                   </div>
-                )}
-                
-                {user.field_of_interest && (
+                  
+                  {user.country && (
+                    <div className="flex items-center text-sm text-slate-600">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      {user.country}
+                    </div>
+                  )}
+                  
+                  {user.field_of_interest && (
+                    <div className="flex items-center text-sm text-slate-600">
+                      <Activity className="h-4 w-4 mr-2" />
+                      {user.field_of_interest}
+                    </div>
+                  )}
+                  
                   <div className="flex items-center text-sm text-slate-600">
-                    <Activity className="h-4 w-4 mr-2" />
-                    {user.field_of_interest}
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Joined {new Date(user.created_at).toLocaleDateString()}
                   </div>
-                )}
-                
-                <div className="flex items-center text-sm text-slate-600">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Joined {new Date(user.created_at).toLocaleDateString()}
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setSelectedUser(user)}
+                    className="flex-1 bg-slate-100 text-slate-700 py-2 px-3 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium"
+                  >
+                    View Details
+                  </button>
+                  
+                  {user.status === 'active' && user.role !== 'admin' && (
+                    <button
+                      onClick={() => onSuspend(user.user_id)}
+                      className="bg-red-100 text-red-700 py-2 px-3 rounded-lg hover:bg-red-200 transition-colors"
+                      title="Suspend User"
+                      aria-label="Suspend user"
+                    >
+                      <Ban className="h-4 w-4" />
+                      <span className="sr-only">Suspend</span>
+                    </button>
+                  )}
                 </div>
               </div>
-
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setSelectedUser(user)}
-                  className="flex-1 bg-slate-100 text-slate-700 py-2 px-3 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium"
-                >
-                  View Details
-                </button>
-                
-                {user.status === 'active' && user.role !== 'admin' && (
-                  <button
-                    onClick={() => onSuspend(user.user_id)}
-                    className="bg-red-100 text-red-700 py-2 px-3 rounded-lg hover:bg-red-200 transition-colors"
-                    title="Suspend User"
-                  >
-                    <Ban className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50">
+                <th className="px-4 py-2 text-left">Name</th>
+                <th className="px-4 py-2 text-left">Email</th>
+                <th className="px-4 py-2 text-left">Role</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Country</th>
+                <th className="px-4 py-2 text-left">Joined</th>
+                <th className="px-4 py-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="border-b">
+                  <td className="px-4 py-2 font-medium text-slate-900">{user.full_name}</td>
+                  <td className="px-4 py-2 text-slate-600">{user.email}</td>
+                  <td className="px-4 py-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>{user.role}</span>
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>{user.status}</span>
+                  </td>
+                  <td className="px-4 py-2 text-slate-600">{user.country || '-'}</td>
+                  <td className="px-4 py-2 text-slate-600">{new Date(user.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => setSelectedUser(user)}
+                      className="bg-slate-100 text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-200 transition-colors text-xs font-medium"
+                      aria-label="View user details"
+                      title="View user details"
+                    >
+                      View
+                    </button>
+                    {user.status === 'active' && user.role !== 'admin' && (
+                      <button
+                        onClick={() => onSuspend(user.user_id)}
+                        className="ml-2 bg-red-100 text-red-700 py-1 px-3 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium"
+                        title="Suspend User"
+                        aria-label="Suspend user"
+                      >
+                        Suspend
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {filteredUsers.length === 0 && (
         <div className="text-center py-12">

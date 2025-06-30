@@ -27,7 +27,8 @@ interface OrderData {
 export function useSubscription() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [orders, setOrders] = useState<OrderData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
 
@@ -36,11 +37,15 @@ export function useSubscription() {
       setSubscription(null);
       setOrders([]);
       setLoading(false);
+      setHasLoadedData(true);
       return;
     }
 
     async function fetchSubscriptionData() {
-      setLoading(true);
+      // Only show loading on first data fetch
+      if (!hasLoadedData) {
+        setLoading(true);
+      }
       setError(null);
       
       try {
@@ -74,11 +79,12 @@ export function useSubscription() {
         setError(err.message || 'An unexpected error occurred');
       } finally {
         setLoading(false);
+        setHasLoadedData(true);
       }
     }
 
     fetchSubscriptionData();
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, hasLoadedData]);
 
   const hasActiveSubscription = subscription?.subscription_status === 'active';
   

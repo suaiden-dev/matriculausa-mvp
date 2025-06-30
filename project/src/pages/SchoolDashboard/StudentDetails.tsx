@@ -121,6 +121,12 @@ const StudentDetails: React.FC = () => {
               <div><strong>Email:</strong> {student.email}</div>
               <div><strong>Phone:</strong> {student.phone || 'N/A'}</div>
               <div><strong>Country:</strong> {student.country || 'N/A'}</div>
+              <div><strong>Student Type:</strong> {
+                application.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
+                application.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
+                application.student_process_type === 'status_change' ? 'Status Change - From Other Visa' :
+                application.student_process_type || 'N/A'
+              }</div>
             </div>
              <div className="mt-4 pt-4 border-t">
                <strong>Status: </strong> 

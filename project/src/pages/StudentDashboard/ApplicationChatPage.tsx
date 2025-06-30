@@ -30,9 +30,23 @@ const ApplicationChatPage: React.FC = () => {
   const { user, userProfile } = useAuth();
   const { messages, sendMessage, loading, isSending, error } = useApplicationChat(applicationId);
 
-  // Estado do I-20 Control Fee
+  // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
   const [i20Error, setI20Error] = useState<string | null>(null);
+  const [applicationDetails, setApplicationDetails] = useState<any>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // useEffect também deve vir antes de qualquer return condicional
+  useEffect(() => {
+    if (applicationId) {
+      supabase
+        .from('scholarship_applications')
+        .select(`*, user_profiles!student_id(*), scholarships(*)`)
+        .eq('id', applicationId)
+        .single()
+        .then(({ data }) => setApplicationDetails(data));
+    }
+  }, [applicationId]);
 
   // Função para iniciar o pagamento do I-20 Control Fee
   const handlePayI20 = async () => {
@@ -72,25 +86,10 @@ const ApplicationChatPage: React.FC = () => {
   const paymentDate = userProfile?.i20_control_fee_due_date || null;
   const isExpired = !hasPaid && dueDate ? new Date(dueDate) < new Date() : false;
 
-  // This check prevents rendering with an invalid state that can cause hook order issues.
+  // AGORA podemos ter o return condicional - todos os hooks já foram chamados
   if (!user) {
     return <div className="text-center text-gray-500 py-10">Authenticating...</div>;
   }
-
-  // Buscar detalhes da application e bolsa
-  const [applicationDetails, setApplicationDetails] = useState<any>(null);
-  useEffect(() => {
-    if (applicationId) {
-      supabase
-        .from('scholarship_applications')
-        .select(`*, user_profiles!student_id(*), scholarships(*)`)
-        .eq('id', applicationId)
-        .single()
-        .then(({ data }) => setApplicationDetails(data));
-    }
-  }, [applicationId]);
-
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   return (
     <div className="p-4 md:p-6 flex flex-col items-center">
@@ -108,13 +107,19 @@ const ApplicationChatPage: React.FC = () => {
                 <div><strong>Email:</strong> {applicationDetails.user_profiles?.email}</div>
                 <div><strong>Phone:</strong> {applicationDetails.user_profiles?.phone || 'N/A'}</div>
                 <div><strong>Country:</strong> {applicationDetails.user_profiles?.country || 'N/A'}</div>
+                <div><strong>Student Type:</strong> {
+                  applicationDetails.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
+                  applicationDetails.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
+                  applicationDetails.student_process_type === 'status_change' ? 'Status Change - From Other Visa' :
+                  applicationDetails.student_process_type || 'N/A'
+                }</div>
               </div>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-md">
               <h3 className="text-xl font-bold text-[#05294E] mb-4">Scholarship Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><strong>Scholarship:</strong> {applicationDetails.scholarships?.title || applicationDetails.scholarships?.name}</div>
-                <div><strong>Amount:</strong> ${Number(applicationDetails.scholarships?.amount).toLocaleString()}</div>
+                <div><strong>Annual Value with Scholarship:</strong> ${Number(applicationDetails.scholarships?.annual_value_with_scholarship || 0).toLocaleString()}</div>
                 {applicationDetails.scholarships?.course && <div><strong>Course:</strong> {applicationDetails.scholarships.course}</div>}
                 {applicationDetails.scholarships?.country && <div><strong>Country:</strong> {applicationDetails.scholarships.country}</div>}
                 <div className="md:col-span-2"><strong>Description:</strong> {applicationDetails.scholarships?.description}</div>

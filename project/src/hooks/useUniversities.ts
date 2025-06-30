@@ -4,12 +4,17 @@ import type { University } from '../types';
 
 export function useUniversities() {
   const [universities, setUniversities] = useState<University[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchUniversities() {
-      setLoading(true);
+      // Only show loading on first data fetch
+      if (!hasLoadedData) {
+        setLoading(true);
+      }
+      
       const { data, error } = await supabase
         .from('universities')
         .select('*')
@@ -22,10 +27,12 @@ export function useUniversities() {
       } else {
         setUniversities(data as University[]);
       }
+      
       setLoading(false);
+      setHasLoadedData(true);
     }
     fetchUniversities();
-  }, []);
+  }, [hasLoadedData]);
 
   return { universities, loading, error };
 } 

@@ -53,21 +53,41 @@ Deno.serve(async (req) => {
       if (!userId) return corsResponse({ error: 'User ID (client_reference_id) missing in session.' }, 400);
       if (!scholarshipsIds) return corsResponse({ error: 'Scholarships IDs missing in session metadata.' }, 400);
 
-      // Atualiza perfil do usuário para marcar que pagou a scholarship fee
-      const { error: profileError } = await supabase
+      // Busca o perfil do usuário para obter o user_profiles.id correto
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, user_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError || !userProfile) {
+        console.error('User profile not found:', profileError);
+        return corsResponse({ error: 'User profile not found' }, 404);
+      }
+
+      console.log(`User profile found: ${userProfile.id} for auth user: ${userId}`);
+
+      // Atualiza perfil do usuário para marcar que pagou a scholarship fee (usando userId para user_profiles)
+      const { error: profileUpdateError } = await supabase
         .from('user_profiles')
         .update({ is_scholarship_fee_paid: true })
         .eq('user_id', userId);
-      if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
+      if (profileUpdateError) throw new Error(`Failed to update user_profiles: ${profileUpdateError.message}`);
 
-      // Atualiza status das aplicações relacionadas para 'approved'
+      console.log('User profile updated - scholarship fee paid');
+
+      // Atualiza status das aplicações relacionadas para 'approved' (usando userProfile.id)
       const scholarshipIdsArray = scholarshipsIds.split(',').map((id: string) => id.trim());
+      console.log(`Updating applications for student_id: ${userProfile.id}, scholarship_ids: ${scholarshipIdsArray}`);
+      
       const { error: appError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'approved' })
-        .eq('student_id', userId)
+        .eq('student_id', userProfile.id)
         .in('scholarship_id', scholarshipIdsArray);
       if (appError) throw new Error(`Failed to update scholarship_applications: ${appError.message}`);
+
+      console.log('Scholarship applications updated to approved status');
 
       // Limpa carrinho (opcional)
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);

@@ -119,31 +119,31 @@ const Scholarships: React.FC = () => {
   return (
     <div className="bg-white min-h-screen">
       {/* Header */}
-      <section className="bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] text-white py-20 relative overflow-hidden">
+      <section className="bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] text-white py-8 relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+          <div className="absolute top-5 left-10 w-56 h-56 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-5 right-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
         </div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-8">
+            <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-4">
               <Award className="h-4 w-4 mr-2 text-white" />
               <span className="text-sm font-medium text-white">Exclusive Opportunities</span>
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-black mb-6 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
               <span className="text-white">Scholarship</span>
               <br />
               <span className="text-[#D0151C]">Opportunities</span>
             </h1>
             
-            <p className="text-xl text-slate-200 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg text-slate-200 max-w-3xl mx-auto leading-relaxed mb-6">
               Discover exclusive funding opportunities crafted specifically for international students pursuing American education excellence.
             </p>
             
             {/* Stats */}
-            <div className="flex flex-wrap justify-center items-center gap-8 mt-12 text-slate-300">
+            <div className="flex flex-wrap justify-center items-center gap-6 text-slate-300">
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
                 <DollarSign className="h-5 w-5 mr-2 text-green-400" />
                 <span className="text-sm font-medium">$50M+ Available</span>
@@ -303,6 +303,13 @@ const Scholarships: React.FC = () => {
                           {scholarship.title}
                         </h3>
                         
+                        {/* Programs */}
+                        <div className="flex items-center mb-3">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                            {scholarship.field_of_study || 'Any Field'}
+                          </span>
+                        </div>
+                        
                         {/* University */}
                         <div className="flex items-center text-slate-600 mb-4">
                           <Building className="h-4 w-4 mr-2 text-[#05294E]" />
@@ -345,13 +352,6 @@ const Scholarships: React.FC = () => {
                           {getLevelIcon(scholarship.level || 'undergraduate')}
                           <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Field</span>
-                        <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                          {scholarship.field_of_study || 'Any Field'}
-                        </span>
                       </div>
                       
                       <div className="flex items-center justify-between text-sm">

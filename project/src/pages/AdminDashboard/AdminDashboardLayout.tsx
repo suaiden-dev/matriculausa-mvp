@@ -7,7 +7,6 @@ import {
   Award, 
   Settings, 
   BarChart3,
-  Bell,
   Search,
   Menu,
   X,
@@ -17,7 +16,8 @@ import {
   Shield,
   Activity,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -40,9 +40,11 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   
   const getActiveTab = () => {
     const path = location.pathname;
+    if (path.includes('/application-monitoring')) return 'application-monitoring';
     if (path.includes('/universities')) return 'universities';
     if (path.includes('/users')) return 'users';
     if (path.includes('/scholarships')) return 'scholarships';
+    if (path.includes('/payments')) return 'payments';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -84,6 +86,8 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
+    { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
+    { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
     { id: 'settings', label: 'System Settings', icon: Settings, path: '/admin/dashboard/settings', badge: null }
   ];
 
@@ -229,12 +233,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   />
                 </div>
               </div>
-
-              {/* Notifications */}
-              <button className="relative p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
 
               {/* User Menu */}
               <div className="relative">

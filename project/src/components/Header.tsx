@@ -63,7 +63,10 @@ const Header: React.FC = () => {
               Home
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
             </Link>
-            <Link to="/schools" className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group">
+            <Link 
+              to="/schools" 
+              className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group"
+            >
               Universities
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
             </Link>
@@ -165,7 +168,13 @@ const Header: React.FC = () => {
         <div className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/50">
           <div className="px-4 pt-4 pb-6 space-y-2">
             <Link to="/" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>Home</Link>
-            <Link to="/schools" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>Universities</Link>
+            <Link 
+              to="/schools" 
+              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" 
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Universities
+            </Link>
             <Link to="/scholarships" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200 flex items-center" onClick={() => setIsMenuOpen(false)}>
               Scholarships
             </Link>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -31,7 +31,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [showStudentVerificationNotice, setShowStudentVerificationNotice] = useState(false);
   
   const { login, register, isAuthenticated, user } = useAuth();
-  const navigate = useNavigate();
 
   // Global scroll-to-top on login/register page load
   useEffect(() => {
@@ -42,17 +41,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      if (user.role === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (user.role === 'school') {
-        navigate('/school/dashboard', { replace: true });
-      } else if (user.role === 'student') {
-        navigate('/student/dashboard', { replace: true });
-      }
-    }
-  }, [isAuthenticated, user, navigate]);
+  // Remove redirecionamento - deixar AuthRedirect fazer isso
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,14 +83,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         return;
       } else {
         await login(formData.email, formData.password);
-        // Após login bem-sucedido, redireciona para o dashboard correto
-        if (user && user.role === 'admin') {
-          navigate('/admin/dashboard', { replace: true });
-        } else if (user && user.role === 'school') {
-          navigate('/school/dashboard', { replace: true });
-        } else if (user && user.role === 'student') {
-          navigate('/', { replace: true });
-        }
+        // O redirecionamento será feito pelo AuthRedirect
         return;
       }
     } catch (err: any) {
@@ -267,7 +249,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </div>
             <button
               className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
-              onClick={() => { setShowVerificationModal(false); navigate('/school/termsandconditions'); }}
+              onClick={() => setShowVerificationModal(false)}
             >
               Got it
             </button>

@@ -51,32 +51,95 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-application-fee] Received payload:', { price_id, success_url, cancel_url, mode, metadata });
 
+    // Busca o perfil do usuário para obter o user_profiles.id correto
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id, user_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !userProfile) {
+      console.error('[stripe-checkout-application-fee] User profile not found:', profileError);
+      return corsResponse({ error: 'User profile not found' }, 404);
+    }
+
     // Verifica se application_id foi fornecido
-    const applicationId = metadata?.application_id;
+    let applicationId = metadata?.application_id;
     if (!applicationId) {
       return corsResponse({ error: 'Application ID is required in metadata' }, 400);
     }
 
-    // Verifica se a aplicação existe e pertence ao usuário
-    const { data: application, error: appError } = await supabase
+    // Verifica se a aplicação existe e pertence ao usuário (usando userProfile.id)
+    let { data: application, error: appError } = await supabase
       .from('scholarship_applications')
-      .select('id, student_id')
+      .select('id, student_id, scholarship_id, student_process_type')
       .eq('id', applicationId)
-      .eq('student_id', user.id)
+      .eq('student_id', userProfile.id)
       .single();
 
+    // Se a aplicação não existe, tenta criar uma nova
     if (appError || !application) {
-      console.error('[stripe-checkout-application-fee] Application not found:', appError);
-      return corsResponse({ error: 'Application not found or access denied' }, 404);
+      console.log('[stripe-checkout-application-fee] Application not found, attempting to create new one');
+      
+      // Extrai scholarship_id do metadata se disponível
+      const scholarshipId = metadata?.selected_scholarship_id || metadata?.scholarship_id;
+      if (!scholarshipId) {
+        console.error('[stripe-checkout-application-fee] No scholarship_id in metadata to create application');
+        return corsResponse({ error: 'Application not found and scholarship_id missing to create new one' }, 404);
+      }
+
+      // Preparar dados da aplicação incluindo student_process_type se disponível
+      const applicationData: any = {
+        student_id: userProfile.id,
+        scholarship_id: scholarshipId,
+        status: 'pending',
+        applied_at: new Date().toISOString(),
+      };
+
+      // Adicionar student_process_type se disponível no metadata
+      if (metadata?.student_process_type) {
+        applicationData.student_process_type = metadata.student_process_type;
+        console.log('[stripe-checkout-application-fee] Adding student_process_type:', metadata.student_process_type);
+      }
+
+      // Cria nova aplicação usando userProfile.id (correto)
+      const { data: newApp, error: insertError } = await supabase
+        .from('scholarship_applications')
+        .insert(applicationData)
+        .select('id, student_id, scholarship_id, student_process_type')
+        .single();
+
+      if (insertError || !newApp) {
+        console.error('[stripe-checkout-application-fee] Error creating application:', insertError);
+        return corsResponse({ error: 'Failed to create application' }, 500);
+      }
+
+      application = newApp;
+      applicationId = newApp.id;
+      console.log('[stripe-checkout-application-fee] New application created:', application.id);
+    } else {
+      console.log('[stripe-checkout-application-fee] Application verified:', application.id);
+      
+      // Se a aplicação existe mas não tem student_process_type, atualiza se disponível
+      if (!application.student_process_type && metadata?.student_process_type) {
+        console.log('[stripe-checkout-application-fee] Updating existing application with student_process_type:', metadata.student_process_type);
+        const { error: updateError } = await supabase
+          .from('scholarship_applications')
+          .update({ student_process_type: metadata.student_process_type })
+          .eq('id', application.id);
+        
+        if (updateError) {
+          console.error('[stripe-checkout-application-fee] Error updating student_process_type:', updateError);
+        }
+      }
     }
 
-    console.log('[stripe-checkout-application-fee] Application verified:', application.id);
-
-    // Monta o metadata para o Stripe
+    // Monta o metadata para o Stripe (usando user.id para compatibilidade com webhooks)
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'application_fee',
       application_id: applicationId,
+      student_process_type: application?.student_process_type || metadata?.student_process_type || null,
       ...metadata,
     };
 

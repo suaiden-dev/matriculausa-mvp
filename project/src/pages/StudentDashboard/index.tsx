@@ -52,7 +52,9 @@ const StudentDashboard: React.FC = () => {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile } = useAuth();
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const cart = useCartStore((state) => state.cart);
   const navigate = useNavigate();
 
@@ -66,6 +68,10 @@ const StudentDashboard: React.FC = () => {
     if (!user) return;
 
     try {
+      if (!hasLoadedData) {
+        setDashboardLoading(true);
+      }
+
       // Buscar bolsas reais do Supabase com informações da universidade
       const { data: realScholarships, error: scholarshipsError } = await supabase
         .from('scholarships')
@@ -129,8 +135,12 @@ const StudentDashboard: React.FC = () => {
           updated_at: profileData.updated_at
         });
       }
+
+      setHasLoadedData(true);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+    } finally {
+      setDashboardLoading(false);
     }
   };
 
@@ -207,7 +217,7 @@ const StudentDashboard: React.FC = () => {
   };
 
   return (
-    <StudentDashboardLayout user={user} profile={profile} loading={loading}>
+    <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
       {/* Área de proteção para o botão */}
       <div className="floating-cart-area" />
       

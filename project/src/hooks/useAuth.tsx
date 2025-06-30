@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -73,18 +72,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const navigate = useNavigate();
 
-  console.log('AUTH_DEBUG: AuthProvider renderizado.');
-  console.log('AUTH_DEBUG: Estado inicial: loading=', loading, 'user=', user?.id);
+
 
   useEffect(() => {
-    console.log('AUTH_DEBUG: useEffect disparado.');
     setLoading(true);
 
     const buildUser = (sessionUser: any, currentProfile: UserProfile | null): User => {
-      console.log('AUTH_DEBUG: buildUser - Iniciando construção de objeto User. sessionUser ID:', sessionUser?.id, 'currentProfile ID:', currentProfile?.id);
-      
       // Priorizar role do metadata do usuário
       let role = sessionUser?.user_metadata?.role;
       
@@ -99,16 +93,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role = getDefaultRole(sessionUser?.email || '');
       }
       
-      console.log('AUTH_DEBUG: Role detectado:', role);
       const builtUser: User = {
-      id: sessionUser.id,
-      email: sessionUser.email,
-      name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || '',
-      role,
+        id: sessionUser.id,
+        email: sessionUser.email,
+        name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || '',
+        role,
         university_id: currentProfile?.university_id ?? undefined,
         hasPaidProcess: currentProfile?.has_paid_selection_process_fee,
-    };
-      console.log('AUTH_DEBUG: buildUser - Objeto User construído:', builtUser);
+      };
       return builtUser;
     };
 
@@ -127,7 +119,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (error) {
             if (error.code === 'PGRST116') {
               // Perfil não encontrado - isso é normal
-              console.log('AUTH_DEBUG: Perfil não encontrado, será criado');
             } else {
               console.log("Error fetching user profile:", error);
             }
@@ -140,7 +131,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Se não existe perfil, criar um novo
         if (!profile) {
-          console.log('AUTH_DEBUG: Perfil não encontrado, criando novo...');
           try {
             const pendingFullName = localStorage.getItem('pending_full_name');
             const fullName = pendingFullName || 
@@ -161,7 +151,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               
             if (insertError) {
               if (insertError.code === '23505') { // Duplicate key error
-                console.log('AUTH_DEBUG: Perfil já existe, tentando buscar novamente...');
                 // Se já existe, tentar buscar novamente
                 try {
                   const { data: existingProfile } = await supabase
@@ -178,11 +167,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             } else {
               profile = newProfile;
-              console.log('AUTH_DEBUG: Perfil criado com sucesso:', profile);
               
               // Se é uma escola, criar registro na tabela universities
               if (session.user.user_metadata?.role === 'school') {
-                console.log('AUTH_DEBUG: Criando registro de universidade...');
                 try {
                   const { error: universityError } = await supabase
                     .from('universities')
@@ -204,8 +191,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     
                   if (universityError) {
                     console.error('Error creating university:', universityError);
-                  } else {
-                    console.log('AUTH_DEBUG: Universidade criada com sucesso');
                   }
                 } catch (error) {
                   console.error('Error creating university:', error);
@@ -226,12 +211,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUserProfile(profile);
         setUser(buildUser(session.user, profile));
         setSupabaseUser(session.user);
-        console.log('AUTH_DEBUG: onAuthStateChange - User e UserProfile setados. Profile:', profile?.id || 'null');
       } else {
         setUser(null);
         setSupabaseUser(null);
         setUserProfile(null);
-        console.log('AUTH_DEBUG: onAuthStateChange - User e UserProfile resetados para null.');
       }
     };
     
@@ -249,7 +232,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     );
 
     return () => {
-      console.log('AUTH_DEBUG: useEffect cleanup.');
       subscription.unsubscribe();
     };
   }, []);
@@ -311,7 +293,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw error;
     }
     // O user_profile será criado automaticamente pelo listener de auth state change
-    console.log('Login realizado com sucesso');
     // Redirection will be handled by the auth state change listener
   };
 
@@ -326,7 +307,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setUserProfile(null); 
     setLoading(false);
-    console.log("AUTH_DEBUG: User logged out, user and userProfile set to null.");
   };
 
   const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => {
@@ -359,9 +339,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // O user_profile será criado naturalmente quando o usuário fizer login
     // Salvar dados no localStorage para uso posterior
     if (data?.user) {
-      console.log('Usuário registrado com sucesso. userData:', userData);
+      // Usuário registrado com sucesso
     } else {
-      console.log('Usuário criado, mas precisa confirmar o e-mail antes de ativar a conta. userData:', userData);
+      // Usuário criado, mas precisa confirmar o e-mail antes de ativar a conta
     }
     // Registration redirection will be handled in the Auth component
   };
@@ -378,8 +358,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     updateUserProfile,
   };
-
-  console.log('AUTH_DEBUG: AuthProvider renderizando com estados: user=', user?.id, 'userProfile=', userProfile, 'loading=', loading);
 
   return (
     <AuthContext.Provider value={value}>

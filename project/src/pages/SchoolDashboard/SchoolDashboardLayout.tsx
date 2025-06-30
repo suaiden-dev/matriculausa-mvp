@@ -12,7 +12,6 @@ import {
   Home,
   Users,
   BarChart3,
-  Bell,
   Search,
   Menu,
   X,
@@ -189,8 +188,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
             })}
           </nav>
 
-
-
           {/* Support */}
           <div className="px-4 py-4 border-t border-slate-200">
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-4 border border-slate-200">
@@ -265,12 +262,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
                   />
                 </div>
               </div>
-
-              {/* Notifications */}
-              <button className="relative p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
 
               {/* User Menu */}
               <div className="relative">

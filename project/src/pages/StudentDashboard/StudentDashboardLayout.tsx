@@ -7,7 +7,6 @@ import {
   User, 
   Settings, 
   BarChart3,
-  Bell,
   Search,
   Menu,
   X,
@@ -42,7 +41,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/scholarships')) return 'scholarships';
-    if (path.includes('/applications')) return 'applications';
+    if (path.includes('/cart')) return 'cart';
+    if (path.includes('/applications') || path.includes('/application/')) return 'applications';
     if (path.includes('/profile')) return 'profile';
     return 'overview';
   };
@@ -60,17 +60,18 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 font-medium">Loading student dashboard...</p>
+          <p className="text-slate-600 font-medium">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   const sidebarItems = [
-    { id: 'overview', label: 'Overview', icon: BarChart3, path: '/student/dashboard', badge: null },
-    { id: 'scholarships', label: 'Find Scholarships', icon: Award, path: '/student/dashboard/scholarships', badge: null },
-    { id: 'applications', label: 'My Applications', icon: FileText, path: '/student/dashboard/applications', badge: null },
-    { id: 'profile', label: 'Profile', icon: User, path: '/student/dashboard/profile', badge: null }
+    { id: 'overview', label: 'Overview', icon: BarChart3, path: '/student/dashboard' },
+    { id: 'scholarships', label: 'Browse Scholarships', icon: Award, path: '/student/dashboard/scholarships' },
+    { id: 'cart', label: 'Selected Scholarships', icon: GraduationCap, path: '/student/dashboard/cart' },
+    { id: 'applications', label: 'My Applications', icon: FileText, path: '/student/dashboard/applications' },
+    { id: 'profile', label: 'Profile', icon: User, path: '/student/dashboard/profile' }
   ];
 
   return (
@@ -97,7 +98,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </button>
           </div>
 
-          {/* Student Status */}
+          {/* User Profile */}
           <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -149,37 +150,14 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
 
           {/* Quick Actions */}
           <div className="px-4 py-4 border-t border-slate-200">
-            {user?.hasPaidProcess ? (
-              <Link
-                to="/student/dashboard/scholarships"
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                <Award className="h-4 w-4 mr-2" />
-                Find Scholarships
-              </Link>
-            ) : (
-              <StripeCheckout
-                productId="SELECTION_PROCESS"
-                feeType="selection_process"
-                paymentType="selection_process"
-                buttonText="Start Selection Process"
-                className="w-full bg-gradient-to-r from-[#D0151C] to-red-600 text-white py-3 px-4 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold text-sm flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
-                successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-              />
-            )}
-          </div>
-
-          {/* Support */}
-          <div className="px-4 py-4 border-t border-slate-200">
-            <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-4 border border-slate-200">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Shield className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">Student Support</h4>
-                  <p className="text-xs text-slate-500">We're here to help</p>
+                  <h4 className="font-semibold text-slate-900 text-sm">Academic Support</h4>
+                  <p className="text-xs text-slate-500">24/7 assistance available</p>
                 </div>
               </div>
             </div>
@@ -191,36 +169,29 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
+          onClick={() => {
+            setSidebarOpen(false);
+            setUserMenuOpen(false);
+          }}
         />
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="bg-white shadow-sm border-b border-slate-200">
-          <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => { setSidebarOpen(true); setUserMenuOpen(false); }}
+                onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
                 <Menu className="h-5 w-5" />
               </button>
               
-              <div className="hidden md:block">
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {activeTab === 'overview' && 'Student Overview'}
-                  {activeTab === 'scholarships' && 'Find Scholarships'}
-                  {activeTab === 'applications' && 'My Applications'}
-                  {activeTab === 'profile' && 'Student Profile'}
-                </h1>
-                <p className="text-slate-600">
-                  {activeTab === 'overview' && 'Track your progress and discover new opportunities'}
-                  {activeTab === 'scholarships' && 'Discover scholarship opportunities tailored for you'}
-                  {activeTab === 'applications' && 'Track your scholarship applications and status'}
-                  {activeTab === 'profile' && 'Manage your academic profile and preferences'}
-                </p>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Student Dashboard</h1>
+                <p className="text-sm text-slate-500">Manage your scholarship applications</p>
               </div>
             </div>
 
@@ -237,74 +208,61 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 </div>
               </div>
 
-              {/* Notifications */}
-              <button className="relative p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-
               {/* User Menu */}
               <div className="relative">
                 <button
-                  onClick={() => { setUserMenuOpen(!userMenuOpen); setSidebarOpen(false); }}
+                  onClick={() => {
+                    setUserMenuOpen(!userMenuOpen);
+                    if (!userMenuOpen) setSidebarOpen(false);
+                  }}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-slate-900 text-sm">{profile?.name || user?.name}</p>
                     <p className="text-xs text-slate-500">Student</p>
-                    {user?.hasPaidProcess && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        <CreditCard className="h-3 w-3 mr-1" />
-                        Selection Process Active
-                      </span>
-                    )}
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>
 
+                {/* User Dropdown */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
-                    <div className="px-4 py-3 border-b border-slate-200">
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-slate-100">
                       <p className="font-semibold text-slate-900">{profile?.name || user?.name}</p>
                       <p className="text-sm text-slate-500">{user?.email}</p>
                     </div>
                     
-                    <Link
-                      to="/student/dashboard/profile"
-                      className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        setSidebarOpen(false);
-                      }}
-                    >
-                      <User className="h-4 w-4 mr-3 text-slate-400" />
-                      Edit Profile
-                    </Link>
+                    <div className="py-2">
+                      <Link
+                        to="/student/dashboard/profile"
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <User className="h-4 w-4 mr-3" />
+                        Profile Settings
+                      </Link>
+                      <Link
+                        to="/settings"
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Settings className="h-4 w-4 mr-3" />
+                        Account Settings
+                      </Link>
+                    </div>
                     
-                    <Link
-                      to="/settings"
-                      className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        setSidebarOpen(false);
-                      }}
-                    >
-                      <Settings className="h-4 w-4 mr-3 text-slate-400" />
-                      Settings
-                    </Link>
-                    
-                    <div className="border-t border-slate-200 my-2"></div>
-                    
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut className="h-4 w-4 mr-3" />
-                      Sign Out
-                    </button>
+                    <div className="border-t border-slate-100 pt-2">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4 mr-3" />
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -312,8 +270,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           </div>
         </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

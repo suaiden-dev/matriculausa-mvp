@@ -163,40 +163,41 @@ const TermsAndConditions: React.FC = () => {
                 <Shield className="h-5 w-5 mr-2 text-[#05294E]" />
                 University Partnership Agreement
               </h2>
-              
               <h3 className="text-lg font-semibold text-gray-800 mb-3">1. Platform Partnership</h3>
               <p className="text-gray-600 mb-4">
-                By joining Matrícula USA, your institution agrees to participate in our international student recruitment platform. We provide technology infrastructure to connect qualified international students with your academic programs.
+                By joining Matrícula USA, your institution agrees to participate in our international student recruitment platform. We provide the technology infrastructure to connect qualified international students with your academic programs.
               </p>
-
               <h3 className="text-lg font-semibold text-gray-800 mb-3">2. Scholarship Management</h3>
               <p className="text-gray-600 mb-4">
-                Universities can create and manage scholarship opportunities through our platform. All scholarship information must be accurate and current. Universities are responsible for honoring published scholarship commitments.
+                Institutions may create and manage scholarship opportunities through our platform. All scholarship information must be accurate and up to date. Institutions are responsible for honoring all scholarship commitments published on the platform.
               </p>
-
               <h3 className="text-lg font-semibold text-gray-800 mb-3">3. Student Data Protection</h3>
               <p className="text-gray-600 mb-4">
-                Student information shared through our platform is confidential. Universities must comply with applicable privacy laws and use student data solely for admissions and scholarship evaluation purposes.
+                Student information shared through the Matrícula USA platform is confidential. Institutions must comply with applicable privacy laws and use student data solely for admissions and scholarship evaluation purposes.
               </p>
-
               <h3 className="text-lg font-semibold text-gray-800 mb-3">4. Quality Standards</h3>
               <p className="text-gray-600 mb-4">
-                Partner universities must maintain accreditation and meet our quality standards. We reserve the right to review and approve university profiles before they become publicly visible.
+                Partner institutions must maintain valid accreditation and meet the quality standards required by Matrícula USA. We reserve the right to review and approve institutional profiles before they become publicly visible.
               </p>
-
               <h3 className="text-lg font-semibold text-gray-800 mb-3">5. Platform Fees</h3>
               <p className="text-gray-600 mb-4">
-                Universities may be subject to platform fees based on successful student placements. Fee structures will be communicated separately and agreed upon in writing.
+                Institutions may be subject to platform fees based on successful student placements. The fee structure will be communicated separately and confirmed in writing.
               </p>
-
               <h3 className="text-lg font-semibold text-gray-800 mb-3">6. Intellectual Property</h3>
               <p className="text-gray-600 mb-4">
-                Universities retain ownership of their institutional information and logos. Matrícula USA retains ownership of platform technology and student matching algorithms.
+                Institutions retain ownership of their institutional information and logos. Matrícula USA retains ownership of the platform technology, including the student matching algorithms.
               </p>
-
               <h3 className="text-lg font-semibold text-gray-800 mb-3">7. Termination</h3>
               <p className="text-gray-600 mb-4">
-                Either party may terminate this agreement with 30 days written notice. Upon termination, universities will no longer appear on the platform, but existing student commitments must be honored.
+                Either party may terminate this agreement with 30 (thirty) days written notice. Upon termination, the institution will be removed from the platform, but must honor all existing commitments to students who have already enrolled.
+              </p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">8. Price Exclusivity</h3>
+              <p className="text-gray-600 mb-4">
+                The partner institution agrees to offer exclusive pricing conditions to the Matrícula USA platform. It is not permitted to advertise or sell scholarships at lower prices outside the platform. Any similar scholarship programs offered elsewhere must be priced at least 20% higher than the scholarship published on Matrícula USA.
+              </p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Agreement Acceptance</h3>
+              <p className="text-gray-600 mb-4">
+                By confirming your participation on the Matrícula USA platform, your institution acknowledges that it has read, understood, and agrees to all the terms above.
               </p>
             </div>
           </div>

@@ -12,18 +12,24 @@ function slugify(str: string) {
 }
 
 const Universities: React.FC = () => {
+
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [realUniversities, setRealUniversities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     const fetchUniversities = async () => {
-      setLoading(true);
+      // Only show loading on first data fetch or when searching
+      if (!hasLoadedData || searchTerm.trim() !== '') {
+        setLoading(true);
+      }
       // Se estiver pesquisando, buscar todas as universidades que correspondem ao termo
       if (searchTerm.trim() !== '') {
         setSearching(true);
@@ -60,9 +66,10 @@ const Universities: React.FC = () => {
         setTotalCount(0);
       }
       setLoading(false);
+      setHasLoadedData(true);
     };
     fetchUniversities();
-  }, [page, searchTerm]);
+  }, [page, searchTerm, hasLoadedData]);
 
   // Get unique locations for filter
   const locations = Array.from(new Set(realUniversities.map(school => school.location?.split(', ')[1]))).filter(Boolean).sort();

@@ -53,12 +53,26 @@ Deno.serve(async (req) => {
       if (!userId) return corsResponse({ error: 'User ID (client_reference_id) missing in session.' }, 400);
       if (!applicationId) return corsResponse({ error: 'Application ID missing in session metadata.' }, 400);
 
-      // Verifica se a aplicação existe e pertence ao usuário
+      // Busca o perfil do usuário para obter o user_profiles.id correto
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, user_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError || !userProfile) {
+        console.error('User profile not found:', profileError);
+        return corsResponse({ error: 'User profile not found' }, 404);
+      }
+
+      console.log(`User profile found: ${userProfile.id} for auth user: ${userId}`);
+
+      // Verifica se a aplicação existe e pertence ao usuário (usando userProfile.id)
       const { data: application, error: fetchError } = await supabase
         .from('scholarship_applications')
-        .select('id, student_id, scholarship_id')
+        .select('id, student_id, scholarship_id, student_process_type')
         .eq('id', applicationId)
-        .eq('student_id', userId)
+        .eq('student_id', userProfile.id)
         .single();
 
       if (fetchError || !application) {
@@ -68,22 +82,35 @@ Deno.serve(async (req) => {
 
       console.log('Application found:', application);
 
-      // Atualiza a aplicação para status 'under_review'
+      // Preparar dados para atualização
+      const updateData: any = { 
+        status: 'under_review',
+        payment_status: 'paid',
+        paid_at: new Date().toISOString()
+      };
+
+      // Se student_process_type não existe na aplicação, tentar obter dos metadados da sessão
+      if (!application.student_process_type && session.metadata?.student_process_type) {
+        updateData.student_process_type = session.metadata.student_process_type;
+        console.log('Adding student_process_type from session metadata:', session.metadata.student_process_type);
+      }
+
+      // Atualiza a aplicação
       const { error: updateError } = await supabase
         .from('scholarship_applications')
-        .update({ status: 'under_review' })
+        .update(updateData)
         .eq('id', applicationId)
-        .eq('student_id', userId);
+        .eq('student_id', userProfile.id);
 
       if (updateError) {
         console.error('Failed to update application status:', updateError);
         throw new Error(`Failed to update application status: ${updateError.message}`);
       }
 
-      console.log('Application status updated to under_review');
+      console.log('Application status updated to under_review with payment info');
 
-      // Buscar documentos do user_profiles e vincular à application
-      const { data: userProfile, error: userProfileError } = await supabase
+      // Buscar documentos do user_profiles e vincular à application (usando userId para user_profiles)
+      const { data: userProfileDocs, error: userProfileError } = await supabase
         .from('user_profiles')
         .select('documents')
         .eq('user_id', userId)
@@ -91,8 +118,8 @@ Deno.serve(async (req) => {
 
       if (userProfileError) {
         console.error('Failed to fetch user profile documents:', userProfileError);
-      } else if (userProfile?.documents) {
-        const documents = Array.isArray(userProfile.documents) ? userProfile.documents : [];
+      } else if (userProfileDocs?.documents) {
+        const documents = Array.isArray(userProfileDocs.documents) ? userProfileDocs.documents : [];
         let formattedDocuments = documents;
 
         // Se for array de strings (URLs), converter para array de objetos completos
@@ -110,7 +137,7 @@ Deno.serve(async (req) => {
             .from('scholarship_applications')
             .update({ documents: formattedDocuments })
             .eq('id', applicationId)
-            .eq('student_id', userId);
+            .eq('student_id', userProfile.id);
 
           if (docUpdateError) {
             console.error('Failed to update application documents:', docUpdateError);
@@ -121,14 +148,17 @@ Deno.serve(async (req) => {
       }
 
       // Atualiza perfil do usuário para marcar que pagou a application fee
-      const { error: profileError } = await supabase
+      const { error: profileUpdateError } = await supabase
         .from('user_profiles')
-        .update({ is_application_fee_paid: true })
+        .update({ 
+          is_application_fee_paid: true,
+          last_payment_date: new Date().toISOString()
+        })
         .eq('user_id', userId);
 
-      if (profileError) {
-        console.error('Failed to update user_profiles:', profileError);
-        throw new Error(`Failed to update user_profiles: ${profileError.message}`);
+      if (profileUpdateError) {
+        console.error('Failed to update user_profiles:', profileUpdateError);
+        throw new Error(`Failed to update user_profiles: ${profileUpdateError.message}`);
       }
 
       console.log('User profile updated - application fee paid');
@@ -144,7 +174,8 @@ Deno.serve(async (req) => {
       return corsResponse({ 
         status: 'complete', 
         message: 'Session verified and processed successfully.',
-        applicationId: applicationId
+        applicationId: applicationId,
+        studentProcessType: application.student_process_type || session.metadata?.student_process_type
       }, 200);
     } else {
       console.log('Session not paid or complete.');

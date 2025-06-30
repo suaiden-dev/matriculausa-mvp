@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Trash2, CheckCircle, Loader2, Clock, XCircle, FileText } from 'lucide-react';
+import { GraduationCap, Trash2, CheckCircle, Loader2 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import DocumentUpload from '../../components/DocumentUpload';
@@ -23,10 +23,25 @@ const CartPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchCart(user.id);
     }
-  }, [user, fetchCart]);
+  }, [user?.id, fetchCart]);
+
+  // Carregar studentType do localStorage na inicialização
+  useEffect(() => {
+    const savedStudentType = window.localStorage.getItem('studentProcessType');
+    if (savedStudentType) {
+      setStudentType(savedStudentType);
+    }
+  }, []);
+
+  // Auto-selecionar primeira bolsa se documentos aprovados e apenas uma bolsa
+  useEffect(() => {
+    if (userProfile?.documents_status === 'approved' && cart.length === 1 && !selectedScholarship) {
+      setSelectedScholarship(cart[0].scholarships.id);
+    }
+  }, [userProfile?.documents_status, cart, selectedScholarship]);
 
   const total = SCHOLARSHIP_PRICE;
 
@@ -38,25 +53,31 @@ const CartPage: React.FC = () => {
     setStudentType(type);
     setShowStudentTypeModal(false);
     window.localStorage.setItem('studentProcessType', type);
-    // Tenta salvar no banco na aplicação ativa
-    if (userProfile) {
+    // Salvar no banco se houver aplicação ativa
+    if (userProfile?.id) {
       try {
         const { data: applications, error } = await supabase
           .from('scholarship_applications')
           .select('id')
-          .eq('student_id', userProfile.user_id)
+          .eq('student_id', userProfile.id)
           .order('applied_at', { ascending: false })
           .limit(1);
         
         if (!error && applications && applications.length > 0) {
           const application = applications[0];
-          await supabase
+          const { error: updateError } = await supabase
             .from('scholarship_applications')
             .update({ student_process_type: type })
             .eq('id', application.id);
+          
+          if (updateError) {
+            console.error('Error updating student_process_type in cart:', updateError);
+          } else {
+            console.log('student_process_type saved in cart:', type);
+          }
         }
       } catch (e) {
-        // Se der erro, só salva no localStorage mesmo
+        console.error('Error saving student type in cart:', e);
       }
     }
     // Redireciona para a página de upload de documentos
@@ -72,7 +93,6 @@ const CartPage: React.FC = () => {
       setShowUploadModal(false);
     } catch (error) {
       console.error('Failed to update user profile:', error);
-      // Optionally, show an error message to the user
     } finally {
       setIsProcessing(false);
     }
@@ -86,28 +106,28 @@ const CartPage: React.FC = () => {
   };
 
   const handleRemoveFromCart = (scholarshipId: string) => {
-    if (user) {
+    if (user?.id) {
       removeFromCart(scholarshipId, user.id);
     }
   };
 
   const handleClearCart = () => {
-    if (user) {
+    if (user?.id) {
       clearCart(user.id);
     }
   };
 
   const createOrGetApplication = async (): Promise<{ applicationId: string } | undefined> => {
-    if (!selectedScholarship || !user) {
-      throw new Error('Scholarship e usuário são obrigatórios');
+    if (!selectedScholarship || !user?.id || !userProfile?.id) {
+      throw new Error('Scholarship, usuário e perfil são obrigatórios');
     }
 
     try {
-      // Busca aplicação existente
+      // Busca aplicação existente usando userProfile.id (correto)
       const { data: existingApp, error: findError } = await supabase
         .from('scholarship_applications')
         .select('id')
-        .eq('student_id', user.id)
+        .eq('student_id', userProfile.id)
         .eq('scholarship_id', selectedScholarship)
         .maybeSingle();
 
@@ -120,15 +140,16 @@ const CartPage: React.FC = () => {
         return { applicationId: existingApp.id };
       }
 
-      // Cria nova aplicação
+      // Cria nova aplicação usando userProfile.id (correto)
       const { data: newApp, error: insertError } = await supabase
         .from('scholarship_applications')
         .insert([
           {
-            student_id: user.id,
+            student_id: userProfile.id,
             scholarship_id: selectedScholarship,
             status: 'pending',
-            student_process_type: studentType || null,
+            student_process_type: studentType || window.localStorage.getItem('studentProcessType') || null,
+            applied_at: new Date().toISOString(),
           },
         ])
         .select('id')
@@ -155,30 +176,52 @@ const CartPage: React.FC = () => {
       );
     }
     
-    // Se documentos foram aprovados, mostrar opção de pagamento
     if (userProfile?.documents_status === 'approved') {
       return (
         <div>
           <h2 className="text-xl font-bold mb-4 text-green-600 flex items-center gap-2">
-            <CheckCircle /> Documents Approved! Please select one scholarship to proceed.
+            <CheckCircle /> Documents Approved! Ready to proceed with payment.
           </h2>
-          <ul className="divide-y divide-slate-200 mb-8">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+            <p className="text-green-700 font-medium">
+              Congratulations! Your documents have been approved. 
+              {cart.length === 1 
+                ? ' Your scholarship has been automatically selected for payment.'
+                : ' Please select one scholarship below to proceed with the application fee payment.'
+              }
+            </p>
+          </div>
+          <ul className="space-y-4 mb-8">
             {cart.map((item) => (
-              <li key={item.scholarships.id} className="flex items-center justify-between py-4">
-                <label className="flex items-center gap-4 cursor-pointer w-full">
-                  <input
-                    type="radio"
-                    name="scholarship"
-                    value={item.scholarships.id}
-                    checked={selectedScholarship === item.scholarships.id}
-                    onChange={() => setSelectedScholarship(item.scholarships.id)}
-                    className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-full"
-                  />
+              <li 
+                key={item.scholarships.id} 
+                className={`p-4 rounded-xl border transition-all duration-200 ${
+                  selectedScholarship === item.scholarships.id 
+                    ? 'border-blue-500 bg-blue-50 shadow-md' 
+                    : 'border-slate-200 bg-slate-50'
+                } ${cart.length > 1 ? 'cursor-pointer' : ''}`}
+                onClick={() => cart.length > 1 && setSelectedScholarship(item.scholarships.id)}
+              >
+                <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-bold text-slate-900">{item.scholarships.title}</div>
+                    <div className="font-bold text-slate-900 text-lg">{item.scholarships.title}</div>
                     <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
                   </div>
-                </label>
+                  {cart.length > 1 && (
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      selectedScholarship === item.scholarships.id 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {selectedScholarship === item.scholarships.id ? 'Selected' : 'Select'}
+                    </div>
+                  )}
+                  {cart.length === 1 && (
+                    <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-600 text-white">
+                      Selected
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -200,92 +243,60 @@ const CartPage: React.FC = () => {
       );
     }
 
-    // Se documentos estão sendo analisados
-    if (userProfile?.documents_status === 'analyzing') {
-      return (
-        <div className="text-center py-12">
-          <div className="w-20 h-20 bg-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Clock className="h-10 w-10 text-yellow-600" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-3">Documents Under Review</h3>
-          <p className="text-slate-600 mb-6 max-w-md mx-auto">
-            Your documents are currently being reviewed by our team. You'll be able to proceed with payment once they are approved.
-          </p>
-          <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
-            <p className="text-sm text-yellow-800">
-              💡 <strong>Review typically takes 1-2 business days.</strong> We'll notify you by email once your documents are approved.
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    // Se documentos foram rejeitados
-    if (userProfile?.documents_status === 'rejected') {
-      return (
-        <div className="text-center py-12">
-          <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <XCircle className="h-10 w-10 text-red-600" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-3">Documents Need Revision</h3>
-          <p className="text-slate-600 mb-6 max-w-md mx-auto">
-            Some of your documents need to be updated. Please upload new versions and we'll review them again.
-          </p>
+    return (
+      <div>
+        <ul className="divide-y divide-slate-200 mb-8">
+          {cart.map((item) => (
+            <li key={item.scholarships.id} className="flex items-center justify-between py-4">
+              <div className="flex items-center gap-4 w-full">
+                <div>
+                  <div className="font-bold text-slate-900">{item.scholarships.title}</div>
+                  <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center justify-between mb-6">
           <button
             onClick={handleNextStep}
-            className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-all duration-300"
+            disabled={isProcessing}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300"
           >
-            Upload New Documents
+            {isProcessing ? 'Processing...' : 'Next Step'}
           </button>
-        </div>
-      );
-    }
-
-    // Se ainda não fez upload de documentos (ou status é pending/null)
-    return (
-      <div className="text-center py-12">
-        <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <FileText className="h-10 w-10 text-blue-600" />
-        </div>
-        <h3 className="text-xl font-bold text-slate-900 mb-3">Upload Required Documents</h3>
-        <p className="text-slate-600 mb-6 max-w-md mx-auto">
-          Before you can pay the application fee, you need to upload your required documents for review.
-        </p>
-        <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 mb-6">
-          <h4 className="font-bold text-blue-900 mb-3">Required Documents:</h4>
-          <ul className="text-sm text-blue-800 space-y-1 text-left max-w-xs mx-auto">
-            <li>• Valid Passport</li>
-            <li>• Academic Diploma/Transcript</li>
-            <li>• Proof of Financial Funds</li>
-          </ul>
         </div>
         <button
-          onClick={handleNextStep}
-          disabled={isProcessing}
-          className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 disabled:bg-slate-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+          onClick={handleClearCart}
+          className="w-full bg-slate-100 text-slate-700 py-3 px-6 rounded-2xl font-medium text-sm hover:bg-slate-200 transition-all duration-300"
         >
-          {isProcessing ? 'Processing...' : 'Upload Documents Now'}
+          Clear Cart
         </button>
-        <div className="mt-6">
-          <button
-            onClick={handleClearCart}
-            className="text-slate-500 hover:text-slate-700 font-medium text-sm transition-colors"
-          >
-            Clear Cart
-          </button>
-        </div>
       </div>
     );
   };
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
-      <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-        <GraduationCap className="h-7 w-7 text-[#05294E]" /> Cart
+      <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
+        <GraduationCap className="h-7 w-7 text-[#05294E]" /> Selected Scholarships
       </h1>
+      
+      {/* Description */}
+      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded-lg">
+        <div className="flex">
+          <div className="ml-3">
+            <p className="text-sm text-blue-700">
+              <strong>Welcome to your scholarship selection!</strong> Here you can see all the scholarships you have selected for the application process. These are the programs you are interested in applying to. Follow the steps below to complete your application and start your journey toward studying abroad.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {cart.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-          <h2 className="text-xl font-bold text-slate-700 mb-4">Your cart is empty</h2>
+          <h2 className="text-xl font-bold text-slate-700 mb-4">No scholarships selected</h2>
+          <p className="text-slate-600 mb-6">You haven't selected any scholarships yet. Browse our available programs and add them to your selection.</p>
           <button
             onClick={() => navigate('/student/dashboard/scholarships')}
             className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#05294E]/90 transition-all"

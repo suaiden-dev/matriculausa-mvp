@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Building, 
@@ -16,7 +16,11 @@ import {
   Eye,
   ArrowUpRight,
   Calendar,
-  Target
+  Target,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  XCircle
 } from 'lucide-react';
 
 interface OverviewProps {
@@ -34,15 +38,44 @@ interface OverviewProps {
   users: any[];
   applications: any[];
   error: string | null;
+  onApprove?: (universityId: string) => void;
+  onReject?: (universityId: string) => void;
 }
 
-const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applications, error }) => {
+const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applications, error, onApprove, onReject }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const UNIVERSITIES_PER_PAGE = 6;
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0
     }).format(value);
+  };
+
+  // Filtrar universidades pendentes
+  const pendingUniversities = universities.filter(u => !u.is_approved);
+  
+  // Calcular paginação
+  const totalPages = Math.ceil(pendingUniversities.length / UNIVERSITIES_PER_PAGE);
+  const startIndex = (currentPage - 1) * UNIVERSITIES_PER_PAGE;
+  const currentUniversities = pendingUniversities.slice(startIndex, startIndex + UNIVERSITIES_PER_PAGE);
+
+  const handleApprove = (universityId: string) => {
+    if (onApprove) {
+      onApprove(universityId);
+    } else {
+      console.log('Approve university:', universityId);
+    }
+  };
+
+  const handleReject = (universityId: string) => {
+    if (onReject) {
+      onReject(universityId);
+    } else {
+      console.log('Reject university:', universityId);
+    }
   };
 
   const quickActions = [
@@ -181,14 +214,16 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Pending Approvals */}
+        {/* Pending University Approvals */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Pending University Approvals</h3>
-                  <p className="text-slate-500 text-sm">Universities awaiting admin review</p>
+                  <p className="text-slate-500 text-sm">
+                    {pendingUniversities.length} universit{pendingUniversities.length !== 1 ? 'ies' : 'y'} awaiting review
+                  </p>
                 </div>
                 <Link
                   to="/admin/dashboard/universities"
@@ -201,7 +236,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
             </div>
             
             <div className="p-6">
-              {universities.filter(u => !u.is_approved).length === 0 ? (
+              {pendingUniversities.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <CheckCircle className="h-10 w-10 text-green-600" />
@@ -210,40 +245,113 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
                   <p className="text-slate-500">No universities pending approval</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {universities.filter(u => !u.is_approved).slice(0, 5).map((university) => (
-                    <div key={university.id} className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors group">
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <Building className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-purple-600 transition-colors">
-                            {university.name}
-                          </h4>
-                          <div className="flex items-center space-x-4 text-sm text-slate-500">
-                            <div className="flex items-center">
-                              <Target className="h-4 w-4 mr-1" />
-                              {university.location}
+                <>
+                  {/* Grid de universidades em blocos */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {currentUniversities.map((university) => (
+                      <div 
+                        key={university.id} 
+                        className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all duration-300 group"
+                      >
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                              <Building className="h-6 w-6 text-white" />
                             </div>
-                            <div className="flex items-center">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {new Date(university.created_at).toLocaleDateString()}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-purple-600 transition-colors">
+                                {university.name}
+                              </h4>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Pending Review
+                              </span>
                             </div>
                           </div>
                         </div>
+
+                        {/* Informações */}
+                        <div className="space-y-3 mb-4">
+                          <div className="flex items-center text-sm text-slate-600">
+                            <MapPin className="h-4 w-4 mr-2 text-slate-400" />
+                            <span>{university.location || 'Location not provided'}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-slate-600">
+                            <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                            <span>Applied {new Date(university.created_at).toLocaleDateString()}</span>
+                          </div>
+                          {university.website && (
+                            <div className="flex items-center text-sm text-slate-600">
+                              <Target className="h-4 w-4 mr-2 text-slate-400" />
+                              <span className="truncate">{university.website}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                          <button 
+                            onClick={() => handleApprove(university.id)}
+                            className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve
+                          </button>
+                          
+                          <div className="flex items-center space-x-2">
+                            <button 
+                              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleReject(university.id)}
+                              className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Reject"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-                          <CheckCircle className="h-4 w-4" />
+                    ))}
+                  </div>
+
+                  {/* Paginação */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+                      <div className="text-sm text-slate-600">
+                        Showing {startIndex + 1}-{Math.min(startIndex + UNIVERSITIES_PER_PAGE, pendingUniversities.length)} of {pendingUniversities.length} universities
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Previous Page"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                          <Eye className="h-4 w-4" />
+                        
+                        <span className="px-4 py-2 text-sm font-medium text-slate-900">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Next Page"
+                        >
+                          <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>

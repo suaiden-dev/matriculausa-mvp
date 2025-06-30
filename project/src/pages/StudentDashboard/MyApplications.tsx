@@ -152,6 +152,7 @@ const MyApplications: React.FC = () => {
         scholarship_id: scholarshipId,
         status: 'pending_scholarship_fee',
         applied_at: new Date().toISOString(),
+        student_process_type: localStorage.getItem('studentProcessType') || null,
       })
       .select('id')
       .single();
@@ -286,6 +287,7 @@ const MyApplications: React.FC = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
+                  title="Filter applications by status"
                   className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                 >
                   <option value="all">All Status</option>

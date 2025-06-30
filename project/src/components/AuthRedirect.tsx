@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -8,95 +8,157 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingUniversity, setCheckingUniversity] = useState(false);
+  const lastCheckedPath = useRef<string>('');
+  const universityCache = useRef<{ [userId: string]: any }>({});
+
+  const checkUniversityStatus = useCallback(async (userId: string) => {
+    // Usar cache se disponível
+    if (universityCache.current[userId]) {
+      return universityCache.current[userId];
+    }
+
+    try {
+      const { data: university, error } = await supabase
+        .from('universities')
+        .select('terms_accepted, profile_completed')
+        .eq('user_id', userId)
+        .single();
+
+      const result = {
+        error: error && error.code !== 'PGRST116' ? error : null,
+        university: university || null
+      };
+
+      // Cache por 30 segundos
+      universityCache.current[userId] = result;
+      setTimeout(() => {
+        delete universityCache.current[userId];
+      }, 30000);
+
+      return result;
+    } catch (error) {
+      return { error, university: null };
+    }
+  }, []);
 
   useEffect(() => {
     if (loading || !user) {
-      console.log('AUTH_DEBUG: AuthRedirect - Aguardando user. loading:', loading, 'user exists:', !!user);
       return;
     }
 
-    const checkAndRedirect = async () => {
-      const currentPath = location.pathname;
-      
-      // Se usuário é school, verificar apenas se está tentando acessar áreas restritas de outros roles
-      if (user.role === 'school' && (currentPath.startsWith('/student') || currentPath.startsWith('/admin'))) {
-        console.log('AUTH_DEBUG: Usuário escola tentando acessar área restrita:', currentPath);
-        navigate('/school/dashboard');
-        return;
-      }
+    const currentPath = location.pathname;
+    
+    // Páginas públicas que não precisam de verificação
+    const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];
+    if (publicPaths.some(path => currentPath.startsWith(path))) {
+      return;
+    }
+    
+    // Evitar re-execução se o path não mudou  
+    if (lastCheckedPath.current === currentPath && !currentPath.includes('/login') && !currentPath.includes('/auth')) {
+      return;
+    }
+    lastCheckedPath.current = currentPath;
 
-      // Se usuário é school, verificar status quando necessário
-      if (user.role === 'school' && !currentPath.startsWith('/school')) {
-        // Verificar apenas se está vindo de login/registro ou se está em página inicial
-        const shouldCheckStatus = currentPath === '/login' || currentPath === '/auth' || 
-                                 currentPath === '/register' || currentPath === '/';
+    const checkAndRedirect = async () => {
+      
+      // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
+      if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
+        // Redirecionamento baseado no role
+        if (user.role === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+          return;
+        }
         
-        if (shouldCheckStatus) {
-          console.log('AUTH_DEBUG: Verificando status da escola em:', currentPath);
+        if (user.role === 'student') {
+          navigate('/student/dashboard', { replace: true });
+          return;
+        }
+        
+        if (user.role === 'school') {
           setCheckingUniversity(true);
           
-          try {
-            const { data: university, error } = await supabase
-              .from('universities')
-              .select('terms_accepted, profile_completed')
-              .eq('user_id', user.id)
-              .single();
-
-            console.log('AUTH_DEBUG: Status da universidade:', university);
-
-            if (error && error.code !== 'PGRST116') {
-              console.error('Error checking university status:', error);
-              navigate('/school/dashboard');
-              return;
-            }
-
-            // Se não existe universidade ou termos não foram aceitos
-            if (!university || !university.terms_accepted) {
-              console.log('AUTH_DEBUG: Redirecionando para termos e condições');
-              navigate('/school/termsandconditions');
-              return;
-            }
-
-            // Se termos aceitos mas perfil não completo
-            if (!university.profile_completed) {
-              console.log('AUTH_DEBUG: Redirecionando para setup de perfil');
-              navigate('/school/setup-profile');
-              return;
-            }
-
-            // Se tudo OK e está vindo de login/auth, ir para dashboard
-            if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
-              console.log('AUTH_DEBUG: Redirecionando para dashboard após login');
-              navigate('/school/dashboard');
-            }
-            // Se está na home (/), deixar na home - não redirecionar
-          } catch (error) {
-            console.error('Error in school redirect:', error);
-            navigate('/school/dashboard');
-          } finally {
+          const { error, university } = await checkUniversityStatus(user.id);
+          
+          if (error) {
+            navigate('/school/dashboard', { replace: true });
             setCheckingUniversity(false);
+            return;
           }
+
+          // Se não existe universidade ou termos não foram aceitos
+          if (!university || !university.terms_accepted) {
+            navigate('/school/termsandconditions', { replace: true });
+            setCheckingUniversity(false);
+            return;
+          }
+
+          // Se termos aceitos mas perfil não completo
+          if (!university.profile_completed) {
+            navigate('/school/setup-profile', { replace: true });
+            setCheckingUniversity(false);
+            return;
+          }
+
+          // Se tudo OK, ir para dashboard
+          navigate('/school/dashboard', { replace: true });
+          setCheckingUniversity(false);
           return;
         }
       }
-      
+
+      // PROTEÇÃO DE ROTAS - verificar se usuário está tentando acessar área restrita
+      // Se usuário é school, verificar apenas se está tentando acessar áreas restritas de outros roles
+      if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin'))) {
+        navigate('/school/dashboard', { replace: true });
+        return;
+      }
+
       // Se usuário é student e está tentando acessar áreas restritas de outros roles
-      if (user.role === 'student' && (currentPath.startsWith('/school') || currentPath.startsWith('/admin'))) {
-        console.log('AUTH_DEBUG: Redirecionando estudante para dashboard - área restrita');
-        navigate('/student/dashboard');
+      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin'))) {
+        navigate('/student/dashboard', { replace: true });
         return;
       }
       
       // Se usuário é admin e está tentando acessar áreas restritas de outros roles
-      if (user.role === 'admin' && (currentPath.startsWith('/student') || currentPath.startsWith('/school'))) {
-        console.log('AUTH_DEBUG: Redirecionando admin para dashboard - área restrita');
-        navigate('/admin/dashboard');
+      if (user.role === 'admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/'))) {
+        navigate('/admin/dashboard', { replace: true });
         return;
+      }
+
+      // VERIFICAÇÃO ADICIONAL PARA ESCOLAS - apenas na página inicial
+      if (user.role === 'school' && currentPath === '/') {
+        setCheckingUniversity(true);
+        
+        const { error, university } = await checkUniversityStatus(user.id);
+        
+        if (error) {
+          setCheckingUniversity(false);
+          return; // Deixar na página atual se houver erro
+        }
+
+        // Se não existe universidade ou termos não foram aceitos
+        if (!university || !university.terms_accepted) {
+          navigate('/school/termsandconditions', { replace: true });
+          setCheckingUniversity(false);
+          return;
+        }
+
+        // Se termos aceitos mas perfil não completo
+        if (!university.profile_completed) {
+          navigate('/school/setup-profile', { replace: true });
+          setCheckingUniversity(false);
+          return;
+        }
+
+        // Se tudo OK e está na home, deixar na home - não redirecionar
+        setCheckingUniversity(false);
       }
     };
 
+    // Executar imediatamente, sem delay desnecessário
     checkAndRedirect();
-  }, [user, loading, navigate, location.pathname]);
+  }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus]);
 
   // Mostrar loading enquanto verifica universidade
   if (checkingUniversity) {

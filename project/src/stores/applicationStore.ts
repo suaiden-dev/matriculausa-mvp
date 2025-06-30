@@ -21,6 +21,7 @@ interface CartItem {
 interface CartState {
   cart: CartItem[];
   isLoading: boolean;
+  lastFetchUserId: string | null;
   fetchCart: (userId: string) => Promise<void>;
   addToCart: (scholarship: Scholarship, userId: string) => Promise<void>;
   removeFromCart: (scholarshipId: string, userId: string) => Promise<void>;
@@ -28,24 +29,31 @@ interface CartState {
 }
 
 const getCartItemsFromDB = async (userId: string): Promise<CartItem[]> => {
+  try {
     const { data, error } = await supabase
-        .from('user_cart')
-        .select(`
-            id, 
-            scholarships (*)
-        `)
-        .eq('user_id', userId);
+      .from('user_cart')
+      .select(`
+        id, 
+        scholarships (
+          *,
+          universities!inner(id, name, logo_url, location, is_approved)
+        )
+      `)
+      .eq('user_id', userId);
 
     if (error) {
-        console.error('Error fetching cart:', error);
-        return [];
+      console.error('Error fetching cart:', error);
+      return [];
     }
 
-    return data.map(item => ({
-        ...(item.scholarships as unknown as Scholarship),
-        cart_id: item.id,
-        scholarships: item.scholarships as unknown as Scholarship,
-    }));
+    return data?.map(item => ({
+      cart_id: item.id,
+      scholarships: item.scholarships as unknown as Scholarship,
+    })) || [];
+  } catch (error) {
+    console.error('Error in getCartItemsFromDB:', error);
+    return [];
+  }
 };
 
 export const useApplicationStore = create<ApplicationStore>()(
@@ -96,54 +104,91 @@ export const useApplicationStore = create<ApplicationStore>()(
 
 export const useCartStore = create<CartState>((set, get) => ({
   cart: [],
-  isLoading: true,
+  isLoading: false,
+  lastFetchUserId: null,
+  
   fetchCart: async (userId) => {
+    const { lastFetchUserId, isLoading } = get();
+    
+    // Evita fetch desnecessário se já está carregando ou é o mesmo usuário
+    if (isLoading || lastFetchUserId === userId) {
+      return;
+    }
+
     set({ isLoading: true });
-    const cartItems = await getCartItemsFromDB(userId);
-    set({ cart: cartItems, isLoading: false });
+    try {
+      const cartItems = await getCartItemsFromDB(userId);
+      set({ cart: cartItems, lastFetchUserId: userId });
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    } finally {
+      set({ isLoading: false });
+    }
   },
+  
   addToCart: async (scholarship, userId) => {
     const { cart } = get();
-    if (cart.some(item => item.scholarships.id === scholarship.id)) return;
-
-    const { data, error } = await supabase
-      .from('user_cart')
-      .insert({ user_id: userId, scholarship_id: scholarship.id })
-      .select('id')
-      .single();
-
-    if (error || !data) {
-      console.error('Error adding to cart:', error);
+    if (cart.some(item => item.scholarships.id === scholarship.id)) {
+      console.log('Scholarship already in cart:', scholarship.id);
       return;
     }
-    
-    set((state) => ({ cart: [...state.cart, { cart_id: data.id, scholarships: scholarship }] }));
+
+    try {
+      const { data, error } = await supabase
+        .from('user_cart')
+        .insert({ user_id: userId, scholarship_id: scholarship.id })
+        .select('id')
+        .single();
+
+      if (error || !data) {
+        console.error('Error adding to cart:', error);
+        return;
+      }
+      
+      set((state) => ({ 
+        cart: [...state.cart, { cart_id: data.id, scholarships: scholarship }] 
+      }));
+    } catch (error) {
+      console.error('Error in addToCart:', error);
+    }
   },
+  
   removeFromCart: async (scholarshipId, userId) => {
-    const { error } = await supabase
-      .from('user_cart')
-      .delete()
-      .eq('user_id', userId)
-      .eq('scholarship_id', scholarshipId);
+    try {
+      const { error } = await supabase
+        .from('user_cart')
+        .delete()
+        .eq('user_id', userId)
+        .eq('scholarship_id', scholarshipId);
 
-    if (error) {
-      console.error('Error removing from cart:', error);
-      return;
+      if (error) {
+        console.error('Error removing from cart:', error);
+        return;
+      }
+
+      set((state) => ({ 
+        cart: state.cart.filter((item) => item.scholarships.id !== scholarshipId) 
+      }));
+    } catch (error) {
+      console.error('Error in removeFromCart:', error);
     }
-
-    set((state) => ({ cart: state.cart.filter((s) => s.scholarships.id !== scholarshipId) }));
   },
+  
   clearCart: async (userId: string) => {
-    const { error } = await supabase
+    try {
+      const { error } = await supabase
         .from('user_cart')
         .delete()
         .eq('user_id', userId);
-    
-    if (error) {
+      
+      if (error) {
         console.error('Error clearing cart:', error);
         return;
-    }
+      }
 
-    set({ cart: [] });
+      set({ cart: [], lastFetchUserId: null });
+    } catch (error) {
+      console.error('Error in clearCart:', error);
+    }
   },
 }));

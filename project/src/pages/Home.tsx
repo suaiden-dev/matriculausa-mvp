@@ -13,26 +13,6 @@ const Home: React.FC = () => {
   const featuredSchools = universities.slice(0, 6);
   const { isAuthenticated } = useAuth();
   const { hasPaidProcess, loading: subscriptionLoading } = useSubscription();
-  const [universitiesState, setUniversitiesState] = useState<any[]>([]);
-  const [loadingState, setLoadingState] = useState(true);
-
-  useEffect(() => {
-    const fetchUniversities = async () => {
-      setLoadingState(true);
-      const { data, error } = await supabase
-        .from('universities')
-        .select('id, name, logo_url, location, programs')
-        .eq('is_approved', true)
-        .eq('profile_completed', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
-      if (!error && data) {
-        setUniversitiesState(data);
-      }
-      setLoadingState(false);
-    };
-    fetchUniversities();
-  }, []);
 
   return (
     <div className="bg-white">
@@ -74,7 +54,7 @@ const Home: React.FC = () => {
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 
-                {isAuthenticated && !hasPaidProcess && !subscriptionLoading && (
+                {isAuthenticated && !hasPaidProcess && (
                   <StripeCheckout 
                     feeType="selection_process"
                     paymentType="selection_process"
@@ -186,7 +166,7 @@ const Home: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {universitiesState.map((school) => (
+            {featuredSchools.map((school) => (
               <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px]">
                 {/* University Image */}
                 <div className="relative h-48 overflow-hidden flex-shrink-0">

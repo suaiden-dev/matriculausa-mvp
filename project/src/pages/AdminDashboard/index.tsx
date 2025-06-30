@@ -7,7 +7,10 @@ import Overview from './Overview';
 import UniversityManagement from './UniversityManagement';
 import UserManagement from './UserManagement';
 import ScholarshipManagement from './ScholarshipManagement';
+import PaymentManagement from './PaymentManagement';
 import SystemSettings from './SystemSettings';
+import ApplicationMonitoring from './ApplicationMonitoring';
+import AdminApplicationView from './AdminApplicationView';
 
 interface AdminStats {
   totalUniversities: number;
@@ -56,6 +59,9 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
+  // Track se já carregamos dados uma vez para cache inteligente
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+
   const [stats, setStats] = useState<AdminStats>({
     totalUniversities: 0,
     pendingUniversities: 0,
@@ -75,7 +81,10 @@ const AdminDashboard: React.FC = () => {
 
   const loadAdminData = async () => {
     try {
-      setLoading(true);
+      // CACHE INTELIGENTE: Só mostrar loading se não temos dados ainda
+      if (!hasLoadedData) {
+        setLoading(true);
+      }
       setError(null);
 
       // Load universities
@@ -210,6 +219,9 @@ const AdminDashboard: React.FC = () => {
       };
 
       setStats(newStats);
+      
+      // Marcar que já carregamos dados uma vez
+      setHasLoadedData(true);
     } catch (error: any) {
       console.error('Error loading admin data:', error);
       setError(`Failed to load admin data: ${error.message}`);
@@ -335,6 +347,8 @@ const AdminDashboard: React.FC = () => {
               users={users}
               applications={applications}
               error={error}
+              onApprove={handleApproveUniversity}
+              onReject={handleRejectUniversity}
             />
           } 
         />
@@ -369,9 +383,15 @@ const AdminDashboard: React.FC = () => {
           } 
         />
         <Route 
+          path="payments" 
+          element={<PaymentManagement />} 
+        />
+        <Route 
           path="settings" 
           element={<SystemSettings />} 
         />
+        <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
+        <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
       </Routes>
     </AdminDashboardLayout>
   );

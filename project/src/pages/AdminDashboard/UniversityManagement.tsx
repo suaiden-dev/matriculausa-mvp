@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building, 
   CheckCircle, 
@@ -13,7 +13,12 @@ import {
   Phone,
   AlertTriangle,
   Clock,
-  TrendingUp
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  Target,
+  List,
+  Grid3X3
 } from 'lucide-react';
 
 interface UniversityManagementProps {
@@ -36,6 +41,23 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUniversity, setSelectedUniversity] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const UNIVERSITIES_PER_PAGE = 12;
+
+  // Carregar preferência de visualização do localStorage
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem('university-view-mode') as 'grid' | 'list';
+    if (savedViewMode) {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+
+  // Salvar preferência no localStorage quando mudar
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('university-view-mode', mode);
+  };
 
   const filteredUniversities = universities.filter(university => {
     const matchesSearch = university.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -47,6 +69,11 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
     
     return matchesSearch && matchesStatus;
   });
+
+  // Calcular paginação
+  const totalPages = Math.ceil(filteredUniversities.length / UNIVERSITIES_PER_PAGE);
+  const startIndex = (currentPage - 1) * UNIVERSITIES_PER_PAGE;
+  const currentUniversities = filteredUniversities.slice(startIndex, startIndex + UNIVERSITIES_PER_PAGE);
 
   return (
     <div className="space-y-8">
@@ -110,11 +137,38 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all duration-200"
+              aria-label="Filter by status"
             >
               <option value="all">All Status</option>
               <option value="approved">Approved</option>
               <option value="pending">Pending</option>
             </select>
+
+            {/* View Mode Toggle */}
+            <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1">
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="Grid view"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                  viewMode === 'list'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="List view"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -126,142 +180,269 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
         </div>
       </div>
 
-      {/* Universities List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  University
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Location
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Applied
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {filteredUniversities.map((university) => (
-                <tr key={university.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mr-4">
-                        <Building className="h-5 w-5 text-white" />
+      {/* Universities Grid */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+        <div className="p-6">
+          {filteredUniversities.length === 0 ? (
+            <div className="text-center py-12">
+              <Building className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No universities found</h3>
+              <p className="text-slate-500">
+                {searchTerm ? `No universities match "${searchTerm}"` : 'No universities registered yet'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {viewMode === 'grid' ? (
+                /* Grid de universidades em blocos */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                  {currentUniversities.map((university) => (
+                    <div 
+                      key={university.id} 
+                      className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all duration-300 group"
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <Building className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-purple-600 transition-colors">
+                              {university.name}
+                            </h4>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              university.is_approved 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-orange-100 text-orange-700'
+                            }`}>
+                              {university.is_approved ? (
+                                <>
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approved
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Pending Review
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">{university.name}</div>
+
+                      {/* Informações */}
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-center text-sm text-slate-600">
+                          <MapPin className="h-4 w-4 mr-2 text-slate-400" />
+                          <span>{university.location || 'Location not provided'}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-slate-600">
+                          <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                          <span>Applied {new Date(university.created_at).toLocaleDateString()}</span>
+                        </div>
                         {university.website && (
-                          <div className="text-sm text-slate-500 flex items-center">
-                            <Globe className="h-3 w-3 mr-1" />
-                            {university.website}
+                          <div className="flex items-center text-sm text-slate-600">
+                            <Globe className="h-4 w-4 mr-2 text-slate-400" />
+                            <span className="truncate">{university.website}</span>
+                          </div>
+                        )}
+                        {university.contact?.email && (
+                          <div className="flex items-center text-sm text-slate-600">
+                            <Mail className="h-4 w-4 mr-2 text-slate-400" />
+                            <span className="truncate">{university.contact.email}</span>
                           </div>
                         )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-900 flex items-center">
-                      <MapPin className="h-4 w-4 mr-1 text-slate-400" />
-                      {university.location || 'Not provided'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="space-y-1">
-                      {university.contact?.email && (
-                        <div className="text-sm text-slate-600 flex items-center">
-                          <Mail className="h-3 w-3 mr-1" />
-                          {university.contact.email}
-                        </div>
-                      )}
-                      {university.contact?.phone && (
-                        <div className="text-sm text-slate-600 flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {university.contact.phone}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                      university.is_approved 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {university.is_approved ? (
-                        <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Approved
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="h-3 w-3 mr-1" />
-                          Pending
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {new Date(university.created_at).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={() => setSelectedUniversity(university)}
-                        className="text-purple-600 hover:text-purple-900 hover:bg-purple-50 p-2 rounded-lg transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      {!university.is_approved && (
-                        <>
-                          <button
-                            onClick={() => onApprove(university.id)}
-                            className="text-green-600 hover:text-green-900 hover:bg-green-50 p-2 rounded-lg transition-colors"
-                            title="Approve University"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => onReject(university.id)}
-                            className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                            title="Reject University"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
 
-        {filteredUniversities.length === 0 && (
-          <div className="text-center py-12">
-            <Building className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No universities found</h3>
-            <p className="text-slate-500">
-              {searchTerm ? `No universities match "${searchTerm}"` : 'No universities registered yet'}
-            </p>
-          </div>
-        )}
+                      {/* Ações */}
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                        {!university.is_approved ? (
+                          <button 
+                            onClick={() => onApprove(university.id)}
+                            className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve
+                          </button>
+                        ) : (
+                          <div className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium text-sm">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approved
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => setSelectedUniversity(university)}
+                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          {!university.is_approved && (
+                            <button 
+                              onClick={() => onReject(university.id)}
+                              className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Reject"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Lista compacta de universidades */
+                <div className="space-y-3 mb-6">
+                  {/* Header da lista */}
+                  <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-600">
+                    <div className="col-span-4">University</div>
+                    <div className="col-span-2">Status</div>
+                    <div className="col-span-2">Location</div>
+                    <div className="col-span-2">Applied</div>
+                    <div className="col-span-2 text-center">Actions</div>
+                  </div>
+                  
+                  {/* Linhas da lista */}
+                  {currentUniversities.map((university) => (
+                    <div 
+                      key={university.id}
+                      className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all duration-200 group"
+                    >
+                      {/* Nome da universidade */}
+                      <div className="md:col-span-4 flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                          <Building className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-slate-900 truncate group-hover:text-purple-600 transition-colors">
+                            {university.name}
+                          </h4>
+                          <p className="text-sm text-slate-500 truncate md:hidden">
+                            {university.location || 'Location not provided'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Status */}
+                      <div className="md:col-span-2 flex items-center">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          university.is_approved 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-orange-100 text-orange-700'
+                        }`}>
+                          {university.is_approved ? (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approved
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Localização */}
+                      <div className="hidden md:flex md:col-span-2 items-center text-sm text-slate-600">
+                        <MapPin className="h-4 w-4 mr-2 text-slate-400" />
+                        <span className="truncate">{university.location || 'Not provided'}</span>
+                      </div>
+
+                      {/* Data de aplicação */}
+                      <div className="hidden md:flex md:col-span-2 items-center text-sm text-slate-600">
+                        <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                        <span>{new Date(university.created_at).toLocaleDateString()}</span>
+                      </div>
+
+                      {/* Ações */}
+                      <div className="md:col-span-2 flex items-center justify-center space-x-2">
+                        {!university.is_approved ? (
+                          <>
+                            <button 
+                              onClick={() => onApprove(university.id)}
+                              className="flex items-center px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                              title="Approve university"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <span className="hidden sm:inline">Approve</span>
+                            </button>
+                            <button 
+                              onClick={() => onReject(university.id)}
+                              className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Reject university"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="flex items-center px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">Approved</span>
+                          </div>
+                        )}
+                        
+                        <button 
+                          onClick={() => setSelectedUniversity(university)}
+                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="View details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Informações adicionais em mobile */}
+                      <div className="md:hidden col-span-1 pt-3 border-t border-slate-100 text-sm text-slate-500">
+                        <div className="flex items-center justify-between">
+                          <span>Applied: {new Date(university.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Paginação */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+                  <div className="text-sm text-slate-600">
+                    Showing {startIndex + 1}-{Math.min(startIndex + UNIVERSITIES_PER_PAGE, filteredUniversities.length)} of {filteredUniversities.length} universities
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    
+                    <span className="px-4 py-2 text-sm font-medium text-slate-900">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Next Page"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* University Detail Modal */}
@@ -274,6 +455,7 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                 <button
                   onClick={() => setSelectedUniversity(null)}
                   className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100"
+                  title="Close modal"
                 >
                   <XCircle className="h-5 w-5" />
                 </button>

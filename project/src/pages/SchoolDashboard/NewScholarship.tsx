@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Award, 
   DollarSign, 
@@ -11,7 +11,10 @@ import {
   BookOpen,
   Target,
   Clock,
-  Info
+  Info,
+  RefreshCw,
+  Plus,
+  X
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,17 +22,30 @@ import { useUniversity } from '../../context/UniversityContext';
 
 const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const FORM_STORAGE_KEY = 'new_scholarship_form_data';
 
 const NewScholarship: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editScholarshipId = searchParams.get('edit');
+  const isEditMode = Boolean(editScholarshipId);
+  
   const { user } = useAuth();
   const { university, loading: universityLoading, refreshData } = useUniversity();
   const [loading, setLoading] = useState(false);
+  const [loadingScholarship, setLoadingScholarship] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isDataRestored, setIsDataRestored] = useState(false);
+  
+  // Novos estados para gerenciar programas
+  const [availablePrograms, setAvailablePrograms] = useState<string[]>([]);
+  const [showNewProgramInput, setShowNewProgramInput] = useState(false);
+  const [newProgramInput, setNewProgramInput] = useState('');
+  const [savingNewProgram, setSavingNewProgram] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -47,6 +63,145 @@ const NewScholarship: React.FC = () => {
     original_value_per_credit: '',
     annual_value_with_scholarship: '',
   });
+
+  // Função para salvar dados no localStorage
+  const saveFormDataToStorage = useCallback((data: any) => {
+    try {
+      const dataToSave = {
+        ...data,
+        timestamp: new Date().toISOString(),
+        userId: user?.id
+      };
+      localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(dataToSave));
+    } catch (error) {
+      console.warn('Failed to save form data to localStorage:', error);
+    }
+  }, [user?.id]);
+
+  // Função para carregar dados do localStorage
+  const loadFormDataFromStorage = useCallback(() => {
+    try {
+      const savedData = localStorage.getItem(FORM_STORAGE_KEY);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        
+        // Verificar se os dados são do usuário atual e não são muito antigos (24 horas)
+        const isCurrentUser = parsedData.userId === user?.id;
+        const isNotTooOld = new Date().getTime() - new Date(parsedData.timestamp).getTime() < 24 * 60 * 60 * 1000;
+        
+        if (isCurrentUser && isNotTooOld) {
+          const { userId, timestamp, ...formDataOnly } = parsedData;
+          return formDataOnly;
+        } else {
+          // Limpar dados antigos ou de outro usuário
+          localStorage.removeItem(FORM_STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load form data from localStorage:', error);
+      localStorage.removeItem(FORM_STORAGE_KEY);
+    }
+    return null;
+  }, [user?.id]);
+
+  // Função para limpar dados salvos
+  const clearSavedFormData = useCallback(() => {
+    localStorage.removeItem(FORM_STORAGE_KEY);
+  }, []);
+
+  // Função para carregar dados da bolsa existente
+  const loadScholarshipData = useCallback(async () => {
+    if (!editScholarshipId || !university) return;
+    
+    setLoadingScholarship(true);
+    try {
+      const { data: scholarship, error } = await supabase
+        .from('scholarships')
+        .select('*')
+        .eq('id', editScholarshipId)
+        .eq('university_id', university.id)
+        .single();
+
+      if (error) throw error;
+
+      if (scholarship) {
+        setFormData({
+          title: scholarship.title || '',
+          description: scholarship.description || '',
+          amount: scholarship.amount?.toString() || '',
+          deadline: scholarship.deadline || '',
+          requirements: scholarship.requirements?.length ? scholarship.requirements : [''],
+          field_of_study: scholarship.field_of_study || '',
+          level: scholarship.level || 'undergraduate',
+          eligibility: scholarship.eligibility?.length ? scholarship.eligibility : [''],
+          benefits: scholarship.benefits?.length ? scholarship.benefits : [''],
+          is_exclusive: scholarship.is_exclusive || false,
+          is_active: scholarship.is_active !== undefined ? scholarship.is_active : true,
+          original_annual_value: scholarship.original_annual_value?.toString() || '',
+          original_value_per_credit: scholarship.original_value_per_credit?.toString() || '',
+          annual_value_with_scholarship: scholarship.annual_value_with_scholarship?.toString() || '',
+        });
+
+        // Set image preview if exists
+        if (scholarship.image_url) {
+          setImagePreview(scholarship.image_url);
+        }
+
+        setIsDataRestored(true);
+      }
+    } catch (error: any) {
+      console.error('Error loading scholarship:', error);
+      setError(`Error loading scholarship: ${error.message}`);
+      // Redirect back if scholarship not found or access denied
+      navigate('/school/dashboard/scholarships');
+    } finally {
+      setLoadingScholarship(false);
+    }
+  }, [editScholarshipId, university, navigate]);
+
+  // Carregar dados salvos quando o componente monta (apenas para modo criar)
+  useEffect(() => {
+    if (user && !isDataRestored && !isEditMode) {
+      const savedData = loadFormDataFromStorage();
+      if (savedData) {
+        setFormData(savedData);
+        setIsDataRestored(true);
+      }
+    }
+  }, [user, loadFormDataFromStorage, isDataRestored, isEditMode]);
+
+  // Carregar dados da bolsa existente quando estiver em modo de edição
+  useEffect(() => {
+    if (isEditMode && university && !isDataRestored) {
+      loadScholarshipData();
+    }
+  }, [isEditMode, university, isDataRestored, loadScholarshipData]);
+
+  // Auto-salvar dados quando formData muda (debounced)
+  useEffect(() => {
+    if (isDataRestored && user) {
+      const timeoutId = setTimeout(() => {
+        // Só salvar se há dados significativos no formulário
+        const hasSignificantData = formData.title.length > 0 || 
+                                  formData.description.length > 0 || 
+                                  formData.amount.length > 0 ||
+                                  formData.original_annual_value.length > 0;
+        
+        if (hasSignificantData) {
+          saveFormDataToStorage(formData);
+        }
+      }, 1000); // Debounce de 1 segundo
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, saveFormDataToStorage, isDataRestored, user]);
+
+  // Carregar programas da universidade
+  useEffect(() => {
+    if (university?.programs && Array.isArray(university.programs)) {
+      setAvailablePrograms(university.programs);
+    }
+  }, [university]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -125,6 +280,75 @@ const NewScholarship: React.FC = () => {
     setImagePreview(null);
   };
 
+  // Funções para gerenciar programas acadêmicos
+  const handleAddNewProgram = async () => {
+    if (!newProgramInput.trim() || !university?.id) return;
+
+    // Verificar se o programa já existe
+    const normalizedInput = newProgramInput.trim();
+    if (availablePrograms.some(program => 
+      program.toLowerCase() === normalizedInput.toLowerCase()
+    )) {
+      setError('This program already exists in your university profile');
+      return;
+    }
+
+    setSavingNewProgram(true);
+    setError(null);
+
+    try {
+      // Atualizar programas na universidade
+      const updatedPrograms = [...availablePrograms, normalizedInput];
+      
+      const { error: updateError } = await supabase
+        .from('universities')
+        .update({ programs: updatedPrograms })
+        .eq('id', university.id);
+
+      if (updateError) throw updateError;
+
+      // Atualizar estados locais
+      setAvailablePrograms(updatedPrograms);
+      setFormData(prev => ({
+        ...prev,
+        field_of_study: normalizedInput
+      }));
+      
+      // Limpar input e fechar modal
+      setNewProgramInput('');
+      setShowNewProgramInput(false);
+      
+      // Refresh university data
+      await refreshData();
+      
+    } catch (error) {
+      console.error('Error adding new program:', error);
+      setError('Failed to add new program. Please try again.');
+    } finally {
+      setSavingNewProgram(false);
+    }
+  };
+
+  const handleCancelNewProgram = () => {
+    setNewProgramInput('');
+    setShowNewProgramInput(false);
+    setError(null);
+  };
+
+  const handleNewProgramInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewProgramInput(e.target.value);
+    setError(null);
+  };
+
+  const handleNewProgramKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddNewProgram();
+    } else if (e.key === 'Escape') {
+      handleCancelNewProgram();
+    }
+  };
+
   const uploadImageToStorage = async (scholarshipId: string): Promise<string | null> => {
     if (!imageFile || !user) return null;
 
@@ -157,6 +381,13 @@ const NewScholarship: React.FC = () => {
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  // Função para salvar como rascunho
+  const saveDraft = async () => {
+    saveFormDataToStorage(formData);
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,6 +430,12 @@ const NewScholarship: React.FC = () => {
       return;
     }
 
+    if (!formData.field_of_study.trim()) {
+      setError('Program is required. Please select or add a program.');
+      setLoading(false);
+      return;
+    }
+
     // Filter out empty array items
     const requirements = formData.requirements.filter(item => item.trim());
     const eligibility = formData.eligibility.filter(item => item.trim());
@@ -211,7 +448,7 @@ const NewScholarship: React.FC = () => {
     }
 
     try {
-      // 3. Prepare data for submission
+      // Prepare data for submission
       const scholarshipData = {
         title: formData.title,
         description: formData.description,
@@ -231,25 +468,40 @@ const NewScholarship: React.FC = () => {
         annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
       };
 
-      // 4. Insert scholarship first
-      const { data: newScholarship, error: submitError } = await supabase
-        .from('scholarships')
-        .insert(scholarshipData)
-        .select('id')
-        .single();
+      let scholarshipId: string;
+      
+      if (isEditMode && editScholarshipId) {
+        // Update existing scholarship
+        const { error: updateError } = await supabase
+          .from('scholarships')
+          .update(scholarshipData)
+          .eq('id', editScholarshipId)
+          .eq('university_id', university.id);
 
-      if (submitError) throw submitError;
+        if (updateError) throw updateError;
+        scholarshipId = editScholarshipId;
+      } else {
+        // Insert new scholarship
+        const { data: newScholarship, error: submitError } = await supabase
+          .from('scholarships')
+          .insert(scholarshipData)
+          .select('id')
+          .single();
 
-      // 5. Upload image if provided
-      if (imageFile && newScholarship) {
+        if (submitError) throw submitError;
+        scholarshipId = newScholarship.id;
+      }
+
+      // Upload image if provided
+      if (imageFile && scholarshipId) {
         try {
-          const imageUrl = await uploadImageToStorage(newScholarship.id);
+          const imageUrl = await uploadImageToStorage(scholarshipId);
           if (imageUrl) {
             // Update scholarship with image URL
             const { error: updateError } = await supabase
               .from('scholarships')
               .update({ image_url: imageUrl })
-              .eq('id', newScholarship.id);
+              .eq('id', scholarshipId);
             
             if (updateError) {
               console.error('Error updating scholarship with image URL:', updateError);
@@ -262,9 +514,16 @@ const NewScholarship: React.FC = () => {
         }
       }
 
+      // Limpar dados salvos após sucesso
+      clearSavedFormData();
+      
       setSuccess(true);
       await refreshData(); // Refresh university data to include new scholarship
-      navigate('/school/dashboard/scholarships');
+      
+      // Aguardar um pouco antes de navegar para mostrar a mensagem de sucesso
+      setTimeout(() => {
+        navigate('/school/dashboard/scholarships');
+      }, 2000);
     } catch (error: any) {
       console.error('Error creating scholarship:', error);
       setError(`Error creating scholarship: ${error.message}`);
@@ -274,12 +533,14 @@ const NewScholarship: React.FC = () => {
   };
 
   // Show loading screen until university is available
-  if (universityLoading) {
+  if (universityLoading || loadingScholarship) {
     return (
       <div className="min-h-screen bg-slate-50 py-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E] mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading university information...</p>
+          <p className="text-slate-600">
+            {loadingScholarship ? 'Loading scholarship data...' : 'Loading university information...'}
+          </p>
         </div>
       </div>
     );
@@ -317,11 +578,43 @@ const NewScholarship: React.FC = () => {
             Back to Scholarships
           </button>
           
-          <h1 className="text-3xl font-bold text-slate-900">Create New Scholarship</h1>
-          <p className="text-slate-600 mt-2">
-            Define a new scholarship opportunity for international students
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {isEditMode ? 'Edit Scholarship' : 'Create New Scholarship'}
+              </h1>
+              <p className="text-slate-600 mt-2">
+                {isEditMode 
+                  ? 'Update scholarship details and requirements'
+                  : 'Define a new scholarship opportunity for international students'
+                }
+              </p>
+            </div>
+            
+            {/* Draft save button */}
+            <button
+              onClick={saveDraft}
+              type="button"
+              className="flex items-center px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Draft
+            </button>
+          </div>
         </div>
+
+        {/* Data Restored Notification */}
+        {isDataRestored && (formData.title || formData.description) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center">
+              <RefreshCw className="h-5 w-5 text-blue-500 mr-3 flex-shrink-0" />
+              <div>
+                <p className="text-blue-700 font-medium">Previous data restored</p>
+                <p className="text-blue-600 text-sm">Your previously entered data has been automatically restored.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -338,7 +631,9 @@ const NewScholarship: React.FC = () => {
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-              <p className="text-green-700">Scholarship created successfully! Redirecting...</p>
+              <p className="text-green-700">
+                {loading ? 'Scholarship created successfully! Redirecting...' : 'Draft saved successfully!'}
+              </p>
             </div>
           </div>
         )}
@@ -516,25 +811,95 @@ const NewScholarship: React.FC = () => {
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Field of Study
+                    Programs *
                   </label>
-                  <select
-                    name="field_of_study"
-                    value={formData.field_of_study}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                  >
-                    <option value="">Any Field</option>
-                    <option value="STEM">STEM</option>
-                    <option value="Business">Business</option>
-                    <option value="Arts & Humanities">Arts & Humanities</option>
-                    <option value="Social Sciences">Social Sciences</option>
-                    <option value="Health Sciences">Health Sciences</option>
-                    <option value="Engineering">Engineering</option>
-                    <option value="Computer Science">Computer Science</option>
-                    <option value="Law">Law</option>
-                    <option value="Medicine">Medicine</option>
-                  </select>
+                  
+                  {!showNewProgramInput ? (
+                    <div className="space-y-3">
+                      <select
+                        name="field_of_study"
+                        value={formData.field_of_study}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                        title="Select program"
+                        required
+                      >
+                        <option value="">Select a program...</option>
+                        {availablePrograms.length > 0 && (
+                          <optgroup label="Your University Programs">
+                            {availablePrograms.map((program, index) => (
+                              <option key={index} value={program}>
+                                {program}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        <optgroup label="General Categories">
+                          <option value="STEM">STEM</option>
+                          <option value="Business">Business</option>
+                          <option value="Arts & Humanities">Arts & Humanities</option>
+                          <option value="Social Sciences">Social Sciences</option>
+                          <option value="Health Sciences">Health Sciences</option>
+                          <option value="Engineering">Engineering</option>
+                          <option value="Computer Science">Computer Science</option>
+                          <option value="Law">Law</option>
+                          <option value="Medicine">Medicine</option>
+                        </optgroup>
+                      </select>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setShowNewProgramInput(true)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-dashed border-slate-300 rounded-xl text-slate-600 hover:border-[#05294E] hover:text-[#05294E] transition-all duration-200"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add New Program to Your University
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newProgramInput}
+                          onChange={handleNewProgramInputChange}
+                          onKeyDown={handleNewProgramKeyPress}
+                          placeholder="Enter new academic program name..."
+                          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                          disabled={savingNewProgram}
+                          autoFocus
+                          title="Enter new program name"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddNewProgram}
+                          disabled={savingNewProgram || !newProgramInput.trim()}
+                          className="px-4 py-3 bg-[#05294E] text-white rounded-xl hover:bg-[#05294E]/90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                          title="Add new program"
+                        >
+                          {savingNewProgram ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4" />
+                          )}
+                          {savingNewProgram ? 'Saving...' : 'Add'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelNewProgram}
+                          disabled={savingNewProgram}
+                          className="px-4 py-3 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 disabled:bg-slate-100 disabled:cursor-not-allowed transition-colors"
+                          title="Cancel adding new program"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      <p className="text-sm text-slate-500">
+                        This will add the program to your university profile and can be used for future scholarships.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -547,6 +912,7 @@ const NewScholarship: React.FC = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                     required
+                    title="Select academic level"
                   >
                     <option value="undergraduate">Undergraduate</option>
                     <option value="graduate">Graduate</option>
@@ -742,12 +1108,12 @@ const NewScholarship: React.FC = () => {
                 {loading || uploadingImage ? (
                   <>
                     <Clock className="animate-spin h-5 w-5 mr-2" />
-                    {uploadingImage ? 'Uploading Image...' : 'Creating...'}
+                    {uploadingImage ? 'Uploading Image...' : (isEditMode ? 'Updating...' : 'Creating...')}
                   </>
                 ) : (
                   <>
                     <Save className="h-5 w-5 mr-2" />
-                    Create Scholarship
+                    {isEditMode ? 'Update Scholarship' : 'Create Scholarship'}
                   </>
                 )}
               </button>
