@@ -210,7 +210,9 @@ const UniversityDetail: React.FC = () => {
 
   // Fallbacks for missing fields in real data
   const programs = university.programs || [];
-  const address = university.address || {};
+  const address = typeof university.address === 'string'
+    ? { street: university.address }
+    : university.address || {};
   const contact = university.contact || {};
 
   return (

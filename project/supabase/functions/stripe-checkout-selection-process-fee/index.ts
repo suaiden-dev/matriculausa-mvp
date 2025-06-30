@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'selection_process',
+      origem: 'site',
       ...metadata,
     };
 

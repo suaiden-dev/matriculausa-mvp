@@ -4,6 +4,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
 const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')!;
+// Configurações do MailerSend
+const mailerSendApiKey = 'mlsn.b2e23b41cf2afd47427c4cd02eb718ca04baaa4e18b2b4ef835ff1f88f4c93b8'; // Token real do MailerSend
+const mailerSendUrl = 'https://api.mailersend.com/v1/email';
+const fromEmail = 'support@matriculausa.com';
+const fromName = 'Matrícula USA';
+
 const stripe = new Stripe(stripeSecret, {
   appInfo: {
     name: 'Bolt Integration',
@@ -13,87 +19,243 @@ const stripe = new Stripe(stripeSecret, {
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-Deno.serve(async (req) => {
-  console.log('[stripe-webhook] Received a request.');
+// Função para enviar e-mail via MailerSend
+async function sendEmail(paymentData: {
+  eventType: 'payment_success' | 'payment_failed';
+  userEmail: string;
+  userName: string;
+  paymentAmount: number;
+  paymentType: string;
+  sessionId: string;
+  origin: string;
+}) {
   try {
-    // Handle OPTIONS request for CORS preflight
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 204 });
+    console.log('[MailerSend] Enviando e-mail:', paymentData);
+    
+    let subject = '';
+    let htmlContent = '';
+    
+    if (paymentData.eventType === 'payment_success') {
+      subject = 'Payment successful - Selective process';
+      htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment successful - Selective process</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>🎓 Payment successful - Selective process</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your payment was successfully processed.</p><p>📚 The next step is to select the schools to which you want to apply for enrollment.</p><p>This step is essential to proceed with your application.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
+    } else {
+      subject = 'Payment failed – Action required';
+      htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment failed – Action required</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>❗ Payment failed – Action required</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Unfortunately, we were not able to complete your payment.</p><p>This may have occurred due to an issue with your card or payment provider.</p><p>To resolve this, please contact our support team so we can assist you directly.</p><p>💬 <strong><a href="https://matriculausa.com/support">Click here to talk to our team</a></strong></p><p>We\'re here to help you complete your enrollment process.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
     }
-
-    if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
+    
+    const response = await fetch(mailerSendUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mailerSendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: { email: fromEmail, name: fromName },
+        to: [{ email: paymentData.userEmail, name: paymentData.userName }],
+        subject,
+        html: htmlContent,
+      }),
+    });
+    console.log('[MailerSend] Status da resposta:', response.status, response.statusText);
+    // Só tenta fazer .json() se o status não for 202 e houver corpo
+    let result = null;
+    if (response.status !== 202) {
+      try {
+        result = await response.json();
+      } catch (e) {
+        console.warn('[MailerSend] Corpo da resposta não é JSON:', e);
+      }
     }
+    return result;
+  } catch (error) {
+    console.error('[MailerSend] Erro ao enviar e-mail:', error);
+    // Não vamos falhar o webhook por causa do e-mail
+    return null;
+  }
+}
 
-    // get the signature from the header
-    const signature = req.headers.get('stripe-signature');
-
-    if (!signature) {
-      return new Response('No signature found', { status: 400 });
+// Função para buscar dados do usuário
+async function getUserData(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('email, full_name')
+      .eq('user_id', userId)
+      .single();
+    if (error) {
+      console.warn('[stripe-webhook] Erro ao buscar dados do usuário:', error);
+      return { email: '', name: 'Usuário' };
     }
+    // Ajustar para retornar o nome correto
+    return { email: data.email, name: data.full_name || 'Usuário' };
+  } catch (err) {
+    console.error('[stripe-webhook] Erro inesperado ao buscar dados do usuário:', err);
+    return { email: '', name: 'Usuário' };
+  }
+}
 
-    // get the raw body
-    const body = await req.text();
-
-    // verify the webhook signature
-    let event: Stripe.Event;
-
+// Função para notificar endpoint externo sobre o pagamento do processo seletivo
+async function notifySelectionProcessWebhook({
+  userName,
+  userEmail,
+  content,
+  tipo_notif = 'pagamento_processo_seletivo',
+  maxRetries = 2,
+  origin: paymentOrigin,
+}: {
+  userName: string;
+  userEmail: string;
+  content: string;
+  tipo_notif?: string;
+  maxRetries?: number;
+  origin: string;
+}) {
+  const url = 'https://nwh.suaiden.com/webhook/notfmatriculausa';
+  const body = {
+    'nome aluno': userName,
+    'email_aluno': userEmail,
+    'contente': content,
+    'tipo_notif': tipo_notif,
+    'origin': paymentOrigin,
+  };
+  let attempt = 0;
+  let lastError = null;
+  while (attempt < maxRetries) {
     try {
-      event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
-    } catch (error: any) {
-      console.error(`Webhook signature verification failed: ${error.message}`);
-      return new Response(`Webhook signature verification failed: ${error.message}`, { status: 400 });
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Status: ${response.status} - ${errorText}`);
+      }
+      console.log(`[Webhook] Notificação enviada com sucesso para ${url}`);
+      return true;
+    } catch (err) {
+      lastError = err;
+      console.error(`[Webhook] Erro ao enviar notificação (tentativa ${attempt + 1}):`, err);
+      attempt++;
     }
+  }
+  console.error('[Webhook] Falha ao notificar endpoint externo após múltiplas tentativas:', lastError);
+  return false;
+}
 
-    EdgeRuntime.waitUntil(handleEvent(event));
+// Função para verificar assinatura Stripe manualmente (Deno/Supabase Edge)
+async function verifyStripeSignature(payload, sigHeader, secret) {
+  try {
+    if (!sigHeader) {
+      console.error('[stripe-webhook] Stripe signature header ausente!');
+      return false;
+    }
+    const encoder = new TextEncoder();
+    // Stripe envia múltiplas assinaturas, pegue t=... e v1=...
+    const parts = sigHeader.split(',').map(s => s.trim());
+    let timestamp = '';
+    let signature = '';
+    for (const part of parts) {
+      if (part.startsWith('t=')) timestamp = part.replace('t=', '');
+      if (part.startsWith('v1=')) signature = part.replace('v1=', '');
+  }
+    if (!timestamp || !signature) {
+      console.error('[stripe-webhook] Não foi possível extrair timestamp ou assinatura do header:', sigHeader);
+      return false;
+    }
+    const signedPayload = `${timestamp}.${payload}`;
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign', 'verify']
+    );
+    const signatureBuffer = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      encoder.encode(signedPayload)
+    );
+    const signatureHex = Array.from(new Uint8Array(signatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    // Compare assinatura calculada com a recebida
+    const isValid = signatureHex === signature;
+    if (!isValid) {
+      console.error('[stripe-webhook] Assinatura Stripe inválida!');
+    }
+    return isValid;
+  } catch (err) {
+    console.error('[stripe-webhook] Erro ao verificar assinatura Stripe:', err);
+    return false;
+    }
+}
 
-    return Response.json({ received: true });
-  } catch (error: any) {
-    console.error('Error processing webhook:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+Deno.serve(async (req) => {
+  try {
+    const sig = req.headers.get('stripe-signature');
+    const body = await req.text();
+    // Verificação manual da assinatura
+    const isValid = await verifyStripeSignature(body, sig, stripeWebhookSecret);
+    if (!isValid) {
+      return new Response(JSON.stringify({ error: 'Webhook signature verification failed.' }), { status: 400 });
+    }
+    // Parse o evento manualmente
+    let event;
+    try {
+      event = JSON.parse(body);
+    } catch (err) {
+      console.error('[stripe-webhook] Erro ao fazer parse do body:', err);
+      return new Response(JSON.stringify({ error: 'Invalid JSON.' }), { status: 400 });
+    }
+    await handleEvent(event);
+    return new Response(JSON.stringify({ received: true }), { status: 200 });
+  } catch (err) {
+    console.error('[stripe-webhook] Erro inesperado no handler:', err);
+    return new Response(JSON.stringify({ error: 'Internal server error.' }), { status: 500 });
   }
 });
 
 async function handleEvent(event: Stripe.Event) {
+  console.log('[stripe-webhook] handleEvent called with event:', JSON.stringify(event, null, 2));
   const stripeData = event?.data?.object ?? {};
+  console.log('[stripe-webhook] stripeData:', JSON.stringify(stripeData, null, 2));
 
-  if (!stripeData) {
-    return;
-  }
-
-  if (!('customer' in stripeData)) {
-    return;
-  }
-
-  // for one time payments, we only listen for the checkout.session.completed event
-  if (event.type === 'payment_intent.succeeded' && event.data.object.invoice === null) {
-    return;
-  }
-
-  const { customer: customerId } = stripeData;
-
-  if (!customerId || typeof customerId !== 'string') {
-    console.error(`No customer received on event: ${JSON.stringify(event)}`);
-  } else {
-    let isSubscription = true;
-
+  // Só processa envio de e-mail para checkout.session.completed
     if (event.type === 'checkout.session.completed') {
-      const { mode } = stripeData as Stripe.Checkout.Session;
-
-      isSubscription = mode === 'subscription';
-
-      console.info(`Processing ${isSubscription ? 'subscription' : 'one-time payment'} checkout session`);
-    }
-
-    const { mode, payment_status } = stripeData as Stripe.Checkout.Session;
-
-    if (isSubscription) {
-      console.info(`Starting subscription sync for customer: ${customerId}`);
-      await syncCustomerFromStripe(customerId);
-    } else if (mode === 'payment' && payment_status === 'paid') {
-      const session = stripeData as Stripe.Checkout.Session;
-      const { metadata, payment_intent, customer } = session;
-
+    console.log('[stripe-webhook] Evento checkout.session.completed recebido!');
+    // --- Bloco de envio de e-mail e atualização de status ---
+    const metadata = stripeData.metadata || {};
+    const { mode, payment_status } = stripeData;
+    const amount_total = stripeData.amount_total;
+    const session = stripeData;
+      // Obter dados do usuário para o e-mail
+      const userId = metadata?.user_id || metadata?.student_id;
+      let userData = { email: '', name: 'Usuário' };
+      if (userId) {
+        userData = await getUserData(userId);
+      console.log('[stripe-webhook] userData extraído para e-mail:', userData);
+    } else {
+      console.warn('[stripe-webhook] Nenhum userId encontrado no metadata para envio de e-mail.');
+      }
+      // Referenciar corretamente o metadado de origem
+    const paymentOrigin1 = metadata?.origin || 'site';
+    console.log('[stripe-webhook] Metadado de origem do pagamento:', paymentOrigin1);
+    // Log antes do envio de e-mail
+      if (mailerSendApiKey && userData.email) {
+      console.log('[stripe-webhook] Tentando enviar e-mail de confirmação para:', userData.email);
+      const emailResult = await sendEmail({
+          eventType: 'payment_success',
+          userEmail: userData.email,
+          userName: userData.name,
+        paymentAmount: amount_total ? amount_total / 100 : 0,
+          paymentType: metadata?.payment_type || 'unknown',
+          sessionId: session.id,
+        origin: paymentOrigin1
+        });
+      console.log('[stripe-webhook] Resultado do envio de e-mail:', emailResult);
+    } else {
+      console.warn('[stripe-webhook] Não foi possível enviar e-mail: mailerSendApiKey ou userData.email ausente.');
+      }
+    // --- Resto do processamento do evento (atualização de status, etc) ---
       if (metadata?.payment_type === 'application_fee') {
         const userId = metadata.user_id;
         const applicationId = metadata.application_id;
@@ -156,6 +318,33 @@ async function handleEvent(event: Stripe.Event) {
         } else {
             console.log(`[stripe-webhook] Successfully updated status for application ${applicationId} to approved.`);
         }
+      } else if (metadata?.payment_type === 'selection_process') {
+        // Processar pagamento da taxa de processo seletivo ($350)
+        const userId = metadata.user_id || metadata.student_id;
+        let userData = { email: '', name: 'Usuário' };
+        if (userId) {
+          userData = await getUserData(userId);
+          const { error } = await supabase
+            .from('user_profiles')
+            .update({ 
+              has_paid_selection_process_fee: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', userId);
+
+          if (error) {
+            console.error('Error updating selection process fee status:', error);
+          } else {
+            console.log('Selection process fee payment processed successfully for user:', userId);
+          }
+          // Notificar endpoint externo (sucesso)
+          await notifySelectionProcessWebhook({
+            userName: userData.name,
+            userEmail: userData.email,
+            content: 'Your application process payment was processed successfully!',
+          origin: paymentOrigin1,
+          });
+        }
       }
 
       try {
@@ -166,7 +355,10 @@ async function handleEvent(event: Stripe.Event) {
           amount_total,
           currency,
         } = stripeData as Stripe.Checkout.Session;
-
+      // Definir variáveis necessárias para o insert
+      const payment_intent = stripeData.payment_intent;
+      const customerId = stripeData.customer || null;
+      const payment_status = stripeData.payment_status || null;
         // Insert the order into the stripe_orders table
         const { error: orderError } = await supabase.from('stripe_orders').insert({
           checkout_session_id,
@@ -187,7 +379,9 @@ async function handleEvent(event: Stripe.Event) {
       } catch (error) {
         console.error('Error processing one-time payment:', error);
       }
-    }
+  } else {
+    // Ignora outros eventos para envio de e-mail
+    console.log(`[stripe-webhook] Evento ignorado para envio de e-mail: ${event.type}`);
   }
 }
 

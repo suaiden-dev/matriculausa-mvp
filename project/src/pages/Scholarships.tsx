@@ -51,7 +51,11 @@ const Scholarships: React.FC = () => {
     const matchesRange = maxPrice > 0 ? (scholarship.annual_value_with_scholarship ?? 0) <= maxPrice : false;
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
-    return matchesSearch && matchesRange && matchesLevel && matchesField;
+    // Filtro para deadline: só bolsas com deadline futuro ou hoje
+    const deadlineDate = new Date(scholarship.deadline);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return matchesSearch && matchesRange && matchesLevel && matchesField && deadlineDate >= today;
   });
 
   const formatAmount = (amount: number) => {
@@ -274,25 +278,28 @@ const Scholarships: React.FC = () => {
               
               return (
                 <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2">
-                  {/* Scholarship Image */}
-                  {scholarship.image_url && (
-                    <div className="relative h-48 overflow-hidden">
+                  {/* Scholarship Image - sempre ocupa o mesmo espaço */}
+                  <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-slate-100">
+                    {scholarship.image_url ? (
                       <img
                         src={scholarship.image_url}
                         alt={scholarship.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                      {/* Exclusive Badge on Image */}
-                      {scholarship.is_exclusive && (
-                        <div className="absolute top-4 right-4">
-                          <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
-                            Exclusive
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full text-slate-400">
+                        <Building className="h-16 w-16" />
+                      </div>
+                    )}
+                    {/* Badge de exclusivo */}
+                    {scholarship.is_exclusive && (
+                      <div className="absolute top-4 right-4">
+                        <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                          Exclusive
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Card Content */}
                   <div className={`p-6 ${scholarship.image_url ? '' : ''}`}>
