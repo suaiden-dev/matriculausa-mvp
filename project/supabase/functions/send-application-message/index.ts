@@ -20,8 +20,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('[send-application-message] Iniciando processamento');
     const { application_id, text, file_url, file_name } = await req.json();
+    console.log('[send-application-message] Payload recebido:', { application_id, text, file_url, file_name });
     if (!application_id || (!text && !file_url)) {
+      console.warn('[send-application-message] Mensagem sem texto ou anexo.');
       return new Response(JSON.stringify({ error: 'A message must have text or an attachment.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -35,11 +38,13 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[send-application-message] Missing Authorization header');
       throw new Error('Missing Authorization header');
     }
     const jwt = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
     if (userError || !user) {
+      console.error('[send-application-message] User not authenticated', userError);
       throw new Error('User not authenticated');
     }
     
@@ -52,6 +57,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (appError || !appData) {
+      console.error('[send-application-message] Falha ao buscar detalhes da aplicação', appError);
       throw new Error('Failed to retrieve application details or application not found.');
     }
 
@@ -59,6 +65,7 @@ Deno.serve(async (req) => {
     const universityUserId = appData.scholarships?.universities?.user_id;
 
     if (!studentId || !universityUserId) {
+        console.error('[send-application-message] Não foi possível determinar studentId ou universityUserId', { studentId, universityUserId });
         throw new Error('Could not determine student or university from application.');
     }
 
@@ -68,6 +75,7 @@ Deno.serve(async (req) => {
     } else if (sender_id === universityUserId) {
         recipient_id = studentId;
     } else {
+        console.error('[send-application-message] Sender não faz parte da aplicação', { sender_id, studentId, universityUserId });
         throw new Error('Sender is not part of this application.');
     }
 
@@ -83,6 +91,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (msgError || !newMessage) {
+      console.error('[send-application-message] Falha ao enviar mensagem', msgError);
       throw new Error(`Failed to send message: ${msgError?.message}`);
     }
 
@@ -96,16 +105,18 @@ Deno.serve(async (req) => {
         });
       if (attachError) {
         // Log the error, but don't fail the whole request
-        console.error('Failed to save attachment:', attachError.message);
+        console.error('[send-application-message] Falha ao salvar anexo:', attachError.message);
       }
     }
     
     // The client expects the full message object for optimistic updates
+    console.log('[send-application-message] Mensagem enviada com sucesso', newMessage);
     return new Response(JSON.stringify(newMessage), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    console.error('[send-application-message] Erro inesperado:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
