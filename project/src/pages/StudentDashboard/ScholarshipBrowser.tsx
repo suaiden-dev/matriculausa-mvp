@@ -126,6 +126,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   };
 
+  // Exibir apenas bolsas com deadline hoje ou futuro
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const visibleScholarships = filteredScholarships.filter(s => {
+    const deadlineDate = new Date(s.deadline);
+    return deadlineDate >= today;
+  });
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -200,7 +208,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
       {/* Scholarships Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredScholarships.map((scholarship) => {
+        {visibleScholarships.map((scholarship) => {
           const deadlineStatus = getDeadlineStatus(scholarship.deadline);
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);

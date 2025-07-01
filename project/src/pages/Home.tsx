@@ -11,8 +11,19 @@ import WhatsAppFloatingButton from '../components/WhatsAppFloatingButton';
 const Home: React.FC = () => {
   const { universities, loading: universitiesLoading } = useUniversities();
   const featuredSchools = universities.slice(0, 6);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, userProfile } = useAuth();
   const { hasPaidProcess, loading: subscriptionLoading } = useSubscription();
+
+  // Função para determinar o dashboard conforme a role (igual Header)
+  const getDashboardPath = () => {
+    if (!user) return '/';
+    switch (user.role) {
+      case 'student': return '/student/dashboard';
+      case 'school': return '/school/dashboard';
+      case 'admin': return '/admin/dashboard';
+      default: return '/';
+    }
+  };
 
   return (
     <div className="bg-white">
@@ -53,8 +64,8 @@ const Home: React.FC = () => {
                   Get Started
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                
-                {isAuthenticated && !hasPaidProcess && (
+                {/* Lógica correta: só para estudante, usando userProfile?.has_paid_selection_process_fee */}
+                {isAuthenticated && user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee && (
                   <StripeCheckout 
                     feeType="selection_process"
                     paymentType="selection_process"
@@ -66,17 +77,25 @@ const Home: React.FC = () => {
                     cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
                   />
                 )}
-                
-                {isAuthenticated && hasPaidProcess && (
+                {isAuthenticated && user && user.role === 'student' && userProfile && userProfile.has_paid_selection_process_fee && (
                   <Link
-                    to="/student/dashboard"
-                    className="group bg-green-600 text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-green-700 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
+                    to={getDashboardPath()}
+                    className="group bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
                   >
                     Go to Dashboard
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 )}
-                
+                {/* Para admin e school, segue igual */}
+                {isAuthenticated && user && (user.role === 'admin' || user.role === 'school') && (
+                  <Link
+                    to={getDashboardPath()}
+                    className="group bg-[#05294E] hover:bg-[#02172B] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                )}
                 <Link
                   to="/scholarships"
                   className="group bg-white border-2 border-[#05294E] text-[#05294E] px-8 py-4 rounded-2xl text-lg font-bold hover:bg-[#05294E] hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg"

@@ -103,6 +103,16 @@ const Header: React.FC = () => {
                       <p className="font-semibold text-slate-900">{userProfile?.full_name || user.email}</p>
                       <p className="text-sm text-slate-500">{user.email}</p>
                     </div>
+                    <div className="py-2 border-b border-slate-100">
+                      <Link
+                        to={getDashboardPath()}
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <BookOpen className="h-4 w-4 mr-3 text-[#05294E]" />
+                        {getDashboardLabel()}
+                      </Link>
+                    </div>
                     <div className="py-2">
                       <Link
                         to={getDashboardPath() + '/profile'}

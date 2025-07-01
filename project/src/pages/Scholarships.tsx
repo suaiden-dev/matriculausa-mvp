@@ -51,11 +51,7 @@ const Scholarships: React.FC = () => {
     const matchesRange = maxPrice > 0 ? (scholarship.annual_value_with_scholarship ?? 0) <= maxPrice : false;
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
-    // Filtro para deadline: só bolsas com deadline futuro ou hoje
-    const deadlineDate = new Date(scholarship.deadline);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    return matchesSearch && matchesRange && matchesLevel && matchesField && deadlineDate >= today;
+    return matchesSearch && matchesRange && matchesLevel && matchesField;
   });
 
   const formatAmount = (amount: number) => {
@@ -117,8 +113,14 @@ const Scholarships: React.FC = () => {
     setTotalCount(filteredScholarships.length);
   }, [filteredScholarships]);
 
-  // Paginação dos resultados filtrados
-  const paginatedScholarships = filteredScholarships.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // Exibir apenas bolsas com deadline hoje ou futuro
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const visibleScholarships = filteredScholarships.filter(s => {
+    const deadlineDate = new Date(s.deadline);
+    return deadlineDate >= today;
+  });
+  const paginatedScholarships = visibleScholarships.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="bg-white min-h-screen">
