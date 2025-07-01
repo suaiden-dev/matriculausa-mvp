@@ -75,11 +75,15 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="h-screen min-h-screen flex overflow-hidden">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        flex flex-col h-full
+        `}
+        style={{ transitionProperty: 'transform, box-shadow', transitionDuration: '300ms' }}
+      >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-20 px-6 border-b border-slate-200">
@@ -167,8 +171,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 lg:hidden"
           onClick={() => {
             setSidebarOpen(false);
             setUserMenuOpen(false);
@@ -177,18 +181,18 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden h-screen min-h-screen lg:ml-6 ml-2">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4">
+        <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                aria-label="Open sidebar"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">Student Dashboard</h1>
                 <p className="text-sm text-slate-500">Manage your scholarship applications</p>
@@ -271,7 +275,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-50">
           {children}
         </main>
       </div>

@@ -61,21 +61,35 @@ Deno.serve(async (req) => {
       throw new Error('Failed to retrieve application details or application not found.');
     }
 
-    const studentId = appData.student_id;
+    const studentProfileId = appData.student_id;
     const universityUserId = appData.scholarships?.universities?.user_id;
 
-    if (!studentId || !universityUserId) {
-        console.error('[send-application-message] Não foi possível determinar studentId ou universityUserId', { studentId, universityUserId });
+    // Buscar o user_id do estudante (auth.users.id) a partir do user_profiles
+    const { data: studentProfile, error: studentProfileError } = await supabase
+      .from('user_profiles')
+      .select('user_id')
+      .eq('id', studentProfileId)
+      .single();
+
+    if (studentProfileError || !studentProfile) {
+      console.error('[send-application-message] Não foi possível buscar user_id do estudante', studentProfileError);
+      throw new Error('Could not retrieve student user_id from user_profiles.');
+    }
+
+    const studentUserId = studentProfile.user_id;
+
+    if (!studentUserId || !universityUserId) {
+        console.error('[send-application-message] Não foi possível determinar studentUserId ou universityUserId', { studentUserId, universityUserId });
         throw new Error('Could not determine student or university from application.');
     }
 
     let recipient_id: string;
-    if (sender_id === studentId) {
+    if (sender_id === studentUserId) {
         recipient_id = universityUserId;
     } else if (sender_id === universityUserId) {
-        recipient_id = studentId;
+        recipient_id = studentUserId;
     } else {
-        console.error('[send-application-message] Sender não faz parte da aplicação', { sender_id, studentId, universityUserId });
+        console.error('[send-application-message] Sender não faz parte da aplicação', { sender_id, studentUserId, universityUserId });
         throw new Error('Sender is not part of this application.');
     }
 
