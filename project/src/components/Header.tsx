@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, BookOpen, Zap, Shield } from 'lucide-react';
+import { Menu, X, User, LogOut, BookOpen, Zap, Shield, ChevronDown, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 const Header: React.FC = () => {
@@ -86,52 +86,50 @@ const Header: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-3 bg-gradient-to-r from-slate-100 to-slate-200 rounded-2xl px-4 py-3 hover:from-slate-200 hover:to-slate-300 transition-all duration-300 shadow-lg"
+                  className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${getRoleColor(user.role)}`}>
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
                     <User className="h-4 w-4 text-white" />
                   </div>
-                  <div className="text-left">
-                    <span className="text-sm font-bold text-slate-700 block">{userProfile?.full_name || user.email}</span>
-                    <span className="text-xs text-slate-500 capitalize">
-                      {user.role}
-                    </span>
+                  <div className="hidden md:block text-left">
+                    <p className="font-semibold text-slate-900 text-sm">{userProfile?.full_name || user.email}</p>
+                    <p className="text-xs text-slate-500 capitalize">{user.role}</p>
                   </div>
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>
-                
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl py-2 border border-slate-200/50 backdrop-blur-lg">
-                    <button
-                      onClick={() => {
-                        navigate(getDashboardPath());
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-[#05294E]/5 transition-all duration-200 mx-2 rounded-xl w-full text-left"
-                    >
-                      <BookOpen className="h-4 w-4 mr-3 text-[#05294E]" />
-                      {getDashboardLabel()}
-                    </button>
-                    
-                    {/* Admin Panel Quick Access */}
-                    {user.role === 'admin' && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="font-semibold text-slate-900">{userProfile?.full_name || user.email}</p>
+                      <p className="text-sm text-slate-500">{user.email}</p>
+                    </div>
+                    <div className="py-2">
                       <Link
-                        to="/admin/dashboard"
-                        className="flex items-center px-4 py-3 text-sm text-purple-700 hover:bg-purple-50 transition-all duration-200 mx-2 rounded-xl"
+                        to={getDashboardPath() + '/profile'}
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
-                        <Shield className="h-4 w-4 mr-3 text-purple-600" />
-                        Admin Panel
+                        <User className="h-4 w-4 mr-3" />
+                        Profile Settings
                       </Link>
-                    )}
-                    
-                    <div className="border-t border-slate-200 my-2"></div>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-3 text-sm text-slate-700 hover:bg-[#D0151C]/5 transition-all duration-200 mx-2 rounded-xl"
-                    >
-                      <LogOut className="h-4 w-4 mr-3 text-[#D0151C]" />
-                      Logout
-                    </button>
+                      <Link
+                        to="/settings"
+                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <Settings className="h-4 w-4 mr-3" />
+                        Account Settings
+                      </Link>
+                    </div>
+                    <div className="border-t border-slate-100 pt-2">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4 mr-3" />
+                        Sign Out
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

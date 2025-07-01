@@ -26,7 +26,7 @@ const Home: React.FC = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             {/* Left Content */}
-            <div>
+            <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
               <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-6 py-2 mb-8 border border-[#05294E]/20 shadow-lg">
                 <Sparkles className="h-4 w-4 mr-2 text-[#05294E]" />
                 <span className="text-sm font-bold text-slate-700">Scholarships Platform</span>
@@ -45,7 +45,7 @@ const Home: React.FC = () => {
                 offering exclusive scholarships and streamlined enrollment processes.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-4 mb-12">
+              <div className="flex flex-col items-center sm:items-stretch sm:flex-row gap-4 mb-12 w-full">
                 <Link
                   to="/register"
                   className={`group bg-[#D0151C] text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-[#B01218] transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center ${isAuthenticated ? 'hidden' : ''}`}
@@ -247,7 +247,7 @@ const Home: React.FC = () => {
           </div>
 
           {/* View All Schools Button */}
-          <div className="text-center">
+          <div className="text-center mb-24 mt-16">
             <Link
               to="/schools"
               className="inline-flex items-center bg-white border-2 border-[#05294E] text-[#05294E] px-8 py-4 rounded-2xl text-lg font-bold hover:bg-[#05294E] hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl"
@@ -604,7 +604,7 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <DollarSign className="h-4 w-4 text-white" />
-          </div>
+                </div>
                 Do I have to pay all fees at once?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
@@ -615,7 +615,7 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <Users className="h-4 w-4 text-white" />
-              </div>
+                </div>
                 Who can I contact if I have questions about fees or payments?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">

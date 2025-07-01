@@ -192,7 +192,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       contact: {
                         name: fullName,
                         position: session.user.user_metadata?.position || '',
-                        email: session.user.email
+                        email: session.user.email,
+                        phone: session.user.user_metadata?.phone || ''
                       },
                       is_approved: false,
                       profile_completed: false,

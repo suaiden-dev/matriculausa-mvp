@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Search, 
   Filter, 
@@ -91,29 +91,32 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   };
 
-  const filteredScholarships = scholarships.filter(scholarship => {
-    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      scholarship.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (scholarship.universities?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level === selectedLevel);
-    const matchesField = selectedField === 'all' || (scholarship.field_of_study || '').toLowerCase().includes(selectedField.toLowerCase());
-    return matchesSearch && matchesLevel && matchesField;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'amount':
-        return b.amount - a.amount;
-      case 'deadline':
-        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-      case 'name':
-        return a.title.localeCompare(b.title);
-      default:
-        return 0;
-    }
-  });
+  // Memoização dos filtros e ordenação
+  const filteredScholarships = useMemo(() => {
+    return scholarships.filter(scholarship => {
+      const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        scholarship.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (scholarship.universities?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level === selectedLevel);
+      const matchesField = selectedField === 'all' || (scholarship.field_of_study || '').toLowerCase().includes(selectedField.toLowerCase());
+      return matchesSearch && matchesLevel && matchesField;
+    }).sort((a, b) => {
+      switch (sortBy) {
+        case 'amount':
+          return b.amount - a.amount;
+        case 'deadline':
+          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+        case 'name':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+  }, [scholarships, searchTerm, selectedLevel, selectedField, sortBy]);
 
-  const hasApplied = (scholarshipId: string) => {
-    return applications.some(app => app.scholarship_id === scholarshipId);
-  };
+  // Memoização dos IDs aplicados e no carrinho
+  const appliedScholarshipIds = useMemo(() => new Set(applications.map(app => app.scholarship_id)), [applications]);
+  const cartScholarshipIds = useMemo(() => new Set(cart.map(s => s.scholarships.id)), [cart]);
 
   const handleAddToCart = (scholarship: any) => {
     if (user) {
@@ -199,8 +202,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredScholarships.map((scholarship) => {
           const deadlineStatus = getDeadlineStatus(scholarship.deadline);
-          const alreadyApplied = applications.some(app => app.scholarship_id === scholarship.id);
-          const inCart = cart.some((s) => s.scholarships.id === scholarship.id);
+          const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
+          const inCart = cartScholarshipIds.has(scholarship.id);
           return (
             <div key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full">
               {/* Scholarship Image - Container com altura fixa para uniformidade */}

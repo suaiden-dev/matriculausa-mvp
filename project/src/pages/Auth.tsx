@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, Phone } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface AuthProps {
@@ -64,7 +64,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             universityName: formData.universityName || '',
             position: formData.position || '',
             website: formData.website || '',
-            location: formData.location || ''
+            location: formData.location || '',
+            phone: formData.phone || ''
+          }),
+          // Add phone for student
+          ...(activeTab === 'student' && {
+            phone: formData.phone || ''
           })
         };
 
@@ -369,6 +374,25 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   <div>
+                    <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
+                      Phone Number *
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        required
+                        value={formData.phone || ''}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
                     <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
                       Password *
                     </label>
@@ -530,6 +554,25 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="City, State"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
+                      Phone Number *
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        required
+                        value={formData.phone || ''}
+                        onChange={handleInputChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
+                        placeholder="Enter contact phone number"
                       />
                     </div>
                   </div>
