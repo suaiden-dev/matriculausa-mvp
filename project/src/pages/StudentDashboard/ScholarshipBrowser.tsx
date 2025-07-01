@@ -21,6 +21,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useCartStore } from '../../stores/applicationStore';
+import { supabase } from '../../lib/supabase';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -310,7 +311,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       if (!userProfile?.has_paid_selection_process_fee) {
                         // Acionar StripeCheckout para selection_process com o price_id correto
                         const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-                        const { data: sessionData } = await import('../../lib/supabase').then(m => m.supabase.auth.getSession());
+                        const { data: sessionData } = await supabase.auth.getSession();
                         const token = sessionData.session?.access_token;
                         const response = await fetch(apiUrl, {
                           method: 'POST',

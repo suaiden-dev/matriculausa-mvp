@@ -623,7 +623,7 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <DollarSign className="h-4 w-4 text-white" />
-                </div>
+          </div>
                 Do I have to pay all fees at once?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
@@ -634,7 +634,7 @@ const Home: React.FC = () => {
               <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <Users className="h-4 w-4 text-white" />
-                </div>
+              </div>
                 Who can I contact if I have questions about fees or payments?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">

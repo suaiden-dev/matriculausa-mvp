@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useAuth } from '../hooks/useAuth';
 import { PRODUCTS } from '../stripe-config';
+import { supabase } from '../lib/supabase';
 
 interface StripeCheckoutProps {
   productId: keyof typeof PRODUCTS;
@@ -74,8 +75,11 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       } else if (feeType === 'scholarship_fee') {
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
       }
-      const { data: sessionData } = await import('../lib/supabase').then(m => m.supabase.auth.getSession());
+      console.log('Getting session data...');
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('Session data:', sessionData);
       const token = sessionData.session?.access_token;
+      console.log('Token:', token ? 'Found' : 'Not found');
       if (!token) {
         throw new Error('Usuário não autenticado. Token não encontrado.');
       }
