@@ -61,7 +61,7 @@ export const STRIPE_PRODUCTS = {
   selectionProcess: isProd
     ? {
         productId: 'prod_SW6LcrOKKbAmbi',
-        priceId: 'price_1RgBJNKdCh3y3bmYkXY2qIZ7',
+        priceId: 'price_1Rb48wKdCh3y3bmY53isC3w9',
         name: 'Selection Process',
         description: 'Complete application process for international students',
         mode: 'payment',
