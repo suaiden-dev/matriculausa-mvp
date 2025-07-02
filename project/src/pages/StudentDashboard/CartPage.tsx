@@ -226,7 +226,7 @@ const CartPage: React.FC = () => {
           </ul>
           <div className="mt-6">
             <StripeCheckout
-              productId="APPLICATION_FEE"
+              productId="applicationFee"
               paymentType="application_fee"
               feeType="application_fee"
               scholarshipsIds={selectedScholarship ? [selectedScholarship] : []}
