@@ -82,7 +82,11 @@ const ApplicationFeePage: React.FC = () => {
         </div>
         <p className="text-green-700 font-medium leading-relaxed">
           You have been <strong>accepted</strong> to these amazing universities! 🎉<br/>
-          Please {cart.length === 1 ? 'proceed with your application' : 'select <strong>one scholarship</strong> below'} to continue with your application process and secure your spot at your chosen institution.
+          {cart.length === 1 ? (
+            <>Please proceed with your application to continue with your application process and secure your spot at your chosen institution.</>
+          ) : (
+            <>Please select <strong>one scholarship</strong> below to continue with your application process and secure your spot at your chosen institution.</>
+          )}
         </p>
       </div>
       <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-8 animate-fade-in">
