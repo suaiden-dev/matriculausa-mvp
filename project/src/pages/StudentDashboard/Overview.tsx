@@ -373,40 +373,6 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           </div>
 
-          {/* Recommended Scholarships */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-              <Star className="h-5 w-5 mr-2 text-yellow-500" />
-              Recommended for You
-            </h3>
-            
-            <div className="space-y-4">
-              {scholarships.slice(0, 3).map((scholarship) => (
-                <div key={scholarship.id} className="p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors group">
-                  <h4 className="font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                    {scholarship.title}
-                  </h4>
-                  <div className="flex items-center justify-between text-sm text-slate-600 mb-3">
-                    <span className="font-semibold text-green-600">
-                      {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
-                    </span>
-                    <span>{scholarship.schoolName}</span>
-                  </div>
-                  <button
-                    onClick={() => onApplyScholarship(scholarship.id)}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                  >
-                    Apply Now
-                  </button>
-                </div>
-              ))}
-              
-              {scholarships.length === 0 && (
-                <p className="text-slate-500 text-sm text-center py-4">No recommendations yet</p>
-              )}
-            </div>
-          </div>
-
           {/* Study Tips */}
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg text-white p-6">
             <h3 className="text-lg font-bold mb-4 flex items-center">
