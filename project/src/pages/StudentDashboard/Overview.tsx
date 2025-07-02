@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
+import { ProgressBar } from '../../components/ProgressBar';
 
 interface OverviewProps {
   profile: any;
@@ -114,6 +115,14 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           </div>
 
+          {/* Progress Bar for Fees */}
+          <ProgressBar
+            hasPaidSelectionProcessFee={!!userProfile?.has_paid_selection_process_fee}
+            hasPaidApplicationFee={!!userProfile?.has_paid_application_fee}
+            hasPaidScholarshipFee={!!userProfile?.has_paid_scholarship_fee}
+            hasPaidI20ControlFee={!!userProfile?.has_paid_i20_control_fee}
+          />
+          
           {userProfile && !userProfile.has_paid_selection_process_fee && (
             <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
