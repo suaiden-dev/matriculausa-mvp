@@ -242,20 +242,20 @@ const Overview: React.FC<OverviewProps> = ({
   const allCompleted = steps.every(step => step.completed);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Welcome Message */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-4 md:p-6 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Award className="h-8 w-8 text-white" />
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+              <Award className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold mb-2">
+              <h2 className="text-2xl md:text-3xl font-bold mb-1">
                 Welcome back, {userProfile?.full_name || user?.email || 'Student'}!
               </h2>
-              <p className="text-blue-100 text-lg">
+              <p className="text-blue-100 text-base md:text-lg">
                 Continue your journey to academic excellence
               </p>
             </div>
@@ -264,24 +264,28 @@ const Overview: React.FC<OverviewProps> = ({
           {/* Progress Bar dentro do bloco azul */}
           {!allCompleted && (
             <>
-              <div className="text-center text-white text-base font-semibold mb-2">This is your application fee progress bar. Complete each step to move forward.</div>
-              <ProgressBar steps={steps} />
+              <div className="text-center text-white text-sm md:text-base font-semibold mb-1">
+                This is your application fee progress bar. Complete each step to move forward.
+              </div>
+              <div className="mb-2 md:mb-4">
+                <ProgressBar steps={steps} />
+              </div>
             </>
           )}
 
           {userProfile && !userProfile.has_paid_selection_process_fee && (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 md:p-6 mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
-                  <CreditCard className="h-6 w-6 text-white mr-3" />
+                  <CreditCard className="h-5 w-5 text-white mr-2" />
                   <div>
-                    <h3 className="text-xl font-bold text-white">Selection Process</h3>
-                    <p className="text-blue-100">Complete your application process</p>
+                    <h3 className="text-lg md:text-xl font-bold text-white">Selection Process</h3>
+                    <p className="text-blue-100 text-sm">Complete your application process</p>
                   </div>
                 </div>
-                <div className="text-2xl font-bold text-white">$350</div>
+                <div className="text-xl md:text-2xl font-bold text-white">$350</div>
               </div>
-              <p className="text-blue-100 mb-4">
+              <p className="text-blue-100 text-sm mb-2">
                 Start your journey to American education by completing our comprehensive selection process.
               </p>
               <StripeCheckout 
@@ -295,21 +299,21 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-              <Award className="h-8 w-8 text-white mb-4" />
-              <h3 className="font-bold text-white mb-2">Discover Scholarships</h3>
-              <p className="text-blue-100 text-sm">Find opportunities that match your profile</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-2">
+            <div className="bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-white/20">
+              <Award className="h-7 w-7 text-white mb-3" />
+              <h3 className="font-bold text-white mb-1 md:mb-2">Discover Scholarships</h3>
+              <p className="text-blue-100 text-xs md:text-sm">Find opportunities that match your profile</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-              <FileText className="h-8 w-8 text-yellow-400 mb-4" />
-              <h3 className="font-bold text-white mb-2">Apply with Confidence</h3>
-              <p className="text-blue-100 text-sm">Get guidance throughout the process</p>
+            <div className="bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-white/20">
+              <FileText className="h-7 w-7 text-yellow-400 mb-3" />
+              <h3 className="font-bold text-white mb-1 md:mb-2">Apply with Confidence</h3>
+              <p className="text-blue-100 text-xs md:text-sm">Get guidance throughout the process</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-              <CheckCircle className="h-8 w-8 text-green-400 mb-4" />
-              <h3 className="font-bold text-white mb-2">Track Your Progress</h3>
-              <p className="text-blue-100 text-sm">Monitor applications in real-time</p>
+            <div className="bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-white/20">
+              <CheckCircle className="h-7 w-7 text-green-400 mb-3" />
+              <h3 className="font-bold text-white mb-1 md:mb-2">Track Your Progress</h3>
+              <p className="text-blue-100 text-xs md:text-sm">Monitor applications in real-time</p>
             </div>
           </div>
         </div>

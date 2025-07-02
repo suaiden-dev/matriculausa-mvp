@@ -36,7 +36,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps }) => {
     '$350', // Selection Process Fee
     '$350', // Application Fee
     '$550', // Scholarship Fee
-    '$350', // I-20 Control Fee
+    '$900', // I-20 Control Fee
   ];
   return (
     <div className="w-full flex flex-col items-center pb-16 md:pb-24 mb-8 md:mb-16">
