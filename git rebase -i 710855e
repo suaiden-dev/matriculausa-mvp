@@ -1,0 +1,29 @@
+[33mfbaf479[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m chore: commit vazio para tentar push sem segredos
+[33md369ba0[m chore: remove .env.production do controle de versão para evitar push de segredos
+[33mbe59f86[m chore: subir todas as alterações pendentes para main
+[33m710855e[m[33m ([m[1;31morigin/main[m[33m)[m fix: corrigido productId do StripeCheckout para 'applicationFee' (camelCase) eliminando erro de produto não encontrado
+[33m31aa802[m fix: atualiza priceId no stripe-config.ts conforme alteração manual
+[33m1687ef5[m refactor: remove bloco de bolsas recomendadas (Recommended for You) do Overview do estudante
+[33md6e6ab6[m fix: corrige renderização de <strong> na mensagem de Application Fee
+[33m2331341[m fix: atualiza todos os arquivos para usar STRIPE_PRODUCTS e corrige imports
+[33m24ed264[m fix: atualiza stripe-config.ts com lógica de ambiente e IDs live/teste
+[33m00bf813[m[33m ([m[1;31morigin/QA[m[33m, [m[1;31mmatriculausa/main[m[33m, [m[1;31mmatriculausa/QA[m[33m, [m[1;32mQA[m[33m)[m refactor: responsividade e UX do dashboard do estudante, logs de debug e ajustes de layout
+[33m85c8857[m fix: adiciona logs explícitos para debug na função send-application-message
+[33m828985a[m fix: Corrige importação do supabase e adiciona logs para debug de autenticação e ambiente
+[33mcbb147f[m fix: ajustes de lógica de exibição dos botões de seleção de processo, dashboard e pagamentos; criação das colunas paid_at, payment_status e last_payment_date no banco; correção de bugs de integração Stripe e sincronização de status do usuário
+[33mad629d8[m feat: melhorias de performance, inclusão de telefone no cadastro de estudante e escola, ajustes de layout e instruções de SMTP
+[33m2623994[m fix: segurança no fluxo de recuperação de senha - usuário não é autenticado no contexto global até redefinir a senha
+[33m323a402[m fix: ajustes de SPA para Netlify, padronização de address, filtro de bolsas expiradas no frontend e melhorias visuais nos cards
+[33mb67ec20[m feat: atualiza termos, corrige edição inline e melhorias gerais de perfil universitário
+[33meab0f1d[m[33m ([m[1;31mbackup/main[m[33m)[m fix: Require document upload before payment - CartPage flow correction
+[33m7035b67[m  SECURITY FIX: Filtrar pagamentos por universidade - corrige vazamento de dados
+[33med792c0[m Fix: Corrige erros de registro - resolve problema do vite.svg e valores undefined no Supabase
+[33m7692c3d[m[33m ([m[1;31mteste_deploy/main[m[33m)[m feat: implementacao completa do projeto - Context API, WhatsApp button, correcoes de bugs e melhorias de UI
+[33mf482ec5[m Refatoração do fluxo de documentos: documentos agora vinculados ao user_profiles, upload centralizado em nova página, remoção da modal antiga, integração automática com application após pagamento. Ajustes no redirecionamento e UX do processo de matrícula.
+[33m6216d01[m feat:melhorias na gestão de documentos
+[33m5f735d9[m feat: melhorias na gestão de pagamentos, sincronização automática de email no user_profiles e ajustes visuais na tabela
+[33m52f3f8f[m fix: ajuste de consulta e foreign key para join correto com user_profiles; busca apenas campos válidos; dashboard students funcionando
+[33m2039c7a[m Backup completo do projeto: sistema de bolsas, pagamentos e mensagens
+[33md5470db[m Initial project import
+[33m84f198e[m feat: subir todas as mudanças locais para o novo repositório
+[33mba4f175[m Initial full project backup
