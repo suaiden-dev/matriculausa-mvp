@@ -312,6 +312,8 @@ const MyApplications: React.FC = () => {
             {filteredApplications.map((application) => {
               const Icon = getStatusIcon(application.status);
               const scholarship = application.scholarships;
+              const applicationFeePaid = !!userProfile?.is_application_fee_paid;
+              const scholarshipFeePaid = !!userProfile?.is_scholarship_fee_paid;
 
               if (!scholarship) return null;
               
@@ -334,23 +336,6 @@ const MyApplications: React.FC = () => {
                                 {scholarship.universities?.name}
                               </div>
                             </div>
-                            {(scholarship.id && (application.status === 'pending' || application.status === 'under_review')) && (
-                              <StripeCheckout
-                                productId="scholarshipFee"
-                                buttonText="Pay Scholarship Fee ($550)"
-                                className="ml-4"
-                                paymentType="scholarship_fee"
-                                feeType="scholarship_fee"
-                                scholarshipsIds={[scholarship.id]}
-                                studentProcessType={application.student_process_type}
-                                successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                                cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
-                                metadata={{ scholarships_ids: String(scholarship.id) }}
-                                beforeCheckout={async () => {
-                                  return await createOrGetApplication(scholarship.id, userProfile.id);
-                                }}
-                              />
-                            )}
                           </div>
                         </div>
                         
@@ -405,12 +390,34 @@ const MyApplications: React.FC = () => {
                       }`}>
                         {getStatusMessage(application.status)}
                       </p>
-                      
                       {application.notes && (
                         <p className="text-sm text-slate-600 mt-2">
                           <strong>Note:</strong> {application.notes}
                         </p>
                       )}
+                      {/* Botões de pagamento */}
+                      <div className="flex flex-row gap-4 mt-4 items-center justify-center">
+                        <StripeCheckout
+                          productId="applicationFee"
+                          feeType="application_fee"
+                          paymentType="application_fee"
+                          buttonText="Pay Application Fee ($350)"
+                          successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                          cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
+                          disabled={applicationFeePaid}
+                          metadata={{ selected_scholarship_id: application.scholarship_id }}
+                        />
+                        <StripeCheckout
+                          productId="scholarshipFee"
+                          feeType="scholarship_fee"
+                          paymentType="scholarship_fee"
+                          buttonText="Pay Scholarship Fee ($550)"
+                          successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                          cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
+                          disabled={!applicationFeePaid || scholarshipFeePaid}
+                          metadata={{ selected_scholarship_id: application.scholarship_id }}
+                        />
+                      </div>
                     </div>
 
                     {application.status === 'pending_scholarship_fee' && (
@@ -423,29 +430,6 @@ const MyApplications: React.FC = () => {
                             <span className="text-blue-600 animate-pulse">Processing payment...</span>
                           </div>
                         )}
-                        <StripeCheckout
-                          productId="scholarshipFee"
-                          paymentType="scholarship_fee"
-                          feeType="scholarship_fee"
-                          scholarshipsIds={[application.scholarship_id]}
-                          buttonText="Pay Scholarship Fee ($550)"
-                          successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                          cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                          metadata={{ scholarships_ids: String(application.scholarship_id), application_id: application.id }}
-                          beforeCheckout={async () => {
-                            return await createOrGetApplication(application.scholarship_id, userProfile.id);
-                          }}
-                          onSuccess={() => {
-                            setSuccessMessage('Scholarship fee paid successfully!');
-                            setPayingId(null);
-                          }}
-                          onError={(err) => {
-                            setErrorMessage('Payment failed: ' + err);
-                            setPayingId(null);
-                          }}
-                          disabled={payingId === application.id}
-                        />
                       </div>
                     )}
                   </div>

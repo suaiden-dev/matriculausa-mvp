@@ -89,20 +89,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const buildUser = (sessionUser: any, currentProfile: UserProfile | null): User => {
-      // Priorizar role do metadata do usuário
       let role = sessionUser?.user_metadata?.role;
-      
-      // Se não tem role no metadata, verificar perfil
       if (!role && currentProfile) {
         if (currentProfile.is_admin) role = 'admin';
-        else role = 'student'; // Default para student se não for admin
+        else role = 'student';
       }
-      
-      // Se ainda não tem role, usar default baseado no email
       if (!role) {
         role = getDefaultRole(sessionUser?.email || '');
       }
-      
       const builtUser: User = {
         id: sessionUser.id,
         email: sessionUser.email,
@@ -117,15 +111,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const fetchAndSetUser = async (session: any) => {
       if (session?.user) {
         let profile: UserProfile | null = null;
-        
-        // Primeiro, tentar buscar o perfil existente
         try {
           const { data, error } = await supabase
             .from('user_profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
-            
           if (error) {
             if (error.code === 'PGRST116') {
               // Perfil não encontrado - isso é normal
@@ -133,22 +124,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log("Error fetching user profile:", error);
             }
           }
-          
           profile = data || null;
         } catch (error) {
           console.log("Error fetching user profile:", error);
         }
-        
-        // Se não existe perfil, criar um novo
         if (!profile) {
           try {
             const pendingFullName = localStorage.getItem('pending_full_name');
             const fullName = pendingFullName || 
-                            session.user.user_metadata?.full_name || 
-                            session.user.user_metadata?.name || 
-                            session.user.email?.split('@')[0] || 
-                            'User';
-            
+              session.user.user_metadata?.full_name || 
+              session.user.user_metadata?.name || 
+              session.user.email?.split('@')[0] || 
+              'User';
             const { data: newProfile, error: insertError } = await supabase
               .from('user_profiles')
               .insert({
@@ -158,10 +145,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               })
               .select()
               .single();
-              
             if (insertError) {
-              if (insertError.code === '23505') { // Duplicate key error
-                // Se já existe, tentar buscar novamente
+              if (insertError.code === '23505') {
                 try {
                   const { data: existingProfile } = await supabase
                     .from('user_profiles')
@@ -177,15 +162,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             } else {
               profile = newProfile;
-              
-              // Se é uma escola, criar registro na tabela universities
               if (session.user.user_metadata?.role === 'school') {
                 try {
                   const { error: universityError } = await supabase
                     .from('universities')
                     .insert({
                       user_id: session.user.id,
-                      name: session.user.user_metadata?.universityName || 'New University',
+                      name: fullName,
                       description: 'University profile created during registration',
                       location: session.user.user_metadata?.location || '',
                       website: session.user.user_metadata?.website || '',
@@ -199,7 +182,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       profile_completed: false,
                       terms_accepted: false
                     });
-                    
                   if (universityError) {
                     console.error('Error creating university:', universityError);
                   }
@@ -207,18 +189,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   console.error('Error creating university:', error);
                 }
               }
-              
-              // Limpar localStorage se foi usado
               if (pendingFullName) {
                 localStorage.removeItem('pending_full_name');
               }
             }
           } catch (error) {
             console.error("Error creating user profile:", error);
-            // Continuar mesmo se falhar
           }
         }
-        
         setUserProfile(profile);
         setUser(buildUser(session.user, profile));
         setSupabaseUser(session.user);
@@ -228,20 +206,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUserProfile(null);
       }
     };
-    
-    // Check for session on initial load
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       fetchAndSetUser(session);
       setLoading(false);
     });
-
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         fetchAndSetUser(session);
       }
     );
-
     return () => {
       subscription.unsubscribe();
     };
@@ -251,21 +225,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!supabaseUser) {
       throw new Error("User must be logged in to update profile");
     }
-    
-    // Remove user_id from updates if it exists, as it should not be updated.
     const { user_id, ...updateData } = updates;
-
     const { data, error } = await supabase
       .from('user_profiles')
       .update(updateData)
       .eq('user_id', supabaseUser.id)
       .select()
       .single();
-
     if (error) {
       throw error;
     }
-
     if (data) {
       setUserProfile(data as UserProfile);
     }

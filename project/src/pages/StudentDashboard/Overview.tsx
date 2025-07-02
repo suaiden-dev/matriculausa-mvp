@@ -95,6 +95,152 @@ const Overview: React.FC<OverviewProps> = ({
 
   const { user, userProfile } = useAuth();
 
+  // Lógica da barra de progresso dinâmica
+  let steps = [];
+  if (!userProfile?.has_paid_selection_process_fee) {
+    // Só pagou (ou está pagando) a Selection Process Fee
+    steps = [
+      {
+        label: 'Selection Process Fee',
+        description: 'Pay the Selection Process Fee to unlock and browse available scholarships.',
+        completed: false,
+        current: true,
+      },
+      {
+        label: 'Application Fee',
+        description: 'Pay the Application Fee to apply for a specific scholarship.',
+        completed: false,
+        current: false,
+      },
+      {
+        label: 'Scholarship Fee',
+        description: 'Pay the Scholarship Fee to confirm your scholarship application.',
+        completed: false,
+        current: false,
+      },
+      {
+        label: 'I-20 Control Fee',
+        description: 'Pay the I-20 Control Fee to start your I-20 and document validation process. You have 10 days after the scholarship fee.',
+        completed: false,
+        current: false,
+      },
+    ];
+  } else if (!userProfile?.is_application_fee_paid) {
+    // Pagou só a Selection Process Fee
+    steps = [
+      {
+        label: 'Selection Process Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'Application Fee',
+        description: 'Pay the Application Fee to apply for a specific scholarship.',
+        completed: false,
+        current: true,
+      },
+      {
+        label: 'Scholarship Fee',
+        description: 'Pay the Scholarship Fee to confirm your scholarship application.',
+        completed: false,
+        current: false,
+      },
+      {
+        label: 'I-20 Control Fee',
+        description: 'Pay the I-20 Control Fee to start your I-20 and document validation process. You have 10 days after the scholarship fee.',
+        completed: false,
+        current: false,
+      },
+    ];
+  } else if (!userProfile?.is_scholarship_fee_paid) {
+    // Pagou até Application Fee
+    steps = [
+      {
+        label: 'Selection Process Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'Application Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'Scholarship Fee',
+        description: 'Pay the Scholarship Fee to confirm your scholarship application.',
+        completed: false,
+        current: true,
+      },
+      {
+        label: 'I-20 Control Fee',
+        description: 'Pay the I-20 Control Fee to start your I-20 and document validation process. You have 10 days after the scholarship fee.',
+        completed: false,
+        current: false,
+      },
+    ];
+  } else if (!userProfile?.has_paid_i20_control_fee) {
+    // Pagou até Scholarship Fee
+    steps = [
+      {
+        label: 'Selection Process Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'Application Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'Scholarship Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'I-20 Control Fee',
+        description: 'Pay the I-20 Control Fee to start your I-20 and document validation process. You have 10 days after the scholarship fee.',
+        completed: false,
+        current: true,
+      },
+    ];
+  } else {
+    // Tudo completo
+    steps = [
+      {
+        label: 'Selection Process Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'Application Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'Scholarship Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+      {
+        label: 'I-20 Control Fee',
+        description: 'Completed!',
+        completed: true,
+        current: false,
+      },
+    ];
+  }
+
+  const allCompleted = steps.every(step => step.completed);
+
   return (
     <div className="space-y-8">
       {/* Welcome Message */}
@@ -115,14 +261,14 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           </div>
 
-          {/* Progress Bar for Fees */}
-          <ProgressBar
-            hasPaidSelectionProcessFee={!!userProfile?.has_paid_selection_process_fee}
-            hasPaidApplicationFee={!!userProfile?.has_paid_application_fee}
-            hasPaidScholarshipFee={!!userProfile?.has_paid_scholarship_fee}
-            hasPaidI20ControlFee={!!userProfile?.has_paid_i20_control_fee}
-          />
-          
+          {/* Progress Bar dentro do bloco azul */}
+          {!allCompleted && (
+            <>
+              <div className="text-center text-white text-base font-semibold mb-2">This is your application fee progress bar. Complete each step to move forward.</div>
+              <ProgressBar steps={steps} />
+            </>
+          )}
+
           {userProfile && !userProfile.has_paid_selection_process_fee && (
             <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
