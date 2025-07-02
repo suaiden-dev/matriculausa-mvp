@@ -336,7 +336,7 @@ const MyApplications: React.FC = () => {
                             </div>
                             {(scholarship.id && (application.status === 'pending' || application.status === 'under_review')) && (
                               <StripeCheckout
-                                productId="SCHOLARSHIP_FEE"
+                                productId="scholarshipFee"
                                 buttonText="Pay Scholarship Fee ($550)"
                                 className="ml-4"
                                 paymentType="scholarship_fee"
@@ -424,7 +424,7 @@ const MyApplications: React.FC = () => {
                           </div>
                         )}
                         <StripeCheckout
-                          productId="SCHOLARSHIP_FEE"
+                          productId="scholarshipFee"
                           paymentType="scholarship_fee"
                           feeType="scholarship_fee"
                           scholarshipsIds={[application.scholarship_id]}

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useAuth } from '../hooks/useAuth';
-import { PRODUCTS } from '../stripe-config';
+import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 
 interface StripeCheckoutProps {
-  productId: keyof typeof PRODUCTS;
+  productId: keyof typeof STRIPE_PRODUCTS;
   buttonText?: string;
   className?: string;
   onSuccess?: () => void;
@@ -41,11 +41,11 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const { isAuthenticated, updateUserProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
   
-  const product = PRODUCTS[productId];
+  const product = STRIPE_PRODUCTS[productId as keyof typeof STRIPE_PRODUCTS];
   
   if (!product) {
-    console.error(`Product ${productId} not found in stripe-config.ts`);
-    return null;
+    console.error(`Product '${productId}' não encontrado em stripe-config.ts. Verifique se o nome está correto e padronizado.`);
+    return <p className="text-red-500">Erro: Produto Stripe não encontrado. Contate o suporte.</p>;
   }
 
   const handleCheckout = async () => {

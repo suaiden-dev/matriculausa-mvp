@@ -130,7 +130,7 @@ const ApplicationFeePage: React.FC = () => {
         </ul>
         <div className="mt-6">
           <StripeCheckout
-            productId="APPLICATION_FEE"
+            productId="applicationFee"
             paymentType="application_fee"
             feeType="application_fee"
             buttonText="Pay Application Fee ($350)"

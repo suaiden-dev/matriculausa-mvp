@@ -6,6 +6,7 @@ import { useScholarships } from '../hooks/useScholarships';
 import type { Scholarship } from '../types';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { supabase } from '../lib/supabase';
+import { STRIPE_PRODUCTS } from '../stripe-config';
 
 const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -400,7 +401,7 @@ const Scholarships: React.FC = () => {
                                 'Authorization': `Bearer ${token}`
                               },
                               body: JSON.stringify({
-                                price_id: 'price_1Rb5w8KdCh3y3bmYqSmUyW2Z',
+                                price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
                                 success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
                                 cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
                                 mode: 'payment',

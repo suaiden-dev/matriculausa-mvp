@@ -130,7 +130,7 @@ const Overview: React.FC<OverviewProps> = ({
                 Start your journey to American education by completing our comprehensive selection process.
               </p>
               <StripeCheckout 
-                productId="SELECTION_PROCESS"
+                productId="selectionProcess"
                 feeType="selection_process"
                 paymentType="selection_process"
                 buttonText="Start Selection Process"

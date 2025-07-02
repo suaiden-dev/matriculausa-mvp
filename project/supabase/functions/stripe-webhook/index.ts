@@ -232,9 +232,24 @@ async function handleEvent(event: Stripe.Event) {
       let userData = { email: '', name: 'Usuário' };
       if (userId) {
         userData = await getUserData(userId);
-      console.log('[stripe-webhook] userData extraído para e-mail:', userData);
-    } else {
-      console.warn('[stripe-webhook] Nenhum userId encontrado no metadata para envio de e-mail.');
+        console.log('[stripe-webhook] userData extraído para e-mail:', userData);
+      } else {
+        console.warn('[stripe-webhook] Nenhum userId encontrado no metadata para envio de e-mail.');
+      }
+      // Fallback: extrair e-mail e nome do evento Stripe se não encontrar no banco
+      if (!userData.email) {
+        userData.email = session.customer_email || session.customer_details?.email || '';
+        if (userData.email) {
+          console.log('[stripe-webhook] E-mail extraído do evento Stripe:', userData.email);
+        } else {
+          console.warn('[stripe-webhook] Nenhum e-mail encontrado nem no banco nem no evento Stripe.');
+        }
+      }
+      if (!userData.name || userData.name === 'Usuário') {
+        userData.name = session.customer_details?.name || 'Usuário';
+        if (userData.name && userData.name !== 'Usuário') {
+          console.log('[stripe-webhook] Nome extraído do evento Stripe:', userData.name);
+        }
       }
       // Referenciar corretamente o metadado de origem
     const paymentOrigin1 = metadata?.origin || 'site';
@@ -359,16 +374,36 @@ async function handleEvent(event: Stripe.Event) {
       const payment_intent = stripeData.payment_intent;
       const customerId = stripeData.customer || null;
       const payment_status = stripeData.payment_status || null;
+        // Log para customerId null
+        if (!customerId) {
+          console.warn('[stripe-webhook] customer_id está null. Pagamento provavelmente de valor zero.');
+        }
+        // Buscar user_id válido
+        let validUserId = null;
+        if (userId) {
+          // Verifica se existe no user_profiles (pode ser adaptado para consultar o Auth via API se necessário)
+          const { data: userProfile, error: userProfileError } = await supabase
+            .from('user_profiles')
+            .select('user_id')
+            .eq('user_id', userId)
+            .single();
+          if (userProfile && userProfile.user_id) {
+            validUserId = userProfile.user_id;
+          } else {
+            console.warn(`[stripe-webhook] user_id ${userId} não encontrado em user_profiles. O campo user_id será null no pedido.`);
+          }
+        }
         // Insert the order into the stripe_orders table
         const { error: orderError } = await supabase.from('stripe_orders').insert({
           checkout_session_id,
           payment_intent_id: payment_intent,
-          customer_id: customerId,
+          customer_id: customerId, // agora pode ser null
+          user_id: validUserId, // só preenche se for válido
           amount_subtotal,
           amount_total,
           currency,
           payment_status,
-          status: 'completed', // assuming we want to mark it as completed since payment is successful
+          status: 'completed',
         });
 
         if (orderError) {

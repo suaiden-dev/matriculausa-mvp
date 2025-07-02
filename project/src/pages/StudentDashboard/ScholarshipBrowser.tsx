@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useCartStore } from '../../stores/applicationStore';
 import { supabase } from '../../lib/supabase';
+import { STRIPE_PRODUCTS } from '../../stripe-config';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -320,7 +321,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                             'Authorization': `Bearer ${token}`
                           },
                           body: JSON.stringify({
-                            price_id: 'price_1Rb5w8KdCh3y3bmYqSmUyW2Z',
+                            price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
                             success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
                             cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
                             mode: 'payment',

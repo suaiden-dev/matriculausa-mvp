@@ -9,7 +9,6 @@ import DocumentUploadModal from '../../components/DocumentUploadModal';
 import StudentTypeModal from '../../components/StudentTypeModal';
 import { supabase } from '../../lib/supabase';
 
-const STRIPE_CHECKOUT_URL = 'https://checkout.stripe.com/pay/cs_test_YOUR_CHECKOUT_LINK'; // Substitua pelo link real do produto Stripe
 const SCHOLARSHIP_PRICE = 550;
 
 const CartPage: React.FC = () => {

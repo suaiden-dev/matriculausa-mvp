@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
+import { STRIPE_PRODUCTS } from '../../stripe-config';
 
 const DOCUMENTS_INFO = [
   {
@@ -65,6 +66,7 @@ const ApplicationChatPage: React.FC = () => {
         body: JSON.stringify({
           success_url: window.location.origin + '/student/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
           cancel_url: window.location.origin + '/student/i20-control-fee-error',
+          price_id: STRIPE_PRODUCTS.controlFee.priceId,
         }),
       });
       const data = await res.json();

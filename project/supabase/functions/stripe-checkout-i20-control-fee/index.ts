@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { success_url, cancel_url } = await req.json();
-    const price_id = 'price_1RbSjQKdCh3y3bmYQdmGvtpk'; // fixo para I-20 Control Fee
+    const { success_url, cancel_url, price_id: incomingPriceId } = await req.json();
+    const price_id = incomingPriceId;
     const mode = 'payment';
 
     const authHeader = req.headers.get('Authorization');
