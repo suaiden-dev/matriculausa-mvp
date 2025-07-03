@@ -415,6 +415,7 @@ const MyApplications: React.FC = () => {
                           successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                           cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
                           disabled={!applicationFeePaid || scholarshipFeePaid}
+                          scholarshipsIds={[application.scholarship_id]}
                           metadata={{ selected_scholarship_id: application.scholarship_id }}
                         />
                       </div>
