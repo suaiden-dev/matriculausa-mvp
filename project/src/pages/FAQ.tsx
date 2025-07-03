@@ -28,7 +28,7 @@ const FAQ: React.FC = () => (
         a: 'You can reach our team via the Contact Us page or by email at info@matriculausa.com.'
       }, {
         q: 'How do I know if I am eligible for a scholarship?',
-        a: 'Eligibility depends on each scholarship's requirements. After creating your profile, you will see which scholarships you qualify for.'
+        a: "Eligibility depends on each scholarship's requirements. After creating your profile, you will see which scholarships you qualify for."
       }].map((item, idx) => (
         <div key={idx} className="bg-white/90 rounded-2xl shadow-lg p-6 border-l-4 border-[#D0151C]">
           <h2 className="font-bold text-xl text-[#05294E] mb-2">{item.q}</h2>
