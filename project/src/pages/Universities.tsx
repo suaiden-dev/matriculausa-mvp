@@ -23,21 +23,26 @@ const Universities: React.FC = () => {
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searching, setSearching] = useState(false);
+  const [allUniversities, setAllUniversities] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUniversities = async () => {
-      // Only show loading on first data fetch or when searching
-      if (!hasLoadedData || searchTerm.trim() !== '') {
+      if (!hasLoadedData || searchTerm.trim() !== '' || selectedLocation !== 'all') {
         setLoading(true);
       }
       // Se estiver pesquisando, buscar todas as universidades que correspondem ao termo
       if (searchTerm.trim() !== '') {
         setSearching(true);
-        const { data, error } = await supabase
+        let query = supabase
           .from('universities')
-          .select('id, name, location, logo_url, programs, description, website')
+          .select('id, name, location, logo_url, programs, description, website, address')
           .eq('is_approved', true)
           .ilike('name', `%${searchTerm}%`);
+        if (selectedLocation !== 'all') {
+          // Filtro por estado no address.street ou location
+          query = query.or(`address->>street.ilike.%${selectedLocation}%,location.ilike.%${selectedLocation}%`);
+        }
+        const { data, error } = await query;
         if (!error && data) {
           setRealUniversities(data);
           setTotalCount(data.length);
@@ -49,15 +54,19 @@ const Universities: React.FC = () => {
         setSearching(false);
         return;
       }
-      // Caso contrário, busca paginada normal
+      // Caso contrário, busca paginada normal ou filtrada por estado
       setSearching(false);
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      const { data, error, count } = await supabase
+      let query = supabase
         .from('universities')
-        .select('id, name, location, logo_url, programs, description, website', { count: 'exact' })
+        .select('id, name, location, logo_url, programs, description, website, address', { count: 'exact' })
         .eq('is_approved', true)
         .range(from, to);
+      if (selectedLocation !== 'all') {
+        query = query.or(`address->>street.ilike.%${selectedLocation}%,location.ilike.%${selectedLocation}%`);
+      }
+      const { data, error, count } = await query;
       if (!error && data) {
         setRealUniversities(data);
         setTotalCount(count || 0);
@@ -69,16 +78,73 @@ const Universities: React.FC = () => {
       setHasLoadedData(true);
     };
     fetchUniversities();
-  }, [page, searchTerm, hasLoadedData]);
+  }, [page, searchTerm, hasLoadedData, selectedLocation]);
 
-  // Get unique locations for filter
-  const locations = Array.from(new Set(realUniversities.map(school => school.location?.split(', ')[1]))).filter(Boolean).sort();
+  useEffect(() => {
+    console.log('Universidades carregadas:', realUniversities);
+    console.log('Locations carregados:', realUniversities.map(u => u.location));
+    console.log('Addresses carregados:', realUniversities.map(u => u.address));
+  }, [realUniversities]);
+
+  // Buscar todas as universidades aprovadas para montar o filtro de estados
+  useEffect(() => {
+    const fetchAllUniversities = async () => {
+      const { data, error } = await supabase
+        .from('universities')
+        .select('location, address')
+        .eq('is_approved', true);
+      if (!error && data) {
+        setAllUniversities(data);
+      } else {
+        setAllUniversities([]);
+      }
+    };
+    fetchAllUniversities();
+  }, []);
+
+  // Get unique states for filter a partir de allUniversities
+  const states = Array.from(new Set(allUniversities.map(school => {
+    // Tenta extrair o estado do address.street
+    const street = school.address?.street || '';
+    let state = null;
+    if (street) {
+      const parts = street.split(',');
+      if (parts.length >= 3) {
+        state = parts[parts.length - 2].trim();
+      } else if (parts.length === 2) {
+        state = parts[1].trim().split(' ')[0];
+      }
+    }
+    if (!state) {
+      const loc = school.location || '';
+      const locParts = loc.split(',');
+      state = locParts.length > 1 ? locParts[1].trim() : null;
+    }
+    return state;
+  }))).filter(Boolean).sort();
+  console.log('Estados disponíveis para filtro:', states);
 
   const filteredSchools = realUniversities.filter(school => {
     const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (school.location || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || school.type === selectedType;
-    const matchesLocation = selectedLocation === 'all' || (school.location || '').includes(selectedLocation);
+    // Extrai o estado do address.street para filtrar
+    let schoolState = '';
+    const street = school.address?.street || '';
+    if (street) {
+      const parts = street.split(',');
+      if (parts.length >= 3) {
+        schoolState = parts[parts.length - 2].trim().toLowerCase();
+      } else if (parts.length === 2) {
+        schoolState = parts[1].trim().split(' ')[0].toLowerCase();
+      }
+    }
+    if (!schoolState) {
+      const loc = school.location || '';
+      const locParts = loc.split(',');
+      schoolState = locParts.length > 1 ? locParts[1].trim().toLowerCase() : '';
+    }
+    const matchesLocation = selectedLocation === 'all' || schoolState === selectedLocation.toLowerCase();
     return matchesSearch && matchesType && matchesLocation;
   });
 
@@ -140,6 +206,7 @@ const Universities: React.FC = () => {
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+              title="Filtrar por tipo de universidade"
             >
               <option value="all">All Types</option>
               <option value="Private">Private</option>
@@ -149,12 +216,16 @@ const Universities: React.FC = () => {
             {/* Location Filter */}
             <select
               value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
+              onChange={(e) => {
+                setSelectedLocation(e.target.value);
+                console.log('Estado selecionado:', e.target.value);
+              }}
               className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
+              title="Filtrar por estado da universidade"
             >
               <option value="all">All States</option>
-              {locations.map((location: string) => (
-                <option key={location} value={location}>{location}</option>
+              {states.map((state: string) => (
+                <option key={state} value={state}>{state}</option>
               ))}
             </select>
 
@@ -178,7 +249,7 @@ const Universities: React.FC = () => {
               {/* University Image */}
               <div className="relative h-48 overflow-hidden flex-shrink-0">
                 <img
-                  src={school.image || school.logo_url || '/university-placeholder.png'}
+                  src={school.logo_url || school.image || '/university-placeholder.png'}
                   alt={`${school.name} campus`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />

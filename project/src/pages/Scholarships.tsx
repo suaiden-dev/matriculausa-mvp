@@ -50,7 +50,8 @@ const Scholarships: React.FC = () => {
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRange = maxPrice > 0 ? (scholarship.annual_value_with_scholarship ?? 0) <= maxPrice : false;
+    const value = scholarship.annual_value_with_scholarship ?? 0;
+    const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
     return matchesSearch && matchesRange && matchesLevel && matchesField;

@@ -16,7 +16,7 @@ export const STRIPE_PRODUCTS = {
   controlFee: isProd
     ? {
         productId: 'prod_SZ3ma6T2b0o702',
-        priceId: 'price_1RdvfEKdCh3y3bmYXwBWmtH9',
+        priceId: 'price_1RgpiMKdCh3y3bmY7zkNInNG',
         name: 'Control Fee',
         description: 'Fee for I-20 control and document validation',
         mode: 'payment',
@@ -31,7 +31,7 @@ export const STRIPE_PRODUCTS = {
   applicationFee: isProd
     ? {
         productId: 'prod_SZ3nS58QT5NrFL',
-        priceId: 'price_1RdvfcKdCh3y3bmYwJODB8zk',
+        priceId: 'price_1Rgpk7KdCh3y3bmYy0vA0b4j',
         name: 'Application Fee',
         description: 'Fee for processing the student application after document analysis',
         mode: 'payment',
@@ -46,7 +46,7 @@ export const STRIPE_PRODUCTS = {
   scholarshipFee: isProd
     ? {
         productId: 'prod_SZ3nMU2XGBe7KD',
-        priceId: 'price_1RdvfwKdCh3y3bmYldM0V3Xz',
+        priceId: 'price_1RgpkfKdCh3y3bmYZPyMEZ7l',
         name: 'Scholarship Fee',
         description: 'One-time fee for applying to scholarships',
         mode: 'payment',
@@ -61,7 +61,7 @@ export const STRIPE_PRODUCTS = {
   selectionProcess: isProd
     ? {
         productId: 'prod_SW6LcrOKKbAmbi',
-        priceId: 'price_1Rb48wKdCh3y3bmY53isC3w9',
+        priceId: 'price_1RgBJNKdCh3y3bmYkXY2qIZ7',
         name: 'Selection Process',
         description: 'Complete application process for international students',
         mode: 'payment',
