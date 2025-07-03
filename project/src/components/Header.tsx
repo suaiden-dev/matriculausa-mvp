@@ -122,14 +122,6 @@ const Header: React.FC = () => {
                         <User className="h-4 w-4 mr-3" />
                         Profile Settings
                       </Link>
-                      <Link
-                        to="/settings"
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Settings className="h-4 w-4 mr-3" />
-                        Account Settings
-                      </Link>
                     </div>
                     <div className="border-t border-slate-100 pt-2">
                       <button
