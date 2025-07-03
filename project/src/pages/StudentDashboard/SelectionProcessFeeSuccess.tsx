@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { CheckCircle } from 'lucide-react';
 
 const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -8,6 +10,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const sessionId = params.get('session_id');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { updateUserProfile } = useAuth();
 
   useEffect(() => {
     const verifySession = async () => {
@@ -41,6 +44,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         if (!response.ok || data.status !== 'complete') {
           throw new Error(data.error || data.message || 'Failed to verify session.');
         }
+        await updateUserProfile({});
       } catch (err: any) {
         setError(err.message || 'Error verifying payment.');
       } finally {
@@ -48,46 +52,55 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       }
     };
     verifySession();
-  }, [sessionId]);
+  }, [sessionId, updateUserProfile]);
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-        <h1 className="text-3xl font-bold text-blue-700 mb-4">Verifying Payment...</h1>
-        <p className="text-slate-700 mb-4">Please wait while we confirm your transaction. This may take a moment.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
+          <svg className="h-16 w-16 text-green-600 mb-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+          </svg>
+          <h1 className="text-3xl font-bold text-green-700 mb-2">Verifying Payment...</h1>
+          <p className="text-slate-700 mb-6 text-center">Please wait while we confirm your payment.</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-        <h1 className="text-3xl font-bold text-red-700 mb-4">Selection Process Fee Payment Error</h1>
-        <p className="text-slate-700 mb-4">{error}</p>
-        <button
-          className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition"
-          onClick={() => navigate('/student/dashboard/scholarships')}
-        >
-          Back to Scholarships
-        </button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-red-50 px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
+          <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
+          </svg>
+          <h1 className="text-3xl font-bold text-red-700 mb-2">Selection Process Fee Payment Error</h1>
+          <p className="text-slate-700 mb-6 text-center">{error}</p>
+          <a href="/student/dashboard/scholarships" className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-all duration-300">
+            Back to Scholarships
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-      <h1 className="text-3xl font-bold text-green-700 mb-4">Selection Process Fee payment successful!</h1>
-      <p className="text-slate-700 mb-4">Your selection process fee has been received. You now have access to all scholarships and can apply freely.</p>
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-        <div className="text-sm text-slate-600 mb-1">Session ID:</div>
-        <div className="font-mono text-green-800 text-xs break-all">{sessionId}</div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-green-50 px-4">
+      <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
+        <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
+        <h1 className="text-3xl font-bold text-green-700 mb-2">Selection Process Fee payment successful!</h1>
+        <p className="text-slate-700 mb-6 text-center">
+          Your selection process fee has been received. You now have access to all scholarships and can apply freely.
+        </p>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4 w-full">
+          <div className="text-sm text-slate-600 mb-1">Session ID:</div>
+          <div className="font-mono text-green-800 text-xs break-all">{sessionId}</div>
+        </div>
+        <a href="/student/dashboard/scholarships" className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300">
+          Go to Scholarships
+        </a>
       </div>
-      <button
-        className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition"
-        onClick={() => navigate('/student/dashboard/scholarships')}
-      >
-        Go to Scholarships
-      </button>
     </div>
   );
 };

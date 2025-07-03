@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 const I20ControlFeeSuccess: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { updateUserProfile } = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -38,6 +40,7 @@ const I20ControlFeeSuccess: React.FC = () => {
           navigate('/student/dashboard/i20-control-fee-error');
           return;
         }
+        await updateUserProfile({});
         setLoading(false);
       } catch (err: any) {
         setError(err.message);
@@ -45,7 +48,7 @@ const I20ControlFeeSuccess: React.FC = () => {
       }
     };
     verifySession();
-  }, [navigate]);
+  }, [navigate, updateUserProfile]);
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center ${error ? 'bg-red-50' : 'bg-green-50'} px-4`}>
