@@ -114,30 +114,38 @@ export const useApplicationChat = (applicationId?: string) => {
       if (file) {
         const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin';
         const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
-        
         const sanitizedBaseName = fileNameWithoutExt
           .toLowerCase()
           .replace(/[^a-z0-9-]/g, '-')
           .replace(/\s+/g, '-')
           .replace(/--+/g, '-');
-        
         const finalFileName = `${Date.now()}-${sanitizedBaseName}.${fileExt}`;
         const filePath = `${applicationId}/${user?.id}/${finalFileName}`;
-        
+        console.log('[ChatUpload] applicationId:', applicationId);
+        console.log('[ChatUpload] user.id:', user?.id);
+        console.log('[ChatUpload] filePath:', filePath);
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('message-attachments')
           .upload(filePath, file);
-
-        if (uploadError) throw new Error('Failed to upload attachment.');
-        
+        if (uploadError) {
+          console.error('[ChatUpload] Erro detalhado do upload:', uploadError);
+          setError(`Erro no upload: ${uploadError.message || uploadError.error || 'Erro desconhecido.'}`);
+          throw new Error('Failed to upload attachment.');
+        } else {
+          console.log('[ChatUpload] Upload realizado com sucesso:', uploadData);
+        }
         const { data: urlData } = supabase.storage
           .from('message-attachments')
           .getPublicUrl(uploadData.path);
-          
         file_url = urlData.publicUrl;
         file_name = file.name;
       }
-      
+      console.log('[ChatUpload] Enviando mensagem para backend', {
+        application_id: applicationId,
+        text,
+        file_url,
+        file_name,
+      });
       const { data: sentMessageData, error: functionError } = await supabase.functions.invoke('send-application-message', {
         body: {
           application_id: applicationId,
@@ -146,9 +154,11 @@ export const useApplicationChat = (applicationId?: string) => {
           file_name,
         },
       });
-
-      if (functionError) throw functionError;
-      
+      if (functionError) {
+        console.error('[ChatUpload] Erro do backend:', functionError);
+        throw functionError;
+      }
+      console.log('[ChatUpload] Resposta do backend:', sentMessageData);
       const sentMessage = formatMessage(sentMessageData as ApiMessage, 'sent');
       setMessages((prevMessages) =>
         prevMessages.map((msg) => (msg.id === tempId ? sentMessage : msg))

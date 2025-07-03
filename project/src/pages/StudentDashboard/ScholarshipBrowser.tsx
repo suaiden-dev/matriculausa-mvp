@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -50,6 +50,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [deadlineDays, setDeadlineDays] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Refresh automático apenas uma vez após o pagamento
+    if (!localStorage.getItem('scholarship_browser_refreshed')) {
+      localStorage.setItem('scholarship_browser_refreshed', 'true');
+      window.location.reload();
+    }
+  }, []);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
