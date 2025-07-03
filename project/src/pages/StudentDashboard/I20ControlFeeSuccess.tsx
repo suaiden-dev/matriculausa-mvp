@@ -55,13 +55,13 @@ const I20ControlFeeSuccess: React.FC = () => {
             <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
             </svg>
-            <h1 className="text-3xl font-bold text-red-700 mb-2">Erro no pagamento do I-20 Control Fee</h1>
+            <h1 className="text-3xl font-bold text-red-700 mb-2">I-20 Control Fee Payment Error</h1>
             <p className="text-slate-700 mb-6 text-center">
-              Ocorreu um problema ao processar seu pagamento de <span className="font-bold">$900</span>.<br/>
-              Por favor, tente novamente. Se o erro persistir, entre em contato com o suporte.
+              There was a problem processing your <span className="font-bold">$900</span> payment.<br/>
+              Please try again. If the error persists, contact support.
             </p>
             <Link to="/student/dashboard/applications" className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-all duration-300">
-              Voltar para Minhas Aplicações
+              Back to My Applications
             </Link>
           </>
         ) : loading ? (
@@ -69,19 +69,19 @@ const I20ControlFeeSuccess: React.FC = () => {
             <svg className="h-16 w-16 text-green-600 mb-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             </svg>
-            <h1 className="text-3xl font-bold text-green-700 mb-2">Verificando Pagamento...</h1>
-            <p className="text-slate-700 mb-6 text-center">Aguarde enquanto confirmamos seu pagamento.</p>
+            <h1 className="text-3xl font-bold text-green-700 mb-2">Verifying Payment...</h1>
+            <p className="text-slate-700 mb-6 text-center">Please wait while we confirm your payment.</p>
           </>
         ) : (
           <>
             <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-            <h1 className="text-3xl font-bold text-green-700 mb-2">Pagamento do I-20 Control Fee realizado com sucesso!</h1>
+            <h1 className="text-3xl font-bold text-green-700 mb-2">I-20 Control Fee Payment Successful!</h1>
             <p className="text-slate-700 mb-6 text-center">
-              Seu pagamento de <span className="font-bold">$900</span> foi processado com sucesso.<br/>
-              Agora sua aplicação seguirá para a próxima etapa.
+              Your payment of <span className="font-bold">$900</span> was processed successfully.<br/>
+              Your application will now proceed to the next step.
             </p>
             <Link to="/student/dashboard/applications" className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300">
-              Ir para Minhas Aplicações
+              Go to My Applications
             </Link>
           </>
         )}
