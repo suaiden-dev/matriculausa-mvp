@@ -13,7 +13,7 @@ import {
   Award,
   ArrowRight
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
@@ -35,6 +35,7 @@ const MyApplications: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -74,6 +75,40 @@ const MyApplications: React.FC = () => {
     if (userProfile?.id) fetchApplications();
   }, [userProfile]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('from') === 'payment-success') {
+      // Força o refetch dos dados
+      setLoading(true);
+      setError(null);
+      const fetchApplications = async () => {
+        try {
+          if (!userProfile?.id) {
+            setApplications([]);
+            setLoading(false);
+            return;
+          }
+          const { data, error } = await supabase
+            .from('scholarship_applications')
+            .select(`*, scholarships(*, universities!inner(id, name, logo_url, location, is_approved))`)
+            .eq('student_id', userProfile.id)
+            .order('created_at', { ascending: false });
+          if (error) {
+            setError('Erro ao buscar aplicações.');
+          } else {
+            setApplications(data || []);
+          }
+        } catch (err) {
+          setError('Erro inesperado ao buscar aplicações.');
+        }
+        setLoading(false);
+      };
+      fetchApplications();
+      // Remove o parâmetro da URL para evitar loops
+      params.delete('from');
+      window.history.replaceState({}, '', `${location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
+    }
+  }, [location.search, userProfile]);
 
   const filteredApplications = applications.filter(application => {
     const scholarshipTitle = application.scholarships?.title || '';

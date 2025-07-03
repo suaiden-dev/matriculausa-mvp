@@ -79,12 +79,12 @@ Deno.serve(async (req) => {
       // Atualiza status das aplicações relacionadas para 'approved' (usando userProfile.id)
       const scholarshipIdsArray = scholarshipsIds.split(',').map((id: string) => id.trim());
       console.log(`Updating applications for student_id: ${userProfile.id}, scholarship_ids: ${scholarshipIdsArray}`);
-      
-      const { error: appError } = await supabase
+      const { data: updatedApps, error: appError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'approved' })
         .eq('student_id', userProfile.id)
-        .in('scholarship_id', scholarshipIdsArray);
+        .in('scholarship_id', scholarshipIdsArray)
+        .select('id');
       if (appError) throw new Error(`Failed to update scholarship_applications: ${appError.message}`);
 
       console.log('Scholarship applications updated to approved status');
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       // Limpa carrinho (opcional)
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
       if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
-      return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
+      return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.', application_ids: updatedApps?.map(app => app.id) || [] }, 200);
     } else {
       console.log('Session not paid or complete.');
       return corsResponse({ message: 'Session not ready.', status: session.status }, 202);
