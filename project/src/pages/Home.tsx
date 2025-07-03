@@ -558,10 +558,10 @@ const Home: React.FC = () => {
                 <div className="bg-yellow-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <CheckCircle className="h-4 w-4 text-white" />
                 </div>
-                What is the University Enrollment Fee?
+                What is the Application Fee?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                The University Enrollment Fee (US$350) is a payment required by some universities to formally process your enrollment after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.
+                The Application Fee (US$350) is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -627,7 +627,7 @@ const Home: React.FC = () => {
                 Do I have to pay all fees at once?
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the University Enrollment Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously.
+                No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the Application Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously.
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">

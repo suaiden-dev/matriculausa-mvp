@@ -5,6 +5,7 @@ import { MapPin, ExternalLink, ArrowLeft, Sparkles, Phone, Mail, Fan as Fax, Dol
 import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import type { Scholarship } from '../types';
+import Header from '../components/Header';
 
 const UniversityDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -216,18 +217,12 @@ const UniversityDetail: React.FC = () => {
   const contact = university.contact || {};
 
   return (
+    <>
+      <Header />
     <div className="min-h-screen bg-white">
       {/* Header Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link 
-              to="/schools" 
-              className="inline-flex items-center text-sm text-gray-600 hover:text-[#05294E] transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Universities
-            </Link>
             {isOwner && (
               isEditing ? (
                 <div className="flex gap-2">
@@ -256,7 +251,6 @@ const UniversityDetail: React.FC = () => {
                 </button>
               )
             )}
-          </div>
           {successMessage && <div className="text-green-600 mt-2">{successMessage}</div>}
           {errorMessage && <div className="text-red-600 mt-2">{errorMessage}</div>}
         </div>
@@ -280,6 +274,7 @@ const UniversityDetail: React.FC = () => {
               className="hidden"
               id="banner-upload"
               disabled={uploading}
+                title="Upload university banner image"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -552,6 +547,7 @@ const UniversityDetail: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

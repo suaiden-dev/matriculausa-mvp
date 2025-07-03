@@ -390,30 +390,7 @@ const Scholarships: React.FC = () => {
                         className={`w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-4 px-6 rounded-2xl font-bold text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#05294E]/90 hover:to-slate-600`}
                         onClick={async () => {
                           if (!userProfile?.has_paid_selection_process_fee) {
-                            // Acionar StripeCheckout para selection_process com o price_id correto
-                            const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-                            const { data: sessionData } = await supabase.auth.getSession();
-                            const token = sessionData.session?.access_token;
-                            const response = await fetch(apiUrl, {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                              },
-                              body: JSON.stringify({
-                                price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
-                                success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-                                cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
-                                mode: 'payment',
-                                payment_type: 'selection_process',
-                                fee_type: 'selection_process',
-                              })
-                            });
-                            const data = await response.json();
-                            if (data.session_url) {
-                              window.location.href = data.session_url;
-                              return;
-                            }
+                            navigate('/student/dashboard');
                             return;
                           }
                           navigate('/student/dashboard/scholarships');

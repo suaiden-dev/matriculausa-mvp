@@ -53,8 +53,7 @@ const Footer: React.FC = () => {
               <li><Link to="/scholarships" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
                 Scholarships <Zap className="ml-1 h-3 w-3 text-yellow-400" />
               </Link></li>
-              <li><Link to="/process" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Application Process</Link></li>
-              <li><Link to="/services" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Legal Services</Link></li>
+              <li><Link to="/how-it-works" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">How It Works</Link></li>
             </ul>
           </div>
 
@@ -63,10 +62,10 @@ const Footer: React.FC = () => {
             <h3 className="text-xl font-bold text-white">Support Center</h3>
             <ul className="space-y-3">
               <li><Link to="/faq" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">FAQ</Link></li>
-              <li><Link to="/contact" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Contact Us</Link></li>
-              <li><Link to="/help" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Help Center</Link></li>
-              <li><Link to="/privacy" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Terms of Service</Link></li>
+              <li><Link to="/contact-us" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Contact Us</Link></li>
+              <li><Link to="/help-center" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Help Center</Link></li>
+              <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Terms of Service</Link></li>
             </ul>
           </div>
 

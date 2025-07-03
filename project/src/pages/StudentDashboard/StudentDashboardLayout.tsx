@@ -200,18 +200,6 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden lg:block">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search scholarships..."
-                    className="w-80 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  />
-                </div>
-              </div>
-
               {/* User Menu */}
               <div className="relative">
                 <button
@@ -247,14 +235,6 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       >
                         <User className="h-4 w-4 mr-3" />
                         Profile Settings
-                      </Link>
-                      <Link
-                        to="/settings"
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Settings className="h-4 w-4 mr-3" />
-                        Account Settings
                       </Link>
                     </div>
                     

@@ -26,6 +26,12 @@ import PaymentErrorPage from './pages/PaymentErrorPage';
 import ApplicationFeeError from './pages/StudentDashboard/ApplicationFeeError';
 import I20ControlFeeSuccess from './pages/StudentDashboard/I20ControlFeeSuccess';
 import I20ControlFeeError from './pages/StudentDashboard/I20ControlFeeError';
+import SupportCenter from './pages/SupportCenter';
+import FAQ from './pages/FAQ';
+import ContactUs from './pages/ContactUs';
+import HelpCenter from './pages/HelpCenter';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 
 function App() {
   return (
@@ -68,6 +74,12 @@ function App() {
             <Route path="/student/dashboard/application-fee-error" element={<ApplicationFeeError />} />
             <Route path="/student/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
             <Route path="/student/i20-control-fee-error" element={<I20ControlFeeError />} />
+            <Route path="/support-center" element={<SupportCenter />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/help-center" element={<HelpCenter />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
             </Routes>
           </Layout>
         </AuthRedirect>
