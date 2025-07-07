@@ -69,12 +69,13 @@ Deno.serve(async (req) => {
         if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
         const { error: appError } = await supabase
           .from('scholarship_applications')
-          .update({ status: 'under_review' })
+          .update({ status: 'pending_scholarship_fee' })
           .eq('id', applicationId)
           .eq('student_id', userId);
         if (appError) throw new Error(`Failed to update scholarship_application: ${appError.message}`);
         const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
         if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
+        console.log(`[verify-stripe-session] Application status set to 'pending_scholarship_fee' for user ${userId}, application ${applicationId}.`);
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'scholarship_fee') {
         if (!applicationId) {

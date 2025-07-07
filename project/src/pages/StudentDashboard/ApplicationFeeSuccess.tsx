@@ -1,94 +1,95 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CheckCircle, ArrowRight, XCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import StudentDashboardLayout from './StudentDashboardLayout';
+import { useAuth } from '../../hooks/useAuth';
+import CustomLoading from '../../components/CustomLoading';
+
+type VerificationStatus = 'loading' | 'success' | 'error';
 
 const ApplicationFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const sessionId = params.get('session_id');
-  const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
+  const { user, userProfile, loading } = useAuth();
 
   useEffect(() => {
     const verifySession = async () => {
+      const sessionId = searchParams.get('session_id');
       if (!sessionId) {
-        setError('Session ID not found in URL.');
-        setLoading(false);
+        setError('No session ID found in URL.');
+        setStatus('error');
         return;
       }
+
       try {
-        const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
-        const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-application-fee`;
-        let token = null;
-        try {
-          const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
-          if (raw) {
-            const tokenObj = JSON.parse(raw);
-            token = tokenObj?.access_token || null;
-          }
-        } catch (e) {
-          token = null;
-        }
-        const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` }),
-          },
-          body: JSON.stringify({ sessionId }),
+        const { error: functionError } = await supabase.functions.invoke('verify-stripe-session', {
+          body: { sessionId },
         });
-        const data = await response.json();
-        if (!response.ok || data.status !== 'complete') {
-          throw new Error(data.error || data.message || 'Failed to verify session.');
+
+        if (functionError) {
+          throw new Error(`Verification failed: ${functionError.message}`);
         }
-      } catch (err: any) {
-        setError(err.message || 'Error verifying payment.');
-      } finally {
-        setLoading(false);
+        
+        setStatus('success');
+
+      } catch (e: any) {
+        setError(e.message || 'An unknown error occurred during verification.');
+        setStatus('error');
       }
     };
+
     verifySession();
-  }, [sessionId]);
+  }, [searchParams]);
 
-  if (loading) {
-    return (
-      <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-        <h1 className="text-3xl font-bold text-blue-700 mb-4">Verifying Payment...</h1>
-        <p className="text-slate-700 mb-4">Please wait while we confirm your transaction. This may take a moment.</p>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-        <h1 className="text-3xl font-bold text-red-700 mb-4">Application Fee Payment Error</h1>
-        <p className="text-slate-700 mb-4">{error}</p>
-        <button
-          className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition"
-          onClick={() => navigate('/student/dashboard/applications')}
-        >
-          Back to My Applications
-        </button>
-      </div>
-    );
-  }
+  const renderContent = () => {
+    switch (status) {
+      case 'loading':
+        return (
+          <CustomLoading color="green" title="Verifying Payment..." message="Please wait while we confirm your transaction. This may take a moment." />
+        );
+      case 'success':
+        return (
+          <>
+            <CheckCircle className="h-16 w-16 text-green-600 mb-4 mx-auto" />
+            <h1 className="text-3xl font-bold text-green-700 mb-2">Application Fee Payment Successful!</h1>
+            <p className="text-slate-700 mb-6 text-center">
+              Your payment of <span className="font-bold">$350</span> was processed successfully.<br/>
+              Your application will now proceed to the next step.
+            </p>
+            <button
+              onClick={() => navigate('/student/dashboard/applications')}
+              className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
+            >
+              Go to View Details
+            </button>
+          </>
+        );
+      case 'error':
+        return (
+           <>
+            <XCircle className="text-red-500 h-16 w-16 mx-auto mb-6" />
+            <h1 className="text-3xl font-bold text-slate-800 mb-4">Verification Failed</h1>
+            <p className="text-slate-600 mb-6">
+              There was a problem verifying your payment. Please contact support.
+            </p>
+            <p className="text-sm text-red-700 bg-red-100 p-3 rounded-lg">{error}</p>
+          </>
+        );
+    }
+  };
 
   return (
-    <div className="max-w-lg mx-auto mt-20 bg-white rounded-2xl shadow-lg p-8 text-center">
-      <h1 className="text-3xl font-bold text-green-700 mb-4">Application Fee payment successful!</h1>
-      <p className="text-slate-700 mb-4">Your application has been processed and is under review. You will receive updates by email.</p>
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-        <div className="text-sm text-slate-600 mb-1">Session ID:</div>
-        <div className="font-mono text-green-800 text-xs break-all">{sessionId}</div>
+    <StudentDashboardLayout user={user} profile={userProfile} loading={loading}>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-green-50 px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
+          {renderContent()}
+        </div>
       </div>
-      <button
-        className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition"
-        onClick={() => navigate('/student/dashboard/applications')}
-      >
-        Go to My Applications
-      </button>
-    </div>
+    </StudentDashboardLayout>
   );
 };
 

@@ -87,6 +87,8 @@ export interface Application {
   notes?: string;
   scholarships?: Scholarship;
   student_process_type?: string;
+  is_application_fee_paid?: boolean;
+  is_scholarship_fee_paid?: boolean;
 }
 
 export interface AuthContextType {
@@ -124,4 +126,5 @@ export interface UserProfile {
   has_paid_i20_control_fee?: boolean;
   i20_control_fee_due_date?: string | null;
   i20_control_fee_payment_intent_id?: string | null;
+  is_scholarship_fee_paid: boolean;
 }

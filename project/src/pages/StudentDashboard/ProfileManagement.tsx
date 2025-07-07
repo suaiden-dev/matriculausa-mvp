@@ -18,6 +18,8 @@ import {
   Calendar,
   Target
 } from 'lucide-react';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 interface ProfileManagementProps {
   profile: any;
@@ -172,13 +174,15 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
-                <input
-                  type="tel"
+                <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number *</label>
+                <PhoneInput
+                  international
+                  defaultCountry="BR"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onChange={(value) => handleInputChange('phone', value || '')}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Your phone number"
+                  placeholder="Ex: +55 11 99999-8888"
+                  limitMaxLength
                 />
               </div>
 

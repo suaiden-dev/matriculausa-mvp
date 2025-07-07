@@ -255,9 +255,11 @@ const Overview: React.FC<OverviewProps> = ({
               <h2 className="text-2xl md:text-3xl font-bold mb-1">
                 Welcome back, {userProfile?.full_name || user?.email || 'Student'}!
               </h2>
-              <p className="text-blue-100 text-base md:text-lg">
-                Continue your journey to academic excellence
-              </p>
+              {userProfile?.phone && (
+                <p className="text-blue-100 text-base md:text-lg">
+                  📞 {userProfile.phone}
+                </p>
+              )}
             </div>
           </div>
 

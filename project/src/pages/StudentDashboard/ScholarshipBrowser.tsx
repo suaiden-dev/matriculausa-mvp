@@ -42,7 +42,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [selectedField, setSelectedField] = useState('all');
   const [sortBy, setSortBy] = useState('deadline');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const { isAuthenticated, userProfile, user } = useAuth();
+  const { isAuthenticated, userProfile, user, refetchUserProfile } = useAuth();
   const navigate = useNavigate();
   const { cart, addToCart, removeFromCart } = useCartStore();
   const [minValue, setMinValue] = useState('');
@@ -58,6 +58,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       window.location.reload();
     }
   }, []);
+
+  // Polling para atualizar o perfil do usuário a cada 3 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchUserProfile && refetchUserProfile();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [refetchUserProfile]);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

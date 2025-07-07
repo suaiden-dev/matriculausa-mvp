@@ -56,7 +56,29 @@ Deno.serve(async (req) => {
         .eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
-      return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
+      // Buscar o application_id mais recente do usuário
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+      console.log('[I20ControlFee] userId do Stripe:', userId);
+      console.log('[I20ControlFee] userProfile encontrado:', userProfile);
+      let applicationId = null;
+      if (userProfile && userProfile.id) {
+        const { data: applications } = await supabase
+          .from('scholarship_applications')
+          .select('id')
+          .eq('student_id', userProfile.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        console.log('[I20ControlFee] applications encontradas:', applications);
+        if (applications && applications.length > 0) {
+          applicationId = applications[0].id;
+        }
+      }
+
+      return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.', application_id: applicationId }, 200);
     } else {
       return corsResponse({ message: 'Session not ready.', status: session.status }, 202);
     }

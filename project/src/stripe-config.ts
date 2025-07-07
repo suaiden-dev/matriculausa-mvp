@@ -16,14 +16,14 @@ export const STRIPE_PRODUCTS = {
   controlFee: isProd
     ? {
         productId: 'prod_SZ3ma6T2b0o702',
-        priceId: 'price_1RgpiMKdCh3y3bmY7zkNInNG',
+        priceId: import.meta.env.VITE_STRIPE_CONTROL_FEE_PRICE_ID,
         name: 'Control Fee',
         description: 'Fee for I-20 control and document validation',
         mode: 'payment',
       }
     : {
         productId: 'prod_SWVk1e4mFkUJ2Z',
-        priceId: 'price_1RbSjQKdCh3y3bmYQdmGvtpk',
+        priceId: import.meta.env.VITE_STRIPE_CONTROL_FEE_PRICE_ID,
         name: 'Control Fee',
         description: 'Fee for I-20 control and document validation',
         mode: 'payment',
@@ -31,14 +31,14 @@ export const STRIPE_PRODUCTS = {
   applicationFee: isProd
     ? {
         productId: 'prod_SZ3nS58QT5NrFL',
-        priceId: 'price_1Rgpk7KdCh3y3bmYy0vA0b4j',
+        priceId: import.meta.env.VITE_STRIPE_APPLICATION_FEE_PRICE_ID,
         name: 'Application Fee',
         description: 'Fee for processing the student application after document analysis',
         mode: 'payment',
       }
     : {
         productId: 'prod_SWVjg1nJuHD4mb',
-        priceId: 'price_1RbShpKdCh3y3bmYmgROPgMe',
+        priceId: import.meta.env.VITE_STRIPE_APPLICATION_FEE_PRICE_ID,
         name: 'Application Fee',
         description: 'Fee for processing the student application after document analysis',
         mode: 'payment',
@@ -46,14 +46,14 @@ export const STRIPE_PRODUCTS = {
   scholarshipFee: isProd
     ? {
         productId: 'prod_SZ3nMU2XGBe7KD',
-        priceId: 'price_1RgpkfKdCh3y3bmYZPyMEZ7l',
+        priceId: import.meta.env.VITE_STRIPE_SCHOLARSHIP_FEE_PRICE_ID,
         name: 'Scholarship Fee',
         description: 'One-time fee for applying to scholarships',
         mode: 'payment',
       }
     : {
         productId: 'prod_SWViFzT8SgWeiC',
-        priceId: 'price_1RbSh9KdCh3y3bmYrklG84hH',
+        priceId: import.meta.env.VITE_STRIPE_SCHOLARSHIP_FEE_PRICE_ID,
         name: 'Scholarship Fee',
         description: 'One-time fee for applying to scholarships',
         mode: 'payment',
@@ -61,14 +61,14 @@ export const STRIPE_PRODUCTS = {
   selectionProcess: isProd
     ? {
         productId: 'prod_SW6LcrOKKbAmbi',
-        priceId: 'price_1RgBJNKdCh3y3bmYkXY2qIZ7',
+        priceId: import.meta.env.VITE_STRIPE_SELECTION_PROCESS_PRICE_ID,
         name: 'Selection Process',
         description: 'Complete application process for international students',
         mode: 'payment',
       }
     : {
         productId: 'prod_SW8CWWoXmOiyfA',
-        priceId: 'price_1Rb5w8KdCh3y3bmYqSmUyW2Z',
+        priceId: import.meta.env.VITE_STRIPE_SELECTION_PROCESS_PRICE_ID,
         name: 'Selection Process',
         description: 'Complete application process for international students',
         mode: 'payment',

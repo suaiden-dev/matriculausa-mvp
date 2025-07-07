@@ -84,10 +84,11 @@ Deno.serve(async (req) => {
 
       // Preparar dados para atualização
       const updateData: any = { 
-        status: 'under_review',
+        status: 'pending_scholarship_fee',
         payment_status: 'paid',
         paid_at: new Date().toISOString()
       };
+      console.log(`[verify-stripe-session-application-fee] Application status set to 'pending_scholarship_fee' for user ${userId}, application ${applicationId}.`);
 
       // Se student_process_type não existe na aplicação, tentar obter dos metadados da sessão
       if (!application.student_process_type && session.metadata?.student_process_type) {

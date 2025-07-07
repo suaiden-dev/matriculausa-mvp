@@ -106,5 +106,121 @@
     -webkit-perspective: 1000 !important;
     perspective: 1000 !important;
   }
+
+  /* Estilos customizados para PhoneInput */
+  .phone-input-custom {
+    width: 100%;
+    display: flex;
+    gap: 0;
+  }
+
+  .phone-input-custom .PhoneInputInput {
+    width: 100%;
+    padding: 16px 16px 16px 12px;
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    font-size: 16px;
+    color: #0f172a;
+    transition: all 0.3s ease;
+    border-left: none;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .phone-input-custom .PhoneInputInput:focus {
+    outline: none;
+    border-color: #05294E;
+    box-shadow: 0 0 0 2px rgba(5, 41, 78, 0.2);
+  }
+
+  .phone-input-custom .PhoneInputInput::placeholder {
+    color: #64748b;
+  }
+
+  .phone-input-custom .PhoneInputCountrySelect {
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    background-color: white;
+    padding: 16px 12px;
+    margin-right: 0;
+    transition: all 0.3s ease;
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    min-width: 80px;
+  }
+
+  .phone-input-custom .PhoneInputCountrySelect:focus {
+    outline: none;
+    border-color: #05294E;
+    box-shadow: 0 0 0 2px rgba(5, 41, 78, 0.2);
+  }
+
+  .phone-input-custom .PhoneInputCountrySelectArrow {
+    color: #64748b;
+  }
+
+  .phone-input-custom .PhoneInputCountryFlag {
+    margin-right: 8px;
+  }
+
+  /* Para o formulário de universidade */
+  .phone-input-university {
+    width: 100%;
+    display: flex;
+    gap: 0;
+  }
+
+  .phone-input-university .PhoneInputInput {
+    width: 100%;
+    padding: 16px 16px 16px 12px;
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    font-size: 16px;
+    color: #0f172a;
+    transition: all 0.3s ease;
+    border-left: none;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .phone-input-university .PhoneInputInput:focus {
+    outline: none;
+    border-color: #D0151C;
+    box-shadow: 0 0 0 2px rgba(208, 21, 28, 0.2);
+  }
+
+  .phone-input-university .PhoneInputInput::placeholder {
+    color: #64748b;
+  }
+
+  .phone-input-university .PhoneInputCountrySelect {
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    background-color: white;
+    padding: 16px 12px;
+    margin-right: 0;
+    transition: all 0.3s ease;
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    min-width: 80px;
+  }
+
+  .phone-input-university .PhoneInputCountrySelect:focus {
+    outline: none;
+    border-color: #D0151C;
+    box-shadow: 0 0 0 2px rgba(208, 21, 28, 0.2);
+  }
+
+  .phone-input-university .PhoneInputCountrySelectArrow {
+    color: #64748b;
+  }
+
+  .phone-input-university .PhoneInputCountryFlag {
+    margin-right: 8px;
+  }
 }
 

@@ -51,6 +51,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  refetchUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -130,37 +131,97 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         if (!profile) {
           try {
+            console.log('🔍 [USEAUTH] Perfil não encontrado, criando novo perfil');
+            console.log('🔍 [USEAUTH] session.user.id:', session.user.id);
+            console.log('🔍 [USEAUTH] session.user.user_metadata:', session.user.user_metadata);
+            
             const pendingFullName = localStorage.getItem('pending_full_name');
+            const pendingPhone = localStorage.getItem('pending_phone');
+            
+            console.log('🔍 [USEAUTH] Dados do localStorage:');
+            console.log('🔍 [USEAUTH] - pendingFullName:', pendingFullName);
+            console.log('🔍 [USEAUTH] - pendingPhone:', pendingPhone);
+            
             const fullName = pendingFullName || 
               session.user.user_metadata?.full_name || 
               session.user.user_metadata?.name || 
               session.user.email?.split('@')[0] || 
               'User';
+            const phone = pendingPhone || 
+              session.user.user_metadata?.phone || 
+              null;
+            
+            console.log('🔍 [USEAUTH] Valores finais para criação do perfil:');
+            console.log('🔍 [USEAUTH] - fullName:', fullName);
+            console.log('🔍 [USEAUTH] - phone:', phone);
+            
+            // Debug: verificar se o telefone está no user_metadata
+            console.log('Debug - user_metadata:', session.user.user_metadata);
+            console.log('Debug - phone from user_metadata:', session.user.user_metadata?.phone);
+            console.log('Debug - phone from localStorage:', pendingPhone);
+            
+            const profileData = {
+              user_id: session.user.id,
+              full_name: fullName,
+              phone: phone,
+              status: 'active'
+            };
+            
+            console.log('🔍 [USEAUTH] profileData que será inserido:', profileData);
+            
             const { data: newProfile, error: insertError } = await supabase
               .from('user_profiles')
-              .insert({
-                user_id: session.user.id,
-                full_name: fullName,
-                status: 'active'
-              })
+              .insert(profileData)
               .select()
               .single();
+            
+            console.log('🔍 [USEAUTH] Resultado da inserção do perfil:');
+            console.log('🔍 [USEAUTH] - newProfile:', newProfile);
+            console.log('🔍 [USEAUTH] - insertError:', insertError);
+            
             if (insertError) {
-              if (insertError.code === '23505') {
+              console.log('❌ [USEAUTH] Erro ao inserir perfil:', insertError);
+              // Log detalhado do erro
+              if (insertError.code === '23505' || insertError.code === '409' || insertError.message?.includes('duplicate')) {
+                console.log('⚠️ [USEAUTH] Conflito: perfil já existe. Buscando perfil existente e atualizando telefone se necessário.');
                 try {
-                  const { data: existingProfile } = await supabase
+                  const { data: existingProfile, error: fetchError } = await supabase
                     .from('user_profiles')
                     .select('*')
                     .eq('user_id', session.user.id)
                     .single();
-                  profile = existingProfile;
+                  if (fetchError) {
+                    console.log('❌ [USEAUTH] Erro ao buscar perfil existente:', fetchError);
+                  } else if (existingProfile) {
+                    profile = existingProfile;
+                    // Atualizar telefone se estiver diferente
+                    if (existingProfile.phone !== phone) {
+                      console.log('🔄 [USEAUTH] Atualizando telefone do perfil existente:', { antigo: existingProfile.phone, novo: phone });
+                      const { data: updatedProfile, error: updateError } = await supabase
+                        .from('user_profiles')
+                        .update({ phone })
+                        .eq('user_id', session.user.id)
+                        .select()
+                        .single();
+                      if (updateError) {
+                        console.log('❌ [USEAUTH] Erro ao atualizar telefone:', updateError);
+                      } else {
+                        console.log('✅ [USEAUTH] Telefone atualizado com sucesso:', updatedProfile);
+                        profile = updatedProfile;
+                      }
+                    } else {
+                      console.log('ℹ️ [USEAUTH] Telefone já está correto no perfil existente.');
+                    }
+                  }
                 } catch (retryError) {
-                  console.log("Error fetching existing profile:", retryError);
+                  console.log('❌ [USEAUTH] Erro ao buscar/atualizar perfil existente:', retryError);
                 }
               } else {
-                console.error("Error creating user profile:", insertError);
+                console.error('❌ [USEAUTH] Erro inesperado ao criar perfil:', insertError);
               }
             } else {
+              console.log('✅ [USEAUTH] Perfil criado com sucesso:', newProfile);
+              console.log('🔍 [USEAUTH] Telefone no perfil criado:', newProfile?.phone);
               profile = newProfile;
               if (session.user.user_metadata?.role === 'school') {
                 try {
@@ -190,16 +251,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 }
               }
               if (pendingFullName) {
+                console.log('🧹 [USEAUTH] Removendo pending_full_name do localStorage');
                 localStorage.removeItem('pending_full_name');
+              }
+              if (pendingPhone) {
+                console.log('🧹 [USEAUTH] Removendo pending_phone do localStorage');
+                localStorage.removeItem('pending_phone');
               }
             }
           } catch (error) {
-            console.error("Error creating user profile:", error);
+            console.error('❌ [USEAUTH] Erro geral ao criar perfil:', error);
           }
         }
         setUserProfile(profile);
         setUser(buildUser(session.user, profile));
         setSupabaseUser(session.user);
+
+        // Sincronizar telefone do user_metadata se o perfil não tiver
+        if (!profile.phone && session.user.user_metadata?.phone) {
+          console.log('🔄 [USEAUTH] Sincronizando telefone do user_metadata para o perfil:', session.user.user_metadata.phone);
+          try {
+            const { data: updatedProfile, error: updateError } = await supabase
+              .from('user_profiles')
+              .update({ phone: session.user.user_metadata.phone })
+              .eq('user_id', session.user.id)
+              .select()
+              .single();
+            if (updateError) {
+              console.error('❌ [USEAUTH] Erro ao atualizar telefone do perfil:', updateError);
+            } else {
+              profile = updatedProfile;
+              console.log('✅ [USEAUTH] Telefone atualizado no perfil:', updatedProfile.phone);
+            }
+          } catch (err) {
+            console.error('❌ [USEAUTH] Erro inesperado ao atualizar telefone:', err);
+          }
+        }
       } else {
         setUser(null);
         setSupabaseUser(null);
@@ -290,40 +377,78 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => {
+    console.log('🔍 [USEAUTH] Iniciando função register');
+    console.log('🔍 [USEAUTH] userData recebido:', userData);
+    console.log('🔍 [USEAUTH] Telefone no userData:', userData.phone);
+    
     // Garantir que full_name não seja undefined
     if (!userData.full_name || userData.full_name.trim() === '') {
       throw new Error('Nome completo é obrigatório');
     }
     
+    console.log('💾 [USEAUTH] Salvando no localStorage:');
+    console.log('💾 [USEAUTH] - pending_full_name:', userData.full_name);
+    console.log('💾 [USEAUTH] - pending_phone:', userData.phone || '');
+    
     localStorage.setItem('pending_full_name', userData.full_name);
+    localStorage.setItem('pending_phone', userData.phone || '');
     
     // Filtrar valores undefined/null do userData
     const cleanUserData = Object.fromEntries(
       Object.entries(userData).filter(([key, value]) => value !== undefined && value !== null)
     );
     
+    console.log('🔍 [USEAUTH] cleanUserData:', cleanUserData);
+    console.log('🔍 [USEAUTH] Telefone no cleanUserData:', cleanUserData.phone);
+    
+    const signUpData = {
+      ...cleanUserData,
+      name: cleanUserData.full_name, // redundância para garantir compatibilidade
+    };
+    
+    console.log('🔍 [USEAUTH] signUpData que será enviado:', signUpData);
+    console.log('🔍 [USEAUTH] Telefone no signUpData:', signUpData.phone);
+    
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          ...cleanUserData,
-          name: cleanUserData.full_name, // redundância para garantir compatibilidade
-        },
+        data: signUpData,
       }
     });
 
     if (error) {
+      console.log('❌ [USEAUTH] Erro no signUp:', error);
       throw error;
     }
+    
+    console.log('✅ [USEAUTH] SignUp bem-sucedido');
+    console.log('🔍 [USEAUTH] data.user:', data?.user);
+    console.log('🔍 [USEAUTH] data.user.user_metadata:', data?.user?.user_metadata);
+    
     // O user_profile será criado naturalmente quando o usuário fizer login
     // Salvar dados no localStorage para uso posterior
     if (data?.user) {
-      // Usuário registrado com sucesso
+      console.log('✅ [USEAUTH] Usuário registrado com sucesso');
     } else {
-      // Usuário criado, mas precisa confirmar o e-mail antes de ativar a conta
+      console.log('⚠️ [USEAUTH] Usuário criado, mas precisa confirmar o e-mail');
     }
     // Registration redirection will be handled in the Auth component
+  };
+
+  // Função para refetch manual do perfil do usuário
+  const refetchUserProfile = async () => {
+    if (!supabaseUser) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', supabaseUser.id)
+        .single();
+      if (!error) setUserProfile(data);
+    } catch (err) {
+      // Ignorar erros silenciosamente
+    }
   };
 
   const value: AuthContextType = {
@@ -337,6 +462,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user && !!supabaseUser,
     loading,
     updateUserProfile,
+    refetchUserProfile,
   };
 
   return (

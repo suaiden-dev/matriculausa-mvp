@@ -18,6 +18,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { StripeCheckout } from '../../components/StripeCheckout';
+import StudentDashboardLayout from "./StudentDashboardLayout";
 
 // Combine os tipos para incluir os detalhes da bolsa na aplicação
 type ApplicationWithScholarship = Application & {
@@ -25,7 +26,8 @@ type ApplicationWithScholarship = Application & {
 };
 
 const MyApplications: React.FC = () => {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refetchUserProfile } = useAuth();
+  const [userProfileId, setUserProfileId] = useState<string | null>(null);
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,46 +36,64 @@ const MyApplications: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const fetchApplications = async () => {
-      setLoading(true);
+    setUserProfileId(userProfile?.id || null);
+    // Iniciar polling apenas se a application fee ainda não foi paga
+    if (userProfile && userProfile.is_application_fee_paid) {
+      setIsPolling(false);
+    } else {
+      setIsPolling(true);
+    }
+  }, [userProfile?.id, userProfile?.is_application_fee_paid]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchApplications = async (showLoading = false) => {
+      if (showLoading && isFirstLoad) setLoading(true);
       try {
-        if (!userProfile?.id) {
-          setApplications([]);
-          setLoading(false);
+        if (!userProfileId) {
+          if (isMounted) setApplications([]);
+          if (showLoading && isFirstLoad) setLoading(false);
           return;
         }
         const { data, error } = await supabase
           .from('scholarship_applications')
-          .select(`
-            *, 
-            scholarships(
-              *,
-              universities!inner(id, name, logo_url, location, is_approved)
-            )
-          `)
-          .eq('student_id', userProfile.id)
+          .select(`*, scholarships(*, universities!inner(id, name, logo_url, location, is_approved))`)
+          .eq('student_id', userProfileId)
           .order('created_at', { ascending: false });
         if (error) {
-          console.error('Erro ao buscar aplicações:', error);
-          setError('Erro ao buscar aplicações.');
+          if (isMounted) setError('Erro ao buscar aplicações.');
         } else {
-          if (!data || data.length === 0) {
-            console.warn('Nenhuma aplicação encontrada para student_id:', userProfile.id);
-          }
-          setApplications(data || []);
+          if (isMounted) setApplications(data || []);
         }
       } catch (err) {
-        setError('Erro inesperado ao buscar aplicações.');
-        console.error(err);
+        if (isMounted) setError('Erro inesperado ao buscar aplicações.');
       }
-      setLoading(false);
+      if (showLoading && isFirstLoad) setLoading(false);
+      if (isFirstLoad) setIsFirstLoad(false);
     };
-    if (userProfile?.id) fetchApplications();
-  }, [userProfile]);
+    if (userProfileId) fetchApplications(true);
+
+    // Polling eficiente: só roda enquanto isPolling for true
+    let interval: NodeJS.Timeout | null = null;
+    if (isPolling) {
+      interval = setInterval(async () => {
+        if (userProfileId) {
+          await refetchUserProfile();
+          fetchApplications(false);
+        }
+      }, 1000);
+    }
+    return () => {
+      isMounted = false;
+      if (interval) clearInterval(interval);
+    };
+  }, [userProfileId, refetchUserProfile, isPolling]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -195,8 +215,16 @@ const MyApplications: React.FC = () => {
     return { applicationId: data.id };
   };
 
-  if (loading) {
-    return <div>Loading applications...</div>;
+  if (loading && isFirstLoad) {
+    return (
+      <StudentDashboardLayout user={user} profile={userProfile} loading={false}>
+        <div className="min-h-[60vh] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center border border-slate-200">
+            <p className="text-lg text-slate-600">Carregando suas aplicações...</p>
+          </div>
+        </div>
+      </StudentDashboardLayout>
+    );
   }
 
   if (error) {
@@ -347,8 +375,8 @@ const MyApplications: React.FC = () => {
             {filteredApplications.map((application) => {
               const Icon = getStatusIcon(application.status);
               const scholarship = application.scholarships;
-              const applicationFeePaid = !!userProfile?.is_application_fee_paid;
-              const scholarshipFeePaid = !!userProfile?.is_scholarship_fee_paid;
+              const applicationFeePaid = !!application.is_application_fee_paid;
+              const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
 
               if (!scholarship) return null;
               
@@ -432,27 +460,43 @@ const MyApplications: React.FC = () => {
                       )}
                       {/* Botões de pagamento */}
                       <div className="flex flex-row gap-4 mt-4 items-center justify-center">
-                        <StripeCheckout
-                          productId="applicationFee"
-                          feeType="application_fee"
-                          paymentType="application_fee"
-                          buttonText="Pay Application Fee ($350)"
-                          successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                          cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
-                          disabled={applicationFeePaid}
-                          metadata={{ selected_scholarship_id: application.scholarship_id }}
-                        />
-                        <StripeCheckout
-                          productId="scholarshipFee"
-                          feeType="scholarship_fee"
-                          paymentType="scholarship_fee"
-                          buttonText="Pay Scholarship Fee ($550)"
-                          successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                          cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
-                          disabled={!applicationFeePaid || scholarshipFeePaid}
-                          scholarshipsIds={[application.scholarship_id]}
-                          metadata={{ selected_scholarship_id: application.scholarship_id }}
-                        />
+                        {/* Application Fee */}
+                        {applicationFeePaid ? (
+                          <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Paid
+                          </span>
+                        ) : (
+                          <button
+                            className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200"
+                            onClick={() => navigate('/student/dashboard/application-fee')}
+                          >
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Pay Application Fee ($350)
+                          </button>
+                        )}
+                        {/* Scholarship Fee */}
+                        {scholarshipFeePaid ? (
+                          <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Paid
+                          </span>
+                        ) : (
+                          <StripeCheckout
+                            productId="scholarshipFee"
+                            feeType="scholarship_fee"
+                            paymentType="scholarship_fee"
+                            buttonText="Pay Scholarship Fee ($550)"
+                            successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                            cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
+                            disabled={!applicationFeePaid || scholarshipFeePaid}
+                            scholarshipsIds={[application.scholarship_id]}
+                            metadata={{
+                              application_id: application.id,
+                              selected_scholarship_id: application.scholarship_id
+                            }}
+                          />
+                        )}
                       </div>
                     </div>
 

@@ -36,8 +36,27 @@ async function sendEmail(paymentData: {
     let htmlContent = '';
     
     if (paymentData.eventType === 'payment_success') {
-      subject = 'Payment successful - Selective process';
-      htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment successful - Selective process</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>🎓 Payment successful - Selective process</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your payment was successfully processed.</p><p>📚 The next step is to select the schools to which you want to apply for enrollment.</p><p>This step is essential to proceed with your application.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
+      switch (paymentData.paymentType) {
+        case 'selection_process':
+          subject = 'Payment successful - Selective process';
+          htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment successful - Selective process</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>🎓 Payment successful - Selective process</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your payment was successfully processed.</p><p>📚 The next step is to select the schools to which you want to apply for enrollment.</p><p>This step is essential to proceed with your application.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
+          break;
+        case 'application_fee':
+          subject = 'Application Fee Payment Confirmed';
+          htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Application Fee Payment Confirmed</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>✅ Application Fee Payment Confirmed</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your application fee payment was successful.</p><p>To continue, please pay the Scholarship Fee to advance your application process.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
+          break;
+        case 'scholarship_fee':
+          subject = 'Scholarship Fee Payment Confirmed';
+          htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Scholarship Fee Payment Confirmed</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>🎓 Scholarship Fee Payment Confirmed</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your scholarship fee payment was successful.</p><p>The university will now analyze your application. You will be notified by email once a decision is made.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
+          break;
+        case 'i20_control_fee':
+          subject = 'I-20 Control Fee Payment Confirmed';
+          htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>I-20 Control Fee Payment Confirmed</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>📄 I-20 Control Fee Payment Confirmed</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your I-20 control fee payment was successful.</p><p>Your I-20 document will be processed and sent to you soon. Please monitor your email for updates.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
+          break;
+        default:
+          subject = 'Payment successful';
+          htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment successful</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>💳 Payment successful</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your payment was successfully processed.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
+      }
     } else {
       subject = 'Payment failed – Action required';
       htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment failed – Action required</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA" style="max-width:120px;height:auto;"></div><div class="content"><strong>❗ Payment failed – Action required</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Unfortunately, we were not able to complete your payment.</p><p>This may have occurred due to an issue with your card or payment provider.</p><p>To resolve this, please contact our support team so we can assist you directly.</p><p>💬 <strong><a href="https://matriculausa.com/support">Click here to talk to our team</a></strong></p><p>We\'re here to help you complete your enrollment process.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>Matrícula USA</strong><br><a href="https://matriculausa.com/">https://matriculausa.com/</a></p></div><div class="footer">You are receiving this message because you registered on the Matrícula USA platform.<br>© 2025 Matrícula USA. All rights reserved.</div></div></body></html>';
@@ -262,7 +281,7 @@ async function handleEvent(event: Stripe.Event) {
           userEmail: userData.email,
           userName: userData.name,
         paymentAmount: amount_total ? amount_total / 100 : 0,
-          paymentType: metadata?.payment_type || 'unknown',
+          paymentType: metadata?.payment_type || metadata?.fee_type || 'unknown',
           sessionId: session.id,
         origin: paymentOrigin1
         });
@@ -271,8 +290,10 @@ async function handleEvent(event: Stripe.Event) {
       console.warn('[stripe-webhook] Não foi possível enviar e-mail: mailerSendApiKey ou userData.email ausente.');
       }
     // --- Resto do processamento do evento (atualização de status, etc) ---
-      if (metadata?.payment_type === 'application_fee') {
-        const userId = metadata.user_id;
+      // Aceitar tanto payment_type quanto fee_type
+      const paymentType = metadata?.payment_type || metadata?.fee_type;
+      if (paymentType === 'application_fee') {
+        const userId = metadata.user_id || metadata.student_id;
         const applicationId = metadata.application_id;
 
         if (!userId || !applicationId) {
@@ -280,58 +301,33 @@ async function handleEvent(event: Stripe.Event) {
           return;
         }
 
-        // Atualizar status da aplicação existente para 'under_review'
-        const { error: updateError } = await supabase
+        // LOGS DETALHADOS PARA DEBUG
+        console.log('[DEBUG] Tentando atualizar is_application_fee_paid:', { applicationId, userId });
+        const { error: appFeePaidError, data: appFeePaidData } = await supabase
           .from('scholarship_applications')
-          .update({ status: 'under_review' })
-          .eq('id', applicationId)
-          .eq('student_id', userId);
-        if (updateError) {
-          console.error(`Failed to update application for user ${userId} and application ${applicationId}:`, updateError);
-        } else {
-          console.log(`Successfully updated application for user ${userId} for application ${applicationId}.`);
-        }
-
-        // Atualizar o perfil do usuário
-        const { error: profileUpdateError } = await supabase
-          .from('user_profiles')
           .update({ is_application_fee_paid: true })
-          .eq('user_id', userId);
-        if (profileUpdateError) {
-          console.error(`Failed to update user_profile for user ${userId}:`, profileUpdateError);
+          .eq('id', applicationId);
+        console.log('[DEBUG] Resultado update is_application_fee_paid:', { appFeePaidError, appFeePaidData });
+        if (appFeePaidError) {
+          console.error(`[stripe-webhook] Failed to update is_application_fee_paid for application ${applicationId}:`, appFeePaidError);
         } else {
-          console.log(`Successfully updated is_application_fee_paid for user ${userId}.`);
+          console.log(`[stripe-webhook] is_application_fee_paid set to true for application ${applicationId}.`);
         }
-      } else if (metadata?.payment_type === 'scholarship_fee') {
+      } else if (paymentType === 'scholarship_fee') {
         // Log detalhado do metadata recebido
         console.log('[stripe-webhook] Metadata recebido:', metadata);
         const applicationId = metadata.application_id;
-        const userId = metadata.user_id || metadata.student_id;
-        console.log('[stripe-webhook] applicationId extraído:', applicationId);
-        console.log('[stripe-webhook] userId/studentId extraído:', userId);
-
-        if (!applicationId) {
-            console.error('Missing application_id in metadata for scholarship_fee payment. Metadata:', metadata);
-            return;
-        }
-
-        // Log para depuração
-        console.log(`[stripe-webhook] Atualizando status para approved. applicationId: ${applicationId}, userId/studentId: ${userId}`);
-
-        // Atualiza com ou sem userId/studentId
-        let updateQuery = supabase
-            .from('scholarship_applications')
-            .update({ status: 'approved' })
-            .eq('id', applicationId);
-        if (userId) {
-          updateQuery = updateQuery.eq('student_id', userId);
-        }
-        const { error: updateError } = await updateQuery;
-
-        if (updateError) {
-            console.error(`[stripe-webhook] Failed to update application status for application ${applicationId}:`, updateError);
+        // Atualizar o campo de pagamento individual da scholarship fee
+        console.log('[DEBUG] Tentando atualizar is_scholarship_fee_paid:', { applicationId });
+        const { error: scholarshipFeePaidError, data: scholarshipFeePaidData } = await supabase
+          .from('scholarship_applications')
+          .update({ is_scholarship_fee_paid: true })
+          .eq('id', applicationId);
+        console.log('[DEBUG] Resultado update is_scholarship_fee_paid:', { scholarshipFeePaidError, scholarshipFeePaidData });
+        if (scholarshipFeePaidError) {
+          console.error(`[stripe-webhook] Failed to update is_scholarship_fee_paid for application ${applicationId}:`, scholarshipFeePaidError);
         } else {
-            console.log(`[stripe-webhook] Successfully updated status for application ${applicationId} to approved.`);
+          console.log(`[stripe-webhook] is_scholarship_fee_paid set to true for application ${applicationId}.`);
         }
       } else if (metadata?.payment_type === 'selection_process') {
         // Processar pagamento da taxa de processo seletivo ($350)

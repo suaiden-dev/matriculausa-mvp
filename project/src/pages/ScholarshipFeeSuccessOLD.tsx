@@ -1,3 +1,6 @@
+// AVISO: Este componente está obsoleto. Use apenas para referência histórica.
+// O fluxo correto agora está em StudentDashboard/ScholarshipFeeSuccess.tsx
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,7 +16,7 @@ const messages = {
   errorTryAgain: 'Please try again or contact support.'
 };
 
-const ScholarshipFeeSuccess: React.FC = () => {
+const ScholarshipFeeSuccessOLD: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,4 +169,4 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
-export default ScholarshipFeeSuccess; 
+export default ScholarshipFeeSuccessOLD; 

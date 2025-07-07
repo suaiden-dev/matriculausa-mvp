@@ -58,7 +58,7 @@ const StudentDetails: React.FC = () => {
         .select(`
           *,
           user_profiles!student_id(*),
-          scholarships(*)
+          scholarships(*, universities(*))
         `)
         .eq('id', applicationId)
         .single();
@@ -147,6 +147,23 @@ const StudentDetails: React.FC = () => {
               <div className="md:col-span-2"><strong>Description:</strong> {scholarship.description}</div>
             </div>
           </div>
+
+          {/* University Information */}
+          {scholarship.universities && (
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <h2 className="text-xl font-bold text-[#05294E] mb-4">University Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><strong>Name:</strong> {scholarship.universities.name || 'N/A'}</div>
+                <div><strong>Country:</strong> {scholarship.universities.address?.country || 'N/A'}</div>
+                <div><strong>City:</strong> {scholarship.universities.address?.city || 'N/A'}</div>
+                <div><strong>Website:</strong> {scholarship.universities.website ? (
+                  <a href={scholarship.universities.website} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">{scholarship.universities.website}</a>
+                ) : 'N/A'}</div>
+                <div><strong>Email:</strong> {scholarship.universities.contact?.email || scholarship.universities.contact?.admissionsEmail || 'N/A'}</div>
+                <div><strong>Phone:</strong> {scholarship.universities.contact?.phone || 'N/A'}</div>
+              </div>
+            </div>
+          )}
 
           {/* Student Documents Section */}
           <div className="bg-white p-6 rounded-xl shadow-md">

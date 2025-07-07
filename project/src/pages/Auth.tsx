@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, Phone } from 'lucide-react';
+import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 interface AuthProps {
   mode: 'login' | 'register';
@@ -50,11 +52,29 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
     try {
       if (mode === 'register') {
+        console.log('🔍 [AUTH] Iniciando processo de registro');
+        console.log('🔍 [AUTH] Dados do formulário:', formData);
+        console.log('🔍 [AUTH] Tab ativa:', activeTab);
+        console.log('🔍 [AUTH] Telefone no formData:', formData.phone);
+        
         if (formData.password !== formData.confirmPassword) {
           setError('Passwords do not match');
           setLoading(false);
           return;
         }
+        
+        // Validar telefone obrigatório e formato internacional
+        if (!formData.phone || formData.phone.length < 8) {
+          console.log('❌ [AUTH] Validação de telefone falhou:', {
+            phone: formData.phone,
+            length: formData.phone?.length
+          });
+          setError('Please enter a valid phone number with country code');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
         
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.name,
@@ -73,6 +93,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           })
         };
 
+        console.log('🔍 [AUTH] userData criado:', userData);
+        console.log('🔍 [AUTH] Telefone no userData:', userData.phone);
+        
+        // Salvar no localStorage antes de chamar register
+        console.log('💾 [AUTH] Salvando telefone no localStorage:', formData.phone);
+        localStorage.setItem('pending_phone', formData.phone || '');
+        
         await register(formData.email, formData.password, userData);
 
         // Se for registro de universidade, mostra modal e retorna
@@ -377,19 +404,27 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
                       Phone Number *
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      <input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        required
-                        value={formData.phone || ''}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Enter your phone number"
-                      />
-                    </div>
+                    <PhoneInput
+                      international
+                      defaultCountry="US"
+                      addInternationalOption={false}
+                      value={formData.phone}
+                      onChange={(value) => {
+                        console.log('📞 [PHONEINPUT] Valor capturado:', value);
+                        setFormData(prev => {
+                          const newData = { ...prev, phone: value || '' };
+                          console.log('📞 [PHONEINPUT] Novo formData:', newData);
+                          return newData;
+                        });
+                      }}
+                      style={{
+                        '--PhoneInputCountryFlag-height': '1.2em',
+                        '--PhoneInputCountrySelectArrow-opacity': '0.8',
+                        '--PhoneInput-color--focus': '#05294E'
+                      }}
+                      className="phone-input-custom"
+                      placeholder="Enter your phone number"
+                    />
                   </div>
 
                   <div>
@@ -562,19 +597,27 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
                       Phone Number *
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      <input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        required
-                        value={formData.phone || ''}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="Enter contact phone number"
-                      />
-                    </div>
+                    <PhoneInput
+                      international
+                      defaultCountry="US"
+                      addInternationalOption={false}
+                      value={formData.phone}
+                      onChange={(value) => {
+                        console.log('📞 [PHONEINPUT-UNI] Valor capturado:', value);
+                        setFormData(prev => {
+                          const newData = { ...prev, phone: value || '' };
+                          console.log('📞 [PHONEINPUT-UNI] Novo formData:', newData);
+                          return newData;
+                        });
+                      }}
+                      style={{
+                        '--PhoneInputCountryFlag-height': '1.2em',
+                        '--PhoneInputCountrySelectArrow-opacity': '0.8',
+                        '--PhoneInput-color--focus': '#D0151C'
+                      }}
+                      className="phone-input-university"
+                      placeholder="Enter contact phone number"
+                    />
                   </div>
 
                   <div>
@@ -590,7 +633,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Create a password"
                       />
                     </div>
@@ -609,7 +652,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Confirm your password"
                       />
                     </div>
