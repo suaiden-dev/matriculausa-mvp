@@ -25,6 +25,7 @@ import { StripeCheckout } from '../../components/StripeCheckout';
 import { useCartStore } from '../../stores/applicationStore';
 import { supabase } from '../../lib/supabase';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -51,28 +52,42 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  const flyIconRef = useRef<HTMLDivElement | null>(null);
+  // Remova o flyAnimation antigo e use Framer Motion
+  const [flyingCard, setFlyingCard] = useState<null | { card: any, from: DOMRect, to: DOMRect }>(null);
+  const [animating, setAnimating] = useState(false);
+
+  // Remover reload automático após pagamento
+  // useEffect(() => {
+  //   if (!localStorage.getItem('scholarship_browser_refreshed')) {
+  //     localStorage.setItem('scholarship_browser_refreshed', 'true');
+  //     window.location.reload();
+  //   }
+  // }, []);
+
+  // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
   useEffect(() => {
-    // Refresh automático apenas uma vez após o pagamento
-    if (!localStorage.getItem('scholarship_browser_refreshed')) {
-      localStorage.setItem('scholarship_browser_refreshed', 'true');
-      window.location.reload();
+    let interval: NodeJS.Timeout | null = null;
+    if (userProfile && !userProfile.has_paid_selection_process_fee) {
+      interval = setInterval(() => {
+        refetchUserProfile && refetchUserProfile();
+      }, 3000);
     }
-  }, []);
+    return () => { if (interval) clearInterval(interval); };
+  }, [refetchUserProfile, userProfile]);
 
-  // Polling para atualizar o perfil do usuário a cada 3 segundos
+  // Refetch imediato após pagamento do selection process fee
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (userProfile && userProfile.has_paid_selection_process_fee) {
       refetchUserProfile && refetchUserProfile();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [refetchUserProfile]);
+      // Aqui você pode também refazer o fetch das applications, se necessário
+    }
+  }, [userProfile?.has_paid_selection_process_fee, refetchUserProfile]);
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0
-    }).format(amount);
+  const formatAmount = (amount: any) => {
+    if (typeof amount === 'string') return amount;
+    if (typeof amount === 'number') return amount.toLocaleString('en-US');
+    return amount;
   };
 
   const getFieldBadgeColor = (field: string | undefined) => {
@@ -163,6 +178,30 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   };
 
+  // Função para animar o chapéu
+  const flyToHat = (startRect: DOMRect) => {
+    const hat = document.getElementById('floating-cart-hat');
+    if (!hat) return;
+    const hatRect = hat.getBoundingClientRect();
+    // Posição inicial: centro do botão
+    const startX = startRect.left + startRect.width / 2;
+    const startY = startRect.top + startRect.height / 2;
+    // Posição final: centro do chapéu
+    const endX = hatRect.left + hatRect.width / 2;
+    const endY = hatRect.top + hatRect.height / 2;
+    // Setar estado para mostrar o ícone voando
+    // setFlyAnimation({x: startX, y: startY, show: true}); // Removido
+    // Após um tick, move para o chapéu
+    // setTimeout(() => { // Removido
+    //   if (flyIconRef.current) {
+    //     flyIconRef.current.style.transform = `translate(${endX - startX}px, ${endY - startY}px) scale(0.5)`;
+    //     flyIconRef.current.style.opacity = '0.2';
+    //   }
+    // }, 20); // Removido
+    // Remove após a animação
+    // setTimeout(() => setFlyAnimation({x: 0, y: 0, show: false}), 700); // Removido
+  };
+
   // Exibir apenas bolsas com deadline hoje ou futuro
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -172,7 +211,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="scholarship-list">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -325,9 +364,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           const deadlineStatus = getDeadlineStatus(scholarship.deadline);
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);
+          const addBtnRef = useRef<HTMLButtonElement>(null);
+          const layoutId = `scholarship-card-${scholarship.id}`;
+          const cardRef = useRef<HTMLDivElement>(null);
           return (
-            <div
+            <motion.div
               key={scholarship.id}
+              ref={cardRef}
+              layoutId={layoutId}
               className={
                 viewMode === 'grid'
                   ? "group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full"
@@ -370,7 +414,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <div className="flex items-center text-slate-600">
                     <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                     <span className="text-xs font-semibold mr-1">University:</span>
-                    <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.universities?.name || 'Unknown University'}</span>
+                    <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.university_name || 'Unknown University'}</span>
                   </div>
                 </div>
                 {/* Financial Values Section */}
@@ -378,15 +422,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col gap-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">Original Annual Value</span>
-                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_annual_value ?? 0)}</span>
+                      <span className="font-bold text-blue-700">${formatAmount(scholarship.original_annual_value)}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">Value Per Credit</span>
-                      <span className="font-bold text-blue-700">{formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                      <span className="font-bold text-blue-700">${formatAmount(scholarship.original_value_per_credit)}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700">Annual Value With Scholarship</span>
-                      <span className="font-bold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span>
+                      <span className="font-bold text-green-700">${formatAmount(scholarship.annual_value_with_scholarship)}</span>
                     </div>
                   </div>
                 </div>
@@ -410,6 +454,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 {/* Action Button */}
                 <div className={viewMode === 'grid' ? "mt-6 pt-4 border-t border-slate-100" : "mt-2"}>
                   <button
+                    ref={addBtnRef}
                     className={`w-full py-3 px-4 rounded-xl transition-all duration-200 font-semibold flex items-center justify-center ${
                       inCart ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-blue-600 text-white hover:bg-blue-700'
                     } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : ''}`}
@@ -441,10 +486,21 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         }
                         return;
                       } else {
-                        // Comportamento normal: adicionar/remover do carrinho
                         if (inCart) {
                           if (user) removeFromCart(scholarship.id, user.id);
                         } else {
+                          // ANIMAÇÃO: voar para o chapéu
+                          const hat = document.getElementById('floating-cart-hat');
+                          if (cardRef.current && hat) {
+                            const from = cardRef.current.getBoundingClientRect();
+                            const to = hat.getBoundingClientRect();
+                            setFlyingCard({ card: scholarship, from, to });
+                            setAnimating(true);
+                            setTimeout(() => {
+                              setAnimating(false);
+                              setFlyingCard(null);
+                            }, 1100);
+                          }
                           handleAddToCart(scholarship);
                         }
                       }
@@ -457,7 +513,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -486,6 +542,39 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           </button>
         </div>
       )}
+      <AnimatePresence>
+        {flyingCard && animating && (
+          <motion.div
+            initial={{
+              left: flyingCard.from.left,
+              top: flyingCard.from.top,
+              width: flyingCard.from.width,
+              height: flyingCard.from.height,
+              position: 'fixed',
+              zIndex: 999999,
+              scale: 1,
+              opacity: 1
+            }}
+            animate={{
+              left: flyingCard.to.left,
+              top: flyingCard.to.top,
+              width: flyingCard.to.width,
+              height: flyingCard.to.height,
+              scale: 0.5,
+              opacity: 0.5
+            }}
+            transition={{ duration: 1.1, type: 'spring' }}
+            style={{ pointerEvents: 'none' }}
+          >
+            <div className="bg-white rounded-3xl shadow-lg border border-slate-200 flex flex-col p-4 items-center w-full h-full">
+              <GraduationCap className="h-10 w-10 text-blue-600 mb-2" />
+              <div className="font-bold text-slate-900 text-center text-sm line-clamp-2 mb-1">{flyingCard.card.title}</div>
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium mb-1">{flyingCard.card.field_of_study}</span>
+              <span className="text-xs text-slate-500">{flyingCard.card.universities?.name || 'University'}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

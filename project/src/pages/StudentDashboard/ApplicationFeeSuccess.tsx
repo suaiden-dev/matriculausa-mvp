@@ -64,7 +64,7 @@ const ApplicationFeeSuccess: React.FC = () => {
               onClick={() => navigate('/student/dashboard/applications')}
               className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all duration-300"
             >
-              Go to View Details
+              Go to My Applications
             </button>
           </>
         );

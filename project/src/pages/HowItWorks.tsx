@@ -258,7 +258,7 @@ const HowItWorks: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Ana Chen</div>
-                  <div className="text-sm text-green-600 font-medium">Stanford Engineering</div>
+                  <div className="text-sm text-green-600 font-medium">Engineering</div>
             </div>
             </div>
             </div>
@@ -280,7 +280,7 @@ const HowItWorks: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Lucas Silva</div>
-                  <div className="text-sm text-blue-600 font-medium">NYU Computer Science</div>
+                  <div className="text-sm text-blue-600 font-medium">Computer Science</div>
                 </div>
               </div>
             </div>
@@ -302,7 +302,7 @@ const HowItWorks: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Priya Patel</div>
-                  <div className="text-sm text-purple-600 font-medium">UCLA Business</div>
+                  <div className="text-sm text-purple-600 font-medium">Business</div>
                 </div>
               </div>
             </div>
@@ -324,7 +324,7 @@ const HowItWorks: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Ahmed Hassan</div>
-                  <div className="text-sm text-red-600 font-medium">University of Texas</div>
+                  <div className="text-sm text-red-600 font-medium">Engineering</div>
                 </div>
               </div>
             </div>
@@ -346,7 +346,7 @@ const HowItWorks: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Maria Gomez</div>
-                  <div className="text-sm text-yellow-600 font-medium">Boston University</div>
+                  <div className="text-sm text-yellow-600 font-medium">Business</div>
                 </div>
               </div>
             </div>

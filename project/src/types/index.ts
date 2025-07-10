@@ -81,7 +81,7 @@ export interface Application {
   id: string;
   scholarship_id: string;
   student_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review' | 'pending_scholarship_fee';
+  status: 'pending' | 'approved' | 'rejected' | 'under_review' | 'pending_scholarship_fee' | 'enrolled';
   applied_at: string;
   documents: string[];
   notes?: string;
@@ -89,6 +89,13 @@ export interface Application {
   student_process_type?: string;
   is_application_fee_paid?: boolean;
   is_scholarship_fee_paid?: boolean;
+  // Acceptance letter fields
+  acceptance_letter_status?: 'pending' | 'sent' | 'signed' | 'approved';
+  acceptance_letter_url?: string | null;
+  acceptance_letter_signed_url?: string | null;
+  acceptance_letter_sent_at?: string | null;
+  acceptance_letter_signed_at?: string | null;
+  acceptance_letter_approved_at?: string | null;
 }
 
 export interface AuthContextType {

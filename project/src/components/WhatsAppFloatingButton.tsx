@@ -20,6 +20,7 @@ const WhatsAppFloatingButton: React.FC<WhatsAppFloatingButtonProps> = ({
       {/* Botão flutuante WhatsApp */}
       <div 
         className={`floating-whatsapp-button ${className}`}
+        data-testid="cart-icon"
         style={{
           position: 'fixed',
           bottom: '20px',

@@ -51,6 +51,7 @@ const StudentManagement: React.FC = () => {
               className="border rounded px-3 py-2 w-full max-w-xs"
               value={selectedScholarship}
               onChange={e => setSelectedScholarship(e.target.value)}
+              title="Filter by scholarship"
             >
               <option value="">Todas as bolsas</option>
               {scholarships.map(s => (
@@ -67,6 +68,25 @@ const StudentManagement: React.FC = () => {
         {filteredApplications.map((app) => {
           const student = (app as any).user_profiles;
           const scholarship = app.scholarships;
+          // Novo: lógica para status e badge
+          let badgeText = '';
+          let badgeClass = '';
+          if (app.status === 'enrolled') {
+            badgeText = 'Enrolled';
+            badgeClass = 'bg-green-100 text-green-700';
+          } else {
+            badgeText = 'Waiting for acceptance letter';
+            badgeClass = 'bg-yellow-100 text-yellow-700';
+          }
+          // LOG DETALHADO PARA DEBUG
+          console.log('[StudentManagement] Application:', {
+            id: app.id,
+            status: app.status,
+            acceptance_letter_status: app.acceptance_letter_status,
+            badgeText,
+            badgeClass,
+            student: student?.full_name || student?.name,
+          });
           return (
             <Link to={`/school/dashboard/student/${app.id}`} key={app.id} className="block bg-white rounded-xl shadow flex flex-col md:flex-row items-center md:items-stretch p-4 md:p-6 border border-slate-100 hover:shadow-lg transition-all">
               <div className="flex-1">
@@ -75,13 +95,11 @@ const StudentManagement: React.FC = () => {
                 {student?.phone && <div className="text-sm text-gray-600">Phone: {student.phone}</div>}
                 {student?.country && <div className="text-sm text-gray-600">Country: {student.country}</div>}
                 {scholarship && (
-                  <div className="text-sm text-blue-700 mt-2 font-medium">Bolsa: {scholarship.title}</div>
+                  <div className="text-sm text-blue-700 mt-2 font-medium">Scholarship: {scholarship.title}</div>
                 )}
               </div>
               <div className="mt-2 md:mt-0 md:ml-6 flex flex-col items-end">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${app.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                  {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                </span>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${badgeClass}`}>{badgeText}</span>
               </div>
             </Link>
           );

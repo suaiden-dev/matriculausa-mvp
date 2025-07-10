@@ -23,6 +23,7 @@ import ApplicationFeeSuccess from './ApplicationFeeSuccess';
 import ApplicationFeeError from './ApplicationFeeError';
 import ApplicationChatPage from './ApplicationChatPage';
 import ApplicationFeePage from './ApplicationFeePage';
+import Layout from '../../components/Layout';
 
 interface StudentProfile {
   id: string;
@@ -57,69 +58,62 @@ const StudentDashboard: React.FC = () => {
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const cart = useCartStore((state) => state.cart);
   const navigate = useNavigate();
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [recentApplications, setRecentApplications] = useState<Application[]>([]);
 
   useEffect(() => {
-    if (user) {
+    if (user && userProfile) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, userProfile]);
 
   const loadDashboardData = async () => {
-    if (!user) return;
+    if (!user || !userProfile) return;
 
     try {
       if (!hasLoadedData) {
         setDashboardLoading(true);
       }
-
+      setDashboardError(null);
       // Buscar bolsas reais do Supabase com informações da universidade
-      const { data: realScholarships, error: scholarshipsError } = await supabase
-        .from('scholarships')
-        .select(`
-          *,
-          universities!inner(id, name, logo_url, location, is_approved)
-        `)
-        .eq('is_active', true);
-      
-      if (scholarshipsError) {
-        console.error('Error fetching scholarships:', scholarshipsError);
+      // NOVO: Buscar bolsas via função RPC protegida
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) {
         setScholarships([]);
+        setDashboardError('Usuário não autenticado');
       } else {
-        // Filtrar apenas scholarships de universidades aprovadas
-        const approvedScholarships = (realScholarships || []).filter(
-          (s: any) => s.universities && s.universities.is_approved
-        );
-        setScholarships(approvedScholarships);
+        const { data: realScholarships, error: scholarshipsError } = await supabase.rpc('get_scholarships_protected', { p_user_id: userId });
+        if (scholarshipsError) {
+          setScholarships([]);
+          setDashboardError('Error fetching scholarships.');
+        } else {
+          setScholarships(realScholarships || []);
+        }
       }
-
-      // Buscar applications reais do Supabase com informações da scholarship e universidade
+      // Buscar applications reais do Supabase
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('scholarship_applications')
-        .select(`
-          *,
-          scholarship:scholarships(
-            *,
-            universities!inner(id, name, logo_url, location, is_approved)
-          )
-        `)
-        .eq('student_id', user.id);
-
+        .select(`*,scholarship:scholarships(*,universities!inner(id, name, logo_url, location, is_approved))`)
+        .eq('student_id', userProfile.id);
       if (applicationsError) {
-        console.error('Error fetching applications:', applicationsError);
         setApplications([]);
+        setDashboardError('Error fetching applications.');
       } else {
         setApplications(applicationsData as Application[]);
+        // Recentes: últimas 5
+        const sorted = [...(applicationsData as Application[])].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
+        setRecentApplications(sorted.slice(0, 5));
       }
-
       // Buscar perfil real do Supabase
       const { data: profileData, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
-
       if (error) {
         setProfile(null);
+        setDashboardError('Error fetching profile.');
       } else if (profileData) {
         setProfile({
           id: profileData.id,
@@ -135,10 +129,9 @@ const StudentDashboard: React.FC = () => {
           updated_at: profileData.updated_at
         });
       }
-
       setHasLoadedData(true);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      setDashboardError('Unexpected error loading dashboard data.');
     } finally {
       setDashboardLoading(false);
     }
@@ -212,140 +205,146 @@ const StudentDashboard: React.FC = () => {
   const stats = {
     totalApplications: applications.length,
     approvedApplications: applications.filter(app => app.status === 'approved').length,
-    pendingApplications: applications.filter(app => app.status === 'pending').length,
+    pendingApplications: applications.filter(app => app.status === 'pending' || app.status === 'under_review').length,
     availableScholarships: scholarships.length
   };
 
   return (
-    <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
-      {/* Área de proteção para o botão */}
-      <div className="floating-cart-area" />
-      
-      {/* Botão flutuante super robusto - sempre visível */}
-      <div 
-        className="floating-cart-button"
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          zIndex: 99999,
-          pointerEvents: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
-        <button
-          onClick={() => navigate('/student/dashboard/cart')}
+      <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
+        {/* Área de proteção para o botão */}
+        <div className="floating-cart-area" />
+        {/* Botão flutuante super robusto - sempre visível */}
+        <div 
+          className="floating-cart-button"
+          id="floating-cart-hat"
           style={{
-            backgroundColor: '#05294E',
-            color: 'white',
-            borderRadius: '50%',
-            width: '60px',
-            height: '60px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '3px solid white',
-            boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            position: 'relative',
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
             zIndex: 99999,
-            minWidth: '60px',
-            minHeight: '60px',
-            outline: 'none'
+            pointerEvents: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
-          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-          onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          aria-label={`Cart with ${cart.length} items`}
         >
-          <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
-          {cart.length > 0 && (
-            <span 
-              style={{
-                position: 'absolute',
-                top: '-8px',
-                right: '-8px',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                borderRadius: '50%',
-                width: '28px',
-                height: '28px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                border: '2px solid white',
-                zIndex: 100000
-              }}
-            >
-              {cart.length > 99 ? '99+' : cart.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      <Routes>
-        <Route 
-          index 
-          element={
-            <Overview 
-              profile={profile}
-              scholarships={scholarships}
-              applications={applications}
-              stats={stats}
-              onApplyScholarship={handleApplyScholarship}
-            />
-          } 
-        />
-        <Route path="cart" element={<CartPage />} />
-        <Route 
-          path="scholarships" 
-          element={
-            <ScholarshipBrowser 
-              scholarships={scholarships}
-              applications={applications}
-              onApplyScholarship={handleApplyScholarship}
-            />
-          } 
-        />
-        <Route 
-          path="applications" 
-          element={
-            <MyApplications />
-          } 
-        />
-        <Route 
-          path="application/:applicationId/chat" 
-          element={
-            <ApplicationChatPage />
-          } 
-        />
-        <Route 
-          path="profile" 
-          element={
-            <ProfileManagement 
-              profile={profile}
-              onUpdateProfile={handleProfileUpdate}
-            />
-          } 
-        />
-        <Route path="documents-and-scholarship-choice" element={<DocumentsAndScholarshipChoice />} />
-        <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
-        <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-        <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
-        <Route path="/selection-process-fee-success" element={<SelectionProcessFeeSuccess />} />
-        <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
-        <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
-        <Route path="/application-fee-error" element={<ApplicationFeeError />} />
-        <Route path="application-fee" element={<ApplicationFeePage />} />
-      </Routes>
-    </StudentDashboardLayout>
+          <button
+            onClick={() => navigate('/student/dashboard/cart')}
+            style={{
+              backgroundColor: '#05294E',
+              color: 'white',
+              borderRadius: '50%',
+              width: '60px',
+              height: '60px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '3px solid white',
+              boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              position: 'relative',
+              zIndex: 99999,
+              minWidth: '60px',
+              minHeight: '60px',
+              outline: 'none'
+            }}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            aria-label={`Cart with ${cart.length} items`}
+          >
+            <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
+            {cart.length > 0 && (
+              <span 
+                style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  border: '2px solid white',
+                  zIndex: 100000
+                }}
+              >
+                {cart.length > 99 ? '99+' : cart.length}
+              </span>
+            )}
+          </button>
+        </div>
+        <Routes>
+          <Route 
+            index 
+            element={
+              dashboardLoading ? (
+                <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
+              ) : dashboardError ? (
+                <div className="p-8 text-center text-red-500">{dashboardError}</div>
+              ) : (
+                <Overview 
+                  profile={profile}
+                  scholarships={scholarships}
+                  applications={applications}
+                  stats={stats}
+                  onApplyScholarship={handleApplyScholarship}
+                  recentApplications={recentApplications}
+                />
+              )
+            } 
+          />
+          <Route path="cart" element={<CartPage />} />
+          <Route 
+            path="scholarships" 
+            element={
+              <ScholarshipBrowser 
+                scholarships={scholarships}
+                applications={applications}
+                onApplyScholarship={handleApplyScholarship}
+              />
+            } 
+          />
+          <Route 
+            path="applications" 
+            element={
+              <MyApplications />
+            } 
+          />
+          <Route 
+            path="application/:applicationId/chat" 
+            element={
+              <ApplicationChatPage />
+            } 
+          />
+          <Route 
+            path="profile" 
+            element={
+              <ProfileManagement 
+                profile={profile}
+                onUpdateProfile={handleProfileUpdate}
+              />
+            } 
+          />
+          <Route path="documents-and-scholarship-choice" element={<DocumentsAndScholarshipChoice />} />
+          <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
+          <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+          <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
+          <Route path="/selection-process-fee-success" element={<SelectionProcessFeeSuccess />} />
+          <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
+          <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
+          <Route path="/application-fee-error" element={<ApplicationFeeError />} />
+          <Route path="application-fee" element={<ApplicationFeePage />} />
+        </Routes>
+      </StudentDashboardLayout>
   );
 };
 

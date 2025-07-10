@@ -142,7 +142,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       <button
         onClick={handleCheckout}
         disabled={loading || disabled}
-        className={`bg-[#D0151C] text-white px-6 py-3 rounded-xl hover:bg-[#B01218] transition-all duration-300 font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        className={`bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all duration-300 font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
         {loading ? (
           <div className="flex items-center">

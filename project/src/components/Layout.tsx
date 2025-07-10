@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import StepByStepButton from './OnboardingTour/StepByStepButton';
+import GuideTestButton from './OnboardingTour/GuideTestButton';
 import { useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -20,10 +22,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {!hideHeader && <Header />}
-      <main className="flex-grow">
+      <main className="flex-grow overflow-hidden">
         {children}
       </main>
       <Footer />
+      {/* <StepByStepButton /> */}
+      {/* <GuideTestButton /> */}
     </div>
   );
 };

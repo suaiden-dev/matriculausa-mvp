@@ -15,15 +15,23 @@ export function useScholarships() {
         setLoading(true);
       }
       
-      const { data, error } = await supabase
-        .from('scholarships')
-        .select(`id, title, description, amount, deadline, requirements, field_of_study, level, eligibility, benefits, is_exclusive, is_active, university_id, created_at, updated_at, needcpt, visaassistance, scholarshipvalue, image_url, original_value_per_credit, original_annual_value, annual_value_with_scholarship, scholarship_type, universities!inner(id, name, logo_url, location, is_approved)`);
+      // Buscar user_id do usuário autenticado
+      const session = supabase.auth.session ? supabase.auth.session() : await supabase.auth.getSession();
+      const userId = session?.user?.id || session?.data?.session?.user?.id;
+      if (!userId) {
+        setError('Usuário não autenticado');
+        setScholarships([]);
+        setLoading(false);
+        setHasLoadedData(true);
+        return;
+      }
+      // Chamar a função RPC
+      const { data, error } = await supabase.rpc('get_scholarships_protected', { p_user_id: userId });
       if (error) {
         setError(error.message);
         setScholarships([]);
       } else {
-        const filtered = (data || []).filter((s: any) => s.universities && s.universities.is_approved);
-        setScholarships(filtered as unknown as Scholarship[]);
+        setScholarships((data || []) as unknown as Scholarship[]);
       }
       setLoading(false);
       setHasLoadedData(true);

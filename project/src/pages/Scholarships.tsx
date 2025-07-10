@@ -57,12 +57,10 @@ const Scholarships: React.FC = () => {
     return matchesSearch && matchesRange && matchesLevel && matchesField;
   });
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0
-    }).format(amount);
+  const formatAmount = (amount: any) => {
+    if (typeof amount === 'string') return amount;
+    if (typeof amount === 'number') return amount.toLocaleString('en-US');
+    return amount;
   };
 
   const getFieldBadgeColor = (field: string | undefined) => {
@@ -326,7 +324,7 @@ const Scholarships: React.FC = () => {
                         <div className="flex items-center text-slate-600 mb-4">
                           <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                           <span className="text-xs font-semibold mr-1">University:</span>
-                          <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.universities?.name || 'Unknown University'}</span>
+                          <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.university_name || 'Unknown University'}</span>
                         </div>
                       </div>
                       
@@ -343,15 +341,15 @@ const Scholarships: React.FC = () => {
                       <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-col gap-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-semibold text-slate-700">Original Annual Value</span>
-                          <span className="font-bold text-blue-700">{formatAmount(scholarship.original_annual_value ?? 0)}</span>
+                          <span className="font-bold text-blue-700">${formatAmount(scholarship.original_annual_value ?? 0)}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-semibold text-slate-700">Value Per Credit</span>
-                          <span className="font-bold text-blue-700">{formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                          <span className="font-bold text-blue-700">${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-semibold text-slate-700">Annual Value With Scholarship</span>
-                          <span className="font-bold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span>
+                          <span className="font-bold text-green-700">${formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span>
                         </div>
                       </div>
                     </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, BookOpen, Zap, Shield, ChevronDown, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import StepByStepButton from './OnboardingTour/StepByStepButton';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -83,7 +84,7 @@ const Header: React.FC = () => {
           {/* User Menu / Auth Buttons */}
           <div className="hidden lg:flex items-center space-x-4">
             {isAuthenticated && user ? (
-              <div className="relative">
+              <div className="relative flex items-center gap-2">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
@@ -97,11 +98,13 @@ const Header: React.FC = () => {
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>
+                {/* Botão do Guia ao lado do perfil */}
+                {/* <StepByStepButton /> */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">
                     <div className="px-4 py-3 border-b border-slate-100">
                       <p className="font-semibold text-slate-900">{userProfile?.full_name || user.email}</p>
-                      <p className="text-sm text-slate-500">{user.email}</p>
+                      <p className="text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user.email}>{user.email}</p>
                     </div>
                     <div className="py-2 border-b border-slate-100">
                       <Link

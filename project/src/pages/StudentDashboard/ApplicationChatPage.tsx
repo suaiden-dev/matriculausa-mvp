@@ -7,24 +7,31 @@ import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
+import { MessageCircle, FileText, UserCircle, GraduationCap, School, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
+// Remover os imports das imagens
+// import WelcomeImg from '../../assets/page 7.png';
+// import SupportImg from '../../assets/page 8.png';
 
-const DOCUMENTS_INFO = [
-  {
-    key: 'passport',
-    label: 'Passport',
-    description: "A valid copy of the student's passport. Used for identification and visa purposes."
-  },
-  {
-    key: 'diploma',
-    label: 'High School Diploma',
-    description: 'Proof of high school graduation. Required for university admission.'
-  },
-  {
-    key: 'funds_proof',
-    label: 'Proof of Funds',
-    description: 'A bank statement or financial document showing sufficient funds for study.'
-  }
+// TABS será montado dinamicamente conforme o status
+
+interface DocumentInfo {
+  key: string;
+  label: string;
+  description: string;
+  emoji: string;
+}
+const DOCUMENTS_INFO: DocumentInfo[] = [
+  { key: 'passport', label: 'Passport', description: "A valid copy of the student's passport. Used for identification and visa purposes.", emoji: '🛂' },
+  { key: 'diploma', label: 'High School Diploma', description: 'Proof of high school graduation. Required for university admission.', emoji: '🎓' },
+  { key: 'funds_proof', label: 'Proof of Funds', description: 'A bank statement or financial document showing sufficient funds for study.', emoji: '💵' },
 ];
+
+// Componente de card padrão para dashboard
+const DashboardCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`bg-white rounded-2xl shadow-2xl border border-blue-100 p-6 md:p-10 mb-8 w-full ${className}`}>
+    {children}
+  </div>
+);
 
 const ApplicationChatPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
@@ -39,6 +46,8 @@ const ApplicationChatPage: React.FC = () => {
   const [scholarshipFeePaidAt, setScholarshipFeePaidAt] = useState<Date | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
+  // Ajustar tipo de activeTab para incluir 'welcome'
+  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'chat' | 'documents'>('welcome');
 
   // useEffect também deve vir antes de qualquer return condicional
   useEffect(() => {
@@ -92,6 +101,7 @@ const ApplicationChatPage: React.FC = () => {
   useEffect(() => {
     if (!scholarshipFeeDeadline) return;
     function updateCountdown() {
+      if (!scholarshipFeeDeadline) return;
       const now = new Date();
       const diff = scholarshipFeeDeadline.getTime() - now.getTime();
       if (diff <= 0) {
@@ -108,6 +118,12 @@ const ApplicationChatPage: React.FC = () => {
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, [scholarshipFeeDeadline]);
+
+  // Lógica de exibição do card
+  const hasPaid = !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
+  const dueDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
+  const paymentDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
+  const isExpired = !hasPaid && dueDate ? new Date(dueDate) < new Date() : false;
 
   // Função para iniciar o pagamento do I-20 Control Fee
   const handlePayI20 = async () => {
@@ -142,27 +158,125 @@ const ApplicationChatPage: React.FC = () => {
     }
   };
 
-  // Lógica de exibição do card
-  const hasPaid = !!userProfile?.has_paid_i20_control_fee;
-  const dueDate = userProfile?.i20_control_fee_due_date || null;
-  const paymentDate = userProfile?.i20_control_fee_due_date || null;
-  const isExpired = !hasPaid && dueDate ? new Date(dueDate) < new Date() : false;
-
   // AGORA podemos ter o return condicional - todos os hooks já foram chamados
   if (!user) {
     return <div className="text-center text-gray-500 py-10">Authenticating...</div>;
   }
 
+  // Montar as abas dinamicamente com ícones distintos
+  const tabs = [
+    { id: 'welcome', label: 'Welcome', icon: Home },
+    { id: 'details', label: 'Details', icon: Info },
+    ...(applicationDetails && applicationDetails.status === 'enrolled' ? [
+      { id: 'i20', label: 'I-20 Control Fee', icon: FileCheck }
+    ] : []),
+    { id: 'chat', label: 'Chat', icon: MessageCircle },
+    { id: 'documents', label: 'Documents', icon: FolderOpen },
+  ];
+
   return (
-    <div className="p-4 md:p-6 flex flex-col items-center">
-      <div className="w-full max-w-4xl space-y-8">
+    <div className="p-6 md:p-12 flex flex-col items-center" style={{ background: '#f6f8fa', minHeight: '100vh' }}>
+      <div className="w-full max-w-3xl mx-auto space-y-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
           Student Application Details
         </h2>
-        {/* Student & Scholarship Info */}
-        {applicationDetails && (
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto flex-nowrap scrollbar-hide" role="tablist">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              className={`flex flex-col items-center gap-1 px-3 py-1 md:px-5 md:py-2 text-sm md:text-base font-semibold rounded-t-lg border-b-2 transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === tab.id ? 'border-[#05294E] text-[#05294E] bg-white' : 'border-transparent text-slate-500 bg-slate-50 hover:text-[#05294E]'}`}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              type="button"
+              aria-selected={activeTab === tab.id ? 'true' : 'false'}
+              role="tab"
+            >
+              <tab.icon className="w-5 h-5 md:w-5 md:h-5" />
+              <span className="text-xs md:text-base mt-0.5 md:mt-0">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+        {/* Conteúdo das abas */}
+        {activeTab === 'welcome' && applicationDetails && (
+          // RESTAURAR layout visual anterior do Welcome (não usar DashboardCard)
+          <div className="bg-white rounded-2xl shadow-2xl p-0 overflow-hidden border border-blue-100 flex flex-col">
+            {/* Header Welcome + Next Steps (layout visual anterior) */}
+            <div className="flex items-center gap-4 px-8 pt-8 pb-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-blue-100">
+              <div className="flex-shrink-0 flex items-center justify-center w-16 h-16 bg-white rounded-full border border-blue-100">
+                {applicationDetails.scholarships?.universities?.logo_url ? (
+                  <img
+                    src={applicationDetails.scholarships.universities.logo_url || ''}
+                    alt={(applicationDetails.scholarships.universities.name || 'university') + ' logo'}
+                    className="w-12 h-12 object-contain rounded-full"
+                    loading="lazy"
+                  />
+                ) : (
+                  <GraduationCap className="w-8 h-8 text-blue-400" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h1 className="text-xl md:text-2xl font-bold text-[#05294E] mb-1">
+                  Welcome, {applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student'}
+                </h1>
+                <div className="text-base text-slate-700">
+                  Your application to <span className="font-semibold text-blue-700">{applicationDetails.scholarships?.universities?.name || 'your university'}</span> is in progress.
+                </div>
+                {applicationDetails.scholarships?.title && (
+                  <div className="text-xs text-slate-600 mt-1">
+                    Scholarship: <span className="font-semibold">{applicationDetails.scholarships.title}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Next Steps - Guia prático */}
+            <div className="px-8 py-8 bg-white flex flex-col gap-6 items-center">
+              <h2 className="text-2xl font-extrabold text-[#05294E] mb-2 text-center tracking-tight">How to Proceed</h2>
+              {/* Passo 1: Document Requests */}
+              <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
+                <FileText className="w-10 h-10 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-bold text-blue-900 text-lg mb-1">Check Document Requests</div>
+                  <div className="text-base text-slate-700 mb-2">Now that you’ve reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.</div>
+                  <button onClick={() => setActiveTab('documents')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">Go to Document Requests</button>
+                </div>
+              </div>
+              {/* Passo 2: Chat */}
+              <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
+                <MessageCircle className="w-10 h-10 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-bold text-blue-900 text-lg mb-1">Talk to the University</div>
+                  <div className="text-base text-slate-700 mb-2">Here you can chat directly with the university, ask questions, and clarify any doubts about your process. Fast and direct communication helps speed up your application.</div>
+                  <button onClick={() => setActiveTab('chat')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">Open Chat</button>
+                </div>
+              </div>
+              {/* Passo 3: Application Details */}
+              <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
+                <UserCircle className="w-10 h-10 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-bold text-blue-900 text-lg mb-1">View Application Details</div>
+                  <div className="text-base text-slate-700 mb-2">See all your scholarship information, uploaded documents, and your current status (waiting for acceptance letter, enrolled, etc). Stay up to date with your process at any time.</div>
+                  <button onClick={() => setActiveTab('details')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">View Application Details</button>
+                </div>
+              </div>
+              {/* Passo 4: I-20 Control Fee (só se liberado) */}
+              {(applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved') && (
+                <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
+                  <Award className="w-10 h-10 text-blue-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-bold text-blue-900 text-lg mb-1">Pay I-20 Control Fee</div>
+                    <div className="text-base text-slate-700 mb-2">After receiving your acceptance letter, you will be able to pay the I-20 Control Fee. This fee is required for the issuance of your I-20 document, essential for your F-1 visa. You have 10 days to pay after it is released.</div>
+                    <button onClick={() => setActiveTab('i20')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">Pay I-20 Control Fee</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {activeTab === 'details' && applicationDetails && (
           <>
-            <div className="bg-white p-6 rounded-xl shadow-md">
+            {/* Student Info */}
+            <DashboardCard>
+              {/* --- Student Information --- */}
               <h3 className="text-xl font-bold text-[#05294E] mb-4">Student Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><strong>Name:</strong> {applicationDetails.user_profiles?.full_name}</div>
@@ -176,24 +290,35 @@ const ApplicationChatPage: React.FC = () => {
                   applicationDetails.student_process_type || 'N/A'
                 }</div>
               </div>
+              <div className="mt-4 pt-4 border-t">
+                <strong>Status: </strong>
+                {applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved' ? (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">Enrolled</span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">Waiting for acceptance letter</span>
+                )}
             </div>
-            {/* University Information */}
+            </DashboardCard>
+            {/* University Info */}
+            <DashboardCard>
+              {/* --- University Information --- */}
             {applicationDetails.scholarships?.universities && (
-              <div className="bg-white p-6 rounded-xl shadow-md">
                 <h3 className="text-xl font-bold text-[#05294E] mb-4">University Information</h3>
+              )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><strong>Name:</strong> {applicationDetails.scholarships.universities.name || 'N/A'}</div>
                   <div><strong>Country:</strong> {applicationDetails.scholarships.universities.address?.country || 'N/A'}</div>
                   <div><strong>City:</strong> {applicationDetails.scholarships.universities.address?.city || 'N/A'}</div>
                   <div><strong>Website:</strong> {applicationDetails.scholarships.universities.website ? (
-                    <a href={applicationDetails.scholarships.universities.website} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">{applicationDetails.scholarships.universities.website}</a>
+                    <a href={applicationDetails.scholarships.universities.website || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">{applicationDetails.scholarships.universities.website}</a>
                   ) : 'N/A'}</div>
                   <div><strong>Email:</strong> {applicationDetails.scholarships.universities.contact?.email || applicationDetails.scholarships.universities.contact?.admissionsEmail || 'N/A'}</div>
                   <div><strong>Phone:</strong> {applicationDetails.scholarships.universities.contact?.phone || 'N/A'}</div>
                 </div>
-              </div>
-            )}
-            <div className="bg-white p-6 rounded-xl shadow-md">
+            </DashboardCard>
+            {/* Scholarship Details */}
+            <DashboardCard>
+              {/* --- Scholarship Details --- */}
               <h3 className="text-xl font-bold text-[#05294E] mb-4">Scholarship Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><strong>Scholarship:</strong> {applicationDetails.scholarships?.title || applicationDetails.scholarships?.name}</div>
@@ -201,9 +326,10 @@ const ApplicationChatPage: React.FC = () => {
                 {applicationDetails.scholarships?.country && <div><strong>Country:</strong> {applicationDetails.scholarships.country}</div>}
                 <div className="md:col-span-2"><strong>Description:</strong> {applicationDetails.scholarships?.description}</div>
               </div>
-            </div>
+            </DashboardCard>
             {/* Student Documents */}
-            <div className="bg-white p-6 rounded-xl shadow-md">
+            <DashboardCard>
+              {/* --- Student Documents --- */}
               <h3 className="text-xl font-bold text-[#05294E] mb-4">Student Documents</h3>
               <ul className="space-y-6">
                 {DOCUMENTS_INFO.map((doc) => {
@@ -251,19 +377,11 @@ const ApplicationChatPage: React.FC = () => {
                   );
                 })}
               </ul>
-            </div>
+            </DashboardCard>
           </>
         )}
-        {/* Document Requests */}
-        {applicationId && (
-          <DocumentRequestsCard 
-            applicationId={applicationId} 
-            isSchool={false} 
-            currentUserId={user.id} 
-          />
-        )}
-        {/* I-20 Payment Area */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
+        {activeTab === 'i20' && applicationDetails && applicationDetails.status === 'enrolled' && !hasPaid && (
+          <DashboardCard>
           <h3 className="text-xl font-bold text-[#05294E] mb-4">I-20 Control Fee</h3>
           <div className="mb-3 text-sm text-slate-700">
             The <strong>I-20 Control Fee</strong> is a mandatory fee required for the issuance and management of your I-20 document, which is essential for the F-1 student visa process in the United States. <br />
@@ -273,20 +391,15 @@ const ApplicationChatPage: React.FC = () => {
           {/* Cronômetro e botão lado a lado (invertidos) */}
           <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 w-full mt-4">
             <div className="flex-1 flex items-center justify-center">
-              {hasPaid ? (
-                <span className="text-green-600 font-semibold">I-20 Control Fee Paid</span>
-              ) : (
                 <button
                   className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium w-full md:w-auto min-w-[140px] max-w-xs shadow-md border border-blue-200"
                   onClick={handlePayI20}
                   disabled={i20Loading}
-                  style={{height: '44px'}}
-                >
+                    style={{height: '44px'}}>
                   {i20Loading ? 'Processing...' : 'Pay I-20 Control Fee'}
                 </button>
-              )}
             </div>
-            {!hasPaid && scholarshipFeeDeadline && (
+              {scholarshipFeeDeadline && (
               <div className={`flex-1 min-w-[140px] max-w-xs p-3 rounded-xl shadow-md text-center border ${i20Countdown === 'Expired' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}
                    style={{height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                 {i20Countdown === 'Expired' ? (
@@ -303,21 +416,38 @@ const ApplicationChatPage: React.FC = () => {
             <span className="text-xs text-slate-600">Due date: {new Date(dueDate).toLocaleDateString()}</span>
           )}
           {i20Error && <div className="text-center text-red-500 py-2">{i20Error}</div>}
-        </div>
-        {/* Chat Section */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h3 className="text-xl font-bold text-[#05294E] mb-4">Chat with University</h3>
+          </DashboardCard>
+        )}
+        {activeTab === 'chat' && (
+          <div className="bg-white rounded-2xl shadow-2xl border border-blue-100 p-0 mb-8 w-full min-h-[600px] flex flex-col">
+            {/* Chat ocupa toda a área do card */}
+            <div className="flex-1 flex flex-col justify-between gap-0">
+              {/* Aqui ficam as mensagens do chat */}
           <ApplicationChat
             messages={messages}
-            onSend={sendMessage}
+            onSend={(text: string, file?: File | null) => sendMessage(text, file ?? null)}
             loading={loading}
             isSending={isSending}
             error={error}
-            currentUserId={user.id}
+              currentUserId={user?.id}
+            messageContainerClassName="gap-6 py-4" // se suportar prop customizada
           />
+            </div>
         </div>
+        )}
+        {activeTab === 'documents' && applicationDetails && (
+          <DashboardCard>
+            <h3 className="text-xl font-bold text-[#05294E] mb-4">Document Requests</h3>
+            <DocumentRequestsCard 
+              applicationId={applicationId} 
+              isSchool={false} 
+              currentUserId={user.id} 
+              studentType={applicationDetails.student_process_type || 'initial'}
+            />
+          </DashboardCard>
+        )}
         {previewUrl && (
-          <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+          <ImagePreviewModal imageUrl={previewUrl || ''} onClose={() => setPreviewUrl(null)} />
         )}
       </div>
     </div>

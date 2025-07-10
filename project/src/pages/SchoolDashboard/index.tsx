@@ -10,6 +10,7 @@ import ProfileManagement from './ProfileManagement';
 import StudentManagement from './StudentManagement';
 import StudentDetails from './StudentDetails';
 import PaymentManagement from './PaymentManagement';
+import UniversityGlobalDocumentRequests from './UniversityGlobalDocumentRequests';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
@@ -31,6 +32,7 @@ const SchoolDashboard: React.FC = () => {
             <Route path="students" element={<StudentManagement />} />
             <Route path="student/:applicationId" element={<StudentDetails />} />
             <Route path="analytics" element={<PaymentManagement />} />
+            <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />
           </Route>
         </Routes>
       </UniversityProvider>

@@ -48,16 +48,18 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <div className="flex items-center space-x-3">
-            <GraduationCap className="h-6 w-6 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-900">Application Cart</h2>
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
-              {getSelectedCount()} {getSelectedCount() === 1 ? 'scholarship' : 'scholarships'}
-            </span>
-          </div>
+                  <div className="flex items-center space-x-3">
+          <GraduationCap className="h-6 w-6 text-blue-600" />
+          <h2 className="text-2xl font-bold text-slate-900">Application Cart</h2>
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium" data-testid="cart-icon">
+            {getSelectedCount()} {getSelectedCount() === 1 ? 'scholarship' : 'scholarships'}
+          </span>
+        </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+            title="Fechar carrinho"
+            aria-label="Fechar carrinho"
           >
             <X className="h-6 w-6 text-slate-500" />
           </button>
@@ -114,6 +116,8 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                       <button
                         onClick={() => removeScholarship(scholarship.id)}
                         className="p-2 hover:bg-red-100 rounded-lg transition-colors ml-4"
+                        title="Remover bolsa"
+                        aria-label="Remover bolsa"
                       >
                         <X className="h-4 w-4 text-red-500" />
                       </button>

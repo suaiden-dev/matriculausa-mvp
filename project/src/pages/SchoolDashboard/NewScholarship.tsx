@@ -408,18 +408,24 @@ const NewScholarship: React.FC = () => {
       return;
     }
 
-    if (!formData.original_annual_value.trim() || isNaN(Number(formData.original_annual_value))) {
-      setError('Valid original annual value is required');
+    if (
+      formData.original_annual_value && isNaN(Number(formData.original_annual_value))
+    ) {
+      setError('Only numbers are allowed in Original Annual Value');
       setLoading(false);
       return;
     }
-    if (!formData.original_value_per_credit.trim() || isNaN(Number(formData.original_value_per_credit))) {
-      setError('Valid value per credit is required');
+    if (
+      formData.original_value_per_credit && isNaN(Number(formData.original_value_per_credit))
+    ) {
+      setError('Only numbers are allowed in Value Per Credit');
       setLoading(false);
       return;
     }
-    if (!formData.annual_value_with_scholarship.trim() || isNaN(Number(formData.annual_value_with_scholarship))) {
-      setError('Valid annual value with scholarship is required');
+    if (
+      formData.annual_value_with_scholarship && isNaN(Number(formData.annual_value_with_scholarship))
+    ) {
+      setError('Only numbers are allowed in Annual Value With Scholarship');
       setLoading(false);
       return;
     }
@@ -745,9 +751,6 @@ const NewScholarship: React.FC = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                     placeholder="e.g., 20000"
-                    min="0"
-                    step="0.01"
-                    required
                   />
                 </div>
                 <div>
@@ -761,9 +764,6 @@ const NewScholarship: React.FC = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                     placeholder="e.g., 500"
-                    min="0"
-                    step="0.01"
-                    required
                   />
                 </div>
                 <div>
@@ -777,9 +777,6 @@ const NewScholarship: React.FC = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                     placeholder="e.g., 12000"
-                    min="0"
-                    step="0.01"
-                    required
                   />
                 </div>
                 <div>

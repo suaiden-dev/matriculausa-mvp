@@ -19,6 +19,8 @@ import {
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { ProgressBar } from '../../components/ProgressBar';
+import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
+import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 interface OverviewProps {
   profile: any;
@@ -31,6 +33,7 @@ interface OverviewProps {
     availableScholarships: number;
   };
   onApplyScholarship: (scholarshipId: string) => void;
+  recentApplications?: any[];
 }
 
 const Overview: React.FC<OverviewProps> = ({ 
@@ -38,13 +41,15 @@ const Overview: React.FC<OverviewProps> = ({
   scholarships, 
   applications, 
   stats, 
-  onApplyScholarship
+  onApplyScholarship,
+  recentApplications = []
 }) => {
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   };
 
@@ -242,7 +247,7 @@ const Overview: React.FC<OverviewProps> = ({
   const allCompleted = steps.every(step => step.completed);
 
   return (
-    <div className="space-y-4">
+    <div className="overview-dashboard-container">
       {/* Welcome Message */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-4 md:p-6 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -255,11 +260,6 @@ const Overview: React.FC<OverviewProps> = ({
               <h2 className="text-2xl md:text-3xl font-bold mb-1">
                 Welcome back, {userProfile?.full_name || user?.email || 'Student'}!
               </h2>
-              {userProfile?.phone && (
-                <p className="text-blue-100 text-base md:text-lg">
-                  📞 {userProfile.phone}
-                </p>
-              )}
             </div>
           </div>
 
@@ -295,6 +295,7 @@ const Overview: React.FC<OverviewProps> = ({
                 feeType="selection_process"
                 paymentType="selection_process"
                 buttonText="Start Selection Process"
+                className="border-2 border-white"
                 successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                 cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
               />
@@ -323,23 +324,20 @@ const Overview: React.FC<OverviewProps> = ({
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Available Scholarships</p>
-              <p className="text-3xl font-bold text-slate-900">{stats.availableScholarships}</p>
-              <div className="flex items-center mt-2">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">New opportunities</span>
-              </div>
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-6.518-3.89A1 1 0 007 8.618v6.764a1 1 0 001.234.97l6.518-1.878a1 1 0 00.748-.97v-2.764a1 1 0 00-.748-.97z" /></svg>
             </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Award className="h-7 w-7 text-white" />
-            </div>
+          </div>
+          <h3 className="font-bold text-slate-900 mb-2">Step-by-Step Tour</h3>
+          <p className="text-slate-600 text-sm mb-4">See the full application journey in detail.</p>
+          <div className="flex justify-end">
+            <StepByStepButton />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">My Applications</p>
@@ -355,7 +353,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Approved</p>
@@ -371,7 +369,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Pending</p>
@@ -389,116 +387,76 @@ const Overview: React.FC<OverviewProps> = ({
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {quickActions.map((action, index) => {
-          const Icon = action.icon;
-          return (
-            <Link
-              key={index}
-              to={action.link}
-              className="group block p-6 bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${action.color} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex items-center">
-                  {action.count !== null && (
-                    <span className="text-2xl font-bold text-slate-900 mr-2">{action.count}</span>
-                  )}
-                  <ArrowUpRight className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
-                </div>
-              </div>
-              <h3 className="font-bold text-slate-900 mb-2">{action.title}</h3>
-              <p className="text-slate-600 text-sm">{action.description}</p>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Applications */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="p-6 border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Recent Applications</h3>
-                  <p className="text-slate-500 text-sm">Track your scholarship applications</p>
-                </div>
-                <Link
-                  to="/student/dashboard/applications"
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
-                >
-                  View All
-                  <ArrowUpRight className="h-4 w-4 ml-1" />
-                </Link>
-              </div>
+      <div className="overview-quick-actions">
+        {quickActions.map((action) => (
+          <Link
+            to={action.link}
+            key={action.title}
+            className="overview-card overview-action-card"
+          >
+            <div className={`overview-card-icon ${action.color}`}>
+              <action.icon className="h-6 w-6 text-white" />
             </div>
-            
-            <div className="p-6">
-              {applications.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <FileText className="h-10 w-10 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">No applications yet</h3>
-                  <p className="text-slate-500 mb-6">Start applying for scholarships to see your progress here</p>
-                  <Link
-                    to="/student/dashboard/scholarships"
-                    className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    Find Scholarships
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {applications.slice(0, 5).map((application) => {
-                    const StatusIcon = getStatusIcon(application.status);
-                    return (
-                      <div key={application.id} className="group flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors">
-                        <div className="flex items-center space-x-4 flex-1">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                            <Award className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-blue-600 transition-colors">
-                              {application.scholarship?.title}
-                            </h4>
-                            <div className="flex items-center space-x-4 text-sm text-slate-500">
-                              <div className="flex items-center">
-                                <Building className="h-4 w-4 mr-1" />
-                                {application.scholarship?.schoolName}
-                              </div>
-                              <div className="flex items-center">
-                                <Calendar className="h-4 w-4 mr-1" />
-                                {new Date(application.applied_at).toLocaleDateString()}
-                              </div>
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
-                                <StatusIcon className="h-3 w-3 mr-1" />
-                                {application.status.replace('_', ' ').toUpperCase()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-colors">
-                            <Eye className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div className="overview-card-content">
+              <div className="overview-card-title">{action.title}</div>
+              <div className="overview-card-desc">{action.description}</div>
+              {action.count !== null && (
+                <div className="overview-card-count">{action.count}</div>
               )}
             </div>
+          </Link>
+        ))}
+      </div>
+      {/* Step by Step Guide */}
+      {/* <div className="overview-stepbystep-wrapper">
+        <div
+          className="overview-card overview-stepbystep-card"
+          tabIndex={0}
+          role="button"
+          onClick={() => document.getElementById('step-by-step-btn')?.click()}
+          onKeyPress={e => { if (e.key === 'Enter') document.getElementById('step-by-step-btn')?.click(); }}
+        >
+          <div className="overview-stepbystep-content">
+            <div className="overview-stepbystep-title">Step by Step Guide</div>
+            <div className="overview-stepbystep-desc">Follow the onboarding steps to complete your journey.</div>
+          </div>
+          <StepByStepButton id="step-by-step-btn" className="hidden-mobile" />
+        </div>
+      </div> */}
+      {/* Progress Bar */}
+      {/* <div className="overview-progressbar-wrapper">
+        <ProgressBar steps={steps} />
+      </div> */}
+      {/* Outros cards/boxes da overview seguem o mesmo padrão visual */}
+      {/* Recent Applications */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6 mt-6 max-w-2xl mx-auto">
+            <h3 className="text-2xl font-extrabold text-blue-900 mb-4">Recent Applications</h3>
+            {recentApplications.length === 0 ? (
+              <div className="text-slate-500">No recent applications found.</div>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {recentApplications.map((app, idx) => (
+                  <li key={app.id} className="flex flex-col sm:flex-row sm:items-center py-4 gap-2">
+                    <div>
+                      <div className="text-lg font-semibold text-slate-800">{app.scholarship?.name || 'Scholarship'}</div>
+                      <div className="text-sm text-gray-500">{new Date(app.applied_at).toLocaleDateString()}</div>
+                    </div>
+                    <span className="ml-auto bg-green-100 text-green-700 font-semibold px-4 py-1 rounded-full text-sm shadow-sm w-fit">
+                      {app.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
         {/* Recommended Scholarships & Profile Status */}
         <div className="space-y-6">
           {/* Profile Completion */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
               <Target className="h-5 w-5 mr-2 text-blue-500" />
               Profile Status

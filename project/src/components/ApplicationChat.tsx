@@ -19,6 +19,7 @@ interface ApplicationChatProps {
   isSending?: boolean;
   error?: string | null;
   currentUserId: string;
+  messageContainerClassName?: string;
 }
 
 interface I20ControlFeeCardProps {
@@ -117,6 +118,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   error = null,
   currentUserId,
   i20ControlFee,
+  messageContainerClassName,
 }) => {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -152,7 +154,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
       )}
       <div className="flex flex-col h-full max-h-[80vh] w-full bg-gray-50 rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-white">
+        <div className={`flex-1 overflow-y-auto p-3 space-y-2 bg-white ${messageContainerClassName || ''}`} style={{ minHeight: '300px', maxHeight: '60vh' }}>
           {messages.length === 0 && (
             <div className="text-center text-gray-400 mt-8">No messages yet.</div>
           )}
@@ -217,7 +219,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
         {/* Input */}
         <form
           onSubmit={handleSend}
-          className="flex items-center gap-2 p-2 border-t bg-white"
+          className="border-t bg-white px-4 py-3 flex items-center gap-2 sticky bottom-0 z-10"
         >
           <label className="flex items-center cursor-pointer">
             <input

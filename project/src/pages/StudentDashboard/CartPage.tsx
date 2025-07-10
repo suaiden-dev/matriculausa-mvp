@@ -260,7 +260,8 @@ const CartPage: React.FC = () => {
           <button
             onClick={handleNextStep}
             disabled={isProcessing}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300 next-step-button"
+            data-testid="next-step-button"
           >
             {isProcessing ? 'Processing...' : 'Next Step'}
           </button>

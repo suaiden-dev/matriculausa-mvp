@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { StripeCheckout } from '../../components/StripeCheckout';
+import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 
 interface StudentDashboardLayoutProps {
   user: any;
@@ -75,85 +76,82 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   ];
 
   return (
-    <div className="h-screen min-h-screen flex overflow-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        min-h-screen h-full flex flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        flex flex-col h-full
         `}
         style={{ transitionProperty: 'transform, box-shadow', transitionDuration: '300ms' }}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between h-20 px-6 border-b border-slate-200">
-            <Link to="/" className="flex items-center justify-center w-full">
-              <img 
-                src="/logo.png.png" 
-                alt="Matrícula USA" 
-                className="h-12 w-auto"
-              />
-            </Link>
-            <button
-              onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
-              className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* User Profile */}
-          <div className="px-6 py-4 border-b border-slate-200">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 truncate">{profile?.name || user?.name}</h3>
-                <p className="text-sm text-slate-500 truncate">Student</p>
-              </div>
+        <div className="flex flex-col h-full flex-1 justify-between">
+          <div>
+            {/* Logo */}
+            <div className="flex items-center justify-between h-20 px-6 border-b border-slate-200">
+              <Link to="/" className="flex items-center justify-center w-full">
+                <img 
+                  src="/logo.png.png" 
+                  alt="Matrícula USA" 
+                  className="h-12 w-auto"
+                />
+              </Link>
+              <button
+                onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
+                className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                title="Fechar menu lateral"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            
-            <div className="flex items-center justify-center mt-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                <Star className="h-3 w-3 mr-1" />
-                Active Student
-              </span>
-            </div>
-          </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
+            {/* User Profile */}
+            <div className="px-6 py-4 border-b border-slate-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-slate-900 truncate">{profile?.name || user?.name}</h3>
+                  <p className="text-sm text-slate-500 truncate">Student</p>
+                </div>
+              </div>
               
-              return (
-                <Link
-                  key={item.id}
-                  to={item.path}
-                  className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                    <span className="text-sm">{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span className="px-2 py-1 text-xs font-medium rounded-lg bg-slate-100 text-slate-500">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+              <div className="flex items-center justify-center mt-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                  <Star className="h-3 w-3 mr-1" />
+                  Active Student
+                </span>
+              </div>
+            </div>
 
-          {/* Quick Actions */}
-          <div className="px-4 py-4 border-t border-slate-200">
+            {/* Navigation */}
+            <nav className="flex-1 px-4 py-6 space-y-2">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.path}
+                    className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      <span className="text-sm">{item.label}</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          {/* Academic Support colado no final da sidebar, formato card */}
+          <div className="px-4 py-4 border-t border-slate-200 bg-white">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -181,7 +179,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden h-screen min-h-screen lg:ml-6 ml-2">
+      <div className="flex-1 lg:ml-6 ml-2">
         {/* Header */}
         <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
           <div className="flex items-center justify-between">
@@ -201,7 +199,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
 
             <div className="flex items-center space-x-4">
               {/* User Menu */}
-              <div className="relative">
+              <div className="relative flex items-center gap-2">
                 <button
                   onClick={() => {
                     setUserMenuOpen(!userMenuOpen);
@@ -218,13 +216,14 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   </div>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>
-
+                {/* Botão do Guia ao lado do perfil REMOVIDO */}
+                {/* <StepByStepButton /> */}
                 {/* User Dropdown */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">
                     <div className="px-4 py-3 border-b border-slate-100">
                       <p className="font-semibold text-slate-900">{profile?.name || user?.name}</p>
-                      <p className="text-sm text-slate-500">{user?.email}</p>
+                      <p className="text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
                     </div>
                     
                     <div className="py-2">
@@ -255,7 +254,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50">
+        <main className="bg-slate-50">
           {children}
         </main>
       </div>

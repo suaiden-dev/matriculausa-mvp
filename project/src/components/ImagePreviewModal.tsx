@@ -43,15 +43,6 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
         />
         <div className="absolute top-2 right-2 flex gap-2">
           <button
-            onClick={handleDownload}
-            className="p-2 bg-gray-800 text-white rounded-full hover:bg-gray-600 transition-colors"
-            title="Download image"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-          <button
             onClick={onClose}
             className="p-2 bg-gray-800 text-white rounded-full hover:bg-gray-600 transition-colors"
             title="Close"
