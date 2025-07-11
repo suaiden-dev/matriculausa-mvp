@@ -53,6 +53,15 @@ Deno.serve(async (req) => {
 
       if (!userId) return corsResponse({ error: 'User ID (client_reference_id) missing in session.' }, 400);
 
+      // Buscar o perfil do usuário para obter o student_id correto
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+      if (profileError || !userProfile) throw new Error('User profile não encontrado.');
+      const studentId = userProfile.id;
+
       // --- Lógica Condicional de Pagamento ---
 
       if (feeType === 'application_fee') {
@@ -62,20 +71,92 @@ Deno.serve(async (req) => {
         }
         console.log('Processing: Application Fee');
         // Atualiza perfil e aplicação, limpa carrinho
-        const { error: profileError } = await supabase
+        const { error: profileError2 } = await supabase
           .from('user_profiles')
           .update({ is_application_fee_paid: true })
           .eq('user_id', userId);
-        if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
+        if (profileError2) throw new Error(`Failed to update user_profiles: ${profileError2.message}`);
         const { error: appError } = await supabase
           .from('scholarship_applications')
-          .update({ status: 'pending_scholarship_fee' })
+          .update({ status: 'under_review' })
           .eq('id', applicationId)
-          .eq('student_id', userId);
+          .eq('student_id', studentId);
         if (appError) throw new Error(`Failed to update scholarship_application: ${appError.message}`);
         const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
         if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
         console.log(`[verify-stripe-session] Application status set to 'pending_scholarship_fee' for user ${userId}, application ${applicationId}.`);
+        
+        // --- Notificação para a universidade via n8n ---
+        try {
+          // Buscar dados do aluno
+          const { data: alunoData, error: alunoError } = await supabase
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', userId)
+            .single();
+          if (alunoError || !alunoData) throw new Error('Aluno não encontrado para notificação');
+
+          // Buscar dados da aplicação usando student_id correto
+          const { data: application, error: appFetchError } = await supabase
+            .from('scholarship_applications')
+            .select('id, scholarship_id')
+            .eq('id', applicationId)
+            .eq('student_id', studentId)
+            .single();
+          if (appFetchError || !application) throw new Error('Application não encontrada para notificação');
+          // Log extra para depuração do scholarship_id
+          if (!application.scholarship_id) {
+            console.error('[NOTIFICAÇÃO] scholarship_id ausente na aplicação:', application);
+            throw new Error('Application inconsistente: scholarship_id ausente.');
+          }
+          console.log('[NOTIFICAÇÃO] scholarship_id encontrado na aplicação:', application.scholarship_id);
+
+          // Buscar dados da bolsa
+          const { data: scholarship, error: scholarshipError } = await supabase
+            .from('scholarships')
+            .select('id, title, university_id')
+            .eq('id', application.scholarship_id)
+            .single();
+          console.log('[NOTIFICAÇÃO] Resultado da busca na tabela scholarships:', scholarship, scholarshipError);
+          if (scholarshipError || !scholarship) throw new Error('Bolsa não encontrada para notificação');
+
+          // Buscar dados da universidade
+          const { data: universidade, error: univError } = await supabase
+            .from('universities')
+            .select('id, name, contact')
+            .eq('id', scholarship.university_id)
+            .single();
+          if (univError || !universidade) throw new Error('Universidade não encontrada para notificação');
+          const contact = universidade.contact || {};
+          const emailUniversidade = contact.admissionsEmail || contact.email || '';
+
+          // Montar mensagem
+          const mensagem = `O aluno ${alunoData.full_name} selecionou a bolsa "${scholarship.title}" da universidade ${universidade.name} e pagou a taxa de aplicação. Acesse o painel para revisar a candidatura.`;
+          const payload = {
+            tipo_notf: 'Novo pagamento de application fee',
+            email_aluno: alunoData.email,
+            nome_aluno: alunoData.full_name,
+            nome_bolsa: scholarship.title,
+            nome_universidade: universidade.name,
+            email_universidade: emailUniversidade,
+            o_que_enviar: mensagem,
+          };
+          console.log('[NOTIFICAÇÃO] Payload para n8n:', payload);
+          // Enviar para o n8n
+          const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3',
+            },
+            body: JSON.stringify(payload),
+          });
+          const n8nText = await n8nRes.text();
+          console.log('[NOTIFICAÇÃO] Resposta do n8n:', n8nRes.status, n8nText);
+        } catch (notifErr) {
+          console.error('[NOTIFICAÇÃO] Erro ao notificar universidade:', notifErr);
+        }
+        // --- Fim da notificação ---
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'scholarship_fee') {
         if (!applicationId) {

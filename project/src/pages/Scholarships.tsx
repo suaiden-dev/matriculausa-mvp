@@ -324,7 +324,11 @@ const Scholarships: React.FC = () => {
                         <div className="flex items-center text-slate-600 mb-4">
                           <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                           <span className="text-xs font-semibold mr-1">University:</span>
-                          <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>{scholarship.university_name || 'Unknown University'}</span>
+                          <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : ''}`}>
+                            {userProfile?.has_paid_selection_process_fee
+                              ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
+                              : '********'}
+                          </span>
                         </div>
                       </div>
                       

@@ -204,7 +204,7 @@ const StudentDashboard: React.FC = () => {
   // Calculate stats
   const stats = {
     totalApplications: applications.length,
-    approvedApplications: applications.filter(app => app.status === 'approved').length,
+    approvedApplications: applications.filter(app => app.status === 'approved' || app.status === 'enrolled').length,
     pendingApplications: applications.filter(app => app.status === 'pending' || app.status === 'under_review').length,
     availableScholarships: scholarships.length
   };

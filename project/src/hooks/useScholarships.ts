@@ -19,8 +19,17 @@ export function useScholarships() {
       const session = supabase.auth.session ? supabase.auth.session() : await supabase.auth.getSession();
       const userId = session?.user?.id || session?.data?.session?.user?.id;
       if (!userId) {
-        setError('Usuário não autenticado');
-        setScholarships([]);
+        // Visitante: buscar todas as bolsas ativas e o nome da universidade
+        const { data, error } = await supabase
+          .from('scholarships')
+          .select('*, universities (id, name, logo_url, location, is_approved)')
+          .eq('is_active', true);
+        if (error) {
+          setError(error.message);
+          setScholarships([]);
+        } else {
+          setScholarships((data || []) as unknown as Scholarship[]);
+        }
         setLoading(false);
         setHasLoadedData(true);
         return;

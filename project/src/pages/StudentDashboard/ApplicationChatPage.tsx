@@ -33,6 +33,23 @@ const DashboardCard: React.FC<{ children: React.ReactNode; className?: string }>
   </div>
 );
 
+// Adicionar função utilitária de download imediato (igual DocumentRequestsCard)
+const handleForceDownload = async (url: string, filename: string) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+  } catch (e) {
+    alert('Failed to download file.');
+  }
+};
+
 const ApplicationChatPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
   const { user, userProfile, refetchUserProfile } = useAuth();
@@ -175,8 +192,8 @@ const ApplicationChatPage: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 md:p-12 flex flex-col items-center" style={{ background: '#f6f8fa', minHeight: '100vh' }}>
-      <div className="w-full max-w-3xl mx-auto space-y-8">
+    <div className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
+      <div className="w-full max-w-3xl mx-auto space-y-8 flex-1 flex flex-col h-full">
         <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
           Student Application Details
         </h2>
@@ -359,11 +376,12 @@ const ApplicationChatPage: React.FC = () => {
                                 View
                               </button>
                               <a
-                                href={docData.url}
-                                download
+                                href="#"
                                 className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xs font-medium"
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  await handleForceDownload(docData.url, docData.url.split('/').pop() || 'document.pdf');
+                                }}
                               >
                                 Download
                               </a>
@@ -419,10 +437,8 @@ const ApplicationChatPage: React.FC = () => {
           </DashboardCard>
         )}
         {activeTab === 'chat' && (
-          <div className="bg-white rounded-2xl shadow-2xl border border-blue-100 p-0 mb-8 w-full min-h-[600px] flex flex-col">
-            {/* Chat ocupa toda a área do card */}
-            <div className="flex-1 flex flex-col justify-between gap-0">
-              {/* Aqui ficam as mensagens do chat */}
+          <div className="bg-white rounded-2xl shadow-2xl border border-blue-100 p-0 w-full flex-1 h-full flex flex-col">
+            <div className="flex-1 flex flex-col justify-between gap-0 h-full">
           <ApplicationChat
             messages={messages}
             onSend={(text: string, file?: File | null) => sendMessage(text, file ?? null)}
@@ -430,7 +446,7 @@ const ApplicationChatPage: React.FC = () => {
             isSending={isSending}
             error={error}
               currentUserId={user?.id}
-            messageContainerClassName="gap-6 py-4" // se suportar prop customizada
+                messageContainerClassName="gap-6 py-4"
           />
             </div>
         </div>

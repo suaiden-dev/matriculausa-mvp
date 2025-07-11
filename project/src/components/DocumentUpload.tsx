@@ -103,7 +103,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
         .from('user_profiles')
         .update(updateData)
         .eq('user_id', user.id);
-      
+
       setUploading(false);
       setAnalyzing(true);
       

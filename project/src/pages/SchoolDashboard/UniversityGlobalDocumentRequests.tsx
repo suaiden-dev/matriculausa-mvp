@@ -70,20 +70,25 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
         }
         attachment_url = data?.path;
       }
-      const { error } = await supabase.from('document_requests').insert({
+      const payload = {
         title: newRequest.title,
         description: newRequest.description,
         due_date: newRequest.due_date || null,
-        attachment_url,
         university_id: userProfile.university_id,
         is_global: true,
-        status: 'open',
         created_by: userProfile.user_id,
         scholarship_application_id: null,
         applicable_student_types: newRequest.applicable_student_types
+      };
+      console.log('[DEBUG] Enviando para Edge Function create-document-request (global)', payload);
+      const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-document-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      if (error) {
-        setError('Failed to create request: ' + error.message);
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setError('Failed to create request: ' + (result.error || 'Unknown error'));
         setCreating(false);
         return;
       }

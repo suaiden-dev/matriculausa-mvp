@@ -437,17 +437,39 @@ const Overview: React.FC<OverviewProps> = ({
               <div className="text-slate-500">No recent applications found.</div>
             ) : (
               <ul className="divide-y divide-gray-100">
-                {recentApplications.map((app, idx) => (
-                  <li key={app.id} className="flex flex-col sm:flex-row sm:items-center py-4 gap-2">
-                    <div>
-                      <div className="text-lg font-semibold text-slate-800">{app.scholarship?.name || 'Scholarship'}</div>
-                      <div className="text-sm text-gray-500">{new Date(app.applied_at).toLocaleDateString()}</div>
+                {recentApplications.map((app, idx) => {
+                  const scholarship = app.scholarship || app.scholarships;
+                  return (
+                    <li key={app.id} className="flex flex-col sm:flex-row sm:items-center py-4 gap-4">
+                      {/* Logo da universidade */}
+                      {scholarship?.universities?.logo_url && (
+                        <img src={scholarship.universities.logo_url} alt={scholarship.universities.name} className="w-12 h-12 rounded-full object-contain border border-slate-200 bg-white mr-4" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <div className="text-lg font-semibold text-slate-800 line-clamp-1">{scholarship?.title || 'Scholarship'}</div>
+                          <span className="ml-0 sm:ml-4 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">{scholarship?.level}</span>
+                          <span className="ml-0 sm:ml-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">{scholarship?.field_of_study}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-slate-600">
+                          <span className="font-medium">University:</span> {scholarship?.universities?.name}
+                          {scholarship?.amount && (
+                            <span className="ml-4 font-medium text-green-700">${scholarship.amount.toLocaleString()}</span>
+                          )}
+                          {scholarship?.deadline && (
+                            <span className="ml-4">Deadline: {new Date(scholarship.deadline).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+                          <span>Applied on {new Date(app.applied_at).toLocaleDateString()}</span>
+                        </div>
                     </div>
-                    <span className="ml-auto bg-green-100 text-green-700 font-semibold px-4 py-1 rounded-full text-sm shadow-sm w-fit">
+                      <span className={`ml-auto bg-green-100 text-green-700 font-semibold px-4 py-1 rounded-full text-sm shadow-sm w-fit`}>
                       {app.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </span>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>

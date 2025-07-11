@@ -20,6 +20,7 @@ import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import StudentDashboardLayout from "./StudentDashboardLayout";
+import CustomLoading from '../../components/CustomLoading';
 
 // Combine os tipos para incluir os detalhes da bolsa na aplicação
 type ApplicationWithScholarship = Application & {
@@ -174,7 +175,7 @@ const MyApplications: React.FC = () => {
 
   const getStatusMessage = (status: string) => {
     switch (status) {
-      case 'approved': return 'Congratulations! Your application has been approved.';
+      case 'approved': return '';
       case 'rejected': return 'Unfortunately, your application was not selected.';
       case 'under_review': return 'Your application is currently being reviewed.';
       case 'pending_scholarship_fee': return 'Pending scholarship fee payment.';
@@ -217,16 +218,14 @@ const MyApplications: React.FC = () => {
     return { applicationId: data.id };
   };
 
-  if (loading && isFirstLoad) {
+  if (loading) {
     return (
-      <StudentDashboardLayout user={user} profile={userProfile} loading={false}>
-        <div className="min-h-[60vh] flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center border border-slate-200 flex flex-col items-center justify-center gap-4">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-lg text-slate-600">Carregando suas aplicações...</p>
-          </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-slate-600 font-medium">Carregando suas aplicações...</p>
         </div>
-      </StudentDashboardLayout>
+      </div>
     );
   }
 
@@ -382,10 +381,17 @@ const MyApplications: React.FC = () => {
               const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
 
               if (!scholarship) return null;
-              
+
+              // Box de congratulações e botões de pagamento
+              const showCongratsBox = application.status === 'approved';
+              const showApplicationFeeButton = showCongratsBox && !applicationFeePaid;
+              const showScholarshipFeeButton = showCongratsBox && applicationFeePaid && !scholarshipFeePaid;
+
               return (
-                <div key={application.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <div key={application.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-300 mb-8">
                   <div className="p-8">
+                    {/* Box de congratulações */}
+                    {/* REMOVIDO: Box de congratulações */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
@@ -404,7 +410,6 @@ const MyApplications: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                           <div className="flex items-center">
                             <DollarSign className="h-4 w-4 mr-2 text-green-600" />
@@ -423,12 +428,13 @@ const MyApplications: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      
                       <div className="ml-6 flex flex-col items-end space-y-3">
                         <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium border ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)} shadow-sm bg-gray-50`}>
                           <Icon className="h-4 w-4 mr-2" />
                           {(application.status === 'enrolled' ? 'APPROVED' : application.status.replace('_', ' ').toUpperCase())}
                         </span>
+                        {/* Indicadores de pagamento */}
+                        {/* REMOVIDO: Badges Application Fee Paid e Scholarship Fee Paid */}
                         {['approved', 'enrolled'].includes(application.status) && (
                           <button
                             className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow border border-blue-700"
@@ -440,77 +446,7 @@ const MyApplications: React.FC = () => {
                         )}
                       </div>
                     </div>
-
                     {/* Status Message */}
-                    <div className={`p-4 rounded-xl border ${
-                      application.status === 'approved' ? 'bg-green-50 border-green-200' :
-                      application.status === 'rejected' ? 'bg-red-50 border-red-200' :
-                      application.status === 'under_review' ? 'bg-yellow-50 border-yellow-200' :
-                      'bg-gray-50 border-gray-200'
-                    }`}>
-                      <p className={`text-sm font-medium ${
-                        application.status === 'approved' ? 'text-green-800' :
-                        application.status === 'rejected' ? 'text-red-800' :
-                        application.status === 'under_review' ? 'text-yellow-800' :
-                        'text-gray-800'
-                      }`}>
-                        {getStatusMessage(application.status === 'enrolled' ? 'approved' : application.status)}
-                      </p>
-                      {application.notes && (
-                        <p className="text-sm text-slate-600 mt-2">
-                          <strong>Note:</strong> {application.notes}
-                        </p>
-                      )}
-                      {/* Botões de pagamento */}
-                      {!(applicationFeePaid && scholarshipFeePaid) && (
-                        <div className="flex flex-row gap-4 mt-4 items-center justify-center">
-                          {/* Application Fee */}
-                          {applicationFeePaid ? (
-                            <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Paid
-                            </span>
-                          ) : (
-                            <button
-                              className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200"
-                              onClick={() => navigate('/student/dashboard/application-fee')}
-                            >
-                              <DollarSign className="h-4 w-4 mr-2" />
-                              Pay Application Fee ($350)
-                            </button>
-                          )}
-                          {/* Scholarship Fee */}
-                          {scholarshipFeePaid ? (
-                            <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Paid
-                            </span>
-                          ) : (
-                            <StripeCheckout
-                              productId="scholarshipFee"
-                              feeType="scholarship_fee"
-                              paymentType="scholarship_fee"
-                              buttonText="Pay Scholarship Fee ($550)"
-                              successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                              cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
-                              disabled={!applicationFeePaid || scholarshipFeePaid}
-                              scholarshipsIds={[application.scholarship_id]}
-                              metadata={{
-                                application_id: application.id,
-                                selected_scholarship_id: application.scholarship_id
-                              }}
-                            />
-                          )}
-                        </div>
-                      )}
-                      {/* Mensagem de congratulações só aparece se não tiver ambas taxas pagas */}
-                      {!(applicationFeePaid && scholarshipFeePaid) && application.status === 'approved' && (
-                        <p className="text-sm font-medium text-green-800">
-                          {getStatusMessage(application.status === 'enrolled' ? 'approved' : application.status)}
-                        </p>
-                      )}
-                    </div>
-
                     {application.status === 'pending_scholarship_fee' && (
                       <div className="mt-4 p-4 bg-blue-50 border-t border-blue-200">
                         <p className="text-blue-800 font-semibold mb-2 text-center">
@@ -520,6 +456,49 @@ const MyApplications: React.FC = () => {
                           <div className="mb-2 flex justify-center">
                             <span className="text-blue-600 animate-pulse">Processing payment...</span>
                           </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Botões de pagamento - AGORA NO FINAL DO CARD */}
+                    {['pending', 'under_review', 'approved'].includes(application.status) && (
+                      <div className="flex flex-row gap-4 mt-8 items-center justify-center">
+                        {/* Application Fee */}
+                        {applicationFeePaid ? (
+                          <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Paid
+                          </span>
+                        ) : (
+                          <button
+                            className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200"
+                            onClick={() => navigate('/student/dashboard/application-fee')}
+                          >
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Pay Application Fee ($350)
+                          </button>
+                        )}
+                        {/* Scholarship Fee */}
+                        {scholarshipFeePaid ? (
+                          <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Paid
+                          </span>
+                        ) : (
+                          <StripeCheckout
+                            productId="scholarshipFee"
+                            feeType="scholarship_fee"
+                            paymentType="scholarship_fee"
+                            buttonText="Pay Scholarship Fee ($550)"
+                            successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                            cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
+                            disabled={!applicationFeePaid || scholarshipFeePaid}
+                            scholarshipsIds={[application.scholarship_id]}
+                            metadata={{
+                              application_id: application.id,
+                              selected_scholarship_id: application.scholarship_id,
+                            }}
+                          />
                         )}
                       </div>
                     )}

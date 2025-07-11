@@ -140,6 +140,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                         ? 'bg-blue-600 text-white shadow-lg'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
+                    onClick={() => {
+                      if (window.innerWidth < 1024) setSidebarOpen(false);
+                    }}
                   >
                     <div className="flex items-center space-x-3">
                       <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />

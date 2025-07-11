@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import ImagePreviewModal from './ImagePreviewModal';
 import { useUniversity } from '../context/UniversityContext';
+import { useAuth } from '../hooks/useAuth';
 
 interface DocumentRequest {
   id: string;
@@ -57,6 +58,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   const refreshData = universityContext ? universityContext.refreshData : undefined;
   // 1. Adicionar estado para logo da universidade
   const [universityLogoUrl, setUniversityLogoUrl] = useState<string | null>(null);
+  const [universityId, setUniversityId] = useState<string | undefined>(undefined); // novo estado global
+  const { user, supabaseUser } = useAuth();
 
   useEffect(() => {
     // Buscar dados da carta de aceite da aplicação
@@ -78,9 +81,21 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   useEffect(() => {
     // Logar uploads carregados para debug
     if (Object.keys(uploads).length > 0) {
-      console.log('[DEBUG] Uploads carregados:', uploads);
+      // console.log('[DEBUG] Uploads carregados:', uploads);
     }
   }, [uploads]);
+
+  // LOGS DE DEBUG PARA BOTÕES DE APROVAÇÃO/REJEIÇÃO
+  useEffect(() => {
+    // console.log('[DocumentRequestsCard] MONTADO', {
+    //   isSchool,
+    //   currentUserId,
+    //   studentType,
+    //   studentUserId,
+    //   applicationId,
+    //   uploads,
+    // });
+  }, [isSchool, currentUserId, studentType, studentUserId, applicationId, uploads]);
 
   // 2. Buscar logo da universidade junto com o universityId
   const fetchRequests = async () => {
@@ -103,10 +118,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         universityId = appData.scholarships.university_id;
         logoUrl = appData.scholarships.universities?.logo_url || null;
       }
+      setUniversityId(universityId); // garantir que o estado global é atualizado
       setUniversityLogoUrl(logoUrl);
-      console.log('[DEBUG] appData:', appData);
+      // console.log('[DEBUG] appData:', appData);
       const studentId = appData.student_id;
-      console.log('[DocumentRequestsCard] universityId:', universityId);
+      // console.log('[DocumentRequestsCard] universityId:', universityId);
       // Buscar requests normais
       const { data: normalRequests, error: normalError } = await supabase
         .from('document_requests')
@@ -114,7 +130,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         .eq('scholarship_application_id', applicationId)
         .order('created_at', { ascending: false });
       if (normalError) throw normalError;
-      console.log('[DocumentRequestsCard] normalRequests:', normalRequests?.length, normalRequests);
+      // console.log('[DocumentRequestsCard] normalRequests:', normalRequests?.length, normalRequests);
       // Buscar requests globais
       let globalRequests: any[] = [];
       if (universityId) {
@@ -129,10 +145,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types)) return true;
           return req.applicable_student_types.includes(studentType);
         });
-        console.log('[DocumentRequestsCard] universityId usado:', universityId);
-        console.log('[DocumentRequestsCard] globalRequests:', globalRequests.length, globalRequests);
+        // console.log('[DocumentRequestsCard] universityId usado:', universityId);
+        // console.log('[DocumentRequestsCard] globalRequests:', globalRequests.length, globalRequests);
       } else {
-        console.log('[DocumentRequestsCard] universityId not found, skipping global requests');
+        // console.log('[DocumentRequestsCard] universityId not found, skipping global requests');
       }
       // Substituir a lógica de merge e remoção de duplicados:
       // const allRequests = [...(normalRequests || []), ...globalRequests];
@@ -140,32 +156,32 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       // Por:
       const allRequests = [...(normalRequests || []), ...globalRequests];
       const uniqueRequests = allRequests.filter((req, idx, arr) => arr.findIndex(r => r.id === req.id) === idx);
-      console.log('[DocumentRequestsCard] uniqueRequests:', uniqueRequests.length, uniqueRequests);
+      // console.log('[DocumentRequestsCard] uniqueRequests:', uniqueRequests.length, uniqueRequests);
       setRequests(uniqueRequests);
       setLoading(false);
       // Buscar uploads para cada request
       if (uniqueRequests.length > 0) {
         const ids = uniqueRequests.map((r: any) => r.id);
-        console.log('[DEBUG] studentId:', studentId, 'currentUserId:', currentUserId, 'isSchool:', isSchool);
+        // console.log('[DEBUG] studentId:', studentId, 'currentUserId:', currentUserId, 'isSchool:', isSchool);
         // Buscar todos os uploads sem filtro para debug
         const { data: allUploadsData } = await supabase
           .from('document_request_uploads')
           .select('*')
           .in('document_request_id', ids);
         if (allUploadsData) {
-          allUploadsData.forEach((upload: any) => {
-            console.log('[DEBUG UPLOAD]', {
-              id: upload.id,
-              document_request_id: upload.document_request_id,
-              uploaded_by: upload.uploaded_by,
-              file_url: upload.file_url,
-              status: upload.status,
-              created_at: upload.created_at,
-              // adicione outros campos relevantes aqui
-            });
-          });
+          // allUploadsData.forEach((upload: any) => {
+          //   console.log('[DEBUG UPLOAD]', {
+          //     id: upload.id,
+          //     document_request_id: upload.document_request_id,
+          //     uploaded_by: upload.uploaded_by,
+          //     file_url: upload.file_url,
+          //     status: upload.status,
+          //     created_at: upload.created_at,
+          //     // adicione outros campos relevantes aqui
+          //   });
+          // });
         }
-        console.log('[DEBUG] ALL uploadsData (sem filtro):', allUploadsData?.length, allUploadsData);
+        // console.log('[DEBUG] ALL uploadsData (sem filtro):', allUploadsData?.length, allUploadsData);
         let uploadsData;
         if (isSchool) {
           // Escola vê apenas uploads do aluno específico (user_id) e da universidade
@@ -176,7 +192,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           // Aluno vê apenas os uploads feitos por ele
           uploadsData = (allUploadsData || []).filter((u: any) => u.uploaded_by === currentUserId);
         }
-        console.log('[DocumentRequestsCard] uploadsData:', uploadsData?.length, uploadsData);
+        // console.log('[DocumentRequestsCard] uploadsData:', uploadsData?.length, uploadsData);
         const uploadsMap: { [requestId: string]: DocumentRequestUpload[] } = {};
         (uploadsData || []).forEach((u: any) => {
           if (!uploadsMap[u.document_request_id]) uploadsMap[u.document_request_id] = [];
@@ -192,11 +208,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   };
 
   const handleNewRequest = async () => {
-    if (!newRequest.title) return;
     setCreating(true);
-    setError(null);
-    let attachment_url = undefined;
+    setError('');
     try {
+      let attachment_url = '';
       if (newRequest.attachment) {
         const { data, error } = await supabase.storage.from('document-attachments').upload(`modelos/${Date.now()}_${newRequest.attachment.name}`, newRequest.attachment);
         if (error) {
@@ -206,17 +221,43 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         }
         attachment_url = data?.path;
       }
-      const { error } = await supabase.from('document_requests').insert({
+      // LOGS DETALHADOS PARA DEBUG
+      const payload = {
         title: newRequest.title,
         description: newRequest.description,
         due_date: newRequest.due_date || null,
         attachment_url,
         scholarship_application_id: applicationId,
         created_by: currentUserId,
-        status: 'open',
+        university_id: universityId,
+      };
+      // console.log('[DEBUG] Enviando para Edge Function create-document-request', payload);
+      // console.log('Payload enviado para Edge Function:', payload);
+      // Antes do fetch:
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        setError('Usuário não autenticado. Faça login novamente.');
+        setCreating(false);
+        return;
+      }
+      const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-document-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
       });
-      if (error) {
-        setError('Failed to create request: ' + error.message);
+      let result = {};
+      try {
+        result = await response.json();
+      } catch (e) {
+        // console.log('Erro ao fazer parse do JSON de resposta:', e);
+      }
+      // console.log('Resposta da Edge Function:', result);
+      if (!response.ok || !result.success) {
+        setError('Failed to create request: ' + (result.error || 'Unknown error'));
         setCreating(false);
         return;
       }
@@ -233,18 +274,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   // Nova função para upload da acceptance letter pela escola
   const handleAcceptanceLetterUpload = async (file: File) => {
     if (!applicationId || !file) {
-      console.error('[LOG] applicationId ou file ausente', { applicationId, file });
+      // console.error('[LOG] applicationId ou file ausente', { applicationId, file });
       return;
     }
     
     setAcceptanceLoading(true);
     try {
-      console.log('[LOG] Iniciando upload da acceptance letter', { applicationId, file });
+      // console.log('[LOG] Iniciando upload da acceptance letter', { applicationId, file });
       // Upload do arquivo
       const { data, error } = await supabase.storage.from('document-attachments').upload(`acceptance_letters/${Date.now()}_${file.name}`, file);
-      console.log('[LOG] Resultado do upload:', { data, error });
+      // console.log('[LOG] Resultado do upload:', { data, error });
       if (error) {
-        console.error('[LOG] Erro no upload do arquivo:', error, error?.message, error?.details, error?.hint);
+        // console.error('[LOG] Erro no upload do arquivo:', error, error?.message, error?.details, error?.hint);
         throw error;
       }
       // Logar dados do update
@@ -254,16 +295,16 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
       };
-      console.log('[LOG] applicationId para update:', applicationId);
-      console.log('[LOG] Objeto enviado no update:', updateObj);
+      // console.log('[LOG] applicationId para update:', applicationId);
+      // console.log('[LOG] Objeto enviado no update:', updateObj);
       // Atualizar a aplicação com a URL da carta e mudar status para enrolled
       const { error: updateError, data: updateData } = await supabase
         .from('scholarship_applications')
         .update(updateObj)
         .eq('id', applicationId);
-      console.log('[LOG] Resultado do update:', { updateError, updateData });
+      // console.log('[LOG] Resultado do update:', { updateError, updateData });
       if (updateError) {
-        console.error('[LOG] Erro no update:', updateError, updateError?.message, updateError?.details, updateError?.hint);
+        // console.error('[LOG] Erro no update:', updateError, updateError?.message, updateError?.details, updateError?.hint);
         throw updateError;
       }
       // Atualizar o campo i20_control_fee_due_date em user_profiles
@@ -278,7 +319,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           .update({ i20_control_fee_due_date: new Date().toISOString() })
           .eq('id', appData.student_id);
         if (profileUpdateError) {
-          console.error('[LOG] Erro ao atualizar i20_control_fee_due_date:', profileUpdateError);
+          // console.error('[LOG] Erro ao atualizar i20_control_fee_due_date:', profileUpdateError);
         }
       }
       // Atualizar o estado local
@@ -294,7 +335,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       // Recarregar dados globais do contexto (apenas para escola)
       if (isSchool && refreshData) await refreshData();
     } catch (error: any) {
-      console.error('[LOG] Error uploading acceptance letter:', error, error?.message, error?.details, error?.hint);
+      // console.error('[LOG] Error uploading acceptance letter:', error, error?.message, error?.details, error?.hint);
       setError('Failed to upload acceptance letter: ' + error.message);
     } finally {
       setAcceptanceLoading(false);
@@ -310,12 +351,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
     if (!file) return;
     setUploading(prev => ({ ...prev, [requestId]: true }));
     try {
-      console.log('[UPLOAD] Iniciando upload', { requestId, file, user: currentUserId });
       const { data, error } = await supabase.storage.from('document-attachments').upload(`uploads/${Date.now()}_${file.name}`, file);
-      console.log('[UPLOAD] Resultado do upload', { data, error });
       if (error) {
         setError(`Erro ao fazer upload do arquivo: ${error.message}`);
-        console.error('[UPLOAD] Erro detalhado:', error, { file, requestId, user: currentUserId });
+        // console.error('[UPLOAD] Erro detalhado:', error, { file, requestId, user: currentUserId });
         alert(`Erro ao fazer upload: ${error.message}\n${JSON.stringify(error, null, 2)}`);
         setUploading(prev => ({ ...prev, [requestId]: false }));
         return;
@@ -327,7 +366,24 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         file_url,
         status: 'under_review',
       });
-      console.log('[UPLOAD] Resultado do insert na tabela document_request_uploads', insertResult);
+
+      // Notificar universidade via Edge Function
+      try {
+        // console.log('[NOTIFICAÇÃO] Chamando Edge Function para notificar universidade', {
+        //   user_id: currentUserId,
+        //   tipos_documentos: [requestId],
+        // });
+        const notifResult = await supabase.functions.invoke('notify-university-document-upload', {
+          body: JSON.stringify({
+            user_id: currentUserId,
+            tipos_documentos: [requestId], // ou tipo do documento, se disponível
+          }),
+        });
+        // console.log('[NOTIFICAÇÃO] Resultado da chamada da Edge Function:', notifResult);
+      } catch (e) {
+        // console.error('Erro ao notificar universidade:', e);
+      }
+
       setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: null }));
       fetchRequests();
     } finally {
@@ -339,15 +395,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
     if (loadingUrls[uploadId]) return;
     setLoadingUrls(prev => ({ ...prev, [uploadId]: true }));
     try {
-      console.log('[LOG] Gerando signedUrl para uploadId:', uploadId, 'filePath:', filePath);
+      // console.log('[LOG] Gerando signedUrl para uploadId:', uploadId, 'filePath:', filePath);
       const { data, error } = await supabase.storage.from('document-attachments').createSignedUrl(filePath, 60 * 60);
-      console.log('[LOG] Resultado signedUrl:', { uploadId, filePath, data, error });
+      // console.log('[LOG] Resultado signedUrl:', { uploadId, filePath, data, error });
       setSignedUrls(prev => ({ ...prev, [uploadId]: error ? null : data.signedUrl }));
       if (error) {
-        console.error('[LOG] Erro ao gerar signedUrl:', error, error?.message);
+        // console.error('[LOG] Erro ao gerar signedUrl:', error, error?.message);
       }
     } catch (e) {
-      console.error('[LOG] Exception ao gerar signedUrl:', e);
+      // console.error('[LOG] Exception ao gerar signedUrl:', e);
       setSignedUrls(prev => ({ ...prev, [uploadId]: null }));
     } finally {
       setLoadingUrls(prev => ({ ...prev, [uploadId]: false }));
@@ -362,7 +418,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       setAttachmentSignedUrls(prev => ({ ...prev, [requestId]: error ? null : data.signedUrl }));
       return error ? null : data.signedUrl;
     } catch (e) {
-      console.error('Error getting attachment signed URL:', e);
+      // console.error('Error getting attachment signed URL:', e);
         setAttachmentSignedUrls(prev => ({ ...prev, [requestId]: null }));
       return null;
     } finally {
@@ -457,6 +513,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
     }
   };
 
+  // Padronizar status para snake_case
+  const normalizeStatus = (status: string) => (status || '').toLowerCase().replace(/\s+/g, '_');
+
   return (
     <div className="max-w-3xl mx-auto p-6">
       {isSchool && (
@@ -520,7 +579,26 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         }}>
                         Download
                       </button>
-              </div>
+                      {/* Botão View para abrir no modal padrão ou nova aba se PDF */}
+                      <button className="sm:ml-2 bg-white text-[#3B82F6] border border-[#3B82F6] px-3 py-1 rounded hover:bg-[#3B82F6] hover:text-white transition text-xs font-semibold w-full sm:w-auto" title="View template"
+                        onClick={async () => {
+                          const url = await getAttachmentSignedUrl(req.attachment_url!, req.id);
+                          if (url) {
+                            const isPdf = req.attachment_url!.toLowerCase().endsWith('.pdf');
+                            const isImage = req.attachment_url!.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                            if (isPdf) {
+                              window.open(url, '_blank');
+                            } else if (isImage) {
+                              setPreviewUrl(url);
+                            } else {
+                              // fallback: abrir no modal se não for PDF
+                              setPreviewUrl(url);
+                            }
+                          }
+                        }}>
+                        View
+                      </button>
+                    </div>
                   )}
 
                   {/* Student uploads for this request */}
@@ -530,68 +608,89 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                     </span>
                     {uploads[req.id]?.length > 0 ? (
                       uploads[req.id].map(upload => {
+                        const normalizedStatus = normalizeStatus(upload.status);
+                        // LOG: status e contexto de cada upload
+                        const showApproveReject = isSchool && ['pending', 'under_review'].includes(normalizedStatus);
+                        // LOG: Renderizando botões Approve/Reject
+                        if (showApproveReject) {
+                          // console.log('[DocumentRequestsCard] Renderizando botões Approve/Reject para upload', upload.id);
+                        }
                         // Badge de status dos uploads
-                        let badgeColor = 'bg-[#22C55E]/20 text-[#22C55E]';
-                        if (upload.status === 'pending') { badgeColor = 'bg-[#FACC15]/20 text-[#FACC15]'; }
-                        if (upload.status === 'rejected') { badgeColor = 'bg-red-100 text-red-700'; }
-                        if (upload.status === 'under review') { badgeColor = 'bg-yellow-100 text-yellow-700'; }
+                        let badgeColor = 'bg-white text-[#22C55E] border border-[#22C55E]';
+                        let containerColor = 'bg-[#F1F5F9] border border-[#22C55E]/30';
+                        if (normalizedStatus === 'pending') { badgeColor = 'bg-white text-[#FACC15] border border-[#FACC15]'; containerColor = 'bg-[#F1F5F9] border border-[#FACC15]/30'; }
+                        if (normalizedStatus === 'rejected') { badgeColor = 'bg-white text-red-600 border border-red-400'; containerColor = 'bg-red-50 border border-red-200'; }
+                        if (normalizedStatus === 'under_review') {
+                          badgeColor = 'bg-white text-yellow-700 border border-yellow-400';
+                          containerColor = isSchool ? 'bg-[#F1F5F9] border border-[#22C55E]/30' : 'bg-yellow-50 border border-yellow-300';
+                        }
                         return (
-                          <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-[#F1F5F9] border border-[#22C55E]/30 rounded-lg px-4 py-2">
+                          <div key={upload.id} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 rounded-lg px-4 py-2 ${containerColor}`}>
                             <div className="flex items-center gap-2">
-                              <svg className="w-5 h-5 text-[#22C55E]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7v10a2 2 0 002 2h6a2 2 0 002-2V7" /></svg>
+                              <svg className={`w-5 h-5 ${normalizedStatus === 'under_review' ? 'text-yellow-500' : 'text-[#22C55E]'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7v10a2 2 0 002 2h6a2 2 0 002-2V7" /></svg>
                               <span className="text-[#05294E] text-sm font-medium truncate max-w-[120px]">{upload.file_url?.split('/').pop()}</span>
                             </div>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${badgeColor}`}>{upload.status.charAt(0).toUpperCase() + upload.status.slice(1)}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${badgeColor}`}>{normalizedStatus.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            {/* Botão Download */}
                             <button
-  className={`flex items-center justify-center gap-1 px-3 py-1 rounded font-semibold transition text-xs border w-full sm:w-auto
-    ${upload.status === 'under review' ? 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200' : 'bg-white text-[#22C55E] border-[#22C55E] hover:bg-[#22C55E] hover:text-white'}
-  `}
-  title="View file"
-  onClick={() => {
-    const signedUrl = signedUrls[upload.id];
-    const fileUrl = signedUrl || upload.file_url;
-    const isImage = upload.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-    if (fileUrl && isImage) {
-      setPreviewUrl(fileUrl);
-    } else if (fileUrl) {
-      window.open(fileUrl, '_blank');
-    }
-  }}
-  disabled={!signedUrls[upload.id] && upload.file_url.includes('document-attachments')}
->
-  {upload.status === 'under review' ? (
-    <svg className="w-4 h-4 mr-1 text-yellow-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-  ) : (
-    <svg className="w-4 h-4 mr-1 text-[#22C55E]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m6 0a6 6 0 11-12 0 6 6 0 0112 0z" /></svg>
-  )}
-  View
-</button>
-        {/* Botões de aprovação/rejeição para escola */}
-        {isSchool && ['pending', 'under review'].includes(upload.status) && (
-          <div className="flex gap-2 mt-2 sm:mt-0">
-            <button
-              className="px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition border border-green-700"
-              onClick={() => handleApproveUpload(upload.id)}
-              disabled={upload.status === 'approved'}
-            >
-              Approve
-            </button>
-            <button
-              className="px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition border border-red-700"
-              onClick={() => handleRejectUpload(upload.id)}
-              disabled={upload.status === 'rejected'}
-            >
-              Reject
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  })
-) : (
+                              className="flex items-center gap-1 px-3 py-1 rounded font-semibold transition text-xs border bg-white text-[#3B82F6] border-[#3B82F6] hover:bg-[#3B82F6]/10 hover:text-[#05294E] hover:border-[#05294E]"
+                              title="Download file"
+                              onClick={async () => {
+                                const signedUrl = signedUrls[upload.id] || upload.file_url;
+                                if (signedUrl) {
+                                  await handleForceDownload(signedUrl, upload.file_url?.split('/').pop() || 'document.pdf');
+                                }
+                              }}
+                              disabled={!signedUrls[upload.id] && upload.file_url.includes('document-attachments')}
+                            >
+                              Download
+                            </button>
+                            {/* Botão View */}
+                            <button
+                              className={`flex items-center justify-center gap-1 px-3 py-1 rounded font-semibold transition text-xs border w-full sm:w-auto
+                                bg-white text-[#3B82F6] border-[#3B82F6] hover:bg-[#3B82F6]/10 hover:text-[#05294E] hover:border-[#05294E]
+                              `}
+                              title="View file"
+                              onClick={() => {
+                                const signedUrl = signedUrls[upload.id];
+                                const fileUrl = signedUrl || upload.file_url;
+                                const isImage = upload.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                                if (fileUrl && isImage) {
+                                  setPreviewUrl(fileUrl);
+                                } else if (fileUrl) {
+                                  window.open(fileUrl, '_blank');
+                                }
+                              }}
+                              disabled={!signedUrls[upload.id] && upload.file_url.includes('document-attachments')}
+                            >
+                              View
+                            </button>
+                            {/* Botões de aprovação/rejeição para escola */}
+                            {showApproveReject && (
+                              <div className="flex gap-2 mt-2 sm:mt-0">
+                                <button
+                                  className="px-3 py-1 rounded bg-white text-[#22C55E] border border-[#22C55E] text-xs font-semibold hover:bg-[#22C55E]/10 hover:text-[#05294E] hover:border-[#05294E] transition"
+                                  onClick={() => handleApproveUpload(upload.id)}
+                                  disabled={normalizedStatus === 'approved'}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  className="px-3 py-1 rounded bg-white text-red-600 border border-red-400 text-xs font-semibold hover:bg-red-50 hover:text-red-800 hover:border-red-600 transition"
+                                  onClick={() => handleRejectUpload(upload.id)}
+                                  disabled={normalizedStatus === 'rejected'}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
                       <span className="text-slate-400 text-xs">No files uploaded yet.</span>
                     )}
-              </div>
+                  </div>
 
                   {/* Upload area for this request */}
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 w-full">
@@ -874,6 +973,13 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   let attachment_url = undefined;
                   try {
                     if (newRequest.attachment) {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      const accessToken = session?.access_token;
+                      if (!accessToken) {
+                        setError('Usuário não autenticado. Faça login novamente.');
+                        setCreating(false);
+                        return;
+                      }
                       const { data, error } = await supabase.storage.from('document-attachments').upload(`individual/${Date.now()}_${newRequest.attachment.name}`, newRequest.attachment);
                       if (error) {
                         setError('Failed to upload attachment: ' + error.message);
@@ -882,19 +988,42 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       }
                       attachment_url = data?.path;
                     }
-                    const { error } = await supabase.from('document_requests').insert({
+                    // LOGS DETALHADOS PARA DEBUG
+                    const payload = {
                       title: newRequest.title,
                       description: newRequest.description,
                       due_date: newRequest.due_date || null,
-                      attachment_url,
-                      university_id: universityContext?.universityId,
+                      university_id: universityId, // agora garantido pelo estado global
                       is_global: false,
                       status: 'open',
-                      created_by: universityContext?.userId,
+                      created_by: currentUserId,
                       scholarship_application_id: applicationId
+                    };
+                    // console.log('Payload enviado para Edge Function (individual):', payload);
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const accessToken = session?.access_token;
+                    if (!accessToken) {
+                      setError('Usuário não autenticado. Faça login novamente.');
+                      setCreating(false);
+                      return;
+                    }
+                    const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-document-request', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
+                      },
+                      body: JSON.stringify(payload),
                     });
-                    if (error) {
-                      setError('Failed to create request: ' + error.message);
+                    let result = {};
+                    try {
+                      result = await response.json();
+                    } catch (e) {
+                      // console.log('Erro ao fazer parse do JSON de resposta (individual):', e);
+                    }
+                    // console.log('Resposta da Edge Function (individual):', result);
+                    if (!response.ok || !result.success) {
+                      setError('Failed to create request: ' + (result.error || 'Unknown error'));
                       setCreating(false);
                       return;
                     }

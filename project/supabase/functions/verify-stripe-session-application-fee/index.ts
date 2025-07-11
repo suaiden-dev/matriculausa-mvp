@@ -172,6 +172,64 @@ Deno.serve(async (req) => {
         console.log('User cart cleared');
       }
 
+      // --- Notificação para a universidade via n8n ---
+      try {
+        // Buscar dados do aluno
+        const { data: alunoData, error: alunoError } = await supabase
+          .from('user_profiles')
+          .select('full_name, email')
+          .eq('user_id', userId)
+          .single();
+        if (alunoError || !alunoData) throw new Error('Aluno não encontrado para notificação');
+
+        // Buscar dados da aplicação (já temos application.scholarship_id)
+        const scholarshipId = application.scholarship_id;
+        // Buscar dados da bolsa
+        const { data: scholarship, error: scholarshipError } = await supabase
+          .from('scholarships')
+          .select('id, name, university_id')
+          .eq('id', scholarshipId)
+          .single();
+        if (scholarshipError || !scholarship) throw new Error('Bolsa não encontrada para notificação');
+
+        // Buscar dados da universidade
+        const { data: universidade, error: univError } = await supabase
+          .from('universities')
+          .select('id, name, contact')
+          .eq('id', scholarship.university_id)
+          .single();
+        if (univError || !universidade) throw new Error('Universidade não encontrada para notificação');
+        const contact = universidade.contact || {};
+        const emailUniversidade = contact.admissionsEmail || contact.email || '';
+
+        // Montar mensagem
+        const mensagem = `O aluno ${alunoData.full_name} selecionou a bolsa "${scholarship.name}" da universidade ${universidade.name} e pagou a taxa de aplicação. Acesse o painel para revisar a candidatura.`;
+        const payload = {
+          tipo_notf: 'Novo pagamento de application fee',
+          email_aluno: alunoData.email,
+          nome_aluno: alunoData.full_name,
+          nome_bolsa: scholarship.name,
+          nome_universidade: universidade.name,
+          email_universidade: emailUniversidade,
+          o_que_enviar: mensagem,
+        };
+        console.log('[NOTIFICAÇÃO] Payload para n8n:', payload);
+        // Enviar para o n8n
+        const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'PostmanRuntime/7.36.3',
+          },
+          body: JSON.stringify(payload),
+        });
+        const n8nText = await n8nRes.text();
+        console.log('[NOTIFICAÇÃO] Resposta do n8n:', n8nRes.status, n8nText);
+      } catch (notifErr) {
+        console.error('[NOTIFICAÇÃO] Erro ao notificar universidade:', notifErr);
+      }
+      // --- Fim da notificação ---
+
       return corsResponse({ 
         status: 'complete', 
         message: 'Session verified and processed successfully.',

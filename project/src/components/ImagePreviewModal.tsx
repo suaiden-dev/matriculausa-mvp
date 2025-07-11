@@ -6,6 +6,8 @@ interface ImagePreviewModalProps {
 }
 
 const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose }) => {
+  const [loading, setLoading] = React.useState(true);
+
   const handleDownload = async () => {
     try {
       const response = await fetch(imageUrl);
@@ -36,10 +38,16 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
         className="relative bg-white p-4 rounded-lg shadow-2xl max-w-4xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the modal content
       >
+        {loading && (
+          <div className="flex items-center justify-center min-h-[300px] min-w-[300px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        )}
         <img 
           src={imageUrl} 
           alt="Image preview" 
-          className="object-contain w-full h-full"
+          className={`object-contain w-full h-full ${loading ? 'hidden' : ''}`}
+          onLoad={() => setLoading(false)}
         />
         <div className="absolute top-2 right-2 flex gap-2">
           <button
