@@ -7,6 +7,7 @@ import type { Scholarship } from '../types';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { supabase } from '../lib/supabase';
 import { STRIPE_PRODUCTS } from '../stripe-config';
+import SmartChat from '../components/SmartChat';
 
 const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -496,6 +497,7 @@ const Scholarships: React.FC = () => {
           </button>
         </div>
       </div>
+      <SmartChat />
     </div>
   );
 };

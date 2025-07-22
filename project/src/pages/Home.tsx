@@ -6,7 +6,7 @@ import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
 import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
-import WhatsAppFloatingButton from '../components/WhatsAppFloatingButton';
+import SmartChat from '../components/SmartChat';
 
 const Home: React.FC = () => {
   const { universities, loading: universitiesLoading } = useUniversities();
@@ -697,8 +697,8 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* WhatsApp Floating Button */}
-      <WhatsAppFloatingButton />
+      {/* Smart Chat with WhatsApp */}
+      <SmartChat />
     </div>
   );
 };

@@ -50,6 +50,7 @@ const Footer: React.FC = () => {
             <ul className="space-y-3">
               <li><Link to="/about" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">About Us</Link></li>
               <li><Link to="/schools" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Partner Universities</Link></li>
+              <li><Link to="/for-universities" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">For Universities</Link></li>
               <li><Link to="/scholarships" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
                 Scholarships <Zap className="ml-1 h-3 w-3 text-yellow-400" />
               </Link></li>

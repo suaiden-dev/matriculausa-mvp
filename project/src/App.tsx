@@ -32,6 +32,7 @@ import ContactUs from './pages/ContactUs';
 import HelpCenter from './pages/HelpCenter';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import ForUniversities from './pages/ForUniversities';
 
 function App() {
   return (
@@ -80,6 +81,7 @@ function App() {
             <Route path="/help-center" element={<HelpCenter />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/for-universities" element={<ForUniversities />} />
             </Routes>
           </Layout>
         </AuthRedirect>

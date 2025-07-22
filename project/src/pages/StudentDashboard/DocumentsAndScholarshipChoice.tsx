@@ -127,14 +127,14 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               </div>
             </label>
             <label className={`flex items-start p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-              studentType === 'status_change' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300'
+              studentType === 'change_of_status' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300'
             }`}>
               <input
                 type="radio"
                 name="processType"
-                value="status_change"
-                checked={studentType === 'status_change'}
-                onChange={() => setStudentType('status_change')}
+                value="change_of_status"
+                checked={studentType === 'change_of_status'}
+                onChange={() => setStudentType('change_of_status')}
                 className="mt-1 mr-4 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                 disabled={isSavingType}
               />

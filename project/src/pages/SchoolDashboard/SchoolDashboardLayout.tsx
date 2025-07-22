@@ -18,7 +18,8 @@ import {
   LogOut,
   User,
   ChevronDown,
-  Shield
+  Shield,
+  Brain
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -48,6 +49,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     if (path.includes('/profile')) return 'profile';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/students')) return 'students';
+    if (path.includes('/ai-solutions')) return 'ai-solutions';
     return 'overview';
   };
 
@@ -76,7 +78,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
-    { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null }
+    { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
+    { id: 'ai-solutions', label: 'AI Solutions', icon: Brain, path: '/school/dashboard/ai-solutions', badge: null }
   ];
 
   return (

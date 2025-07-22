@@ -41,9 +41,12 @@ export const useApplicationChat = (applicationId?: string) => {
     setLoading(true);
     setError(null);
     try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
       const { data, error: functionError } = await supabase.functions.invoke('list-application-messages', {
         method: 'POST',
         body: { application_id: applicationId },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (functionError) {
@@ -129,7 +132,7 @@ export const useApplicationChat = (applicationId?: string) => {
           .upload(filePath, file);
         if (uploadError) {
           console.error('[ChatUpload] Erro detalhado do upload:', uploadError);
-          setError(`Erro no upload: ${uploadError.message || uploadError.error || 'Erro desconhecido.'}`);
+          setError(`Erro no upload: ${uploadError.message || 'Erro desconhecido.'}`);
           throw new Error('Failed to upload attachment.');
         } else {
           console.log('[ChatUpload] Upload realizado com sucesso:', uploadData);

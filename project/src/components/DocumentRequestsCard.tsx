@@ -27,7 +27,7 @@ interface DocumentRequestsCardProps {
   applicationId: string;
   isSchool: boolean;
   currentUserId: string;
-  studentType: 'initial' | 'transfer' | 'status_change';
+  studentType: 'initial' | 'transfer' | 'change_of_status';
   studentUserId?: string; // Novo: id do usuário do aluno
 }
 
@@ -142,8 +142,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           .order('created_at', { ascending: false });
         if (globalError) throw globalError;
         globalRequests = (globalData || []).filter((req: any) => {
-          if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types)) return true;
-          return req.applicable_student_types.includes(studentType);
+          // Se não houver applicable_student_types ou não for array, mostra para todos
+          if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types) || req.applicable_student_types.length === 0) return true;
+          // Se o tipo do estudante estiver incluso, mostra
+          if (req.applicable_student_types.includes(studentType)) return true;
+          // Se o array inclui 'all', mostra para todos
+          if (req.applicable_student_types.includes('all')) return true;
+          // Caso contrário, não mostra
+          return false;
         });
         // console.log('[DocumentRequestsCard] universityId usado:', universityId);
         // console.log('[DocumentRequestsCard] globalRequests:', globalRequests.length, globalRequests);
@@ -230,6 +236,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         scholarship_application_id: applicationId,
         created_by: currentUserId,
         university_id: universityId,
+        is_global: false, // Request individual
       };
       // console.log('[DEBUG] Enviando para Edge Function create-document-request', payload);
       // console.log('Payload enviado para Edge Function:', payload);
@@ -531,12 +538,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       {/* <h2 className="text-2xl font-bold mb-6 text-[#05294E]">Document Requests</h2> */}
       {/* <p className="text-slate-500 mb-8">Below are the documents requested by the university. Download templates if available and upload your files for each request.</p> */}
 
+
+
+      {/* Lista de Document Requests - Design Antigo */}
       <div className="space-y-8">
         {requests.length === 0 ? (
           <div className="text-center text-slate-400 py-12">
             <svg className="mx-auto w-16 h-16 mb-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
             <p>No document requests found.</p>
-      </div>
+          </div>
         ) : (
           requests.map(req => {
             // Determinar status principal do upload do aluno para cor da borda
@@ -559,7 +569,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0H6m6 0h6" /></svg>
                       </span>
                     )}
-              <div>
+                    <div>
                       <h3 className="font-bold text-xl text-[#05294E]">{req.title}</h3>
                       <p className="text-sm text-slate-500 mt-1">{req.description}</p>
                     </div>
@@ -696,26 +706,26 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 w-full">
                     <label className="btn-ghost cursor-pointer bg-[#F1F5F9] hover:bg-[#3B82F6]/10 text-[#3B82F6] px-3 py-2 rounded-lg font-medium transition w-full sm:w-auto" title="Upload new file">
                       <span>Upload new file</span>
-                    <input
-                      id={`file-upload-${req.id}`}
-                      type="file"
+                      <input
+                        id={`file-upload-${req.id}`}
+                        type="file"
                         title="Select a file to upload"
                         placeholder="Choose a file"
-                      onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
-                      className="sr-only"
-                    />
-                  </label>
-                  {selectedFiles[req.id] && (
-                    <span className="text-sm text-gray-700 truncate max-w-xs w-full sm:w-auto">{selectedFiles[req.id]?.name}</span>
-                  )}
-                  <button
+                        onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
+                        className="sr-only"
+                      />
+                    </label>
+                    {selectedFiles[req.id] && (
+                      <span className="text-sm text-gray-700 truncate max-w-xs w-full sm:w-auto">{selectedFiles[req.id]?.name}</span>
+                    )}
+                    <button
                       className={`bg-[#22C55E] text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto`}
-                    disabled={!selectedFiles[req.id] || uploading[req.id]}
-                    onClick={() => handleSendUpload(req.id)}
+                      disabled={!selectedFiles[req.id] || uploading[req.id]}
+                      onClick={() => handleSendUpload(req.id)}
                       title="Send file"
-                  >
+                    >
                       {uploading[req.id] ? 'Uploading...' : 'Upload'}
-                  </button>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -723,7 +733,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           })
         )}
       </div>
-      {/* Acceptance Letter block and Modal remain unchanged */}
+
+      {/* Acceptance Letter block - MOVIDO PARA O FINAL */}
       <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-2xl p-8 mt-8 shadow-xl hover:shadow-2xl transition-shadow duration-300 ring-1 ring-yellow-100">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-3">
@@ -734,7 +745,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
               {(!acceptanceLetter?.acceptance_letter_url || acceptanceLetter?.acceptance_letter_status === 'pending') && (
                 <p className="text-yellow-800 text-base">
                   {isSchool
-                    ? 'Please upload the student’s acceptance letter and any other required documents, such as the I-20 Control Fee receipt.'
+                    ? 'Please upload the student\'s acceptance letter and any other required documents, such as the I-20 Control Fee receipt.'
                     : "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."}
                 </p>
               )}
@@ -777,8 +788,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 disabled={acceptanceLoading}
               />
             </label>
-              </div>
-            )}
+          </div>
+        )}
         
         {/* Download da acceptance letter */}
         {acceptanceLetter?.acceptance_letter_url && (
@@ -817,6 +828,82 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           </div>
         )}
       </div>
+
+      {/* Transfer Form block: só para transfer, no final da página */}
+      {studentType === 'transfer' && (
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-2xl p-8 mt-8 shadow-xl hover:shadow-2xl transition-shadow duration-300 ring-1 ring-blue-100">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-9 h-9 text-blue-500 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" /></svg>
+            <div>
+              <h3 className="text-2xl font-extrabold text-blue-900 mb-1 drop-shadow">Transfer Form</h3>
+              <p className="text-blue-800 text-base">
+                {isSchool
+                  ? 'Upload the transfer form for this student. Only visible for transfer students.'
+                  : 'Your university will upload your transfer form here. Download it when available.'}
+              </p>
+            </div>
+          </div>
+          {/* Upload para escola */}
+          {isSchool ? (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 w-full">
+              <label className="btn-ghost cursor-pointer bg-[#F1F5F9] hover:bg-[#3B82F6]/10 text-[#3B82F6] px-3 py-2 rounded-lg font-medium transition w-full sm:w-auto" title="Upload transfer form">
+                <span>Upload transfer form</span>
+                <input
+                  id="transfer-form-upload"
+                  type="file"
+                  title="Select transfer form"
+                  placeholder="Choose a file"
+                  onChange={e => handleFileSelect('transfer_form', e.target.files ? e.target.files[0] : null)}
+                  className="sr-only"
+                />
+              </label>
+              {selectedFiles['transfer_form'] && (
+                <span className="text-sm text-gray-700 truncate max-w-xs w-full sm:w-auto">{selectedFiles['transfer_form']?.name}</span>
+              )}
+              <button
+                className={`bg-[#22C55E] text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto`}
+                disabled={!selectedFiles['transfer_form'] || uploading['transfer_form']}
+                onClick={() => handleSendUpload('transfer_form')}
+                title="Send transfer form"
+              >
+                {uploading['transfer_form'] ? 'Uploading...' : 'Upload'}
+              </button>
+            </div>
+          ) : (
+            // Download/visualização para aluno
+            <div className="flex flex-col gap-2 mt-2">
+              {/* Exibir botão de download se houver upload feito pela escola */}
+              {uploads['transfer_form'] && uploads['transfer_form'].length > 0 ? (
+                uploads['transfer_form'].map(upload => (
+                  <div key={upload.id} className="flex items-center gap-3">
+                    <button
+                      className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700 transition"
+                      onClick={async () => {
+                        const signedUrl = await getSignedUrl(upload.file_url, upload.id);
+                        if (signedUrl) handleForceDownload(signedUrl, upload.file_url.split('/').pop() || 'transfer_form.pdf');
+                      }}
+                    >
+                      Download Transfer Form
+                    </button>
+                    <button
+                      className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition"
+                      onClick={async () => {
+                        const signedUrl = await getSignedUrl(upload.file_url, upload.id);
+                        if (signedUrl) window.open(signedUrl, '_blank');
+                      }}
+                    >
+                      View
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <span className="text-slate-400 text-xs">No transfer form uploaded yet.</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* New Request Modal */}
       {showNewModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">

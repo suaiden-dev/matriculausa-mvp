@@ -303,7 +303,7 @@ const ApplicationChatPage: React.FC = () => {
                 <div><strong>Student Type:</strong> {
                   applicationDetails.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
                   applicationDetails.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                  applicationDetails.student_process_type === 'status_change' ? 'Status Change - From Other Visa' :
+                  applicationDetails.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
                   applicationDetails.student_process_type || 'N/A'
                 }</div>
               </div>
@@ -398,42 +398,79 @@ const ApplicationChatPage: React.FC = () => {
             </DashboardCard>
           </>
         )}
-        {activeTab === 'i20' && applicationDetails && applicationDetails.status === 'enrolled' && !hasPaid && (
+        {activeTab === 'i20' && applicationDetails && applicationDetails.status === 'enrolled' && (
           <DashboardCard>
-          <h3 className="text-xl font-bold text-[#05294E] mb-4">I-20 Control Fee</h3>
-          <div className="mb-3 text-sm text-slate-700">
-            The <strong>I-20 Control Fee</strong> is a mandatory fee required for the issuance and management of your I-20 document, which is essential for the F-1 student visa process in the United States. <br />
-            <span className="font-semibold">You have up to <span className="text-blue-700">10 days</span> after paying your Scholarship Fee to pay the I-20 Control Fee.</span> The timer below shows exactly how much time you have left to complete this payment. <br />
-            Paying this fee ensures that your I-20 will be processed and sent correctly by the university. If you have any questions about this process, please contact support or chat with the university below.
-          </div>
-          {/* Cronômetro e botão lado a lado (invertidos) */}
-          <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 w-full mt-4">
-            <div className="flex-1 flex items-center justify-center">
-                <button
-                  className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium w-full md:w-auto min-w-[140px] max-w-xs shadow-md border border-blue-200"
-                  onClick={handlePayI20}
-                  disabled={i20Loading}
-                    style={{height: '44px'}}>
-                  {i20Loading ? 'Processing...' : 'Pay I-20 Control Fee'}
-                </button>
-            </div>
-              {scholarshipFeeDeadline && (
-              <div className={`flex-1 min-w-[140px] max-w-xs p-3 rounded-xl shadow-md text-center border ${i20Countdown === 'Expired' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}
-                   style={{height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                {i20Countdown === 'Expired' ? (
-                  <span className="text-red-600 font-bold text-sm md:text-base">The deadline to pay the I-20 Control Fee has expired!</span>
-                ) : (
-                  <span className="font-mono text-base md:text-lg text-[#05294E] tracking-widest">
-                    {i20Countdown}
-                  </span>
+            <h3 className="text-xl font-bold text-[#05294E] mb-4">I-20 Control Fee</h3>
+            
+            {!hasPaid ? (
+              <>
+                <div className="mb-3 text-sm text-slate-700">
+                  The <strong>I-20 Control Fee</strong> is a mandatory fee required for the issuance and management of your I-20 document, which is essential for the F-1 student visa process in the United States. <br />
+                  <span className="font-semibold">You have up to <span className="text-blue-700">10 days</span> after paying your Scholarship Fee to pay the I-20 Control Fee.</span> The timer below shows exactly how much time you have left to complete this payment. <br />
+                  Paying this fee ensures that your I-20 will be processed and sent correctly by the university. If you have any questions about this process, please contact support or chat with the university below.
+                </div>
+                {/* Cronômetro e botão lado a lado (invertidos) */}
+                <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 w-full mt-4">
+                  <div className="flex-1 flex items-center justify-center">
+                    <button
+                      className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium w-full md:w-auto min-w-[140px] max-w-xs shadow-md border border-blue-200"
+                      onClick={handlePayI20}
+                      disabled={i20Loading}
+                      style={{height: '44px'}}>
+                      {i20Loading ? 'Processing...' : 'Pay I-20 Control Fee'}
+                    </button>
+                  </div>
+                  {scholarshipFeeDeadline && (
+                    <div className={`flex-1 min-w-[140px] max-w-xs p-3 rounded-xl shadow-md text-center border ${i20Countdown === 'Expired' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}
+                         style={{height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                      {i20Countdown === 'Expired' ? (
+                        <span className="text-red-600 font-bold text-sm md:text-base">The deadline to pay the I-20 Control Fee has expired!</span>
+                      ) : (
+                        <span className="font-mono text-base md:text-lg text-[#05294E] tracking-widest">
+                          {i20Countdown}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {dueDate && (
+                  <span className="text-xs text-slate-600">Due date: {new Date(dueDate).toLocaleDateString()}</span>
                 )}
-              </div>
+                {i20Error && <div className="text-center text-red-500 py-2">{i20Error}</div>}
+              </>
+            ) : (
+              <>
+                <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h4 className="text-lg font-bold text-green-800">I-20 Control Fee Paid Successfully!</h4>
+                  </div>
+                  <p className="text-green-700 mb-3">
+                    Your I-20 Control Fee payment has been processed successfully. Your I-20 document will now be prepared and sent to you by the university.
+                  </p>
+                  <div className="text-sm text-green-600">
+                    <strong>Next steps:</strong>
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>Wait for the university to process your I-20 document</li>
+                      <li>You will receive your I-20 document via email</li>
+                      <li>Use the I-20 to apply for your F-1 student visa</li>
+                      <li>Contact the university if you have any questions about the process</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <h5 className="font-semibold text-blue-900 mb-2">Payment Information</h5>
+                  <div className="text-sm text-blue-800 space-y-1">
+                    <div><strong>Amount Paid:</strong> $900</div>
+                    <div><strong>Payment Date:</strong> {paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
+                    <div><strong>Status:</strong> <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Completed</span></div>
+                  </div>
+                </div>
+              </>
             )}
-          </div>
-          {dueDate && (
-            <span className="text-xs text-slate-600">Due date: {new Date(dueDate).toLocaleDateString()}</span>
-          )}
-          {i20Error && <div className="text-center text-red-500 py-2">{i20Error}</div>}
           </DashboardCard>
         )}
         {activeTab === 'chat' && (

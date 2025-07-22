@@ -24,6 +24,7 @@ import {
   GraduationCap,
   CreditCard
 } from 'lucide-react';
+import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
   return (
@@ -353,6 +354,7 @@ const HowItWorks: React.FC = () => {
           </div>
         </div>
       </section>
+      <SmartChat />
     </div>
   );
 };

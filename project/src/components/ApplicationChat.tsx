@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import ImagePreviewModal from './ImagePreviewModal';
 
 export interface ChatMessage {
@@ -124,6 +124,17 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   const [file, setFile] = useState<File | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll inteligente: só rola se o usuário já estiver perto do final
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+    if (isNearBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages.length]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,9 +163,13 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
           paymentDate={i20ControlFee.paymentDate}
         />
       )}
-      <div className="flex flex-col h-full max-h-[80vh] w-full bg-gray-50 rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+      <div className="flex flex-col h-full max-h-[90vh] min-h-[70vh] w-full overflow-hidden">
         {/* Messages */}
-        <div className={`flex-1 overflow-y-auto p-3 space-y-2 bg-white ${messageContainerClassName || ''}`} style={{ minHeight: '300px', maxHeight: '60vh' }}>
+        <div
+          ref={messagesContainerRef}
+          className={`flex-1 overflow-y-auto p-3 space-y-2 bg-white ${messageContainerClassName || ''}`}
+          style={{ minHeight: '400px', maxHeight: '75vh' }}
+        >
           {messages.length === 0 && (
             <div className="text-center text-gray-400 mt-8">No messages yet.</div>
           )}

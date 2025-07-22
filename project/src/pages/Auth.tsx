@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import PhoneInput from 'react-phone-number-input';
@@ -33,6 +33,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [showStudentVerificationNotice, setShowStudentVerificationNotice] = useState(false);
   
   const { login, register, isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
 
   // Global scroll-to-top on login/register page load
   useEffect(() => {
@@ -77,7 +78,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
         
         const userData = {
-          full_name: activeTab === 'student' ? formData.full_name : formData.name,
+          full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
           role: (activeTab === 'student' ? 'student' : 'school') as 'student' | 'school',
           // Add additional registration data only for universities
           ...(activeTab === 'university' && {
@@ -162,6 +163,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     setActiveTab(tab);
   };
 
+  useEffect(() => {
+    if (showVerificationModal || showStudentVerificationNotice) {
+      const timer = setTimeout(() => {
+        navigate('/login');
+      }, 3000); // 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showVerificationModal, showStudentVerificationNotice, navigate]);
+
   if (mode === 'login') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -176,7 +186,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               />
             </div>
             <h2 className="text-4xl font-black text-slate-900 mb-4">
-              Welcome Back
+              Login
             </h2>
             <p className="text-slate-600 text-lg">
               Sign in to access your dashboard and continue your educational journey
@@ -510,7 +520,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         name="name"
                         type="text"
                         required
-                        value={formData.name || ''}
+                        value={formData.full_name || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="Your full name"

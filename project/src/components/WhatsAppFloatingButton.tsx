@@ -25,7 +25,7 @@ const WhatsAppFloatingButton: React.FC<WhatsAppFloatingButtonProps> = ({
           position: 'fixed',
           bottom: '20px',
           right: '20px',
-          zIndex: 99999,
+          zIndex: 9999,
           pointerEvents: 'auto',
           display: 'flex',
           flexDirection: 'column',

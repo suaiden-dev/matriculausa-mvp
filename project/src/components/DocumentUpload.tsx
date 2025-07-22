@@ -18,7 +18,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, userProfile } = useAuth();
   const navigate = useNavigate();
 
   // Função para sanitizar nome do arquivo removendo caracteres especiais
@@ -41,11 +41,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
     try {
       if (!user) throw new Error('User not authenticated');
       const uploadedDocs: { name: string; url: string; type: string; uploaded_at: string }[] = [];
-      
+      const docUrls: Record<string, string> = {};
       for (const doc of DOCUMENT_TYPES) {
         const file = files[doc.key];
         if (!file) throw new Error(`Missing file for ${doc.label}`);
-        
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
           const [resource, config] = args;
@@ -57,18 +56,15 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
           }
           return originalFetch.apply(this, args);
         };
-        
         const sanitizedFileName = sanitizeFileName(file.name);
         const { data: storageData, error: storageError } = await supabase.storage
           .from('student-documents')
           .upload(`${user.id}/${doc.key}-${Date.now()}-${sanitizedFileName}`, file, { upsert: true });
-        
         window.fetch = originalFetch;
         if (storageError) throw storageError;
-        
         const file_url = storageData?.path ? supabase.storage.from('student-documents').getPublicUrl(storageData.path).data.publicUrl : null;
         if (!file_url) throw new Error('Failed to get file URL');
-        
+        docUrls[doc.key] = file_url;
         const { error: insertError } = await supabase.from('student_documents').insert({
           user_id: user.id,
           type: doc.key,
@@ -76,60 +72,88 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
           status: 'pending',
         });
         if (insertError) throw insertError;
-        
         uploadedDocs.push({ name: file.name, url: file_url, type: doc.key, uploaded_at: new Date().toISOString() });
       }
-      
-      // Busca documentos atuais
-      const { data: userProfile, error: userProfileError } = await supabase
-        .from('user_profiles')
-        .select('documents')
-        .eq('user_id', user.id)
-        .single();
-      if (userProfileError) throw userProfileError;
-      
-      const currentDocs = Array.isArray(userProfile.documents) ? userProfile.documents : [];
-      const newDocs = [...currentDocs, ...uploadedDocs];
-      
-      // Atualiza TODAS as colunas relacionadas a documentos
-      const updateData = {
-        documents: newDocs,
-        documents_uploaded: true,
-        documents_status: 'analyzing' as const
-      };
-      
-      // Atualiza diretamente no banco para evitar problemas de tipo
-      await supabase
-        .from('user_profiles')
-        .update(updateData)
-        .eq('user_id', user.id);
 
+      // Enviar para o webhook de análise (agora com os 3 documentos)
       setUploading(false);
       setAnalyzing(true);
-      
-      // Simula análise por 40 segundos e depois marca como aprovado
-      setTimeout(async () => {
+      const webhookBody = {
+        user_id: user.id,
+        student_name: userProfile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email || '',
+        passport_url: docUrls['passport'],
+        diploma_url: docUrls['diploma'],
+        funds_proof_url: docUrls['funds_proof'],
+      };
+      const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const webhookResponse = await fetch(`${SUPABASE_FUNCTIONS_URL}/analyze-student-documents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(webhookBody),
+      });
+      const webhookResult = await webhookResponse.json();
+      // Adaptação para o novo formato de resposta do n8n
+      let n8nData = null;
+      if (webhookResult.n8nResponse) {
         try {
-          const finalUpdateData = {
-            documents_status: 'approved' as const
-          };
-          
+          n8nData = JSON.parse(webhookResult.n8nResponse);
+        } catch (e) {
+          n8nData = webhookResult.n8nResponse;
+        }
+      }
+      // Se não vier via n8nResponse, tente usar o próprio webhookResult
+      if (!n8nData && webhookResult.response_passaport !== undefined) {
+        n8nData = webhookResult;
+      }
+      if (n8nData) {
+        const allValid = n8nData.response_passaport === true && n8nData.response_funds === true && n8nData.response_degree === true;
+        if (allValid) {
           await supabase
             .from('user_profiles')
-            .update(finalUpdateData)
+            .update({
+              documents: uploadedDocs,
+              documents_uploaded: true,
+              documents_status: 'approved',
+            })
             .eq('user_id', user.id);
-          
           setAnalyzing(false);
           onUploadSuccess();
           navigate('/student/dashboard/application-fee');
-        } catch (e) {
-          console.error('Erro ao atualizar status final:', e);
+        } else {
+          // Monta mensagem de erro detalhada
+          let errorMsg = 'Some documents need to be re-uploaded:';
+          if (!n8nData.response_passaport) {
+            errorMsg += `\n- Passport: ${n8nData.details_passport || 'Invalid document.'}`;
+          }
+          if (!n8nData.response_funds) {
+            errorMsg += `\n- Proof of Funds: ${n8nData.details_funds || 'Invalid document.'}`;
+          }
+          if (!n8nData.response_degree) {
+            errorMsg += `\n- High School Diploma: ${n8nData.details_degree || 'Invalid document.'}`;
+          }
           setAnalyzing(false);
-          onUploadSuccess();
+          setError(errorMsg);
+          // Limpa apenas os arquivos inválidos para reenvio
+          setFiles(prev => {
+            const updated = { ...prev };
+            if (!n8nData.response_passaport) updated['passport'] = null;
+            if (!n8nData.response_funds) updated['funds_proof'] = null;
+            if (!n8nData.response_degree) updated['diploma'] = null;
+            return updated;
+          });
         }
-      }, 40000);
+      } else {
+        setAnalyzing(false);
+        setError('Unexpected response from document analysis. Please try again.');
+      }
     } catch (e: any) {
       setUploading(false);
+      setAnalyzing(false);
       setError(e.message || 'Upload failed');
     }
   };

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 const options = [
   { value: 'initial', label: 'Initial (I am outside the US and need an F-1 student visa)' },
   { value: 'transfer', label: 'Transfer (I am already in the US with an F-1 visa and want to transfer schools)' },
-  { value: 'status_change', label: 'Status Change (I am in the US with another visa and want to change to student)' },
+  { value: 'change_of_status', label: 'Change of Status (I am in the US with another visa and want to change to student)' },
 ];
 
 interface StudentTypeModalProps {

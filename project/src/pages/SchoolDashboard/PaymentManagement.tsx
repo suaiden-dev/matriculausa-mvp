@@ -124,7 +124,7 @@ const PaymentManagement: React.FC = () => {
     <div className="p-4 md:p-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Payment Management</h1>
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <p>Here you can view student payments for your university's scholarships - selection process, application, scholarship, and I-20 control fees.</p>
+        <p>Here you can view student payments for your university's scholarships - only the selection process fee status is shown.</p>
         <div className="mt-4 flex items-center justify-between">
           <input
             type="text"
@@ -148,15 +148,13 @@ const PaymentManagement: React.FC = () => {
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Student</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700">Phone</th>
-                {FEE_TYPES.map(fee => (
-                  <th key={fee.key} className="px-4 py-3 text-left font-semibold text-slate-700">{fee.label}</th>
-                ))}
+                <th className="px-4 py-3 text-left font-semibold text-slate-700">Selection Process Fee</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center text-gray-400 py-8">No students found.</td>
+                  <td colSpan={4} className="text-center text-gray-400 py-8">No students found.</td>
                 </tr>
               )}
               {filtered.map((student, idx) => (
@@ -166,33 +164,12 @@ const PaymentManagement: React.FC = () => {
                   <td className="px-4 py-3 font-semibold text-[#05294E]">{student.full_name}</td>
                   <td className="px-4 py-3">{student.email || '-'}</td>
                   <td className="px-4 py-3">{student.phone || '-'}</td>
-                  {/* Selection Process Fee */}
                   <td className="px-4 py-3">
                     {student.has_paid_selection_process_fee ? (
                       <span className="flex items-center gap-1 text-green-600 font-bold"><CheckCircle size={18} className="inline" /> Paid</span>
                     ) : (
                       <span className="flex items-center gap-1 text-red-500 font-bold"><XCircle size={18} className="inline" /> Pending</span>
                     )}
-                  </td>
-                  {/* Application Fee */}
-                  <td className="px-4 py-3">
-                    {student.is_application_fee_paid ? (
-                      <span className="flex items-center gap-1 text-green-600 font-bold"><CheckCircle size={18} className="inline" /> Paid</span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-red-500 font-bold"><XCircle size={18} className="inline" /> Pending</span>
-                    )}
-                  </td>
-                  {/* Scholarship Fee */}
-                  <td className="px-4 py-3">
-                    {student.is_scholarship_fee_paid ? (
-                      <span className="flex items-center gap-1 text-green-600 font-bold"><CheckCircle size={18} className="inline" /> Paid</span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-red-500 font-bold"><XCircle size={18} className="inline" /> Pending</span>
-                    )}
-                  </td>
-                  {/* I-20 Control Fee (sempre pendente) */}
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-1 text-red-500 font-bold"><XCircle size={18} className="inline" /> Pending</span>
                   </td>
                 </tr>
               ))}
