@@ -115,11 +115,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const isEmailOnlyOAuth = localStorage.getItem('oauth_provider_pending');
         
         if (isEmailOnlyOAuth) {
-          console.log('🔄 [USEAUTH] OAuth detectado para funcionalidades de email apenas. Não criando perfil.');
-          // Não criar perfil, apenas retornar usuário existente
-          setUser(buildUser(session.user, null));
-          setSupabaseUser(session.user);
-          setUserProfile(null);
+          console.log('🔄 [USEAUTH] OAuth detectado para funcionalidades de email apenas. Redirecionando...');
+          // Fazer logout imediatamente para evitar criação de usuário
+          await supabase.auth.signOut();
           return;
         }
 
