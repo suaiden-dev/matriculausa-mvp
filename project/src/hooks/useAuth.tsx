@@ -268,7 +268,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setSupabaseUser(session.user);
 
         // Sincronizar telefone do user_metadata se o perfil não tiver
-        if (!profile.phone && session.user.user_metadata?.phone) {
+        if (profile && !profile.phone && session.user.user_metadata?.phone) {
           console.log('🔄 [USEAUTH] Sincronizando telefone do user_metadata para o perfil:', session.user.user_metadata.phone);
           try {
             const { data: updatedProfile, error: updateError } = await supabase
@@ -407,7 +407,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
     
     console.log('🔍 [USEAUTH] signUpData que será enviado:', signUpData);
-    console.log('🔍 [USEAUTH] Telefone no signUpData:', signUpData.phone);
+    console.log('🔍 [USEAUTH] Telefone no signUpData:', (signUpData as any).phone);
     
     const { error, data } = await supabase.auth.signUp({
       email,

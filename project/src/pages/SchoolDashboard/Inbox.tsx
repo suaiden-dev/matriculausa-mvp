@@ -25,6 +25,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import AuthConnect from '../../components/AuthConnect';
+import EmailComposer from '../../components/EmailComposer';
 
 interface Email {
   id: string;
@@ -46,6 +47,7 @@ const Inbox: React.FC = () => {
   const [isComposing, setIsComposing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasEmailConnection, setHasEmailConnection] = useState(true); // Habilitar demo de e-mails
+  const [composerEmail, setComposerEmail] = useState<any>(null);
 
   // Mock data - será substituído por dados reais da API
   useEffect(() => {
@@ -134,6 +136,23 @@ const Inbox: React.FC = () => {
     }
   };
 
+  const handleReply = (email: Email) => {
+    setComposerEmail({
+      id: email.id,
+      threadId: email.id, // Using email ID as thread ID for demo
+      from: email.from,
+      subject: email.subject,
+      snippet: email.preview
+    });
+    setIsComposing(true);
+  };
+
+  const handleSendEmail = (result: any) => {
+    console.log('Email sent successfully:', result);
+    // Here you could update the UI to show the sent email
+    // or refresh the email list
+  };
+
   const toggleStar = (emailId: string) => {
     setEmails(prev => prev.map(email => 
       email.id === emailId ? { ...email, isStarred: !email.isStarred } : email
@@ -206,11 +225,14 @@ const Inbox: React.FC = () => {
             <div>
               <h1 className="text-xl font-bold text-white">Inbox</h1>
               <p className="text-white/80 text-sm">{filteredEmails.length} messages</p>
-              <div className="flex items-center space-x-2 mt-1">
-                <div className="bg-yellow-500/20 px-2 py-1 rounded-lg">
-                  <span className="text-yellow-200 text-xs font-medium">DEMO MODE</span>
+                              <div className="flex items-center space-x-2 mt-1">
+                  <div className="bg-yellow-500/20 px-2 py-1 rounded-lg">
+                    <span className="text-yellow-200 text-xs font-medium">DEMO MODE</span>
+                  </div>
+                  <div className="bg-blue-500/20 px-2 py-1 rounded-lg">
+                    <span className="text-blue-200 text-xs font-medium">TEMPLATE RESPONSES</span>
+                  </div>
                 </div>
-              </div>
             </div>
           </div>
           
@@ -429,7 +451,10 @@ const Inbox: React.FC = () => {
               {/* Reply Section */}
               <div className="p-6 border-t border-slate-200 bg-slate-50">
                 <div className="flex items-center space-x-4">
-                  <button className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#041f3f] transition-colors flex items-center space-x-2">
+                  <button 
+                    onClick={() => handleReply(selectedEmail)}
+                    className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#041f3f] transition-colors flex items-center space-x-2"
+                  >
                     <Reply className="h-4 w-4" />
                     <span>Reply</span>
                   </button>
@@ -455,6 +480,17 @@ const Inbox: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Email Composer Modal */}
+      <EmailComposer
+        originalEmail={composerEmail}
+        onSend={handleSendEmail}
+        onClose={() => {
+          setIsComposing(false);
+          setComposerEmail(null);
+        }}
+        isOpen={isComposing}
+      />
     </div>
   );
 };
