@@ -52,7 +52,11 @@ import {
   Zap,
   Heart,
   Phone,
-  Mail
+  Mail,
+  MessageCircle,
+  Smartphone,
+  Bot,
+  BarChart3
 } from 'lucide-react';
 import SmartChat from '../components/SmartChat';
 import { useAuth } from '../hooks/useAuth';
@@ -194,8 +198,174 @@ const ForUniversities: React.FC = () => {
         </div>
       </section>
 
-      {/* Trusted Universities Section */}
+      {/* AI Solutions Section */}
       <section className="py-24 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
+              AI-Powered <span className="text-[#05294E]">Solutions</span> for Universities
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Transform your university operations with cutting-edge AI solutions designed specifically for educational institutions
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-green-500 to-emerald-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <MessageCircle className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">WhatsApp AI Assistant</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Automate WhatsApp customer service with intelligent AI responses, 24/7 support, and seamless integration with your university database.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Multi-language support</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Sentiment analysis</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">48-72h implementation</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <Mail className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Email AI Management</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Intelligent email management with automatic categorization, context-based responses, and integration with your university CRM.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Priority analysis</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Performance reports</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">48-72h implementation</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-purple-500 to-violet-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <Smartphone className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">SMS AI Campaigns</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Intelligent and personalized SMS campaigns with automatic student segmentation and real-time engagement analysis.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Student segmentation</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Academic calendar integration</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">48-72h implementation</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-orange-500 to-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <Bot className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Advanced AI Chatbot</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Intelligent chatbot for websites and applications with natural conversations and integration with academic systems.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Natural conversations</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Multi-language support</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">72-96h implementation</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-teal-500 to-cyan-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <BarChart3 className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">AI Analytics & Insights</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Predictive analysis and insights for strategic decisions with automated personalized reports and intelligent alerts.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Predictive enrollment analysis</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Real-time dashboard</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">96-120h implementation</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-pink-500 to-rose-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <FileText className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">AI Document Processing</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Intelligent processing of academic documents with automatic data extraction, validation, and advanced OCR capabilities.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Automatic data extraction</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Document validation</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">72-96h implementation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-center mt-12">
+            <button className="bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white px-8 py-4 rounded-2xl font-semibold hover:scale-105 transition-all duration-300 shadow-lg">
+              View All AI Solutions
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Trusted Universities Section */}
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
