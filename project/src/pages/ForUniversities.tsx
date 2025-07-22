@@ -393,6 +393,224 @@ const ForUniversities: React.FC = () => {
         </div>
       </section>
 
+      {/* Student Recruitment & Marketing Section */}
+      <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-red-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
+              Comprehensive <span className="text-[#05294E]">Student Recruitment</span> & Marketing
+            </h2>
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              Our multi-channel marketing approach ensures maximum visibility and attracts high-quality international students to your institution.
+            </p>
+          </div>
+          
+          {/* Marketing Channels */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <Globe className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Digital Marketing</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Strategic digital campaigns across social media, search engines, and educational platforms to reach prospective students worldwide.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Social media advertising</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Google Ads & SEO</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Content marketing</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-green-500 to-emerald-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <MessageCircle className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Social Media & Messaging</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Active presence on WhatsApp, Instagram, Facebook, and LinkedIn with personalized engagement strategies.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">WhatsApp Business</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Instagram & Facebook Ads</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">LinkedIn targeting</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
+              <div className="bg-gradient-to-br from-purple-500 to-violet-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
+                <Users className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-4">Partnership Network</h3>
+              <p className="text-slate-600 mb-4 leading-relaxed">
+                Extensive network of educational consultants, agents, and institutions across Latin America and other regions.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Educational consultants</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">Study abroad agents</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-slate-600">University partnerships</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Marketing Statistics */}
+          <div className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200 mb-16">
+            <div className="text-center mb-12">
+              <h3 className="text-3xl font-bold text-slate-900 mb-4">Our Marketing Reach & Results</h3>
+              <p className="text-xl text-slate-600">Comprehensive data-driven approach to student recruitment</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <TrendingUp className="h-10 w-10 text-white" />
+                </div>
+                <div className="text-3xl font-bold text-slate-900 mb-2">500K+</div>
+                <p className="text-slate-600">Monthly Reach</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Target className="h-10 w-10 text-white" />
+                </div>
+                <div className="text-3xl font-bold text-slate-900 mb-2">15+</div>
+                <p className="text-slate-600">Target Countries</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Zap className="h-10 w-10 text-white" />
+                </div>
+                <div className="text-3xl font-bold text-slate-900 mb-2">85%</div>
+                <p className="text-slate-600">Response Rate</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Award className="h-10 w-10 text-white" />
+                </div>
+                <div className="text-3xl font-bold text-slate-900 mb-2">95%</div>
+                <p className="text-slate-600">Student Satisfaction</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Marketing Strategy Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="bg-white rounded-3xl p-8 shadow-lg border border-slate-200">
+              <h3 className="text-2xl font-bold text-slate-900 mb-6">Target Markets & Demographics</h3>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="bg-[#05294E] w-6 h-6 rounded-full flex items-center justify-center mt-1">
+                    <span className="text-white text-xs font-bold">1</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Latin America</h4>
+                    <p className="text-sm text-slate-600">Brazil, Mexico, Colombia, Argentina, Chile, Peru</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="bg-[#D0151C] w-6 h-6 rounded-full flex items-center justify-center mt-1">
+                    <span className="text-white text-xs font-bold">2</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Asia Pacific</h4>
+                    <p className="text-sm text-slate-600">India, China, South Korea, Vietnam, Philippines</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="bg-[#05294E] w-6 h-6 rounded-full flex items-center justify-center mt-1">
+                    <span className="text-white text-xs font-bold">3</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Europe & Middle East</h4>
+                    <p className="text-sm text-slate-600">Germany, France, Spain, UAE, Saudi Arabia</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="bg-[#D0151C] w-6 h-6 rounded-full flex items-center justify-center mt-1">
+                    <span className="text-white text-xs font-bold">4</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Africa</h4>
+                    <p className="text-sm text-slate-600">Nigeria, Ghana, Kenya, South Africa, Egypt</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-lg border border-slate-200">
+              <h3 className="text-2xl font-bold text-slate-900 mb-6">Marketing Campaign Types</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Awareness Campaigns</h4>
+                    <p className="text-sm text-slate-600">Brand visibility and platform introduction</p>
+                  </div>
+                  <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Ongoing
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl">
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Lead Generation</h4>
+                    <p className="text-sm text-slate-600">Qualified student inquiries</p>
+                  </div>
+                  <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Active
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-violet-50 rounded-2xl">
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Conversion Campaigns</h4>
+                    <p className="text-sm text-slate-600">Application completion focus</p>
+                  </div>
+                  <div className="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Seasonal
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl">
+                  <div>
+                    <h4 className="font-semibold text-slate-900">Retention Programs</h4>
+                    <p className="text-sm text-slate-600">Student engagement & referrals</p>
+                  </div>
+                  <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Continuous
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Get Started Section */}
       <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-red-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
