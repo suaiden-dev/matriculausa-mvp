@@ -21,8 +21,10 @@ import {
   Eye,
   EyeOff,
   Settings,
-  Download
+  Download,
+  AlertCircle
 } from 'lucide-react';
+import AuthConnect from '../../components/AuthConnect';
 
 interface Email {
   id: string;
@@ -43,63 +45,64 @@ const Inbox: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'unread' | 'starred'>('all');
   const [isComposing, setIsComposing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasEmailConnection, setHasEmailConnection] = useState(true); // Habilitar demo de e-mails
 
   // Mock data - será substituído por dados reais da API
   useEffect(() => {
     const mockEmails: Email[] = [
       {
         id: '1',
-        from: 'john.doe@example.com',
-        subject: 'Application Status Update',
-        preview: 'Dear Admissions Team, I would like to inquire about the status of my application...',
+        from: 'student.inquiry@example.com',
+        subject: 'International Student Application Question',
+        preview: 'Hello, I am interested in applying to your university as an international student. Could you please provide information about the application process and required documents?',
         date: '2 hours ago',
         isRead: false,
         isStarred: true,
-        hasAttachments: true,
+        hasAttachments: false,
         priority: 'high'
       },
       {
         id: '2',
-        from: 'maria.silva@example.com',
-        subject: 'Scholarship Application Documents',
-        preview: 'Hello, I am writing to submit the required documents for the scholarship application...',
+        from: 'scholarship.applicant@example.com',
+        subject: 'Scholarship Application - Documents Submitted',
+        preview: 'Dear Admissions Office, I have submitted all required documents for the International Student Scholarship. Please confirm receipt and let me know if anything else is needed.',
         date: '4 hours ago',
         isRead: true,
         isStarred: false,
-        hasAttachments: false,
+        hasAttachments: true,
         priority: 'normal'
       },
       {
         id: '3',
-        from: 'admissions@university.edu',
-        subject: 'Welcome to Our University Community',
-        preview: 'Congratulations! We are pleased to welcome you to our university community...',
+        from: 'accepted.student@example.com',
+        subject: 'Acceptance Letter - Next Steps',
+        preview: 'Thank you for the acceptance letter! I am very excited to join your university. What are the next steps I need to take to complete my enrollment?',
         date: '1 day ago',
         isRead: true,
         isStarred: false,
-        hasAttachments: true,
+        hasAttachments: false,
         priority: 'normal'
       },
       {
         id: '4',
-        from: 'financial.aid@university.edu',
-        subject: 'Financial Aid Package Available',
-        preview: 'We are pleased to inform you that a financial aid package has been prepared...',
+        from: 'visa.questions@example.com',
+        subject: 'F-1 Visa Application Support',
+        preview: 'I need help with my F-1 visa application. Could you provide the I-20 form and any additional documentation required for the visa interview?',
         date: '2 days ago',
         isRead: false,
         isStarred: true,
-        hasAttachments: false,
+        hasAttachments: true,
         priority: 'high'
       },
       {
         id: '5',
-        from: 'housing@university.edu',
-        subject: 'Campus Housing Application',
-        preview: 'Thank you for your interest in campus housing. Please find attached...',
+        from: 'housing.inquiry@example.com',
+        subject: 'On-Campus Housing Availability',
+        preview: 'I would like to know about on-campus housing options for international students. What are the available dormitories and how do I apply for housing?',
         date: '3 days ago',
         isRead: true,
         isStarred: false,
-        hasAttachments: true,
+        hasAttachments: false,
         priority: 'low'
       }
     ];
@@ -164,6 +167,33 @@ const Inbox: React.FC = () => {
     );
   }
 
+  // Se não há conexão de e-mail, mostrar componente de conexão
+  if (!hasEmailConnection) {
+    return (
+      <div className="h-full bg-slate-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-[#05294E] to-[#D0151C] px-6 py-4 rounded-2xl mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 p-2 rounded-xl">
+                  <Mail className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-white">Email Integration</h1>
+                  <p className="text-white/80 text-sm">Connect your email accounts to get started</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Connection Component */}
+          <AuthConnect onConnectionChange={setHasEmailConnection} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Header */}
@@ -176,6 +206,11 @@ const Inbox: React.FC = () => {
             <div>
               <h1 className="text-xl font-bold text-white">Inbox</h1>
               <p className="text-white/80 text-sm">{filteredEmails.length} messages</p>
+              <div className="flex items-center space-x-2 mt-1">
+                <div className="bg-yellow-500/20 px-2 py-1 rounded-lg">
+                  <span className="text-yellow-200 text-xs font-medium">DEMO MODE</span>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -186,6 +221,13 @@ const Inbox: React.FC = () => {
             >
               <Plus className="h-4 w-4" />
               <span>Compose</span>
+            </button>
+            <button 
+              onClick={() => setHasEmailConnection(false)}
+              className="bg-white/20 text-white px-3 py-2 rounded-xl font-semibold hover:bg-white/30 transition-colors flex items-center space-x-2"
+            >
+              <Settings className="h-4 w-4" />
+              <span>Manage Connections</span>
             </button>
             <button 
               className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
