@@ -111,6 +111,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const fetchAndSetUser = async (session: any) => {
       if (session?.user) {
+        // Verificar se este é um OAuth apenas para email (não para autenticação)
+        const isEmailOnlyOAuth = localStorage.getItem('oauth_provider_pending');
+        
+        if (isEmailOnlyOAuth) {
+          console.log('🔄 [USEAUTH] OAuth detectado para funcionalidades de email apenas. Não criando perfil.');
+          // Não criar perfil, apenas retornar usuário existente
+          setUser(buildUser(session.user, null));
+          setSupabaseUser(session.user);
+          setUserProfile(null);
+          return;
+        }
+
         let profile: UserProfile | null = null;
         try {
           const { data, error } = await supabase
@@ -213,11 +225,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       console.log('ℹ️ [USEAUTH] Telefone já está correto no perfil existente.');
                     }
                   }
-                } catch (retryError) {
-                  console.log('❌ [USEAUTH] Erro ao buscar/atualizar perfil existente:', retryError);
+                } catch (error) {
+                  console.error('❌ [USEAUTH] Erro geral ao criar perfil:', error);
                 }
               } else {
-                console.error('❌ [USEAUTH] Erro inesperado ao criar perfil:', insertError);
+                console.error('❌ [USEAUTH] Erro geral ao criar perfil:', insertError);
               }
             } else {
               console.log('✅ [USEAUTH] Perfil criado com sucesso:', newProfile);
