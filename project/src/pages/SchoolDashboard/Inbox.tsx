@@ -24,7 +24,7 @@ import {
   Download,
   AlertCircle
 } from 'lucide-react';
-import AuthConnect from '../../components/AuthConnect';
+import EmailConnectionManager from '../../components/EmailConnectionManager';
 import EmailComposer from '../../components/EmailComposer';
 
 interface Email {
@@ -207,7 +207,7 @@ const Inbox: React.FC = () => {
           </div>
 
           {/* Connection Component */}
-          <AuthConnect onConnectionChange={setHasEmailConnection} />
+          <EmailConnectionManager />
         </div>
       </div>
     );

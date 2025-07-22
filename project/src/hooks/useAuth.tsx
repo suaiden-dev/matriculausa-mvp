@@ -111,17 +111,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const fetchAndSetUser = async (session: any) => {
       if (session?.user) {
-        // Verificar se este é um OAuth apenas para email (não para autenticação)
-        const isEmailOnlyOAuth = localStorage.getItem('oauth_provider_pending');
+        // Verificar se é OAuth de email (não para autenticação)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
         
-        // Só fazer logout se realmente for OAuth para email E se não for um login normal
-        if (isEmailOnlyOAuth && session.user.app_metadata?.provider) {
-          console.log('🔄 [USEAUTH] OAuth detectado para funcionalidades de email apenas. Processando...');
-          // Limpar o flag e processar normalmente
-          localStorage.removeItem('oauth_provider_pending');
-          // Não fazer logout, apenas processar como OAuth normal
+        // Se há código OAuth na URL, é provavelmente para email
+        if (code && state && (state.startsWith('google_') || state.startsWith('microsoft_'))) {
+          console.log('🔄 [USEAUTH] OAuth de email detectado. Não processando autenticação...');
+          // Não processar autenticação para OAuth de email
+          return;
         }
-
+        
         let profile: UserProfile | null = null;
         try {
           const { data, error } = await supabase
