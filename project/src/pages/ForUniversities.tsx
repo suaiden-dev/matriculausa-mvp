@@ -346,43 +346,7 @@ const ForUniversities: React.FC = () => {
             </div>
           </div>
           
-          {/* Marketing Channels */}
-          <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-200">
-            <h3 className="text-2xl font-bold text-slate-900 mb-8 text-center">Multi-Channel Marketing Approach</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200">
-                <div className="bg-blue-500 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <MessageCircle className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">Social Media</h4>
-                <p className="text-sm text-slate-600">Instagram, Facebook, LinkedIn, TikTok campaigns</p>
-              </div>
-              
-              <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
-                <div className="bg-green-500 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Mail className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">Email Marketing</h4>
-                <p className="text-sm text-slate-600">Personalized campaigns and newsletters</p>
-              </div>
-              
-              <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200">
-                <div className="bg-purple-500 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Smartphone className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">SMS Campaigns</h4>
-                <p className="text-sm text-slate-600">Direct messaging and notifications</p>
-              </div>
-              
-              <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200">
-                <div className="bg-orange-500 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Globe className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">SEO & Content</h4>
-                <p className="text-sm text-slate-600">Search optimization and educational content</p>
-              </div>
-            </div>
-          </div>
+
         </div>
       </section>
 
