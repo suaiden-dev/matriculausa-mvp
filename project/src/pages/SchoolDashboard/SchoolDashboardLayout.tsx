@@ -19,7 +19,8 @@ import {
   User,
   ChevronDown,
   Shield,
-  Brain
+  Brain,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -50,6 +51,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/students')) return 'students';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
+    if (path.includes('/inbox')) return 'inbox';
     return 'overview';
   };
 
@@ -76,6 +78,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/school/dashboard/scholarships', badge: university?.profile_completed ? null : 'Setup' },
     { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
+    { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
