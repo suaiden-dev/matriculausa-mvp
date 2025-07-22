@@ -114,11 +114,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Verificar se este é um OAuth apenas para email (não para autenticação)
         const isEmailOnlyOAuth = localStorage.getItem('oauth_provider_pending');
         
-        if (isEmailOnlyOAuth) {
-          console.log('🔄 [USEAUTH] OAuth detectado para funcionalidades de email apenas. Redirecionando...');
-          // Fazer logout imediatamente para evitar criação de usuário
-          await supabase.auth.signOut();
-          return;
+        // Só fazer logout se realmente for OAuth para email E se não for um login normal
+        if (isEmailOnlyOAuth && session.user.app_metadata?.provider) {
+          console.log('🔄 [USEAUTH] OAuth detectado para funcionalidades de email apenas. Processando...');
+          // Limpar o flag e processar normalmente
+          localStorage.removeItem('oauth_provider_pending');
+          // Não fazer logout, apenas processar como OAuth normal
         }
 
         let profile: UserProfile | null = null;
