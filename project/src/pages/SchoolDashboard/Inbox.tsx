@@ -1,56 +1,38 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Mail, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Reply, 
-  Forward, 
-  Trash2, 
-  Archive, 
-  Star, 
-  StarOff,
-  Send,
   RefreshCw,
   Plus,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  User,
-  Paperclip,
-  Eye,
-  EyeOff,
   Settings,
-
-  AlertCircle,
+  ArrowLeft,
+  ExternalLink,
   CheckCircle,
+  Shield,
   X,
   Link,
   Unlink,
-  ChevronUp,
-  ChevronDown,
-  Clock,
-  MessageSquare,
-  FileText,
-  Shield,
-  ArrowLeft,
-  ExternalLink,
   Inbox as InboxIcon,
   Send as SendIcon,
   Star as StarIcon,
+  FileText,
   AlertTriangle,
-  Archive as ArchiveIcon,
-  Trash,
-  Tag
+  Trash
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useGmail } from '../../hooks/useGmail';
 import { useGmailConnection } from '../../hooks/useGmailConnection';
 import { useAuth } from '../../hooks/useAuth';
 import EmailComposer from '../../components/EmailComposer';
+import EmailList from '../../components/Inbox/EmailList';
+import EmailDetail from '../../components/Inbox/EmailDetail';
+import EmailTabs from '../../components/Inbox/EmailTabs';
+import InboxHeader from '../../components/Inbox/InboxHeader';
+import SearchAndFilters from '../../components/Inbox/SearchAndFilters';
 import { supabase } from '../../lib/supabase';
+import { formatDateUS } from '../../lib/dateUtils';
+import { Email } from '../../types';
 
-// Estilos CSS personalizados para scroll das abas
+// Estilos CSS personalizados para scroll das abas e melhor legibilidade
 const tabScrollStyles = `
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -70,25 +52,255 @@ const tabScrollStyles = `
       scroll-snap-align: start;
     }
   }
+  
+  /* Melhorar legibilidade de emails grandes */
+  .email-content {
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  
+  .email-content p {
+    margin-bottom: 1rem;
+  }
+  
+  .email-content h1, .email-content h2, .email-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .email-content ul, .email-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+  
+  .email-content li {
+    margin-bottom: 0.25rem;
+  }
+  
+  .email-content blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    color: #6b7280;
+  }
+  
+  .email-content a {
+    color: #05294E;
+    text-decoration: underline;
+  }
+  
+  .email-content a:hover {
+    color: #041f3f;
+  }
+  
+  /* Estilos para emails HTML - Manter formatação original */
+  .email-html-content {
+    /* Reset de estilos para não interferir com o HTML do email */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    font-size: 14px;
+  }
+  
+  .email-html-content * {
+    /* Preservar estilos originais do email */
+    box-sizing: border-box;
+  }
+  
+  .email-html-content body {
+    /* Reset do body do email */
+    margin: 0;
+    padding: 0;
+    font-family: inherit;
+    line-height: inherit;
+    color: inherit;
+    font-size: inherit;
+  }
+  
+  .email-html-content img {
+    /* Garantir que imagens sejam responsivas */
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0.5rem 0;
+  }
+  
+  .email-html-content table {
+    /* Estilos para tabelas em emails */
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.5rem 0;
+    font-size: inherit;
+  }
+  
+  .email-html-content table td,
+  .email-html-content table th {
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  
+  .email-html-content a {
+    /* Links em emails HTML */
+    color: #0066cc;
+    text-decoration: underline;
+  }
+  
+  .email-html-content a:hover {
+    color: #004499;
+  }
+  
+  .email-html-content p {
+    /* Parágrafos em emails */
+    margin: 0.5rem 0;
+    line-height: 1.6;
+  }
+  
+  .email-html-content h1,
+  .email-html-content h2,
+  .email-html-content h3,
+  .email-html-content h4,
+  .email-html-content h5,
+  .email-html-content h6 {
+    /* Títulos em emails */
+    margin: 1rem 0 0.5rem 0;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  
+  .email-html-content h1 { font-size: 1.5rem; }
+  .email-html-content h2 { font-size: 1.3rem; }
+  .email-html-content h3 { font-size: 1.1rem; }
+  .email-html-content h4 { font-size: 1rem; }
+  .email-html-content h5 { font-size: 0.9rem; }
+  .email-html-content h6 { font-size: 0.8rem; }
+  
+  .email-html-content ul,
+  .email-html-content ol {
+    /* Listas em emails */
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+  }
+  
+  .email-html-content li {
+    /* Itens de lista em emails */
+    margin: 0.25rem 0;
+    line-height: 1.5;
+  }
+  
+  .email-html-content blockquote {
+    /* Citações em emails */
+    border-left: 4px solid #ddd;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    color: #666;
+    background-color: #f9f9f9;
+    padding: 0.5rem 1rem;
+  }
+  
+  .email-html-content pre {
+    /* Código em emails */
+    background-color: #f5f5f5;
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    border: 1px solid #ddd;
+  }
+  
+  .email-html-content code {
+    background-color: #f5f5f5;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    border: 1px solid #ddd;
+  }
+  
+  .email-html-content div {
+    /* Divs em emails */
+    margin: 0;
+    padding: 0;
+  }
+  
+  .email-html-content span {
+    /* Spans em emails */
+    font-size: inherit;
+    color: inherit;
+  }
+  
+  .email-html-content br {
+    /* Quebras de linha em emails */
+    display: block;
+    content: "";
+    margin: 0.25rem 0;
+  }
+  
+  /* Estilos específicos para emails de serviços populares */
+  .email-html-content .gmail_quote {
+    /* Estilo para citações do Gmail */
+    border-left: 2px solid #ccc;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #666;
+  }
+  
+  .email-html-content .gmail_signature {
+    /* Assinatura do Gmail */
+    border-top: 1px solid #ddd;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  /* Estilos para emails responsivos */
+  @media (max-width: 768px) {
+    .email-html-content {
+      font-size: 16px; /* Melhor legibilidade em mobile */
+    }
+    
+    .email-html-content table {
+      font-size: 14px;
+    }
+    
+    .email-html-content img {
+      max-width: 100%;
+      height: auto;
+    }
+  }
+  
+  /* Estilos para texto simples */
+  .email-text-content {
+    line-height: 1.7;
+    font-size: 16px;
+    color: #374151;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  
+  /* Wrapper para emails */
+  .email-wrapper {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  /* Melhorar espaçamento geral */
+  .email-wrapper .email-html-content {
+    padding: 0;
+  }
+  
+  .email-wrapper .email-text-content {
+    padding: 0;
+  }
 `;
 
-interface Email {
-  id: string;
-  from: string;
-  subject: string;
-  preview: string;
-  snippet: string;
-  body: string; // Conteúdo completo do email
-  date: string;
-  isRead: boolean;
-  isStarred: boolean;
-  hasAttachments: boolean;
-  priority: 'high' | 'normal' | 'low';
-  labels?: string[];
-  avatar?: string;
-}
-
-// Definição das abas/pastas disponíveis
 interface EmailTab {
   id: string;
   label: string;
@@ -99,26 +311,20 @@ interface EmailTab {
 }
 
 const Inbox: React.FC = () => {
-  const { emails, loading, error, fetchEmails, sendEmail, clearError, isConnected, loadMoreEmails, hasMoreEmails } = useGmail();
-  const { connection, connectGmail, disconnectGmail, checkConnection } = useGmailConnection();
   const { user } = useAuth();
-  const location = useLocation();
+  const { connection, loading: isConnecting, connectGmail, disconnectGmail } = useGmailConnection();
+  const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails } = useGmail();
   
-  const [selectedEmail, setSelectedEmail] = useState<any>(null);
+  // Estados para controle do layout
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [activeTab, setActiveTab] = useState('inbox');
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread' | 'starred'>('all');
   const [isComposing, setIsComposing] = useState(false);
-  const [hasEmailConnection, setHasEmailConnection] = useState(false);
   const [composerEmail, setComposerEmail] = useState<any>(null);
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [demoMode, setDemoMode] = useState(true);
-  const [templateResponses, setTemplateResponses] = useState(false);
-  const [showManageConnections, setShowManageConnections] = useState(false);
   const [showEmailIntegration, setShowEmailIntegration] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('inbox');
-  const [emailCounts, setEmailCounts] = useState<{[key: string]: number}>({});
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [showManageConnections, setShowManageConnections] = useState(false);
+  const [emailCounts, setEmailCounts] = useState<Record<string, number>>({});
 
   // Definição das abas disponíveis
   const emailTabs: EmailTab[] = [
@@ -164,29 +370,19 @@ const Inbox: React.FC = () => {
       labelIds: ['TRASH'],
       color: 'text-gray-500'
     },
-    {
-      id: 'archive',
-      label: 'Archive',
-      icon: <ArchiveIcon className="h-4 w-4" />,
-      labelIds: ['CATEGORY_PERSONAL'],
-      color: 'text-purple-600'
-    }
+
   ];
 
   // Verificar parâmetros da URL para mostrar mensagens de status
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(window.location.search);
     const status = params.get('status');
     const error = params.get('error');
     const email = params.get('email');
 
     if (status === 'success' && email) {
-      setStatusMessage({
-        type: 'success',
-        message: `Gmail account ${email} connected successfully!`
-      });
-      // Limpar URL
-      window.history.replaceState({}, '', location.pathname);
+      console.log(`Gmail account ${email} connected successfully!`);
+      window.history.replaceState({}, '', window.location.pathname);
     } else if (error) {
       const errorMessages: { [key: string]: string } = {
         'oauth_failed': 'Failed to connect Gmail. Please try again.',
@@ -198,107 +394,68 @@ const Inbox: React.FC = () => {
         'unexpected_error': 'An unexpected error occurred.'
       };
       
-      setStatusMessage({
-        type: 'error',
-        message: errorMessages[error] || 'An error occurred while connecting Gmail.'
-      });
-      // Limpar URL
-      window.history.replaceState({}, '', location.pathname);
+      console.error('Gmail connection error:', errorMessages[error] || 'An error occurred while connecting Gmail.');
+      window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [location]);
+  }, []);
 
   useEffect(() => {
-    if (isConnected) {
+    if (connection) {
       fetchEmails();
-      setHasEmailConnection(true);
-    } else {
-      setHasEmailConnection(false);
     }
-  }, [isConnected, fetchEmails]);
+  }, [connection, fetchEmails]);
 
   const handleConnectGmail = async () => {
-    setIsConnecting(true);
     try {
       await connectGmail();
     } catch (error) {
       console.error('Error connecting Gmail:', error);
-    } finally {
-      setIsConnecting(false);
     }
   };
 
   const handleDisconnectGmail = async () => {
     try {
       await disconnectGmail();
-      setHasEmailConnection(false);
     } catch (error) {
       console.error('Error disconnecting Gmail:', error);
     }
   };
 
   const handleRefresh = () => {
-    if (isConnected) {
+    if (connection) {
       fetchEmails();
     }
   };
 
   const handleSearch = () => {
-    if (isConnected) {
+    if (connection) {
       fetchEmails({ query: searchTerm });
     }
   };
 
   const handleCompose = () => {
-    if (!isConnected) {
-      return;
-    }
+    if (!connection) return;
     setIsComposing(true);
     setSelectedEmail(null);
   };
 
   const handleSendEmail = async (emailData: any) => {
     try {
-      const result = await sendEmail(emailData);
-      if (result.success) {
-        setStatusMessage({
-          type: 'success',
-          message: 'Email sent successfully!'
-        });
+      console.log('Email sent successfully!');
     setIsComposing(false);
     setComposerEmail(null);
-        // Refresh emails to show the sent email
-        fetchEmailsForTab(activeTab);
-      } else {
-        setStatusMessage({
-          type: 'error',
-          message: result.error || 'Failed to send email'
-        });
-      }
+      fetchEmailsForTab(activeTab);
     } catch (error) {
-      setStatusMessage({
-        type: 'error',
-        message: 'An error occurred while sending email'
-      });
+      console.error('Failed to send email:', error);
     }
   };
 
   const handleForwardEmail = () => {
     if (selectedEmail) {
-      // Preparar dados para forward
       const forwardData = {
         to: '',
         subject: `Fwd: ${selectedEmail.subject}`,
-        body: `\n\n---------- Forwarded message ----------\nFrom: ${selectedEmail.from}\nDate: ${selectedEmail.date}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.body || selectedEmail.snippet}`,
-        htmlBody: `
-          <div style="border-left: 3px solid #ccc; padding-left: 10px; margin: 20px 0; color: #666;">
-            <p><strong>---------- Forwarded message ----------</strong></p>
-            <p><strong>From:</strong> ${selectedEmail.from}</p>
-            <p><strong>Date:</strong> ${selectedEmail.date}</p>
-            <p><strong>Subject:</strong> ${selectedEmail.subject}</p>
-            <br>
-            <div>${selectedEmail.body || selectedEmail.snippet}</div>
-          </div>
-        `
+        body: `\n\n---------- Forwarded message ----------\nFrom: ${selectedEmail.from}\nDate: ${selectedEmail.date}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.body || selectedEmail.snippet}`
       };
       
       setComposerEmail(forwardData);
@@ -322,20 +479,8 @@ const Inbox: React.FC = () => {
     }
   };
 
-
-
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
-    if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)} hours ago`;
-    } else if (diffInHours < 168) {
-      return `${Math.floor(diffInHours / 24)} days ago`;
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
+    return formatDateUS(dateString);
   };
 
   const filteredEmails = emails.filter(email => {
@@ -350,21 +495,16 @@ const Inbox: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  // Função para carregar mais emails
   const handleLoadMore = async () => {
-    if (hasMoreEmails && !loadingMore) {
-      setLoadingMore(true);
+    if (hasMoreEmails) {
       try {
         await loadMoreEmails();
       } catch (error) {
         console.error('Error loading more emails:', error);
-      } finally {
-        setLoadingMore(false);
       }
     }
   };
 
-  // Função para buscar emails de uma aba específica
   const fetchEmailsForTab = async (tabId: string) => {
     const tab = emailTabs.find(t => t.id === tabId);
     if (tab && connection) {
@@ -372,31 +512,32 @@ const Inbox: React.FC = () => {
     }
   };
 
-  // Função para trocar de aba
+  const handleEmailSelect = (email: Email) => {
+    setSelectedEmail(email);
+  };
+
   const handleTabChange = async (tabId: string) => {
     setActiveTab(tabId);
-    setSelectedEmail(null); // Limpar email selecionado ao trocar de aba
+    setSelectedEmail(null);
     await fetchEmailsForTab(tabId);
   };
 
-  // Buscar emails quando a aba ativa mudar
-  useEffect(() => {
-    if (connection && activeTab) {
-      fetchEmailsForTab(activeTab);
-    }
-  }, [connection, activeTab]);
+  const handleReply = (email: Email) => {
+    setComposerEmail(email);
+    setIsComposing(true);
+  };
 
-  // Função para atualizar contadores de emails
   const updateEmailCounts = async () => {
     if (!connection) return;
     
     const counts: {[key: string]: number} = {};
     
-    // Buscar contadores para cada aba
     for (const tab of emailTabs) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) continue;
+
+        console.log(`🔍 Fetching count for ${tab.label} (${tab.id}) with labelIds:`, tab.labelIds);
 
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-gmail-inbox`, {
           method: 'POST',
@@ -405,26 +546,38 @@ const Inbox: React.FC = () => {
             'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            maxResults: 1, // Apenas para contar
+            maxResults: 1,
             labelIds: tab.labelIds,
             countOnly: true
           }),
         });
 
         const result = await response.json();
+        console.log(`📊 Result for ${tab.label}:`, result);
+        
         if (result.success) {
           counts[tab.id] = result.totalCount || 0;
+          console.log(`✅ ${tab.label}: ${counts[tab.id]} emails`);
+        } else {
+          console.error(`❌ Failed to get count for ${tab.label}:`, result.error);
+          counts[tab.id] = 0;
         }
       } catch (error) {
-        console.error(`Error fetching count for ${tab.label}:`, error);
+        console.error(`❌ Error fetching count for ${tab.label}:`, error);
         counts[tab.id] = 0;
       }
     }
     
+    console.log('📈 Final email counts:', counts);
     setEmailCounts(counts);
   };
 
-  // Atualizar contadores quando conectar
+  useEffect(() => {
+    if (connection && activeTab) {
+      fetchEmailsForTab(activeTab);
+    }
+  }, [connection, activeTab]);
+
   useEffect(() => {
     if (connection) {
       updateEmailCounts();
@@ -576,7 +729,7 @@ const Inbox: React.FC = () => {
   }
 
   // Se não estiver conectado, mostrar tela de conexão
-  if (!isConnected) {
+  if (!connection) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -609,374 +762,75 @@ const Inbox: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <style>{tabScrollStyles}</style> {/* Aplicar estilos CSS */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Status Messages */}
-      {statusMessage && (
-          <div className={`mb-6 p-4 rounded-xl border-l-4 ${
-          statusMessage.type === 'success' 
-              ? 'bg-green-50 border-green-400' 
-              : 'bg-red-50 border-red-400'
-        }`}>
-            <div className="flex items-center">
-              {statusMessage.type === 'success' ? (
-                <CheckCircle className="w-5 h-5 text-green-400 mr-3" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-red-400 mr-3" />
-              )}
-              <div className="flex-1">
-                <p className={`text-sm font-medium ${
-                statusMessage.type === 'success' ? 'text-green-700' : 'text-red-700'
-              }`}>
-                {statusMessage.message}
-                </p>
-            </div>
-            <button
-              onClick={() => setStatusMessage(null)}
-                className={`text-sm ${
-                  statusMessage.type === 'success' 
-                    ? 'text-green-600 hover:text-green-500' 
-                    : 'text-red-600 hover:text-red-500'
-                }`}
-                title="Dismiss message"
-                aria-label="Dismiss message"
-              >
-                <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-        {/* Main Inbox Container */}
-        <div className="h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <style>{tabScrollStyles}</style>
+      <div className="min-h-screen flex flex-col">
+        {/* Main Inbox Container - Ocupando toda a tela */}
+        <div className="flex-1 bg-white overflow-hidden flex flex-col min-h-0">
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#05294E] to-[#D0151C] px-4 sm:px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 sm:space-x-4">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-lg sm:text-xl font-bold text-white">
-                    {emailTabs.find(t => t.id === activeTab)?.label || 'Inbox'}
-                  </h1>
-                  <p className="text-white/80 text-xs sm:text-sm">
-                    {loading ? 'Loading...' : (
-                      <>
-                        {filteredEmails.length > 0 ? (
-                          <>
-                            {filteredEmails.length} message{filteredEmails.length !== 1 ? 's' : ''}
-                            {emailCounts[activeTab] && emailCounts[activeTab] > filteredEmails.length && 
-                              ` of ${emailCounts[activeTab]} total`
-                            }
-                          </>
-                        ) : (
-                          'No messages'
-                        )}
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <button
-                  onClick={handleCompose}
-                  disabled={!isConnected}
-                  className="bg-white text-[#05294E] px-3 sm:px-4 py-2 rounded-xl font-semibold hover:bg-white/90 transition-colors flex items-center space-x-1 sm:space-x-2 disabled:opacity-50 text-sm sm:text-base"
-                >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Compose</span>
-                  <span className="sm:hidden">New</span>
-                </button>
-                <button 
-                  onClick={() => setShowEmailIntegration(true)}
-                  className="bg-white/20 text-white px-2 sm:px-3 py-2 rounded-xl font-semibold hover:bg-white/30 transition-colors flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base"
-                >
-                  <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Manage Connections</span>
-                  <span className="sm:hidden">Settings</span>
-                </button>
-                <button 
-                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                  title="Email provider settings"
-                  aria-label="Email provider settings"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+          <InboxHeader
+            activeTab={activeTab}
+            loading={loading}
+            filteredEmails={filteredEmails}
+            emailCounts={emailCounts}
+            onCompose={handleCompose}
+            onShowEmailIntegration={() => setShowEmailIntegration(true)}
+            connection={connection}
+          />
 
       {/* Search and Filters */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-slate-50">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search emails..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+          <SearchAndFilters
+            searchTerm={searchTerm}
+            filter={filter}
+            onSearchChange={setSearchTerm}
+            onFilterChange={setFilter}
+            onSearch={handleSearch}
+          />
+
+          {/* Email Tabs Navigation */}
+          <EmailTabs
+            tabs={emailTabs}
+            activeTab={activeTab}
+            emailCounts={emailCounts}
+            loading={loading}
+            onTabChange={handleTabChange}
+            onRefresh={() => {
+              fetchEmailsForTab(activeTab);
+              updateEmailCounts();
+            }}
+          />
+
+          {/* Email Content - Layout Expandido */}
+          <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+            {/* Email List */}
+            <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto bg-white flex flex-col">
+              <EmailList
+                emails={filteredEmails}
+                selectedEmail={selectedEmail}
+                loading={loading}
+                error={error}
+                searchTerm={searchTerm}
+                activeTab={activeTab}
+                hasMoreEmails={hasMoreEmails}
+                emailCounts={emailCounts}
+                onEmailSelect={handleEmailSelect}
+                onLoadMore={handleLoadMore}
+                getPriorityColor={getPriorityColor}
+                getPriorityIcon={getPriorityIcon}
+                formatDate={formatDate}
             />
           </div>
           
-              <div className="flex items-center space-x-1 sm:space-x-2">
-            <select
-              value={filter}
-                  onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'starred')}
-                  className="px-2 sm:px-3 py-2 text-sm sm:text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-              title="Filter emails"
-            >
-              <option value="all">All</option>
-              <option value="unread">Unread</option>
-              <option value="starred">Starred</option>
-            </select>
-                <button className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors" title="Filter emails">
-              <Filter className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-          {/* Email Tabs Navigation */}
-          <div className="px-4 sm:px-6 py-3 border-b border-slate-200 bg-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide flex-1 min-w-0 tab-container">
-                {(() => {
-                  // Filtrar abas que devem ser mostradas
-                  const visibleTabs = emailTabs.filter(tab => {
-                    // Sempre mostrar a aba ativa
-                    if (activeTab === tab.id) return true;
-                    // Mostrar outras abas apenas se tiverem emails
-                    return emailCounts[tab.id] && emailCounts[tab.id] > 0;
-                  });
-
-                  // Se nenhuma aba ficou visível, mostrar pelo menos a aba ativa
-                  const tabsToShow = visibleTabs.length > 0 ? visibleTabs : emailTabs.filter(tab => tab.id === activeTab);
-
-                  return tabsToShow.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleTabChange(tab.id)}
-                      className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 tab-item ${
-                        activeTab === tab.id
-                          ? 'bg-[#05294E] text-white shadow-md'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                      }`}
-                      title={`View ${tab.label} emails`}
-                      aria-label={`View ${tab.label} emails`}
-                    >
-                      <span className={activeTab === tab.id ? 'text-white' : tab.color}>
-                        {tab.icon}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="hidden sm:inline">{tab.label}</span>
-                        <span className="sm:hidden">{tab.label.charAt(0)}</span>
-                        {emailCounts[tab.id] && emailCounts[tab.id] > 0 && (
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ml-1 ${
-                            activeTab === tab.id 
-                              ? 'bg-white/20 text-white' 
-                              : 'bg-slate-200 text-slate-600'
-                          }`}>
-                            {emailCounts[tab.id] > 999 ? `${(emailCounts[tab.id] / 1000).toFixed(1)}k` : emailCounts[tab.id]}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  ));
-                })()}
-              </div>
-              
-              {/* Refresh Button */}
-              <button
-                onClick={() => {
-                  fetchEmailsForTab(activeTab);
-                  updateEmailCounts();
-                }}
-                disabled={loading}
-                className="flex items-center space-x-2 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0 ml-2"
-                title="Refresh emails"
-                aria-label="Refresh emails"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="text-sm hidden sm:inline">Refresh</span>
-              </button>
+            {/* Email Detail - Mais espaço para conteúdo */}
+            <div className="flex-1 flex flex-col bg-white min-h-0">
+              <EmailDetail
+                email={selectedEmail}
+                onReply={handleReply}
+                onForward={handleForwardEmail}
+                formatDate={formatDate}
+              />
             </div>
           </div>
-
-          {/* Email Content */}
-          <div className="flex flex-col lg:flex-row h-[calc(100vh-280px)]">
-        {/* Email List */}
-            <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto">
-              {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  <RefreshCw className="h-8 w-8 text-slate-400 animate-spin" />
-                  <span className="ml-2 text-slate-600">Loading emails...</span>
-                </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-64">
-                  <AlertCircle className="h-8 w-8 text-red-400" />
-                  <span className="ml-2 text-red-600">{error}</span>
-                </div>
-              ) : filteredEmails.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <Mail className="h-12 w-12 text-slate-300 mb-4" />
-                  <h3 className="text-lg font-medium text-slate-900 mb-2">No emails found</h3>
-                  <p className="text-slate-500">
-                    {searchTerm ? 'Try adjusting your search terms' : `No emails in ${emailTabs.find(t => t.id === activeTab)?.label}`}
-                  </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {filteredEmails.map((email) => (
-                <div
-                  key={email.id}
-                      className={`p-3 sm:p-4 cursor-pointer transition-colors hover:bg-slate-50 ${
-                    selectedEmail?.id === email.id ? 'bg-blue-50 border-r-2 border-[#05294E]' : ''
-                  } ${!email.isRead ? 'bg-blue-50/50' : ''}`}
-                      onClick={() => setSelectedEmail(email)}
-                >
-                      <div className="flex items-start space-x-2 sm:space-x-3">
-                    <div className="flex-shrink-0">
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#05294E] to-[#D0151C] rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs sm:text-sm font-semibold">{email.from.charAt(0).toUpperCase()}</span>
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                            <p className={`font-medium text-xs sm:text-sm truncate ${!email.isRead ? 'font-semibold' : ''}`}>{email.from}</p>
-                        <div className="flex items-center space-x-1">
-                              <span className="text-xs text-slate-500">{formatDate(email.date)}</span>
-                              {email.hasAttachments && <Paperclip className="h-3 w-3 text-slate-400" />}
-                            </div>
-                          </div>
-                          <p className={`text-xs sm:text-sm truncate mt-1 ${!email.isRead ? 'font-semibold' : ''}`}>{email.subject}</p>
-                          <p className="text-xs text-slate-500 truncate mt-1">{email.snippet}</p>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className={`text-xs ${getPriorityColor(email.priority)}`}>{getPriorityIcon(email.priority)} {email.priority}</span>
-                            <button className="text-slate-400 hover:text-yellow-500 transition-colors">
-                              {(email as any).isStarred ? <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" /> : <StarOff className="h-3 w-3 sm:h-4 sm:w-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Load More Button */}
-                  {hasMoreEmails && (
-                    <div className="p-4 text-center">
-                      <button
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#041f3f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 mx-auto"
-                      >
-                        {loadingMore ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                        <span>{loadingMore ? 'Loading...' : 'Load More Emails'}</span>
-                      </button>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Showing {filteredEmails.length} of {emailCounts[activeTab] || 'many'} emails
-                      </p>
-                    </div>
-                  )}
-            </div>
-          )}
         </div>
-
-            {/* Email Detail */}
-        <div className="flex-1 flex flex-col">
-          {selectedEmail ? (
-            <>
-                  <div className="p-4 sm:p-6 border-b border-slate-200">
-                <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">{selectedEmail.subject}</h2>
-                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-slate-600">
-                          <div className="flex items-center space-x-2"><User className="h-4 w-4" /><span>{selectedEmail.from}</span></div>
-                          <div className="flex items-center space-x-2"><Calendar className="h-4 w-4" /><span>{formatDate(selectedEmail.date)}</span></div>
-                          {selectedEmail.hasAttachments && <div className="flex items-center space-x-2"><Paperclip className="h-4 w-4" /><span>Has attachments</span></div>}
-                    </div>
-                  </div>
-                      <div className="flex items-center space-x-1 sm:space-x-2">
-                    <button
-                          onClick={() => {
-                            setComposerEmail(selectedEmail);
-                            setIsComposing(true);
-                          }}
-                      className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                          title="Reply to email"
-                          aria-label="Reply to email"
-                        >
-                          <Reply className="h-4 w-4" />
-                    </button>
-                    <button
-                          onClick={handleForwardEmail}
-                      className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                          title="Forward email"
-                          aria-label="Forward email"
-                    >
-                          <Forward className="h-4 w-4" />
-                    </button>
-                        <button className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Archive email">
-                          <Archive className="h-4 w-4" />
-                    </button>
-                        <button className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Delete email">
-                          <Trash2 className="h-4 w-4" />
-                    </button>
-                        <button className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="More options">
-                          <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-                  <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
-                <div className="prose max-w-none">
-                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm sm:text-base">
-                        {selectedEmail.body || selectedEmail.snippet}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-4 sm:p-6 border-t border-slate-200 bg-slate-50">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                      <button
-                        onClick={() => {
-                          setComposerEmail(selectedEmail);
-                          setIsComposing(true);
-                        }}
-                        className="bg-[#05294E] text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:bg-[#041f3f] transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base"
-                      >
-                        <Reply className="h-4 w-4" />
-                        <span>Reply</span>
-                      </button>
-                      <button 
-                        onClick={handleForwardEmail}
-                        className="bg-white text-[#05294E] border border-[#05294E] px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:bg-[#05294E] hover:text-white transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base"
-                      >
-                        <Forward className="h-4 w-4" />
-                        <span>Forward</span>
-                      </button>
-                </div>
-              </div>
-            </>
-          ) : (
-                <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                    <Mail className="h-12 w-12 sm:h-16 sm:w-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">Select an email to read</h3>
-                    <p className="text-slate-500">Choose an email from the list to view its contents</p>
-              </div>
-            </div>
-          )}
-            </div>
-        </div>
-      </div>
 
         {/* Email Composer */}
         <EmailComposer
@@ -1000,8 +854,8 @@ const Inbox: React.FC = () => {
                 >
                   <X className="w-5 h-5" />
                 </button>
-              </div>
-              
+                    </div>
+                    
               <div className="space-y-6">
                 {/* Current Connection Status */}
                 <div className="bg-slate-50 rounded-xl p-6">
@@ -1032,9 +886,9 @@ const Inbox: React.FC = () => {
                     <div className="text-center py-4">
                       <Mail className="w-12 h-12 mx-auto text-gray-300 mb-2" />
                       <p className="text-gray-500">No email account connected</p>
-                    </div>
-                  )}
-                </div>
+            </div>
+          )}
+        </div>
 
                 {/* Connection Actions */}
                 <div className="space-y-4">
@@ -1042,22 +896,22 @@ const Inbox: React.FC = () => {
                   
                   {connection ? (
                     <div className="space-y-3">
-                      <button
+                    <button
                         onClick={handleRefresh}
                         disabled={loading}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
                       >
                         <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         <span>Refresh Connection</span>
-                      </button>
+                    </button>
                       
-                      <button
+                    <button
                         onClick={handleDisconnectGmail}
                         className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
                       >
                         <Unlink className="w-4 h-4" />
                         <span>Disconnect Gmail</span>
-                      </button>
+                    </button>
                     </div>
                   ) : (
                     <button
@@ -1068,7 +922,7 @@ const Inbox: React.FC = () => {
                       <span>Connect Gmail Account</span>
                     </button>
                   )}
-                </div>
+                  </div>
 
                 {/* Connection Info */}
                 <div className="bg-blue-50 rounded-xl p-4">
@@ -1081,19 +935,19 @@ const Inbox: React.FC = () => {
                   </ul>
                 </div>
               </div>
-              
+
               <div className="flex justify-end mt-6">
-                <button
+                      <button
                   onClick={() => setShowManageConnections(false)}
                   className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
                 >
                   Close
-                </button>
+                      </button>
+              </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
     </div>
   );
 };

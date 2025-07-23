@@ -12,7 +12,6 @@ import {
   Home,
   Users,
   BarChart3,
-  Search,
   Menu,
   X,
   LogOut,
@@ -258,18 +257,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden lg:block">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-80 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                  />
-                </div>
-              </div>
-
               {/* User Menu */}
               <div className="relative">
                 <button

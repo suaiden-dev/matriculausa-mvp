@@ -88,26 +88,24 @@ function extractEmailBody(payload: any): string {
 
   // Se tem parts, processar cada parte
   if (payload.parts && payload.parts.length > 0) {
+    // Primeiro, procurar por HTML para manter formatação
     for (const part of payload.parts) {
-      // Priorizar texto simples
+      if (part.mimeType === 'text/html' && part.body?.data) {
+        try {
+          return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+        } catch (e) {
+          console.error('Error decoding text/html:', e);
+        }
+      }
+    }
+    
+    // Se não encontrou HTML, procurar texto simples
+    for (const part of payload.parts) {
       if (part.mimeType === 'text/plain' && part.body?.data) {
         try {
           return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
         } catch (e) {
           console.error('Error decoding text/plain:', e);
-        }
-      }
-    }
-    
-    // Se não encontrou texto simples, procurar HTML
-    for (const part of payload.parts) {
-      if (part.mimeType === 'text/html' && part.body?.data) {
-        try {
-          const htmlContent = atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-          // Converter HTML para texto simples (remover tags)
-          return htmlContent.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
-        } catch (e) {
-          console.error('Error decoding text/html:', e);
         }
       }
     }
@@ -117,10 +115,6 @@ function extractEmailBody(payload: any): string {
   if (payload.body?.data) {
     try {
       const content = atob(payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-      if (payload.mimeType === 'text/html') {
-        // Converter HTML para texto simples
-        return content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
-      }
       return content;
     } catch (e) {
       console.error('Error decoding payload body:', e);
@@ -183,6 +177,8 @@ Deno.serve(async (req) => {
     }
 
     const { maxResults = 50, labelIds = ['INBOX'], query = '', countOnly = false, pageToken } = await req.json();
+    
+    console.log('📨 Request parameters:', { maxResults, labelIds, query, countOnly, pageToken });
 
     // Buscar conexão Gmail do usuário
     const { data: connection, error: connectionError } = await supabase
@@ -231,11 +227,15 @@ Deno.serve(async (req) => {
 
     // Se for apenas para contar, buscar apenas o total
     if (countOnly) {
+      // Para obter contagem precisa, vamos buscar uma quantidade maior e contar
       const params = new URLSearchParams({
-        maxResults: '1', // Mínimo para obter o total
+        maxResults: '500', // Buscar mais emails para contagem mais precisa
         ...(labelIds.length > 0 && { labelIds: labelIds.join(',') }),
         ...(query && { q: query })
       });
+
+      console.log('🔍 Gmail API URL for count:', `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`);
+      console.log('🔍 LabelIds being sent:', labelIds);
 
       const gmailResponse = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`,
@@ -249,7 +249,7 @@ Deno.serve(async (req) => {
 
       if (!gmailResponse.ok) {
         const errorText = await gmailResponse.text();
-        console.error('Gmail API error:', errorText);
+        console.error('❌ Gmail API error:', errorText);
         return new Response(JSON.stringify({ error: 'Failed to fetch email count' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -257,10 +257,20 @@ Deno.serve(async (req) => {
       }
 
       const gmailData = await gmailResponse.json();
+      console.log('📊 Gmail API response for count:', gmailData);
+      
+      // Contar os emails retornados
+      const actualCount = gmailData.messages ? gmailData.messages.length : 0;
+      
+      // Se temos nextPageToken, significa que há mais emails
+      // Neste caso, vamos usar o resultSizeEstimate como fallback
+      const totalCount = gmailData.nextPageToken ? (gmailData.resultSizeEstimate || actualCount) : actualCount;
+      
+      console.log('📈 Actual count:', actualCount, 'Total estimate:', gmailData.resultSizeEstimate, 'Final count:', totalCount);
       
       return new Response(JSON.stringify({
         success: true,
-        totalCount: gmailData.resultSizeEstimate || 0,
+        totalCount: totalCount,
         labelIds: labelIds
       }), {
         status: 200,

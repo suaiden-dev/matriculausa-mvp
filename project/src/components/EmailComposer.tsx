@@ -68,7 +68,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         // É um reply
         setTo(originalEmail.from || '');
         setSubject(`Re: ${originalEmail.subject || ''}`);
-        setBody('');
+      setBody('');
       }
     }
   }, [originalEmail]);
@@ -167,7 +167,7 @@ Yours sincerely,
       if (response.error) {
         throw new Error(response.error.message || 'Failed to send email');
       }
-
+      
       if (response.data?.success) {
         setSendResult({
           success: true,
@@ -232,7 +232,7 @@ Yours sincerely,
             <h2 className="text-xl font-bold text-white">
               {originalEmail ? (
                 originalEmail.to !== undefined ? 'Forward Email' : 'Reply to Email'
-              ) : 'Compose New Email'}
+              ) : 'New Email'}
             </h2>
             {connection && (
               <div className="flex items-center space-x-2 bg-white/20 px-2 py-1 rounded-lg">
@@ -363,8 +363,8 @@ Yours sincerely,
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-slate-700">
-                  Message *
-                </label>
+                Message *
+              </label>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setIsHtmlMode(!isHtmlMode)}
@@ -389,15 +389,15 @@ Yours sincerely,
                   disabled={!connection}
                 />
               ) : (
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={12}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
-                  placeholder="Write your message here..."
-                  required
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={12}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
+                placeholder="Write your message here..."
+                required
                   disabled={!connection}
-                />
+              />
               )}
             </div>
 

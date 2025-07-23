@@ -1,20 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useGmailConnection } from './useGmailConnection';
-
-interface Email {
-  id: string;
-  threadId: string;
-  from: string;
-  to: string;
-  subject: string;
-  snippet: string;
-  date: string;
-  isRead: boolean;
-  hasAttachments: boolean;
-  priority: 'high' | 'normal' | 'low';
-  labels: string[];
-}
+import { Email } from '../types';
 
 interface SendEmailRequest {
   to: string;

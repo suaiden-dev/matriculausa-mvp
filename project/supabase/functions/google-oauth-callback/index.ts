@@ -8,6 +8,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Função para detectar automaticamente a URL do frontend
+function getFrontendUrl(req: Request): string {
+  // Verificar se há uma variável de ambiente específica
+  const envFrontendUrl = Deno.env.get('FRONTEND_URL');
+  if (envFrontendUrl) {
+    console.log('🔧 Using FRONTEND_URL from environment:', envFrontendUrl);
+    return envFrontendUrl;
+  }
+
+  // Detectar baseado no referer (de onde veio a requisição)
+  const referer = req.headers.get('referer');
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      const hostname = refererUrl.hostname;
+      
+      // Se é localhost, é desenvolvimento
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        const devUrl = `http://${hostname}:${refererUrl.port || '5173'}`;
+        console.log('🔧 Detected development environment:', devUrl);
+        return devUrl;
+      }
+      
+      // Se é um domínio real, é produção
+      if (hostname.includes('.') && !hostname.includes('localhost')) {
+        const prodUrl = `${refererUrl.protocol}//${hostname}`;
+        console.log('🔧 Detected production environment:', prodUrl);
+        return prodUrl;
+      }
+    } catch (error) {
+      console.error('Error parsing referer:', error);
+    }
+  }
+
+  // Fallback para desenvolvimento
+  console.log('🔧 Using default development URL: http://localhost:5173');
+  return 'http://localhost:5173';
+}
+
 // Função para criptografar dados
 async function encryptData(data: string, key: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -115,7 +154,8 @@ Deno.serve(async (req) => {
     // Verificar se há erro
     if (error) {
       console.error('OAuth error:', error);
-      const redirectUrl = `${url.origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?error=oauth_failed&message=${encodeURIComponent(error)}`;
+      const frontendUrl = getFrontendUrl(req);
+      const redirectUrl = `${frontendUrl}/auth/callback?error=oauth_failed&message=${encodeURIComponent(error)}`;
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -124,7 +164,8 @@ Deno.serve(async (req) => {
 
     // Verificar se temos o código
     if (!code) {
-      const redirectUrl = `${url.origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?error=no_code`;
+      const frontendUrl = getFrontendUrl(req);
+      const redirectUrl = `${frontendUrl}/auth/callback?error=no_code`;
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -145,7 +186,8 @@ Deno.serve(async (req) => {
 
     if (!clientId || !clientSecret) {
       console.error('Missing Google OAuth credentials');
-      const redirectUrl = `${url.origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?error=config_missing`;
+      const frontendUrl = getFrontendUrl(req);
+      const redirectUrl = `${frontendUrl}/auth/callback?error=config_missing`;
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -170,7 +212,8 @@ Deno.serve(async (req) => {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('Token exchange failed:', errorText);
-      const redirectUrl = `${url.origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?error=token_exchange_failed`;
+      const frontendUrl = getFrontendUrl(req);
+      const redirectUrl = `${frontendUrl}/auth/callback?error=token_exchange_failed`;
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -219,7 +262,8 @@ Deno.serve(async (req) => {
 
     if (!finalUserId) {
       console.error('No user ID found for email:', userEmail);
-      const redirectUrl = `${url.origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?error=user_not_found`;
+      const frontendUrl = getFrontendUrl(req);
+      const redirectUrl = `${frontendUrl}/auth/callback?error=user_not_found`;
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -275,17 +319,17 @@ Deno.serve(async (req) => {
       const { data: insertData, error: insertErr } = await supabase
         .from('email_connections')
         .insert({
-          user_id: finalUserId,
-          provider: 'google',
-          access_token: tokenData.access_token,
-          refresh_token: encryptedRefreshToken,
-          expires_at: expiresAt.toISOString(),
-          email: userEmail,
-          scopes: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send']
-        })
-        .select()
-        .single();
-      
+        user_id: finalUserId,
+        provider: 'google',
+        access_token: tokenData.access_token,
+        refresh_token: encryptedRefreshToken,
+        expires_at: expiresAt.toISOString(),
+        email: userEmail,
+        scopes: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send']
+      })
+      .select()
+      .single();
+
       connectionData = insertData;
       insertError = insertErr;
     }
@@ -298,7 +342,8 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       console.error('Error saving email connection:', insertError);
-      const redirectUrl = `${url.origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?error=save_failed`;
+      const frontendUrl = getFrontendUrl(req);
+      const redirectUrl = `${frontendUrl}/auth/callback?error=save_failed`;
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -312,7 +357,9 @@ Deno.serve(async (req) => {
     });
 
     // Redirecionar de volta para o dashboard com sucesso
-    const redirectUrl = `${url.origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?status=success&email=${encodeURIComponent(userEmail)}`;
+    // Usar a URL base do frontend em vez da URL da Edge Function
+    const frontendUrl = getFrontendUrl(req);
+    const redirectUrl = `${frontendUrl}/auth/callback?status=success&email=${encodeURIComponent(userEmail)}`;
     return new Response(null, {
       status: 302,
       headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -320,7 +367,8 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Unexpected error in google-oauth-callback:', error);
-    const redirectUrl = `${new URL(req.url).origin.replace('/functions/v1/google-oauth-callback', '')}/school/dashboard/inbox?error=unexpected_error`;
+    const frontendUrl = getFrontendUrl(req);
+    const redirectUrl = `${frontendUrl}/auth/callback?error=unexpected_error`;
     return new Response(null, {
       status: 302,
       headers: { ...corsHeaders, 'Location': redirectUrl },

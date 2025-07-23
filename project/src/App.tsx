@@ -34,6 +34,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ForUniversities from './pages/ForUniversities';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
+import AuthCallback from './pages/AuthCallback';
 
 function App() {
   return (
@@ -84,6 +85,7 @@ function App() {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/for-universities" element={<ForUniversities />} />
             <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             </Routes>
           </Layout>
         </AuthRedirect>

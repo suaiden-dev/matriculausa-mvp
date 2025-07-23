@@ -135,3 +135,21 @@ export interface UserProfile {
   i20_control_fee_payment_intent_id?: string | null;
   is_scholarship_fee_paid: boolean;
 }
+
+export interface Email {
+  id: string;
+  threadId?: string;
+  from: string;
+  to?: string;
+  subject: string;
+  preview?: string;
+  snippet: string;
+  body?: string;
+  date: string;
+  isRead: boolean;
+  isStarred?: boolean;
+  hasAttachments: boolean;
+  priority: 'high' | 'normal' | 'low';
+  labels?: string[];
+  avatar?: string;
+}
