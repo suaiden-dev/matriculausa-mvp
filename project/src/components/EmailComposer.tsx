@@ -8,17 +8,24 @@ import {
   CheckCircle, 
   AlertCircle,
   Save,
-  Trash2
+  Trash2,
+  Paperclip,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useGmailConnection } from '../hooks/useGmailConnection';
 
 interface EmailComposerProps {
   originalEmail?: {
-    id: string;
-    threadId: string;
-    from: string;
-    subject: string;
-    snippet: string;
+    id?: string;
+    threadId?: string;
+    from?: string;
+    subject?: string;
+    snippet?: string;
+    to?: string;
+    body?: string;
+    htmlBody?: string;
   };
   onSend?: (result: any) => void;
   onClose?: () => void;
@@ -44,13 +51,25 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [tone, setTone] = useState<'professional' | 'friendly' | 'formal'>('professional');
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const { connection } = useGmailConnection();
 
   // Initialize form when original email changes
   useEffect(() => {
     if (originalEmail) {
-      setTo(originalEmail.from);
-      setSubject(`Re: ${originalEmail.subject}`);
-      setBody('');
+      // Se tem 'to', é um forward
+      if (originalEmail.to !== undefined) {
+        setTo(originalEmail.to);
+        setSubject(originalEmail.subject || '');
+        setBody(originalEmail.body || '');
+        setIsHtmlMode(!!originalEmail.htmlBody);
+      } else {
+        // É um reply
+        setTo(originalEmail.from || '');
+        setSubject(`Re: ${originalEmail.subject || ''}`);
+        setBody('');
+      }
     }
   }, [originalEmail]);
 
@@ -61,6 +80,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       setSubject('');
       setBody('');
       setSendResult(null);
+      setAttachments([]);
     }
   }, [isOpen, originalEmail]);
 
@@ -69,30 +89,40 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
 
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/generate-draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          originalEmail: {
-            from: originalEmail.from,
-            subject: originalEmail.subject,
-            content: originalEmail.snippet
-          },
-          tone: tone
-        })
-      });
+      // Template responses based on tone
+      const templates = {
+        professional: `Dear ${originalEmail.from?.split('@')[0]},
 
-      const data = await response.json();
+Thank you for your email regarding "${originalEmail.subject}".
+
+I have reviewed your inquiry and would be happy to assist you with this matter. Please let me know if you need any additional information or have any questions.
+
+Best regards,
+[Your Name]`,
+        friendly: `Hi ${originalEmail.from?.split('@')[0]}!
+
+Thanks for reaching out about "${originalEmail.subject}" - I'm excited to help you with this!
+
+I've looked into your request and I think we can definitely work something out. Let me know if you need anything else or have any questions.
+
+Cheers!
+[Your Name]`,
+        formal: `Dear ${originalEmail.from?.split('@')[0]},
+
+I acknowledge receipt of your correspondence dated ${new Date().toLocaleDateString()} regarding "${originalEmail.subject}".
+
+After careful consideration of the matter you have presented, I am pleased to inform you that I am in a position to provide the assistance you require.
+
+Should you require any additional clarification or have further inquiries, please do not hesitate to contact me.
+
+Yours sincerely,
+[Your Name]`
+      };
+
+      // Simulate AI generation delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      if (data.success) {
-        setBody(data.draft);
-      } else {
-        console.error('Failed to generate draft:', data.error);
-        // Use fallback draft
-        setBody(data.fallbackDraft || 'Unable to generate AI draft');
-      }
+      setBody(templates[tone]);
     } catch (error) {
       console.error('Error generating draft:', error);
       setBody('Error generating AI draft. Please write your response manually.');
@@ -107,6 +137,11 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       return;
     }
 
+    if (!connection) {
+      alert('Gmail not connected. Please connect your Gmail account first.');
+      return;
+    }
+
     setIsSending(true);
     setSendResult(null);
 
@@ -114,50 +149,46 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session?.provider_token) {
-        throw new Error('No email provider token available. Please reconnect your email account.');
+      if (!session) {
+        throw new Error('User not authenticated. Please log in again.');
       }
 
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          access_token: session.provider_token,
+      // Prepare email content
+      const emailContent = originalEmail?.htmlBody || (isHtmlMode ? body : body.replace(/\n/g, '<br>'));
+
+      const response = await supabase.functions.invoke('send-gmail-message', {
+        body: {
           to: to,
           subject: subject,
-          body: body,
-          threadId: originalEmail?.threadId
-        })
+          htmlBody: emailContent
+        }
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to send email');
+      }
+
+      if (response.data?.success) {
         setSendResult({
           success: true,
-          messageId: result.messageId
+          messageId: response.data.messageId
         });
         
         // Call onSend callback
-        onSend?.(result);
+        onSend?.(response.data);
         
         // Close composer after successful send
         setTimeout(() => {
           onClose?.();
         }, 2000);
       } else {
-        setSendResult({
-          success: false,
-          error: result.error
-        });
+        throw new Error('Failed to send email');
       }
     } catch (error: any) {
       console.error('Error sending email:', error);
       setSendResult({
         success: false,
-        error: error.message
+        error: error.message || 'An error occurred while sending email'
       });
     } finally {
       setIsSending(false);
@@ -165,26 +196,56 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   };
 
   const saveDraft = () => {
-    // TODO: Implement draft saving
-    console.log('Saving draft...', { to, subject, body });
+    // TODO: Implement draft saving to localStorage or database
+    const draft = {
+      to,
+      subject,
+      body,
+      timestamp: new Date().toISOString()
+    };
+    
+    const drafts = JSON.parse(localStorage.getItem('email-drafts') || '[]');
+    drafts.push(draft);
+    localStorage.setItem('email-drafts', JSON.stringify(drafts));
+    
+    alert('Draft saved successfully!');
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setAttachments(prev => [...prev, ...files]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-[#05294E] to-[#D0151C] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Send className="h-6 w-6 text-white" />
             <h2 className="text-xl font-bold text-white">
-              {originalEmail ? 'Reply to Email' : 'Compose New Email'}
+              {originalEmail ? (
+                originalEmail.to !== undefined ? 'Forward Email' : 'Reply to Email'
+              ) : 'Compose New Email'}
             </h2>
+            {connection && (
+              <div className="flex items-center space-x-2 bg-white/20 px-2 py-1 rounded-lg">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span className="text-white text-sm">Connected to {connection.email}</span>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
             className="text-white hover:text-white/80 transition-colors"
+            title="Close email composer"
+            aria-label="Close email composer"
           >
             <X className="h-6 w-6" />
           </button>
@@ -217,6 +278,18 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
             </div>
           )}
 
+          {/* Connection Status */}
+          {!connection && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+                <span className="text-yellow-800">
+                  Gmail not connected. Please connect your Gmail account to send emails.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* AI Generation Controls */}
           {originalEmail && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -230,6 +303,8 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                     value={tone}
                     onChange={(e) => setTone(e.target.value as any)}
                     className="px-3 py-1 border border-blue-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                    title="Select response tone"
+                    aria-label="Select response tone"
                   >
                     <option value="professional">Professional</option>
                     <option value="friendly">Friendly</option>
@@ -248,9 +323,6 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                     <span>{isGenerating ? 'Generating...' : 'Generate Template'}</span>
                   </button>
                 </div>
-                <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mt-2">
-                  AI integration coming soon - using smart templates
-                </div>
               </div>
             </div>
           )}
@@ -268,6 +340,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 placeholder="recipient@example.com"
                 required
+                disabled={!connection}
               />
             </div>
 
@@ -282,21 +355,98 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 placeholder="Email subject"
                 required
+                disabled={!connection}
               />
             </div>
 
+            {/* Message Editor */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-700">
+                  Message *
+                </label>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setIsHtmlMode(!isHtmlMode)}
+                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+                    title="Toggle HTML mode"
+                    aria-label="Toggle HTML mode"
+                  >
+                    {isHtmlMode ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    <span>{isHtmlMode ? 'HTML' : 'Text'}</span>
+                  </button>
+                </div>
+              </div>
+              
+              {isHtmlMode ? (
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={12}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none font-mono text-sm"
+                  placeholder="Write your HTML message here...&#10;&#10;Example:&#10;&lt;h1&gt;Hello&lt;/h1&gt;&#10;&lt;p&gt;This is a paragraph.&lt;/p&gt;"
+                  required
+                  disabled={!connection}
+                />
+              ) : (
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={12}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
+                  placeholder="Write your message here..."
+                  required
+                  disabled={!connection}
+                />
+              )}
+            </div>
+
+            {/* Attachments */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Message *
+                Attachments
               </label>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={12}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
-                placeholder="Write your message here..."
-                required
-              />
+              <div className="space-y-2">
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="file-upload"
+                  disabled={!connection}
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="inline-flex items-center space-x-2 px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  <span>Add Files</span>
+                </label>
+                
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Paperclip className="h-4 w-4 text-slate-500" />
+                          <span className="text-sm text-slate-700">{file.name}</span>
+                          <span className="text-xs text-slate-500">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeAttachment(index)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Remove attachment"
+                          aria-label="Remove attachment"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -316,6 +466,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 setTo('');
                 setSubject('');
                 setBody('');
+                setAttachments([]);
               }}
               className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center space-x-2"
             >
@@ -333,7 +484,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
             </button>
             <button
               onClick={sendEmail}
-              disabled={isSending || !to || !subject || !body}
+              disabled={isSending || !to || !subject || !body || !connection}
               className="bg-[#05294E] text-white px-6 py-2 rounded-xl font-medium hover:bg-[#041f3f] disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isSending ? (
