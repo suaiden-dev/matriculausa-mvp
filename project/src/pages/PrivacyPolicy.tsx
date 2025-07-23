@@ -234,14 +234,6 @@ const PrivacyPolicy: React.FC = () => (
             <p className="text-gray-700"><strong>Address:</strong> Los Angeles - CA - USA</p>
           </div>
         </section>
-
-        {/* Legal Disclaimer */}
-        <div className="border border-gray-200 p-4 bg-gray-50">
-          <p className="text-sm text-gray-600">
-            <strong>LEGAL DISCLAIMER:</strong> This document was generated as a starting point and does not replace 
-            legal consultation from a qualified professional. We recommend review by a specialized attorney before implementation.
-          </p>
-        </div>
       </div>
     </div>
   </div>

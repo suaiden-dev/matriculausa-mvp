@@ -291,14 +291,6 @@ const TermsOfService: React.FC = () => (
             <p className="text-blue-800"><strong>Address:</strong> Los Angeles - CA - USA</p>
           </div>
         </section>
-
-        {/* Legal Disclaimer */}
-        <div className="bg-gray-100 p-4 rounded-lg border-l-4 border-gray-400">
-          <p className="text-sm text-gray-600">
-            <strong>LEGAL DISCLAIMER:</strong> This document was generated as a starting point and does not replace 
-            legal consultation from a qualified professional. We recommend review by a specialized attorney before implementation.
-          </p>
-        </div>
       </div>
     </div>
   </div>
