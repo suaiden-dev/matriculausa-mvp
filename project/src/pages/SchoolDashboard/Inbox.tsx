@@ -24,6 +24,8 @@ import {
   Download,
   AlertCircle
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import EmailConnectionManager from '../../components/EmailConnectionManager';
 import EmailComposer from '../../components/EmailComposer';
 
@@ -40,6 +42,7 @@ interface Email {
 }
 
 const Inbox: React.FC = () => {
+  const { user } = useAuth();
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,71 +52,93 @@ const Inbox: React.FC = () => {
   const [hasEmailConnection, setHasEmailConnection] = useState(true); // Habilitar demo de e-mails
   const [composerEmail, setComposerEmail] = useState<any>(null);
 
-  // Mock data - será substituído por dados reais da API
+  // Buscar emails reais da API
   useEffect(() => {
-    const mockEmails: Email[] = [
-      {
-        id: '1',
-        from: 'student.inquiry@example.com',
-        subject: 'International Student Application Question',
-        preview: 'Hello, I am interested in applying to your university as an international student. Could you please provide information about the application process and required documents?',
-        date: '2 hours ago',
-        isRead: false,
-        isStarred: true,
-        hasAttachments: false,
-        priority: 'high'
-      },
-      {
-        id: '2',
-        from: 'scholarship.applicant@example.com',
-        subject: 'Scholarship Application - Documents Submitted',
-        preview: 'Dear Admissions Office, I have submitted all required documents for the International Student Scholarship. Please confirm receipt and let me know if anything else is needed.',
-        date: '4 hours ago',
-        isRead: true,
-        isStarred: false,
-        hasAttachments: true,
-        priority: 'normal'
-      },
-      {
-        id: '3',
-        from: 'accepted.student@example.com',
-        subject: 'Acceptance Letter - Next Steps',
-        preview: 'Thank you for the acceptance letter! I am very excited to join your university. What are the next steps I need to take to complete my enrollment?',
-        date: '1 day ago',
-        isRead: true,
-        isStarred: false,
-        hasAttachments: false,
-        priority: 'normal'
-      },
-      {
-        id: '4',
-        from: 'visa.questions@example.com',
-        subject: 'F-1 Visa Application Support',
-        preview: 'I need help with my F-1 visa application. Could you provide the I-20 form and any additional documentation required for the visa interview?',
-        date: '2 days ago',
-        isRead: false,
-        isStarred: true,
-        hasAttachments: true,
-        priority: 'high'
-      },
-      {
-        id: '5',
-        from: 'housing.inquiry@example.com',
-        subject: 'On-Campus Housing Availability',
-        preview: 'I would like to know about on-campus housing options for international students. What are the available dormitories and how do I apply for housing?',
-        date: '3 days ago',
-        isRead: true,
-        isStarred: false,
-        hasAttachments: false,
-        priority: 'low'
-      }
-    ];
+    const fetchEmails = async () => {
+      try {
+        setLoading(true);
+        
+        // Verificar se há conexão de email ativa
+        const { data: connections, error: connectionsError } = await supabase
+          .from('email_connections')
+          .select('*')
+          .eq('user_id', user?.id)
+          .eq('is_active', true)
+          .single();
 
-    setTimeout(() => {
-      setEmails(mockEmails);
-      setLoading(false);
-    }, 1000);
-  }, []);
+        if (connectionsError || !connections) {
+          console.log('Nenhuma conexão de email ativa encontrada');
+          setHasEmailConnection(false);
+          setLoading(false);
+          return;
+        }
+
+        // Buscar emails reais via Edge Function
+        const response = await fetch('/api/get-inbox-emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            access_token: connections.access_token,
+            maxResults: 50
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Falha ao buscar emails');
+        }
+
+        const data = await response.json();
+        
+        if (data.emails && Array.isArray(data.emails)) {
+          // Converter emails da API para o formato da interface
+          const realEmails: Email[] = data.emails.map((email: any) => ({
+            id: email.id,
+            from: email.from || email.sender || 'unknown@example.com',
+            subject: email.subject || 'Sem assunto',
+            preview: email.snippet || email.body || 'Sem preview disponível',
+            date: email.date || email.timestamp || 'Data desconhecida',
+            isRead: email.isRead || false,
+            isStarred: email.isStarred || false,
+            hasAttachments: email.hasAttachments || false,
+            priority: email.priority || 'normal'
+          }));
+          
+          setEmails(realEmails);
+          setHasEmailConnection(true);
+        } else {
+          console.log('Nenhum email encontrado ou formato inválido');
+          setEmails([]);
+          setHasEmailConnection(true);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar emails:', error);
+        setHasEmailConnection(false);
+        // Em caso de erro, mostrar dados mock como fallback
+        const mockEmails: Email[] = [
+          {
+            id: '1',
+            from: 'student.inquiry@example.com',
+            subject: 'International Student Application Question',
+            preview: 'Hello, I am interested in applying to your university as an international student. Could you please provide information about the application process and required documents?',
+            date: '2 hours ago',
+            isRead: false,
+            isStarred: true,
+            hasAttachments: false,
+            priority: 'high'
+          }
+        ];
+        setEmails(mockEmails);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user?.id) {
+      fetchEmails();
+    }
+  }, [user?.id]);
 
   const filteredEmails = emails.filter(email => {
     const matchesSearch = email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
