@@ -71,46 +71,46 @@ const EmailList: React.FC<EmailListProps> = ({
     <div className="h-full flex flex-col min-h-0">
       {/* Email List Content */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-200">
           {emails.map((email) => (
             <div
               key={email.id}
-              className={`p-3 sm:p-4 cursor-pointer transition-colors hover:bg-slate-50 ${
-                selectedEmail?.id === email.id ? 'bg-blue-50 border-r-2 border-[#05294E]' : ''
-              } ${!email.isRead ? 'bg-blue-50/50' : ''}`}
+              className={`px-4 py-3 cursor-pointer transition-colors hover:bg-slate-50 border-l-4 border-transparent ${
+                selectedEmail?.id === email.id ? 'bg-blue-50 border-l-[#05294E]' : ''
+              } ${!email.isRead ? 'bg-blue-50/30' : ''}`}
               onClick={() => onEmailSelect(email)}
             >
-              <div className="flex items-start space-x-2 sm:space-x-3">
+              <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-[#05294E] to-[#D0151C] rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs sm:text-sm font-semibold">
+                  <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                    <span className="text-slate-600 text-sm font-medium">
                       {email.from.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className={`font-medium text-xs sm:text-sm truncate ${!email.isRead ? 'font-semibold' : ''}`}>
+                    <p className={`font-medium text-sm truncate ${!email.isRead ? 'font-semibold' : ''}`}>
                       {email.from}
                     </p>
-                    <div className="flex items-center space-x-1 flex-shrink-0">
+                    <div className="flex items-center space-x-2 flex-shrink-0">
                       <span className="text-xs text-slate-500">{formatDate(email.date)}</span>
-                      {email.hasAttachments && <Paperclip className="h-3 w-3 text-slate-400" />}
+                      {email.hasAttachments && <Paperclip className="h-4 w-4 text-slate-400" />}
                     </div>
                   </div>
-                  <p className={`text-xs sm:text-sm truncate mt-1 ${!email.isRead ? 'font-semibold' : ''}`}>
+                  <p className={`text-sm truncate mt-1 ${!email.isRead ? 'font-semibold' : ''}`}>
                     {email.subject}
                   </p>
-                  <p className="text-xs text-slate-500 truncate mt-1">{email.snippet}</p>
+                  <p className="text-sm text-slate-600 truncate mt-1">{email.snippet}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className={`text-xs ${getPriorityColor(email.priority)}`}>
                       {getPriorityIcon(email.priority)} {email.priority}
                     </span>
                     <button className="text-slate-400 hover:text-yellow-500 transition-colors">
                       {(email as any).isStarred ? (
-                        <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       ) : (
-                        <StarOff className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <StarOff className="h-4 w-4" />
                       )}
                     </button>
                   </div>
@@ -121,18 +121,18 @@ const EmailList: React.FC<EmailListProps> = ({
         </div>
       </div>
       
-      {/* Load More Button - Altura fixa */}
+      {/* Load More Button */}
       {hasMoreEmails && (
-        <div className="flex-shrink-0 p-4 text-center border-t border-slate-200 bg-slate-50">
+        <div className="flex-shrink-0 p-3 text-center border-t border-slate-200">
           <button
             onClick={onLoadMore}
             disabled={loading}
-            className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#041f3f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 mx-auto"
+            className="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-medium hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 mx-auto"
           >
             <ChevronDown className="h-4 w-4" />
-            <span>Load More Emails</span>
+            <span>Load More</span>
           </button>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 mt-1">
             Showing {emails.length} of {emailCounts[activeTab] || 'many'} emails
           </p>
         </div>

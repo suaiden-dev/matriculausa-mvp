@@ -23,6 +23,8 @@ import { useGmail } from '../../hooks/useGmail';
 import { useGmailConnection } from '../../hooks/useGmailConnection';
 import { useAuth } from '../../hooks/useAuth';
 import EmailComposer from '../../components/EmailComposer';
+import ReplyComposer from '../../components/ReplyComposer';
+import ForwardComposer from '../../components/ForwardComposer';
 import EmailList from '../../components/Inbox/EmailList';
 import EmailDetail from '../../components/Inbox/EmailDetail';
 import EmailTabs from '../../components/Inbox/EmailTabs';
@@ -289,7 +291,6 @@ const tabScrollStyles = `
   /* Wrapper para emails */
   .email-wrapper {
     background: white;
-    border-radius: 8px;
     overflow: hidden;
   }
   
@@ -300,6 +301,81 @@ const tabScrollStyles = `
   
   .email-wrapper .email-text-content {
     padding: 0;
+  }
+  
+  /* CSS global para remover bordas de emails (versão menos agressiva) */
+  .email-html-content table,
+  .email-html-content td,
+  .email-html-content th {
+    border: none !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+  }
+  
+  .email-html-content img {
+    border: none !important;
+    outline: none !important;
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  
+  .email-html-content a img {
+    border: none !important;
+    outline: none !important;
+    text-decoration: none !important;
+  }
+  
+  /* Remove apenas bordas e sombras, mantém outros estilos */
+  .email-html-content * {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  /* Remove backgrounds apenas de elementos específicos (NÃO links) */
+  .email-html-content table,
+  .email-html-content td,
+  .email-html-content th,
+  .email-html-content div,
+  .email-html-content p,
+  .email-html-content span {
+    background: transparent !important;
+  }
+  
+  /* Garante que links sejam visíveis */
+  .email-html-content a {
+    color: inherit !important;
+    text-decoration: inherit !important;
+    display: inline-block !important;
+  }
+  
+  /* Garante que links com imagens sejam visíveis */
+  .email-html-content a img {
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+    border: none !important;
+    outline: none !important;
+  }
+  
+  /* Garante que botões e elementos clicáveis sejam visíveis */
+  .email-html-content button,
+  .email-html-content input[type="button"],
+  .email-html-content input[type="submit"] {
+    background: inherit !important;
+    color: inherit !important;
+  }
+  
+  /* Fallback para imagens que falham */
+  .email-html-content .image-placeholder {
+    display: none;
+    color: #666 !important;
+    font-style: italic !important;
+    padding: 10px !important;
+    background: #f5f5f5 !important;
+    border: 1px dashed #ccc !important;
+    text-align: center !important;
+    margin: 5px 0 !important;
   }
 `;
 
@@ -323,7 +399,11 @@ const Inbox: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread' | 'starred'>('all');
   const [isComposing, setIsComposing] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [isForwarding, setIsForwarding] = useState(false);
   const [composerEmail, setComposerEmail] = useState<any>(null);
+  const [replyEmail, setReplyEmail] = useState<Email | null>(null);
+  const [forwardEmail, setForwardEmail] = useState<Email | null>(null);
   const [showEmailIntegration, setShowEmailIntegration] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [emailCounts, setEmailCounts] = useState<Record<string, number>>({});
@@ -488,15 +568,24 @@ const Inbox: React.FC = () => {
 
   const handleCompose = () => {
     if (!activeConnection) return;
+    setComposerEmail(null);
+    setReplyEmail(null);
+    setForwardEmail(null);
     setIsComposing(true);
+    setIsReplying(false);
+    setIsForwarding(false);
     setSelectedEmail(null);
   };
 
   const handleSendEmail = async (emailData: any) => {
     try {
       console.log('Email sent successfully!');
-    setIsComposing(false);
-    setComposerEmail(null);
+      setIsComposing(false);
+      setIsReplying(false);
+      setIsForwarding(false);
+      setComposerEmail(null);
+      setReplyEmail(null);
+      setForwardEmail(null);
       fetchEmailsForTab(activeTab);
     } catch (error) {
       console.error('Failed to send email:', error);
@@ -504,15 +593,15 @@ const Inbox: React.FC = () => {
   };
 
   const handleForwardEmail = () => {
+    console.log('📧 Inbox handleForwardEmail: Called with selectedEmail:', {
+      id: selectedEmail?.id,
+      from: selectedEmail?.from,
+      subject: selectedEmail?.subject
+    });
+    
     if (selectedEmail) {
-      const forwardData = {
-        to: '',
-        subject: `Fwd: ${selectedEmail.subject}`,
-        body: `\n\n---------- Forwarded message ----------\nFrom: ${selectedEmail.from}\nDate: ${selectedEmail.date}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.body || selectedEmail.snippet}`
-      };
-      
-      setComposerEmail(forwardData);
-      setIsComposing(true);
+      setForwardEmail(selectedEmail);
+      setIsForwarding(true);
     }
   };
 
@@ -576,8 +665,19 @@ const Inbox: React.FC = () => {
   };
 
   const handleReply = (email: Email) => {
-    setComposerEmail(email);
-    setIsComposing(true);
+    console.log('📧 Inbox handleReply: email received:', {
+      id: email.id,
+      from: email.from,
+      subject: email.subject,
+      hasHtmlBody: !!email.htmlBody,
+      hasBody: !!email.body,
+      htmlBodyLength: email.htmlBody?.length || 0,
+      bodyLength: email.body?.length || 0,
+      htmlBodyPreview: email.htmlBody?.substring(0, 100) + '...',
+      bodyPreview: email.body?.substring(0, 100) + '...'
+    });
+    setReplyEmail(email);
+    setIsReplying(true);
   };
 
   useEffect(() => {
@@ -796,6 +896,7 @@ const Inbox: React.FC = () => {
             emailCounts={emailCounts}
             onCompose={handleCompose}
             onShowEmailIntegration={() => setShowEmailIntegration(true)}
+            onShowManageConnections={() => setShowManageConnections(true)}
             connection={activeConnection}
             onAccountChange={(email) => {
               console.log('🔄 Inbox: onAccountChange called with:', email);
@@ -867,12 +968,28 @@ const Inbox: React.FC = () => {
           </div>
         </div>
 
-        {/* Email Composer */}
+        {/* Email Composer for new emails only */}
         <EmailComposer
           isOpen={isComposing}
           onClose={() => setIsComposing(false)}
           onSend={handleSendEmail}
           originalEmail={composerEmail}
+        />
+
+        {/* Reply Composer */}
+        <ReplyComposer
+          isOpen={isReplying}
+          onClose={() => setIsReplying(false)}
+          onSend={handleSendEmail}
+          originalEmail={replyEmail!}
+        />
+
+        {/* Forward Composer */}
+        <ForwardComposer
+          isOpen={isForwarding}
+          onClose={() => setIsForwarding(false)}
+          onSend={handleSendEmail}
+          originalEmail={forwardEmail!}
         />
 
                 {/* Manage Connections Modal */}

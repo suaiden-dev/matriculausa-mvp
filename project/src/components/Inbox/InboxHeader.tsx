@@ -9,6 +9,7 @@ interface InboxHeaderProps {
   emailCounts: Record<string, number>;
   onCompose: () => void;
   onShowEmailIntegration: () => void;
+  onShowManageConnections: () => void;
   connection: any;
   onAccountChange?: (email: string) => void;
 }
@@ -20,6 +21,7 @@ const InboxHeader: React.FC<InboxHeaderProps> = ({
   emailCounts,
   onCompose,
   onShowEmailIntegration,
+  onShowManageConnections,
   connection,
   onAccountChange
 }) => {
@@ -64,7 +66,7 @@ const InboxHeader: React.FC<InboxHeaderProps> = ({
             <span className="sm:hidden">New</span>
           </button>
           <button 
-            onClick={onShowEmailIntegration}
+            onClick={onShowManageConnections}
             className="bg-white/20 text-white px-3 sm:px-4 py-3 rounded-xl font-semibold hover:bg-white/30 transition-colors flex items-center space-x-2 text-base sm:text-lg"
           >
             <Settings className="h-4 w-4 sm:h-5 sm:w-5" />

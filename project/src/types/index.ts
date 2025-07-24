@@ -136,6 +136,14 @@ export interface UserProfile {
   is_scholarship_fee_paid: boolean;
 }
 
+export interface EmailAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  attachmentId: string;
+}
+
 export interface Email {
   id: string;
   threadId?: string;
@@ -145,10 +153,12 @@ export interface Email {
   preview?: string;
   snippet: string;
   body?: string;
+  htmlBody?: string;
   date: string;
   isRead: boolean;
   isStarred?: boolean;
   hasAttachments: boolean;
+  attachments?: EmailAttachment[];
   priority: 'high' | 'normal' | 'low';
   labels?: string[];
   avatar?: string;

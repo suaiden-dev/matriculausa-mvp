@@ -53,22 +53,109 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   const [tone, setTone] = useState<'professional' | 'friendly' | 'formal'>('professional');
   const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
-  const { connection } = useGmailConnection();
+  const { activeConnection } = useGmailConnection();
 
   // Initialize form when original email changes
   useEffect(() => {
+    console.log('📧 EmailComposer: useEffect triggered with originalEmail:', {
+      id: originalEmail?.id,
+      from: originalEmail?.from,
+      subject: originalEmail?.subject,
+      hasHtmlBody: !!originalEmail?.htmlBody,
+      hasBody: !!originalEmail?.body,
+      htmlBodyLength: originalEmail?.htmlBody?.length || 0,
+      bodyLength: originalEmail?.body?.length || 0
+    });
+    
     if (originalEmail) {
-      // Se tem 'to', é um forward
-      if (originalEmail.to !== undefined) {
-        setTo(originalEmail.to);
+      console.log('📧 EmailComposer: originalEmail received:', {
+        id: originalEmail.id,
+        from: originalEmail.from,
+        subject: originalEmail.subject,
+        hasHtmlBody: !!originalEmail.htmlBody,
+        hasBody: !!originalEmail.body,
+        hasSnippet: !!originalEmail.snippet,
+        htmlBodyLength: originalEmail.htmlBody?.length || 0,
+        bodyLength: originalEmail.body?.length || 0,
+        snippetLength: originalEmail.snippet?.length || 0,
+        htmlBodyPreview: originalEmail.htmlBody?.substring(0, 100) + '...',
+        bodyPreview: originalEmail.body?.substring(0, 100) + '...'
+      });
+
+      // Se tem 'id', é um email real (reply). Se não tem 'id', é um forward criado manualmente
+      console.log('📧 EmailComposer: Checking email type:', {
+        hasId: !!originalEmail.id,
+        id: originalEmail.id,
+        isForward: !originalEmail.id,
+        isReply: !!originalEmail.id
+      });
+      
+      if (!originalEmail.id) {
+        setTo(originalEmail.to || '');
         setSubject(originalEmail.subject || '');
-        setBody(originalEmail.body || '');
-        setIsHtmlMode(!!originalEmail.htmlBody);
+        // Para forward, usar o snippet em vez do body HTML
+        setBody(originalEmail.snippet || '');
+        setIsHtmlMode(false);
       } else {
         // É um reply
+        console.log('📧 EmailComposer: This is a REPLY (not forward)');
         setTo(originalEmail.from || '');
         setSubject(`Re: ${originalEmail.subject || ''}`);
-      setBody('');
+        
+        // Para reply, incluir o email original completo
+        // Priorizar htmlBody se disponível, senão usar body, senão snippet
+        const originalEmailContent = originalEmail.htmlBody || originalEmail.body || originalEmail.snippet || '';
+        
+        console.log('📧 EmailComposer: Content selection:', {
+          usingHtmlBody: !!originalEmail.htmlBody,
+          usingBody: !originalEmail.htmlBody && !!originalEmail.body,
+          usingSnippet: !originalEmail.htmlBody && !originalEmail.body && !!originalEmail.snippet,
+          finalContentLength: originalEmailContent.length
+        });
+        
+        console.log('📧 EmailComposer: Using content for reply:', {
+          hasHtmlBody: !!originalEmail.htmlBody,
+          hasBody: !!originalEmail.body,
+          htmlBodyLength: originalEmail.htmlBody?.length || 0,
+          bodyLength: originalEmail.body?.length || 0,
+          contentLength: originalEmailContent.length,
+          htmlBodyPreview: originalEmail.htmlBody?.substring(0, 200) + '...',
+          bodyPreview: originalEmail.body?.substring(0, 200) + '...',
+          contentPreview: originalEmailContent.substring(0, 200) + '...'
+        });
+        
+        // Se temos HTML, criar um reply HTML formatado
+        const hasHtmlContent = originalEmail.htmlBody || (originalEmail.body && originalEmail.body.includes('<'));
+        console.log('📧 EmailComposer: HTML detection:', {
+          hasHtmlBody: !!originalEmail.htmlBody,
+          bodyHasHtml: originalEmail.body?.includes('<') || false,
+          hasHtmlContent,
+          htmlBodyFirstChars: originalEmail.htmlBody?.substring(0, 50) || 'N/A',
+          bodyFirstChars: originalEmail.body?.substring(0, 50) || 'N/A'
+        });
+        
+        if (hasHtmlContent) {
+          const replyHtml = `
+<div style="border-left: 3px solid #ccc; padding-left: 15px; margin: 20px 0; color: #666;">
+  <p style="margin: 0 0 10px 0; font-size: 12px;">
+    <strong>From:</strong> ${originalEmail.from}<br>
+    <strong>Subject:</strong> ${originalEmail.subject}<br>
+    <strong>Date:</strong> ${new Date().toLocaleString()}
+  </p>
+  <div style="border-top: 1px solid #eee; padding-top: 10px;">
+    ${originalEmailContent}
+  </div>
+</div>`;
+          setBody(replyHtml);
+          setIsHtmlMode(true);
+          console.log('📧 EmailComposer: Set HTML mode with formatted reply');
+        } else {
+          // Se é texto simples
+          const replyTemplate = `\n\n--- Original Message ---\nFrom: ${originalEmail.from}\nSubject: ${originalEmail.subject}\nDate: ${new Date().toLocaleString()}\n\n${originalEmailContent}`;
+          setBody(replyTemplate);
+          setIsHtmlMode(false);
+          console.log('📧 EmailComposer: Set text mode with simple reply');
+        }
       }
     }
   }, [originalEmail]);
@@ -137,7 +224,7 @@ Yours sincerely,
       return;
     }
 
-    if (!connection) {
+    if (!activeConnection) {
       alert('Gmail not connected. Please connect your Gmail account first.');
       return;
     }
@@ -155,12 +242,39 @@ Yours sincerely,
 
       // Prepare email content
       const emailContent = originalEmail?.htmlBody || (isHtmlMode ? body : body.replace(/\n/g, '<br>'));
+      
+      console.log('📧 EmailComposer: Preparing email content:', {
+        hasOriginalHtmlBody: !!originalEmail?.htmlBody,
+        isHtmlMode,
+        bodyLength: body.length,
+        emailContentLength: emailContent.length,
+        emailContentPreview: emailContent.substring(0, 200) + '...'
+      });
+
+      // Prepare attachments
+      const emailAttachments = await Promise.all(attachments.map(async file => ({
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        data: await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Remove data URL prefix and get base64
+            const base64 = result.split(',')[1];
+            resolve(base64);
+          };
+          reader.readAsDataURL(file);
+        })
+      })));
 
       const response = await supabase.functions.invoke('send-gmail-message', {
         body: {
           to: to,
           subject: subject,
-          htmlBody: emailContent
+          htmlBody: emailContent,
+          textBody: !isHtmlMode ? body : undefined,
+          threadId: originalEmail?.threadId,
+          attachments: emailAttachments
         }
       });
 
@@ -234,10 +348,10 @@ Yours sincerely,
                 originalEmail.to !== undefined ? 'Forward Email' : 'Reply to Email'
               ) : 'New Email'}
             </h2>
-            {connection && (
+            {activeConnection && (
               <div className="flex items-center space-x-2 bg-white/20 px-2 py-1 rounded-lg">
                 <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span className="text-white text-sm">Connected to {connection.email}</span>
+                <span className="text-white text-sm">Connected to {activeConnection.email}</span>
               </div>
             )}
           </div>
@@ -279,7 +393,7 @@ Yours sincerely,
           )}
 
           {/* Connection Status */}
-          {!connection && (
+          {!activeConnection && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="h-5 w-5 text-yellow-600" />
@@ -340,7 +454,7 @@ Yours sincerely,
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 placeholder="recipient@example.com"
                 required
-                disabled={!connection}
+                disabled={!activeConnection}
               />
             </div>
 
@@ -355,7 +469,7 @@ Yours sincerely,
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 placeholder="Email subject"
                 required
-                disabled={!connection}
+                disabled={!activeConnection}
               />
             </div>
 
@@ -379,25 +493,34 @@ Yours sincerely,
               </div>
               
               {isHtmlMode ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    rows={8}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none font-mono text-sm"
+                    placeholder="Write your HTML message here...&#10;&#10;Example:&#10;&lt;h1&gt;Hello&lt;/h1&gt;&#10;&lt;p&gt;This is a paragraph.&lt;/p&gt;"
+                    required
+                    disabled={!activeConnection}
+                  />
+                  <div className="border border-slate-300 rounded-xl p-4 bg-slate-50">
+                    <div className="text-xs text-slate-500 mb-2">Preview:</div>
+                    <div 
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: body }}
+                    />
+                  </div>
+                </div>
+              ) : (
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={12}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none font-mono text-sm"
-                  placeholder="Write your HTML message here...&#10;&#10;Example:&#10;&lt;h1&gt;Hello&lt;/h1&gt;&#10;&lt;p&gt;This is a paragraph.&lt;/p&gt;"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
+                  placeholder="Write your message here..."
                   required
-                  disabled={!connection}
+                  disabled={!activeConnection}
                 />
-              ) : (
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={12}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
-                placeholder="Write your message here..."
-                required
-                  disabled={!connection}
-              />
               )}
             </div>
 
@@ -413,7 +536,7 @@ Yours sincerely,
                   onChange={handleFileUpload}
                   className="hidden"
                   id="file-upload"
-                  disabled={!connection}
+                  disabled={!activeConnection}
                 />
                 <label
                   htmlFor="file-upload"
@@ -484,7 +607,7 @@ Yours sincerely,
             </button>
             <button
               onClick={sendEmail}
-              disabled={isSending || !to || !subject || !body || !connection}
+              disabled={isSending || !to || !subject || !body || !activeConnection}
               className="bg-[#05294E] text-white px-6 py-2 rounded-xl font-medium hover:bg-[#041f3f] disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isSending ? (

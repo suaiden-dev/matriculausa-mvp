@@ -107,6 +107,23 @@ export const useGmail = (): UseGmailReturn => {
       }
 
       if (result.success) {
+        // Log para debugar se os emails têm htmlBody
+        if (result.emails && result.emails.length > 0) {
+          console.log('📧 useGmail: Emails received from API:', {
+            totalEmails: result.emails.length,
+            emailsWithHtmlBody: result.emails.filter((e: any) => e.htmlBody).length,
+            emailsWithBody: result.emails.filter((e: any) => e.body).length,
+            firstEmailSample: {
+              id: result.emails[0].id,
+              subject: result.emails[0].subject,
+              hasHtmlBody: !!result.emails[0].htmlBody,
+              hasBody: !!result.emails[0].body,
+              htmlBodyLength: result.emails[0].htmlBody?.length || 0,
+              bodyLength: result.emails[0].body?.length || 0
+            }
+          });
+        }
+
         if (options.pageToken) {
           // Carregar mais emails (append)
           setEmails(prev => [...prev, ...result.emails]);

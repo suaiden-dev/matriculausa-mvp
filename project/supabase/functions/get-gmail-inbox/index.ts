@@ -85,11 +85,14 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
 // Função para decodificar conteúdo base64 com encoding correto
 function decodeBase64WithEncoding(base64Data: string, encoding: string = 'UTF-8'): string {
   try {
-    // Substituir caracteres URL-safe
+    // Substituir caracteres URL-safe (Base64URL para Base64 padrão)
     const normalizedData = base64Data.replace(/-/g, '+').replace(/_/g, '/');
     
+    // Adicionar padding se necessário
+    const paddedData = normalizedData + '='.repeat((4 - normalizedData.length % 4) % 4);
+    
     // Decodificar base64
-    const binaryString = atob(normalizedData);
+    const binaryString = atob(paddedData);
     
     // Converter para Uint8Array
     const bytes = new Uint8Array(binaryString.length);
@@ -105,7 +108,8 @@ function decodeBase64WithEncoding(base64Data: string, encoding: string = 'UTF-8'
     // Fallback para UTF-8
     try {
       const normalizedData = base64Data.replace(/-/g, '+').replace(/_/g, '/');
-      return atob(normalizedData);
+      const paddedData = normalizedData + '='.repeat((4 - normalizedData.length % 4) % 4);
+      return atob(paddedData);
     } catch (fallbackError) {
       console.error('Fallback decoding also failed:', fallbackError);
       return '';
@@ -153,19 +157,33 @@ function extractEmailBody(payload: any): string {
       const charsetMatch = contentType.match(/charset=([^;]+)/i);
       if (charsetMatch) {
         encoding = charsetMatch[1].toUpperCase();
-        // Normalizar encodings comuns
-        if (encoding === 'ISO-8859-1') encoding = 'ISO-8859-1';
+        // Normalizar encodings comuns para português
+        if (encoding === 'ISO-8859-1' || encoding === 'LATIN1') encoding = 'ISO-8859-1';
         else if (encoding === 'WINDOWS-1252') encoding = 'WINDOWS-1252';
-        else if (encoding === 'LATIN1') encoding = 'ISO-8859-1';
+        else if (encoding === 'UTF-8' || encoding === 'UTF8') encoding = 'UTF-8';
+        else if (encoding === 'ASCII') encoding = 'UTF-8';
+        else {
+          console.log('Unknown encoding detected:', encoding, 'falling back to UTF-8');
+          encoding = 'UTF-8';
+        }
       }
     }
     
     try {
-      return decodeBase64WithEncoding(part.body.data, encoding);
+      const decoded = decodeBase64WithEncoding(part.body.data, encoding);
+      console.log(`Successfully decoded part with encoding: ${encoding}`);
+      return decoded;
     } catch (e) {
       console.error('Error processing part with encoding:', encoding, e);
       // Tentar com UTF-8 como fallback
-      return decodeBase64WithEncoding(part.body.data, 'UTF-8');
+      try {
+        const fallbackDecoded = decodeBase64WithEncoding(part.body.data, 'UTF-8');
+        console.log('Fallback to UTF-8 successful');
+        return fallbackDecoded;
+      } catch (fallbackError) {
+        console.error('UTF-8 fallback also failed:', fallbackError);
+        return '';
+      }
     }
   };
 
@@ -214,6 +232,14 @@ function extractEmailBody(payload: any): string {
   return '';
 }
 
+interface EmailAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  attachmentId: string;
+}
+
 interface Email {
   id: string;
   threadId: string;
@@ -222,9 +248,11 @@ interface Email {
   subject: string;
   snippet: string;
   body: string; // Conteúdo completo do email
+  htmlBody?: string;
   date: string;
   isRead: boolean;
   hasAttachments: boolean;
+  attachments?: EmailAttachment[];
   priority: 'high' | 'normal' | 'low';
   labels: string[];
 }
@@ -449,13 +477,18 @@ Deno.serve(async (req) => {
             try {
               if (encoding === 'B') {
                 // Base64 encoding
-                return decodeBase64WithEncoding(data, charset.toUpperCase());
+                const decoded = decodeBase64WithEncoding(data, charset.toUpperCase());
+                console.log(`Header decoded: ${charset} ${encoding} -> ${decoded}`);
+                return decoded;
               } else if (encoding === 'Q') {
                 // Quoted-printable encoding
-                return decodeQuotedPrintable(data, charset.toUpperCase());
+                const decoded = decodeQuotedPrintable(data, charset.toUpperCase());
+                console.log(`Header decoded: ${charset} ${encoding} -> ${decoded}`);
+                return decoded;
               }
             } catch (e) {
               console.error('Error decoding header:', e);
+              return value; // Retornar valor original se falhar
             }
           }
           
@@ -481,6 +514,96 @@ Deno.serve(async (req) => {
           priority = 'low';
         }
 
+        // Extrair informações dos anexos
+        const attachments: EmailAttachment[] = [];
+        console.log('🔍 Checking for attachments in email:', message.id);
+        
+        if (detail.payload?.parts) {
+          console.log('📎 Email has parts, checking for attachments...');
+          for (const part of detail.payload.parts) {
+            console.log('📄 Part:', {
+              mimeType: part.mimeType,
+              filename: part.filename,
+              hasAttachmentId: !!part.body?.attachmentId,
+              size: part.body?.size
+            });
+            
+            if (part.filename && part.body?.attachmentId) {
+              const attachment = {
+                id: part.body.attachmentId,
+                filename: part.filename,
+                mimeType: part.mimeType || 'application/octet-stream',
+                size: part.body.size || 0,
+                attachmentId: part.body.attachmentId
+              };
+              attachments.push(attachment);
+              console.log('✅ Found attachment:', attachment);
+            }
+          }
+        } else if (detail.payload?.body?.attachmentId) {
+          // Email sem parts mas com anexo no body principal
+          console.log('📎 Email has attachment in main body');
+          if (detail.payload.filename) {
+            const attachment = {
+              id: detail.payload.body.attachmentId,
+              filename: detail.payload.filename,
+              mimeType: detail.payload.mimeType || 'application/octet-stream',
+              size: detail.payload.body.size || 0,
+              attachmentId: detail.payload.body.attachmentId
+            };
+            attachments.push(attachment);
+            console.log('✅ Found attachment in main body:', attachment);
+          }
+        }
+        
+        console.log('📊 Total attachments found:', attachments.length);
+
+        // Extrair HTML e texto separadamente
+        const emailBody = extractEmailBody(detail.payload);
+        let htmlBody: string | undefined;
+        let textBody: string | undefined;
+
+        // Função auxiliar para processar parte do email (reutilizando a lógica de extractEmailBody)
+        const processPartForType = (part: any): string => {
+          if (!part.body?.data) return '';
+          
+          let encoding = 'UTF-8';
+          if (part.headers) {
+            const contentType = part.headers.find((h: any) => h.name === 'Content-Type')?.value || '';
+            const charsetMatch = contentType.match(/charset=([^;]+)/i);
+            if (charsetMatch) {
+              encoding = charsetMatch[1].toUpperCase();
+              if (encoding === 'ISO-8859-1' || encoding === 'LATIN1') encoding = 'ISO-8859-1';
+              else if (encoding === 'WINDOWS-1252') encoding = 'WINDOWS-1252';
+              else if (encoding === 'UTF-8' || encoding === 'UTF8') encoding = 'UTF-8';
+              else if (encoding === 'ASCII') encoding = 'UTF-8';
+              else encoding = 'UTF-8';
+            }
+          }
+          
+          try {
+            return decodeBase64WithEncoding(part.body.data, encoding);
+          } catch (e) {
+            return decodeBase64WithEncoding(part.body.data, 'UTF-8');
+          }
+        };
+
+        if (detail.payload?.parts) {
+          for (const part of detail.payload.parts) {
+            if (part.mimeType === 'text/html' && part.body?.data) {
+              htmlBody = processPartForType(part);
+            } else if (part.mimeType === 'text/plain' && part.body?.data) {
+              textBody = processPartForType(part);
+            }
+          }
+        } else if (detail.payload?.body?.data) {
+          if (detail.payload.mimeType === 'text/html') {
+            htmlBody = processPartForType(detail.payload);
+          } else {
+            textBody = processPartForType(detail.payload);
+          }
+        }
+
         return {
           id: message.id,
           threadId: message.threadId,
@@ -488,10 +611,12 @@ Deno.serve(async (req) => {
           to: to,
           subject: subject,
           snippet: detail.snippet || '',
-          body: extractEmailBody(detail.payload), // Adicionar o conteúdo completo
+          body: emailBody,
+          htmlBody: htmlBody,
           date: new Date(date).toLocaleString(),
           isRead: !detail.labelIds?.includes('UNREAD'),
-          hasAttachments: detail.payload?.parts?.some((part: any) => part.filename) || false,
+          hasAttachments: attachments.length > 0,
+          attachments: attachments.length > 0 ? attachments : undefined,
           priority: priority,
           labels: detail.labelIds || []
         };

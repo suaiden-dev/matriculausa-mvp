@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGmailConnection } from '../hooks/useGmailConnection';
-import { Trash2, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { Trash2, Mail, CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
 const GmailConnectionManager: React.FC = () => {
   const { 
@@ -13,15 +13,29 @@ const GmailConnectionManager: React.FC = () => {
     setActiveConnection,
     clearError 
   } = useGmailConnection();
+  
+  const [showConnectInfo, setShowConnectInfo] = useState(false);
+  const [disconnectModal, setDisconnectModal] = useState<{ show: boolean; email: string }>({ show: false, email: '' });
 
   const handleDisconnect = async (email: string) => {
-    if (confirm(`Tem certeza que deseja desconectar a conta ${email}?`)) {
-      await disconnectGmail(email);
-    }
+    setDisconnectModal({ show: true, email });
+  };
+
+  const confirmDisconnect = async () => {
+    await disconnectGmail(disconnectModal.email);
+    setDisconnectModal({ show: false, email: '' });
+  };
+
+  const cancelDisconnect = () => {
+    setDisconnectModal({ show: false, email: '' });
   };
 
   const handleSetActive = (email: string) => {
     setActiveConnection(email);
+  };
+
+  const handleConnectNewAccount = () => {
+    setShowConnectInfo(true);
   };
 
   return (
@@ -32,15 +46,15 @@ const GmailConnectionManager: React.FC = () => {
             Gmail Connections
           </h3>
           <p className="text-slate-600 text-sm">
-            Gerencie suas contas Gmail conectadas
+            Manage your connected Gmail accounts
           </p>
         </div>
         <button
-          onClick={connectGmail}
+          onClick={handleConnectNewAccount}
           disabled={loading}
           className="px-4 py-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white rounded-lg hover:from-[#041f3f] hover:to-[#b01218] disabled:opacity-50 transition-all duration-300 font-semibold text-sm"
         >
-          {loading ? 'Conectando...' : 'Conectar Nova Conta'}
+          {loading ? 'Connecting...' : 'Connect New Account'}
         </button>
       </div>
 
@@ -60,8 +74,8 @@ const GmailConnectionManager: React.FC = () => {
       {connections.length === 0 ? (
         <div className="text-center py-8">
           <Mail className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-          <p className="text-slate-600">Nenhuma conta Gmail conectada</p>
-          <p className="text-slate-500 text-sm">Conecte uma conta para começar</p>
+          <p className="text-slate-600">No Gmail accounts connected</p>
+          <p className="text-slate-500 text-sm">Connect an account to get started</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -88,7 +102,7 @@ const GmailConnectionManager: React.FC = () => {
                     )}
                   </div>
                   <p className="text-sm text-slate-600">
-                    Conectado em {new Date(connection.created_at).toLocaleDateString()}
+                    Connected on {new Date(connection.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -99,17 +113,16 @@ const GmailConnectionManager: React.FC = () => {
                     onClick={() => handleSetActive(connection.email)}
                     className="px-3 py-1 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                   >
-                    Ativar
+                    Activate
                   </button>
                 )}
-                <button
-                  onClick={() => handleDisconnect(connection.email)}
-                  disabled={loading}
-                  className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                  title={`Desconectar ${connection.email}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                                 <button
+                   onClick={() => handleDisconnect(connection.email)}
+                   disabled={loading}
+                   className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 font-medium"
+                 >
+                   Disconnect
+                 </button>
               </div>
             </div>
           ))}
@@ -118,21 +131,99 @@ const GmailConnectionManager: React.FC = () => {
 
       {connections.length > 0 && (
         <div className="mt-6 p-4 bg-slate-50 rounded-xl">
-          <h4 className="font-semibold text-slate-900 mb-2">Conta Ativa</h4>
+          <h4 className="font-semibold text-slate-900 mb-2">Active Account</h4>
           <p className="text-slate-600 text-sm">
             {activeConnection ? (
               <>
                 <span className="font-medium">{activeConnection.email}</span>
-                <span className="text-slate-500"> - Esta conta será usada para enviar e receber emails</span>
+                <span className="text-slate-500"> - This account will be used to send and receive emails</span>
               </>
             ) : (
-              'Nenhuma conta ativa selecionada'
+              'No active account selected'
             )}
           </p>
         </div>
       )}
-    </div>
-  );
-};
+
+      {/* Connect New Account Info */}
+      {showConnectInfo && (
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="flex items-start space-x-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-blue-900 mb-2">Connect New Gmail Account</h4>
+              <p className="text-blue-700 text-sm mb-3">
+                To connect a new Gmail account, you'll need to go through the OAuth process. This will redirect you to Google's authorization page.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowConnectInfo(false);
+                    connectGmail();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Continue to Google
+                </button>
+                <button
+                  onClick={() => setShowConnectInfo(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+                 </div>
+       )}
+
+       {/* Modal de Confirmação de Desconexão */}
+       {disconnectModal.show && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+             <div className="flex items-center justify-between mb-4">
+               <h3 className="text-lg font-bold text-slate-900">Confirm Disconnection</h3>
+               <button
+                 onClick={cancelDisconnect}
+                 className="text-slate-400 hover:text-slate-600 transition-colors"
+                 title="Close modal"
+               >
+                 <X className="h-5 w-5" />
+               </button>
+             </div>
+             
+             <div className="mb-6">
+               <p className="text-slate-600 mb-2">
+                 Are you sure you want to disconnect the account:
+               </p>
+               <p className="font-semibold text-slate-900 bg-slate-50 p-3 rounded-lg">
+                 {disconnectModal.email}
+               </p>
+               <p className="text-sm text-slate-500 mt-2">
+                 This action cannot be undone. You'll need to reconnect the account if you want to use it again.
+               </p>
+             </div>
+             
+             <div className="flex space-x-3">
+               <button
+                 onClick={cancelDisconnect}
+                 className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors font-medium"
+               >
+                 Cancel
+               </button>
+               <button
+                 onClick={confirmDisconnect}
+                 disabled={loading}
+                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors font-medium"
+               >
+                 {loading ? 'Disconnecting...' : 'Disconnect'}
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ };
 
 export default GmailConnectionManager; 

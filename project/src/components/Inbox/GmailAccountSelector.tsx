@@ -23,7 +23,8 @@ const GmailAccountSelector: React.FC<GmailAccountSelectorProps> = ({ onAccountCh
 
   const handleAddAccount = () => {
     setIsOpen(false);
-    connectGmail();
+    // Em vez de conectar diretamente, mostrar uma mensagem informativa
+    alert('To add a new Gmail account, please use the "Manage Connections" button in the header.');
   };
 
   if (connections.length === 0) {
