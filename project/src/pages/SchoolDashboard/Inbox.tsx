@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Mail, 
   RefreshCw,
@@ -29,8 +29,10 @@ import EmailTabs from '../../components/Inbox/EmailTabs';
 import InboxHeader from '../../components/Inbox/InboxHeader';
 import SearchAndFilters from '../../components/Inbox/SearchAndFilters';
 import { supabase } from '../../lib/supabase';
+import { config } from '../../lib/config';
 import { formatDateUS } from '../../lib/dateUtils';
 import { Email } from '../../types';
+import GmailConnectionManager from '../../components/GmailConnectionManager';
 
 // Estilos CSS personalizados para scroll das abas e melhor legibilidade
 const tabScrollStyles = `
@@ -312,8 +314,8 @@ interface EmailTab {
 
 const Inbox: React.FC = () => {
   const { user } = useAuth();
-  const { connection, loading: isConnecting, connectGmail, disconnectGmail } = useGmailConnection();
-  const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails } = useGmail();
+  const { connections, activeConnection, loading: isConnecting, connectGmail, disconnectGmail, setActiveConnection, checkConnections } = useGmailConnection();
+  const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails, clearEmails } = useGmail();
   
   // Estados para controle do layout
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -373,6 +375,55 @@ const Inbox: React.FC = () => {
 
   ];
 
+  // Função para atualizar contagens de emails
+  const updateEmailCounts = useCallback(async (specificEmail?: string) => {
+    const emailToUse = specificEmail || activeConnection?.email;
+    if (!emailToUse) return;
+    
+    console.log('📊 Updating email counts for:', emailToUse);
+    
+    const counts: {[key: string]: number} = {};
+    
+    for (const tab of emailTabs) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) continue;
+
+        console.log(`🔍 Fetching count for ${tab.label} (${tab.id}) with labelIds:`, tab.labelIds);
+
+        const response = await fetch(`${config.getSupabaseUrl()}/functions/v1/get-gmail-inbox?email=${encodeURIComponent(emailToUse)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            maxResults: 1,
+            labelIds: tab.labelIds,
+            countOnly: true
+          }),
+        });
+
+        const result = await response.json();
+        console.log(`📊 Result for ${tab.label}:`, result);
+        
+        if (result.success) {
+          counts[tab.id] = result.totalCount || 0;
+          console.log(`✅ ${tab.label}: ${counts[tab.id]} emails`);
+        } else {
+          console.error(`❌ Failed to get count for ${tab.label}:`, result.error);
+          counts[tab.id] = 0;
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching count for ${tab.label}:`, error);
+        counts[tab.id] = 0;
+      }
+    }
+    
+    console.log('📈 Final email counts:', counts);
+    setEmailCounts(counts);
+  }, [activeConnection?.email]);
+
   // Verificar parâmetros da URL para mostrar mensagens de status
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -382,6 +433,14 @@ const Inbox: React.FC = () => {
 
     if (status === 'success' && email) {
       console.log(`Gmail account ${email} connected successfully!`);
+      // Recarregar conexões e definir a nova conta como ativa
+      checkConnections().then(() => {
+        // Definir a nova conta como ativa
+        setActiveConnection(email);
+        // Recarregar emails da nova conta
+        fetchEmails();
+        updateEmailCounts(email);
+      });
       window.history.replaceState({}, '', window.location.pathname);
     } else if (error) {
       const errorMessages: { [key: string]: string } = {
@@ -397,13 +456,13 @@ const Inbox: React.FC = () => {
       console.error('Gmail connection error:', errorMessages[error] || 'An error occurred while connecting Gmail.');
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
+  }, [checkConnections, setActiveConnection, fetchEmails, updateEmailCounts]);
 
   useEffect(() => {
-    if (connection) {
+    if (activeConnection) {
       fetchEmails();
     }
-  }, [connection, fetchEmails]);
+  }, [activeConnection, fetchEmails]);
 
   const handleConnectGmail = async () => {
     try {
@@ -413,28 +472,22 @@ const Inbox: React.FC = () => {
     }
   };
 
-  const handleDisconnectGmail = async () => {
-    try {
-      await disconnectGmail();
-    } catch (error) {
-      console.error('Error disconnecting Gmail:', error);
-    }
-  };
+
 
   const handleRefresh = () => {
-    if (connection) {
+    if (activeConnection) {
       fetchEmails();
     }
   };
 
   const handleSearch = () => {
-    if (connection) {
+    if (activeConnection) {
       fetchEmails({ query: searchTerm });
     }
   };
 
   const handleCompose = () => {
-    if (!connection) return;
+    if (!activeConnection) return;
     setIsComposing(true);
     setSelectedEmail(null);
   };
@@ -505,12 +558,12 @@ const Inbox: React.FC = () => {
     }
   };
 
-  const fetchEmailsForTab = async (tabId: string) => {
+  const fetchEmailsForTab = useCallback(async (tabId: string) => {
     const tab = emailTabs.find(t => t.id === tabId);
-    if (tab && connection) {
+    if (tab && activeConnection) {
       await fetchEmails({ labelIds: tab.labelIds, maxResults: 50 });
     }
-  };
+  }, [activeConnection, fetchEmails]);
 
   const handleEmailSelect = (email: Email) => {
     setSelectedEmail(email);
@@ -527,62 +580,26 @@ const Inbox: React.FC = () => {
     setIsComposing(true);
   };
 
-  const updateEmailCounts = async () => {
-    if (!connection) return;
-    
-    const counts: {[key: string]: number} = {};
-    
-    for (const tab of emailTabs) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) continue;
-
-        console.log(`🔍 Fetching count for ${tab.label} (${tab.id}) with labelIds:`, tab.labelIds);
-
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-gmail-inbox`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            maxResults: 1,
-            labelIds: tab.labelIds,
-            countOnly: true
-          }),
-        });
-
-        const result = await response.json();
-        console.log(`📊 Result for ${tab.label}:`, result);
-        
-        if (result.success) {
-          counts[tab.id] = result.totalCount || 0;
-          console.log(`✅ ${tab.label}: ${counts[tab.id]} emails`);
-        } else {
-          console.error(`❌ Failed to get count for ${tab.label}:`, result.error);
-          counts[tab.id] = 0;
-        }
-      } catch (error) {
-        console.error(`❌ Error fetching count for ${tab.label}:`, error);
-        counts[tab.id] = 0;
-      }
-    }
-    
-    console.log('📈 Final email counts:', counts);
-    setEmailCounts(counts);
-  };
-
   useEffect(() => {
-    if (connection && activeTab) {
+    console.log('🔄 Inbox useEffect: activeConnection or activeTab changed');
+    console.log('🔄 activeConnection:', activeConnection?.email);
+    console.log('🔄 activeTab:', activeTab);
+    
+    if (activeConnection && activeTab) {
+      console.log('🔄 Calling fetchEmailsForTab for:', activeTab);
       fetchEmailsForTab(activeTab);
     }
-  }, [connection, activeTab]);
+  }, [activeConnection?.email, activeTab, fetchEmailsForTab]);
 
   useEffect(() => {
-    if (connection) {
-      updateEmailCounts();
+    console.log('🔄 Inbox useEffect: activeConnection changed');
+    console.log('🔄 activeConnection:', activeConnection?.email);
+    
+    if (activeConnection) {
+      console.log('🔄 Calling updateEmailCounts for:', activeConnection.email);
+      updateEmailCounts(activeConnection.email);
     }
-  }, [connection]);
+  }, [activeConnection?.email, updateEmailCounts]);
 
   // Se mostrar integração de email, renderizar a página de integração
   if (showEmailIntegration) {
@@ -636,30 +653,35 @@ const Inbox: React.FC = () => {
                   <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
                     <span className="text-white font-bold text-lg">G</span>
             </div>
-            <div>
+                              <div>
                     <p className="font-medium text-slate-900">Google (Gmail)</p>
                     <p className="text-sm text-slate-500">
-                      {connection ? 'Connected' : 'Not connected'}
+                      {activeConnection 
+                        ? `Connected (${connections.length} account${connections.length > 1 ? 's' : ''})`
+                        : 'Not connected'
+                      }
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  {connection && (
+                  {activeConnection ? (
                     <button
-                      onClick={handleDisconnectGmail}
-                      className="px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                      onClick={() => setShowManageConnections(true)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                     >
-                      Disconnect
+                      <Settings className="h-4 w-4" />
+                      <span>Manage Connections</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleConnectGmail}
+                      disabled={isConnecting}
+                      className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#041f3f] transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      <span>Connect</span>
                     </button>
                   )}
-                  <button
-                    onClick={handleConnectGmail}
-                    disabled={isConnecting || !!connection}
-                    className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#041f3f] transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>{connection ? 'Connected' : 'Connect'}</span>
-                  </button>
                 </div>
               </div>
 
@@ -729,7 +751,7 @@ const Inbox: React.FC = () => {
   }
 
   // Se não estiver conectado, mostrar tela de conexão
-  if (!connection) {
+  if (!activeConnection) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -774,7 +796,20 @@ const Inbox: React.FC = () => {
             emailCounts={emailCounts}
             onCompose={handleCompose}
             onShowEmailIntegration={() => setShowEmailIntegration(true)}
-            connection={connection}
+            connection={activeConnection}
+            onAccountChange={(email) => {
+              console.log('🔄 Inbox: onAccountChange called with:', email);
+              console.log('🔄 Inbox: Current activeConnection before change:', activeConnection?.email);
+              
+              // Mudar para a nova conta
+              setActiveConnection(email);
+              
+              console.log('🔄 Inbox: Account changed to:', email);
+              console.log('🔄 Inbox: Refreshing page to load new account emails...');
+              
+              // Refresh da página para carregar os emails da nova conta
+              window.location.reload();
+            }}
           />
 
       {/* Search and Filters */}
@@ -795,7 +830,7 @@ const Inbox: React.FC = () => {
             onTabChange={handleTabChange}
             onRefresh={() => {
               fetchEmailsForTab(activeTab);
-              updateEmailCounts();
+              updateEmailCounts(activeConnection?.email);
             }}
           />
 
@@ -840,10 +875,10 @@ const Inbox: React.FC = () => {
           originalEmail={composerEmail}
         />
 
-        {/* Manage Connections Modal */}
+                {/* Manage Connections Modal */}
         {showManageConnections && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900">Manage Email Connections</h3>
                 <button
@@ -854,99 +889,21 @@ const Inbox: React.FC = () => {
                 >
                   <X className="w-5 h-5" />
                 </button>
-                    </div>
-                    
-              <div className="space-y-6">
-                {/* Current Connection Status */}
-                <div className="bg-slate-50 rounded-xl p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Current Connection</h4>
-                  {connection ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-[#05294E] to-[#D0151C] rounded-full flex items-center justify-center">
-                            <Mail className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{connection.email}</p>
-                            <p className="text-sm text-gray-500">Gmail Account</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm text-green-600 font-medium">Connected</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <p>Connected since: {new Date(connection.created_at).toLocaleDateString()}</p>
-                        <p>Last updated: {new Date(connection.updated_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <Mail className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-                      <p className="text-gray-500">No email account connected</p>
-            </div>
-          )}
-        </div>
-
-                {/* Connection Actions */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-gray-900">Actions</h4>
-                  
-                  {connection ? (
-                    <div className="space-y-3">
-                    <button
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        <span>Refresh Connection</span>
-                    </button>
-                      
-                    <button
-                        onClick={handleDisconnectGmail}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
-                      >
-                        <Unlink className="w-4 h-4" />
-                        <span>Disconnect Gmail</span>
-                    </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleConnectGmail}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
-                    >
-                      <Link className="w-4 h-4" />
-                      <span>Connect Gmail Account</span>
-                    </button>
-                  )}
-                  </div>
-
-                {/* Connection Info */}
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-2">About Email Connections</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Your email data is encrypted and secure</li>
-                    <li>• Only email access is requested (no other permissions)</li>
-                    <li>• You can disconnect anytime</li>
-                    <li>• Connection is used only for this dashboard</li>
-                  </ul>
-                </div>
               </div>
-
+              
+              <GmailConnectionManager />
+              
               <div className="flex justify-end mt-6">
-                      <button
+                <button
                   onClick={() => setShowManageConnections(false)}
                   className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
                 >
                   Close
-                      </button>
-              </div>
+                </button>
               </div>
             </div>
-          )}
+          </div>
+        )}
         </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Mail, Plus, Settings } from 'lucide-react';
+import GmailAccountSelector from './GmailAccountSelector';
 
 interface InboxHeaderProps {
   activeTab: string;
@@ -9,6 +10,7 @@ interface InboxHeaderProps {
   onCompose: () => void;
   onShowEmailIntegration: () => void;
   connection: any;
+  onAccountChange?: (email: string) => void;
 }
 
 const InboxHeader: React.FC<InboxHeaderProps> = ({
@@ -18,7 +20,8 @@ const InboxHeader: React.FC<InboxHeaderProps> = ({
   emailCounts,
   onCompose,
   onShowEmailIntegration,
-  connection
+  connection,
+  onAccountChange
 }) => {
   return (
     <div className="bg-gradient-to-r from-[#05294E] to-[#D0151C] px-6 sm:px-8 py-6">
@@ -48,6 +51,9 @@ const InboxHeader: React.FC<InboxHeaderProps> = ({
         </div>
         
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Seletor de conta Gmail */}
+          <GmailAccountSelector onAccountChange={onAccountChange} />
+          
           <button
             onClick={onCompose}
             disabled={!connection}
@@ -64,13 +70,6 @@ const InboxHeader: React.FC<InboxHeaderProps> = ({
             <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="hidden sm:inline">Manage Connections</span>
             <span className="sm:hidden">Settings</span>
-          </button>
-          <button 
-            className="p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            title="Email provider settings"
-            aria-label="Email provider settings"
-          >
-            <Settings className="h-5 w-5" />
           </button>
         </div>
       </div>

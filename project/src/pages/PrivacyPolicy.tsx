@@ -203,7 +203,7 @@ const PrivacyPolicy: React.FC = () => (
             <li>Essential service providers (Supabase, Stripe, Google)</li>
             <li>When required by law</li>
             <li>With your explicit consent</li>
-          </ul>
+      </ul>
         </section>
 
         {/* Children's Privacy */}

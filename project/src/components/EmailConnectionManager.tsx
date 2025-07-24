@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useGmailConnection } from '../hooks/useGmailConnection';
 
 interface EmailConnection {
   id: string;
@@ -12,6 +13,7 @@ interface EmailConnection {
 
 const EmailConnectionManager: React.FC = () => {
   const { user } = useAuth();
+  const { connections: gmailConnections, disconnectGmail, loading: gmailLoading, error: gmailError } = useGmailConnection();
   const [connections, setConnections] = useState<EmailConnection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,35 +24,58 @@ const EmailConnectionManager: React.FC = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Para Gmail, usar os dados do hook
+      const googleConnections = gmailConnections || [];
+      
+      // Para Microsoft, buscar da tabela
+      const { data: microsoftData, error } = await supabase
         .from('email_connections')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('provider', 'microsoft');
 
       if (error) {
-        console.error('Erro ao buscar conexões:', error);
+        console.error('Erro ao buscar conexões Microsoft:', error);
         return;
       }
 
-      const googleConnection = data?.find(conn => conn.provider === 'google');
-      const microsoftConnection = data?.find(conn => conn.provider === 'microsoft');
+      const microsoftConnection = microsoftData?.[0];
 
-      setConnections([
-        {
-          id: googleConnection?.id || '',
+      // Criar lista de conexões
+      const connectionList: EmailConnection[] = [];
+
+      // Adicionar conexões Gmail
+      if (googleConnections.length > 0) {
+        googleConnections.forEach(conn => {
+          connectionList.push({
+            id: conn.id,
+            provider: 'google',
+            isConnected: true,
+            email: conn.email,
+            expires_at: conn.expires_at
+          });
+        });
+      } else {
+        // Adicionar placeholder para Gmail se não houver conexões
+        connectionList.push({
+          id: '',
           provider: 'google',
-          isConnected: !!googleConnection,
-          email: googleConnection?.email,
-          expires_at: googleConnection?.expires_at
-        },
-        {
-          id: microsoftConnection?.id || '',
-          provider: 'microsoft',
-          isConnected: !!microsoftConnection,
-          email: microsoftConnection?.email,
-          expires_at: microsoftConnection?.expires_at
-        }
-      ]);
+          isConnected: false,
+          email: undefined,
+          expires_at: undefined
+        });
+      }
+
+      // Adicionar conexão Microsoft
+      connectionList.push({
+        id: microsoftConnection?.id || '',
+        provider: 'microsoft',
+        isConnected: !!microsoftConnection,
+        email: microsoftConnection?.email,
+        expires_at: microsoftConnection?.expires_at
+      });
+
+      setConnections(connectionList);
     } catch (error) {
       console.error('Erro ao verificar conexões:', error);
     }
@@ -74,7 +99,7 @@ const EmailConnectionManager: React.FC = () => {
   useEffect(() => {
     checkExistingConnections();
     checkOAuthSuccess();
-  }, [user]);
+  }, [user, gmailConnections]);
 
   const handleGoogleConnect = async () => {
     if (!user) {
@@ -187,37 +212,44 @@ const EmailConnectionManager: React.FC = () => {
     }
   };
 
-  const handleDisconnect = async (provider: 'google' | 'microsoft') => {
+  const handleDisconnect = async (provider: 'google' | 'microsoft', email?: string) => {
     if (!user) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log(`🔌 Desconectando ${provider}...`);
+      console.log(`🔌 Desconectando ${provider}${email ? ` (${email})` : ''}...`);
       
-      // Remover conexão da tabela
-      const { error: deleteError } = await supabase
-        .from('email_connections')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('provider', provider);
+      if (provider === 'google') {
+        // Usar a funcionalidade específica do hook para Gmail
+        await disconnectGmail(email);
+        console.log(`✅ Gmail desconectado${email ? ` (${email})` : ''} com sucesso`);
+        setDebugInfo(prev => [...prev, `✅ Gmail desconectado${email ? ` (${email})` : ''}`]);
+      } else {
+        // Para Microsoft, manter a lógica antiga
+        const { error: deleteError } = await supabase
+          .from('email_connections')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('provider', provider);
 
-      if (deleteError) {
-        throw deleteError;
+        if (deleteError) {
+          throw deleteError;
+        }
+
+        // Atualizar estado local
+        setConnections(prev => 
+          prev.map(conn => 
+            conn.provider === provider 
+              ? { ...conn, isConnected: false, email: undefined, expires_at: undefined }
+              : conn
+          )
+        );
+
+        console.log(`✅ ${provider} desconectado com sucesso`);
+        setDebugInfo(prev => [...prev, `✅ ${provider} desconectado`]);
       }
-
-      // Atualizar estado local
-      setConnections(prev => 
-        prev.map(conn => 
-          conn.provider === provider 
-            ? { ...conn, isConnected: false, email: undefined, expires_at: undefined }
-            : conn
-        )
-      );
-
-      console.log(`✅ ${provider} desconectado com sucesso`);
-      setDebugInfo(prev => [...prev, `✅ ${provider} desconectado`]);
 
     } catch (err: any) {
       console.error(`Erro ao desconectar ${provider}:`, err);
@@ -303,8 +335,8 @@ const EmailConnectionManager: React.FC = () => {
                 <>
                   <span className="text-green-700 text-sm font-medium">Conectado</span>
                   <button
-                    onClick={() => handleDisconnect(connection.provider)}
-                    disabled={loading}
+                    onClick={() => handleDisconnect(connection.provider, connection.email)}
+                    disabled={loading || gmailLoading}
                     className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                   >
                     Desconectar
@@ -313,10 +345,10 @@ const EmailConnectionManager: React.FC = () => {
               ) : (
                 <button
                   onClick={connection.provider === 'google' ? handleGoogleConnect : handleMicrosoftConnect}
-                  disabled={loading}
+                  disabled={loading || gmailLoading}
                   className="px-4 py-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white rounded-lg hover:from-[#041f3f] hover:to-[#b01218] disabled:opacity-50 transition-all duration-300 font-semibold"
                 >
-                  {loading ? 'Conectando...' : 'Conectar'}
+                  {loading || gmailLoading ? 'Conectando...' : 'Conectar'}
                 </button>
               )}
             </div>
@@ -324,9 +356,9 @@ const EmailConnectionManager: React.FC = () => {
         ))}
       </div>
 
-      {error && (
+      {(error || gmailError) && (
         <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <p className="text-red-700 text-sm font-medium">{error}</p>
+          <p className="text-red-700 text-sm font-medium">{error || gmailError}</p>
         </div>
       )}
 

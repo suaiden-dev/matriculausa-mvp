@@ -10,39 +10,126 @@ const corsHeaders = {
 
 // Função para detectar automaticamente a URL do frontend
 function getFrontendUrl(req: Request): string {
-  // Verificar se há uma variável de ambiente específica
-  const envFrontendUrl = Deno.env.get('FRONTEND_URL');
-  if (envFrontendUrl) {
-    console.log('🔧 Using FRONTEND_URL from environment:', envFrontendUrl);
-    return envFrontendUrl;
+  console.log('🔍 Debug: Starting frontend URL detection...');
+  
+  // Detectar baseado no referer (de onde veio a requisição) - PRIORIDADE ALTA
+  const referer = req.headers.get('referer');
+  console.log('🔍 Debug: Referer header:', referer);
+  
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      const hostname = refererUrl.hostname;
+      console.log('🔍 Debug: Parsed hostname from referer:', hostname);
+      
+      // IGNORAR Google OAuth domains
+      if (hostname.includes('accounts.google.com') || 
+          hostname.includes('google.com') || 
+          hostname.includes('googleapis.com')) {
+        console.log('🔍 Debug: Ignoring Google OAuth domain:', hostname);
+      } else {
+        // Se é localhost, é desenvolvimento
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          const devUrl = `http://${hostname}:${refererUrl.port || '5173'}`;
+          console.log('🔧 Detected development environment:', devUrl);
+          return devUrl;
+        }
+        
+        // Se é um domínio real, é produção
+        if (hostname.includes('.') && !hostname.includes('localhost')) {
+          const prodUrl = `${refererUrl.protocol}//${hostname}`;
+          console.log('🔧 Detected production environment:', prodUrl);
+          return prodUrl;
+        }
+        
+        console.log('🔍 Debug: Hostname did not match any known pattern:', hostname);
+      }
+    } catch (error) {
+      console.error('Error parsing referer:', error);
+    }
+  } else {
+    console.log('🔍 Debug: No referer header found');
   }
 
-  // Detectar baseado no referer (de onde veio a requisição)
-  const referer = req.headers.get('referer');
+  // IGNORAR FRONTEND_URL do ambiente - usar apenas detecção automática
+  const envFrontendUrl = Deno.env.get('FRONTEND_URL');
+  if (envFrontendUrl) {
+    console.log('🔧 IGNORING FRONTEND_URL from environment (using auto-detection instead):', envFrontendUrl);
+  }
+
+  // Verificar se há uma variável de ambiente para produção
+  const isProduction = Deno.env.get('IS_PRODUCTION');
+  if (isProduction === 'true') {
+    console.log('🔧 Using production URL from environment variable');
+    return 'https://matriculausa.com';
+  }
+
+  // Detectar baseado no User-Agent ou outras headers
+  const userAgent = req.headers.get('user-agent');
+  console.log('🔍 Debug: User-Agent:', userAgent);
+  
+  // Detectar baseado no Origin header
+  const origin = req.headers.get('origin');
+  console.log('🔍 Debug: Origin header:', origin);
+  
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      const hostname = originUrl.hostname;
+      console.log('🔍 Debug: Parsed hostname from origin:', hostname);
+      
+      // Se é localhost, é desenvolvimento
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        const devUrl = `http://${hostname}:${originUrl.port || '5173'}`;
+        console.log('🔧 Detected development environment from origin:', devUrl);
+        return devUrl;
+      }
+      
+      // Se é matriculausa.com, é produção
+      if (hostname.includes('matriculausa.com')) {
+        const prodUrl = `${originUrl.protocol}//${hostname}`;
+        console.log('🔧 Detected production environment from origin:', prodUrl);
+        return prodUrl;
+      }
+    } catch (error) {
+      console.error('Error parsing origin:', error);
+    }
+  }
+
+  // Fallback inteligente baseado no ambiente do Supabase
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  console.log('🔍 Debug: Supabase URL:', supabaseUrl);
+  
+  // Verificar se há uma variável de ambiente específica para desenvolvimento
+  const isDevelopment = Deno.env.get('IS_DEVELOPMENT');
+  if (isDevelopment === 'true') {
+    console.log('🔧 Using development URL from environment variable');
+    return 'http://localhost:5173';
+  }
+  
+  // Verificar se há uma variável de ambiente específica para produção (já declarada acima)
+  if (isProduction === 'true') {
+    console.log('🔧 Using production URL from environment variable');
+    return 'https://matriculausa.com';
+  }
+
+  // Fallback baseado no referer (se disponível)
   if (referer) {
     try {
       const refererUrl = new URL(referer);
       const hostname = refererUrl.hostname;
       
-      // Se é localhost, é desenvolvimento
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        const devUrl = `http://${hostname}:${refererUrl.port || '5173'}`;
-        console.log('🔧 Detected development environment:', devUrl);
-        return devUrl;
-      }
-      
-      // Se é um domínio real, é produção
-      if (hostname.includes('.') && !hostname.includes('localhost')) {
-        const prodUrl = `${refererUrl.protocol}//${hostname}`;
-        console.log('🔧 Detected production environment:', prodUrl);
-        return prodUrl;
+      // Se o referer contém matriculausa.com, é produção
+      if (hostname.includes('matriculausa.com')) {
+        console.log('🔧 Using production URL based on referer pattern');
+        return 'https://matriculausa.com';
       }
     } catch (error) {
-      console.error('Error parsing referer:', error);
+      console.error('Error parsing referer for fallback:', error);
     }
   }
 
-  // Fallback para desenvolvimento
+  // Fallback para desenvolvimento (mais seguro)
   console.log('🔧 Using default development URL: http://localhost:5173');
   return 'http://localhost:5173';
 }
@@ -282,29 +369,29 @@ Deno.serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + (tokenData.expires_in || 3600));
 
-    console.log('🔍 Checking if email connection exists for user:', finalUserId);
+    console.log('🔍 Creating new email connection for user:', finalUserId);
     
-    // Primeiro, verificar se já existe uma conexão
+    // Verificar se já existe uma conexão com este email específico
     const { data: existingConnection, error: checkError } = await supabase
       .from('email_connections')
       .select('id')
       .eq('user_id', finalUserId)
       .eq('provider', 'google')
+      .eq('email', userEmail)
       .single();
 
     let connectionData;
     let insertError;
 
     if (existingConnection) {
-      // Atualizar conexão existente
-      console.log('🔍 Updating existing connection:', existingConnection.id);
+      // Atualizar conexão existente para este email específico
+      console.log('🔍 Updating existing connection for email:', userEmail);
       const { data: updateData, error: updateError } = await supabase
         .from('email_connections')
         .update({
           access_token: tokenData.access_token,
           refresh_token: encryptedRefreshToken,
           expires_at: expiresAt.toISOString(),
-          email: userEmail,
           scopes: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send']
         })
         .eq('id', existingConnection.id)
@@ -314,8 +401,8 @@ Deno.serve(async (req) => {
       connectionData = updateData;
       insertError = updateError;
     } else {
-      // Criar nova conexão
-      console.log('🔍 Creating new connection');
+      // Criar nova conexão para este email
+      console.log('🔍 Creating new connection for email:', userEmail);
       const { data: insertData, error: insertErr } = await supabase
         .from('email_connections')
         .insert({
@@ -343,7 +430,7 @@ Deno.serve(async (req) => {
     if (insertError) {
       console.error('Error saving email connection:', insertError);
       const frontendUrl = getFrontendUrl(req);
-      const redirectUrl = `${frontendUrl}/auth/callback?error=save_failed`;
+      const redirectUrl = `${frontendUrl}/school/dashboard/inbox?error=save_failed`;
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
@@ -356,19 +443,30 @@ Deno.serve(async (req) => {
       email: connectionData.email 
     });
 
-    // Redirecionar de volta para o dashboard com sucesso
+    // Redirecionar de volta para o Inbox com sucesso
     // Usar a URL base do frontend em vez da URL da Edge Function
     const frontendUrl = getFrontendUrl(req);
-    const redirectUrl = `${frontendUrl}/auth/callback?status=success&email=${encodeURIComponent(userEmail)}`;
+    const redirectUrl = `${frontendUrl}/school/dashboard/inbox?status=success&email=${encodeURIComponent(userEmail)}`;
+    
+    console.log('🔄 Redirecting to:', redirectUrl);
+    console.log('🔄 Frontend URL:', frontendUrl);
+    console.log('🔄 User email:', userEmail);
+    
     return new Response(null, {
       status: 302,
-      headers: { ...corsHeaders, 'Location': redirectUrl },
+      headers: { 
+        ...corsHeaders, 
+        'Location': redirectUrl,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
     });
 
   } catch (error) {
     console.error('Unexpected error in google-oauth-callback:', error);
     const frontendUrl = getFrontendUrl(req);
-    const redirectUrl = `${frontendUrl}/auth/callback?error=unexpected_error`;
+    const redirectUrl = `${frontendUrl}/school/dashboard/inbox?error=unexpected_error`;
     return new Response(null, {
       status: 302,
       headers: { ...corsHeaders, 'Location': redirectUrl },

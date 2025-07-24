@@ -82,42 +82,132 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   return data.access_token;
 }
 
+// Função para decodificar conteúdo base64 com encoding correto
+function decodeBase64WithEncoding(base64Data: string, encoding: string = 'UTF-8'): string {
+  try {
+    // Substituir caracteres URL-safe
+    const normalizedData = base64Data.replace(/-/g, '+').replace(/_/g, '/');
+    
+    // Decodificar base64
+    const binaryString = atob(normalizedData);
+    
+    // Converter para Uint8Array
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Decodificar com encoding específico
+    const decoder = new TextDecoder(encoding);
+    return decoder.decode(bytes);
+  } catch (e) {
+    console.error('Error decoding base64 with encoding:', encoding, e);
+    // Fallback para UTF-8
+    try {
+      const normalizedData = base64Data.replace(/-/g, '+').replace(/_/g, '/');
+      return atob(normalizedData);
+    } catch (fallbackError) {
+      console.error('Fallback decoding also failed:', fallbackError);
+      return '';
+    }
+  }
+}
+
+// Função para decodificar quoted-printable
+function decodeQuotedPrintable(data: string, encoding: string = 'UTF-8'): string {
+  try {
+    // Substituir sequências quoted-printable
+    let decoded = data.replace(/=([0-9A-F]{2})/gi, (match, hex) => {
+      return String.fromCharCode(parseInt(hex, 16));
+    });
+    
+    // Substituir underscores por espaços (quoted-printable)
+    decoded = decoded.replace(/_/g, ' ');
+    
+    // Decodificar com encoding específico
+    const bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i++) {
+      bytes[i] = decoded.charCodeAt(i);
+    }
+    
+    const decoder = new TextDecoder(encoding);
+    return decoder.decode(bytes);
+  } catch (e) {
+    console.error('Error decoding quoted-printable with encoding:', encoding, e);
+    return data;
+  }
+}
+
 // Função para extrair o conteúdo completo do email
 function extractEmailBody(payload: any): string {
   if (!payload) return '';
+
+  // Função auxiliar para processar parte do email
+  const processPart = (part: any): string => {
+    if (!part.body?.data) return '';
+    
+    // Detectar encoding do Content-Type
+    let encoding = 'UTF-8';
+    if (part.headers) {
+      const contentType = part.headers.find((h: any) => h.name === 'Content-Type')?.value || '';
+      const charsetMatch = contentType.match(/charset=([^;]+)/i);
+      if (charsetMatch) {
+        encoding = charsetMatch[1].toUpperCase();
+        // Normalizar encodings comuns
+        if (encoding === 'ISO-8859-1') encoding = 'ISO-8859-1';
+        else if (encoding === 'WINDOWS-1252') encoding = 'WINDOWS-1252';
+        else if (encoding === 'LATIN1') encoding = 'ISO-8859-1';
+      }
+    }
+    
+    try {
+      return decodeBase64WithEncoding(part.body.data, encoding);
+    } catch (e) {
+      console.error('Error processing part with encoding:', encoding, e);
+      // Tentar com UTF-8 como fallback
+      return decodeBase64WithEncoding(part.body.data, 'UTF-8');
+    }
+  };
 
   // Se tem parts, processar cada parte
   if (payload.parts && payload.parts.length > 0) {
     // Primeiro, procurar por HTML para manter formatação
     for (const part of payload.parts) {
-      if (part.mimeType === 'text/html' && part.body?.data) {
-        try {
-          return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-        } catch (e) {
-          console.error('Error decoding text/html:', e);
-        }
+      if (part.mimeType === 'text/html') {
+        const content = processPart(part);
+        if (content) return content;
       }
     }
     
     // Se não encontrou HTML, procurar texto simples
     for (const part of payload.parts) {
-      if (part.mimeType === 'text/plain' && part.body?.data) {
-        try {
-          return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-        } catch (e) {
-          console.error('Error decoding text/plain:', e);
-        }
+      if (part.mimeType === 'text/plain') {
+        const content = processPart(part);
+        if (content) return content;
       }
     }
   }
 
   // Se não tem parts, verificar se o payload tem dados diretamente
   if (payload.body?.data) {
+    // Detectar encoding do Content-Type
+    let encoding = 'UTF-8';
+    if (payload.headers) {
+      const contentType = payload.headers.find((h: any) => h.name === 'Content-Type')?.value || '';
+      const charsetMatch = contentType.match(/charset=([^;]+)/i);
+      if (charsetMatch) {
+        encoding = charsetMatch[1].toUpperCase();
+        if (encoding === 'ISO-8859-1') encoding = 'ISO-8859-1';
+        else if (encoding === 'WINDOWS-1252') encoding = 'WINDOWS-1252';
+        else if (encoding === 'LATIN1') encoding = 'ISO-8859-1';
+      }
+    }
+    
     try {
-      const content = atob(payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-      return content;
+      return decodeBase64WithEncoding(payload.body.data, encoding);
     } catch (e) {
-      console.error('Error decoding payload body:', e);
+      console.error('Error processing payload body with encoding:', encoding, e);
+      return decodeBase64WithEncoding(payload.body.data, 'UTF-8');
     }
   }
 
@@ -178,17 +268,37 @@ Deno.serve(async (req) => {
 
     const { maxResults = 50, labelIds = ['INBOX'], query = '', countOnly = false, pageToken } = await req.json();
     
-    console.log('📨 Request parameters:', { maxResults, labelIds, query, countOnly, pageToken });
+    // Extrair email da conta específica (opcional)
+    const url = new URL(req.url);
+    const targetEmail = url.searchParams.get('email');
+    
+    console.log('📨 Request parameters:', { maxResults, labelIds, query, countOnly, pageToken, targetEmail });
 
-    // Buscar conexão Gmail do usuário
-    const { data: connection, error: connectionError } = await supabase
+    // Buscar conexão Gmail do usuário (específica ou primeira)
+    let dbQuery = supabase
       .from('email_connections')
       .select('*')
       .eq('user_id', user.id)
-      .eq('provider', 'google')
-      .single();
+      .eq('provider', 'google');
+    
+    if (targetEmail) {
+      dbQuery = dbQuery.eq('email', targetEmail);
+      console.log('🔍 Searching for specific email connection:', targetEmail);
+    } else {
+      console.log('🔍 Searching for any email connection for user:', user.id);
+    }
+    
+    const { data: connection, error: connectionError } = await dbQuery.single();
+
+    console.log('🔍 Database query result:', {
+      connection: connection ? { id: connection.id, email: connection.email, hasAccessToken: !!connection.access_token } : null,
+      error: connectionError,
+      targetEmail,
+      userId: user.id
+    });
 
     if (connectionError || !connection) {
+      console.log('❌ Connection not found or error:', connectionError);
       return new Response(JSON.stringify({ error: 'Gmail not connected. Please connect your Gmail account first.' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -328,11 +438,35 @@ Deno.serve(async (req) => {
 
         const detail = await detailResponse.json();
 
+        // Função para decodificar headers de email
+        const decodeHeader = (value: string): string => {
+          if (!value) return '';
+          
+          // Verificar se é um header codificado (ex: =?UTF-8?B?...?=)
+          const encodedMatch = value.match(/=\?([^?]+)\?([BQ])\?([^?]+)\?=/);
+          if (encodedMatch) {
+            const [, charset, encoding, data] = encodedMatch;
+            try {
+              if (encoding === 'B') {
+                // Base64 encoding
+                return decodeBase64WithEncoding(data, charset.toUpperCase());
+              } else if (encoding === 'Q') {
+                // Quoted-printable encoding
+                return decodeQuotedPrintable(data, charset.toUpperCase());
+              }
+            } catch (e) {
+              console.error('Error decoding header:', e);
+            }
+          }
+          
+          return value;
+        };
+
         // Extrair headers
         const headers = detail.payload?.headers || [];
-        const from = headers.find((h: any) => h.name === 'From')?.value || 'Unknown';
-        const to = headers.find((h: any) => h.name === 'To')?.value || '';
-        const subject = headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject';
+        const from = decodeHeader(headers.find((h: any) => h.name === 'From')?.value || 'Unknown');
+        const to = decodeHeader(headers.find((h: any) => h.name === 'To')?.value || '');
+        const subject = decodeHeader(headers.find((h: any) => h.name === 'Subject')?.value || 'No Subject');
         const date = headers.find((h: any) => h.name === 'Date')?.value || new Date().toISOString();
 
         // Determinar prioridade

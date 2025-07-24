@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { config } from '../lib/config';
 
 interface GmailConnection {
   id: string;
@@ -15,32 +16,42 @@ interface GmailConnection {
 }
 
 interface UseGmailConnectionReturn {
-  connection: GmailConnection | null;
+  connections: GmailConnection[];
+  activeConnection: GmailConnection | null;
   loading: boolean;
   error: string | null;
   connectGmail: () => Promise<void>;
-  disconnectGmail: () => Promise<void>;
-  checkConnection: () => Promise<boolean>;
+  disconnectGmail: (email?: string) => Promise<void>;
+  checkConnections: () => Promise<boolean>;
+  setActiveConnection: (email: string) => void;
   clearError: () => void;
 }
 
+const ACTIVE_CONNECTION_KEY = 'matricula_usa_active_gmail_connection';
+
 export const useGmailConnection = (): UseGmailConnectionReturn => {
-  const [connection, setConnection] = useState<GmailConnection | null>(null);
+  const [connections, setConnections] = useState<GmailConnection[]>([]);
+  const [activeConnection, setActiveConnection] = useState<GmailConnection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Verificar conexão automaticamente quando o hook é inicializado
+  // Verificar conexões automaticamente quando o hook é inicializado
   useEffect(() => {
-    checkConnection();
+    checkConnections();
   }, []);
+
+  // Monitorar mudanças na activeConnection
+  useEffect(() => {
+    console.log('🔄 useGmailConnection: activeConnection changed to:', activeConnection?.email);
+  }, [activeConnection?.email]);
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  const checkConnection = useCallback(async (): Promise<boolean> => {
+  const checkConnections = useCallback(async (): Promise<boolean> => {
     try {
-      console.log('🔍 Checking Gmail connection...');
+      console.log('🔍 Checking Gmail connections...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.log('❌ No session found');
@@ -53,26 +64,56 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
         .select('*')
         .eq('user_id', session.user.id)
         .eq('provider', 'google')
-        .single();
+        .order('created_at', { ascending: false });
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('❌ Error checking Gmail connection:', error);
+      if (error) {
+        console.error('❌ Error checking Gmail connections:', error);
         return false;
       }
 
-      if (data) {
-        console.log('✅ Gmail connection found:', { id: data.id, email: data.email });
-        setConnection(data);
+      if (data && data.length > 0) {
+        console.log('✅ Gmail connections found:', data.length);
+        setConnections(data);
+        
+        // Restaurar conta ativa do localStorage ou usar a primeira
+        const savedActiveEmail = localStorage.getItem(ACTIVE_CONNECTION_KEY);
+        const activeConn = savedActiveEmail 
+          ? data.find(conn => conn.email === savedActiveEmail)
+          : data[0];
+        
+        if (activeConn) {
+          setActiveConnection(activeConn);
+          localStorage.setItem(ACTIVE_CONNECTION_KEY, activeConn.email);
+        }
+        
         return true;
       }
 
-      console.log('❌ No Gmail connection found');
+      console.log('❌ No Gmail connections found');
+      setConnections([]);
+      setActiveConnection(null);
+      localStorage.removeItem(ACTIVE_CONNECTION_KEY);
       return false;
     } catch (err) {
-      console.error('❌ Error checking Gmail connection:', err);
+      console.error('❌ Error checking Gmail connections:', err);
       return false;
     }
   }, []);
+
+  const setActiveConnectionByEmail = useCallback((email: string) => {
+    console.log('🔄 setActiveConnectionByEmail called with:', email);
+    console.log('🔄 Available connections:', connections.map(c => c.email));
+    
+    const connection = connections.find(conn => conn.email === email);
+    if (connection) {
+      console.log('🔄 Setting active connection to:', email);
+      setActiveConnection(connection);
+      localStorage.setItem(ACTIVE_CONNECTION_KEY, email);
+      console.log('✅ Active connection set to:', email);
+    } else {
+      console.log('❌ Connection not found for email:', email);
+    }
+  }, [connections]);
 
   const connectGmail = useCallback(async () => {
     setLoading(true);
@@ -84,17 +125,21 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
         throw new Error('User not authenticated');
       }
 
-      // Construir URL de autorização OAuth 2.0 manual
+      // Construir URL de autorização OAuth 2.0 manual com configuração dinâmica
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-oauth-callback`;
+      const redirectUri = config.getOAuthRedirectUrl();
       const state = `google_${session.user.id}`; // Incluir user_id no state para segurança
+      
+      // Log da configuração atual
+      config.logCurrentConfig();
       
       // Debug: verificar se as variáveis estão configuradas
       console.log('🔍 Debug OAuth:', {
         clientId: clientId ? '✅ Configurado' : '❌ Vazio',
         redirectUri,
         state,
-        sessionUserId: session.user.id
+        sessionUserId: session.user.id,
+        environment: config.isDevelopment() ? '🟢 Development' : '🔴 Production'
       });
       
       if (!clientId) {
@@ -128,7 +173,7 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
     }
   }, []);
 
-  const disconnectGmail = useCallback(async () => {
+  const disconnectGmail = useCallback(async (email?: string) => {
     setLoading(true);
     setError(null);
 
@@ -138,32 +183,63 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
         throw new Error('User not authenticated');
       }
 
-      const { error } = await supabase
-        .from('email_connections')
-        .delete()
-        .eq('user_id', session.user.id)
-        .eq('provider', 'google');
+      if (email) {
+        // Desconectar conta específica
+        const { error } = await supabase
+          .from('email_connections')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('provider', 'google')
+          .eq('email', email);
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        // Remover da lista de conexões
+        setConnections(prev => prev.filter(conn => conn.email !== email));
+        
+        // Se era a conta ativa, limpar
+        if (activeConnection?.email === email) {
+          setActiveConnection(null);
+          localStorage.removeItem(ACTIVE_CONNECTION_KEY);
+        }
+        
+        console.log('✅ Disconnected Gmail account:', email);
+      } else {
+        // Desconectar todas as contas (comportamento antigo)
+        const { error } = await supabase
+          .from('email_connections')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('provider', 'google');
+
+        if (error) {
+          throw error;
+        }
+
+        setConnections([]);
+        setActiveConnection(null);
+        localStorage.removeItem(ACTIVE_CONNECTION_KEY);
+        console.log('✅ Disconnected all Gmail accounts');
       }
-
-      setConnection(null);
     } catch (err: any) {
       setError(err.message || 'Failed to disconnect Gmail');
       console.error('Error disconnecting Gmail:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeConnection]);
 
   return {
-    connection,
+    connections,
+    activeConnection,
     loading,
     error,
     connectGmail,
     disconnectGmail,
-    checkConnection,
+    checkConnections,
+    setActiveConnection: setActiveConnectionByEmail,
     clearError,
   };
 }; 

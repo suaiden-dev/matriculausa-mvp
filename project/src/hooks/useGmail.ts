@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { config } from '../lib/config';
 import { useGmailConnection } from './useGmailConnection';
 import { Email } from '../types';
 
@@ -26,6 +27,7 @@ interface UseGmailReturn {
   fetchEmails: (options?: { maxResults?: number; labelIds?: string[]; query?: string; pageToken?: string }) => Promise<void>;
   loadMoreEmails: () => Promise<void>;
   clearError: () => void;
+  clearEmails: () => void;
   isConnected: boolean;
   hasMoreEmails: boolean;
   nextPageToken?: string;
@@ -37,22 +39,43 @@ export const useGmail = (): UseGmailReturn => {
   const [error, setError] = useState<string | null>(null);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [hasMoreEmails, setHasMoreEmails] = useState(true);
-  const { connection, checkConnection } = useGmailConnection();
+  const { activeConnection, checkConnections } = useGmailConnection();
+
+  // Log quando activeConnection muda
+  useEffect(() => {
+    console.log('🔄 useGmail: activeConnection changed to:', activeConnection?.email);
+    
+    // Se a conexão mudou, limpar emails para evitar mostrar emails da conta anterior
+    if (activeConnection) {
+      console.log('🔄 useGmail: Clearing emails for new connection:', activeConnection.email);
+      setEmails([]);
+      setNextPageToken(undefined);
+      setHasMoreEmails(true);
+    }
+  }, [activeConnection?.email]);
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  // Verificar conexão ao inicializar
+  const clearEmails = useCallback(() => {
+    setEmails([]);
+    setNextPageToken(undefined);
+    setHasMoreEmails(true);
+  }, []);
+
+  // Verificar conexões ao inicializar
   useEffect(() => {
-    checkConnection();
-  }, [checkConnection]);
+    checkConnections();
+  }, [checkConnections]);
 
   const fetchEmails = useCallback(async (options: { maxResults?: number; labelIds?: string[]; query?: string; pageToken?: string } = {}) => {
-    if (!connection) {
+    if (!activeConnection) {
       setError('Gmail not connected. Please connect your Gmail account first.');
       return;
     }
+
+    console.log('📧 Fetching emails for account:', activeConnection.email);
 
     setLoading(true);
     setError(null);
@@ -63,7 +86,7 @@ export const useGmail = (): UseGmailReturn => {
         throw new Error('User not authenticated');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-gmail-inbox`, {
+      const response = await fetch(`${config.getSupabaseUrl()}/functions/v1/get-gmail-inbox?email=${encodeURIComponent(activeConnection.email)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +126,7 @@ export const useGmail = (): UseGmailReturn => {
     } finally {
       setLoading(false);
     }
-  }, [connection]);
+  }, [activeConnection?.email]); // Mudança crucial: usar activeConnection.email em vez de activeConnection
 
   const loadMoreEmails = useCallback(async () => {
     if (nextPageToken && hasMoreEmails && !loading) {
@@ -112,7 +135,7 @@ export const useGmail = (): UseGmailReturn => {
   }, [nextPageToken, hasMoreEmails, loading, fetchEmails]);
 
   const sendEmail = useCallback(async (request: SendEmailRequest): Promise<{ success: boolean; messageId?: string; error?: string }> => {
-    if (!connection) {
+    if (!activeConnection) {
       const errorMessage = 'Gmail not connected. Please connect your Gmail account first.';
       setError(errorMessage);
       return { success: false, error: errorMessage };
@@ -127,7 +150,7 @@ export const useGmail = (): UseGmailReturn => {
         throw new Error('User not authenticated');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-gmail-message`, {
+      const response = await fetch(`${config.getSupabaseUrl()}/functions/v1/send-gmail-message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,7 +182,7 @@ export const useGmail = (): UseGmailReturn => {
     } finally {
       setLoading(false);
     }
-  }, [connection]);
+  }, [activeConnection]);
 
   return {
     emails,
@@ -169,7 +192,8 @@ export const useGmail = (): UseGmailReturn => {
     fetchEmails,
     loadMoreEmails,
     clearError,
-    isConnected: !!connection,
+    clearEmails,
+    isConnected: !!activeConnection,
     hasMoreEmails,
     nextPageToken,
   };

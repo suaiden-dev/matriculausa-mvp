@@ -207,7 +207,7 @@ const TermsOfService: React.FC = () => (
                 <li>Your data will be deleted according to our Privacy Policy</li>
                 <li>Gmail integrations will be disconnected</li>
                 <li>Platform access will be revoked</li>
-              </ul>
+      </ul>
             </div>
           </div>
         </section>
