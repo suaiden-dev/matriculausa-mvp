@@ -12,10 +12,12 @@ import {
   Download,
   File,
   Eye,
-  X
+  X,
+  Zap
 } from 'lucide-react';
 import { Email, EmailAttachment } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 interface EmailDetailProps {
   email: Email | null;
@@ -83,22 +85,90 @@ function cleanEmailHtml(html: string): string {
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 }
 
+// Função para converter HTML para texto simples
+function htmlToText(html: string): string {
+  if (!html) return '';
+  
+  // Criar um elemento temporário para extrair o texto
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  // Extrair texto e limpar
+  let text = tempDiv.textContent || tempDiv.innerText || '';
+  
+  // Limpar espaços extras e quebras de linha
+  text = text
+    .replace(/\s+/g, ' ') // Múltiplos espaços para um só
+    .replace(/\n\s*\n/g, '\n') // Múltiplas quebras de linha para uma só
+    .trim();
+  
+  return text;
+}
+
 const EmailDetail: React.FC<EmailDetailProps> = ({
   email,
   onReply,
   onForward,
   formatDate
 }) => {
+  const { user } = useAuth();
   const [downloadingAttachments, setDownloadingAttachments] = useState<{ [attachmentId: string]: boolean }>({});
   const [viewingAttachments, setViewingAttachments] = useState<{ [attachmentId: string]: boolean }>({});
   const [viewingAttachment, setViewingAttachment] = useState<{ attachment: EmailAttachment; data: string; mimeType: string } | null>(null);
+  const [isTestingNgrok, setIsTestingNgrok] = useState(false);
+  const [ngrokTestResult, setNgrokTestResult] = useState<any>(null);
+  const [ngrokTestError, setNgrokTestError] = useState<string | null>(null);
 
   // Limpar estados quando o email muda
   React.useEffect(() => {
     setDownloadingAttachments({});
     setViewingAttachments({});
     setViewingAttachment(null);
+    setNgrokTestResult(null);
+    setNgrokTestError(null);
   }, [email?.id]);
+
+  // Função para testar o endpoint ngrok com o email atual
+  const testNgrokEndpoint = async () => {
+    if (!email || !user) return;
+    
+    setIsTestingNgrok(true);
+    setNgrokTestError(null);
+    setNgrokTestResult(null);
+
+    try {
+      console.log('🧪 EmailDetail: Testing ngrok endpoint with email:', email);
+
+      const testData = {
+        from: email.from, // Email real que chegou na caixa
+        timestamp: email.date,
+        content: htmlToText(email.body || email.snippet || "Sem conteúdo"), // Converter HTML para texto simples
+        subject: email.subject,
+        client_id: user.id // User ID real
+      };
+
+      console.log('🧪 EmailDetail: Sending test data:', testData);
+
+      const { data, error } = await supabase.functions.invoke('send-to-ngrok-endpoint', {
+        body: testData
+      });
+
+      if (error) {
+        console.error('❌ EmailDetail: Error:', error);
+        setNgrokTestError(`Erro na requisição: ${error.message}`);
+        return;
+      }
+
+      console.log('✅ EmailDetail: Success response:', data);
+      setNgrokTestResult(data);
+
+    } catch (err: any) {
+      console.error('❌ EmailDetail: Unexpected error:', err);
+      setNgrokTestError(`Erro inesperado: ${err.message}`);
+    } finally {
+      setIsTestingNgrok(false);
+    }
+  };
 
   const handleDownloadAttachment = async (attachment: EmailAttachment) => {
     if (!email) return;
@@ -434,6 +504,19 @@ const EmailDetail: React.FC<EmailDetailProps> = ({
             >
               <Forward className="h-4 w-4" />
             </button>
+            <button
+              onClick={testNgrokEndpoint}
+              disabled={isTestingNgrok}
+              className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Test ngrok endpoint with this email"
+              aria-label="Test ngrok endpoint with this email"
+            >
+              {isTestingNgrok ? (
+                <div className="h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4" />
+              )}
+            </button>
             <button 
               className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" 
               title="Archive email"
@@ -560,6 +643,34 @@ const EmailDetail: React.FC<EmailDetailProps> = ({
         </div>
       </div>
       
+      {/* Ngrok Test Results */}
+      {(ngrokTestResult || ngrokTestError) && (
+        <div className="flex-shrink-0 p-4 sm:p-6 border-t border-slate-200 bg-slate-50">
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-slate-900 flex items-center space-x-2">
+              <Zap className="h-4 w-4 text-purple-600" />
+              <span>Teste Endpoint Ngrok</span>
+            </h4>
+            
+            {ngrokTestError && (
+              <div className="p-3 bg-red-100 border border-red-300 rounded-md">
+                <h5 className="font-semibold text-red-800 text-sm">❌ Erro:</h5>
+                <p className="text-red-700 text-sm">{ngrokTestError}</p>
+              </div>
+            )}
+            
+            {ngrokTestResult && (
+              <div className="p-3 bg-green-100 border border-green-300 rounded-md">
+                <h5 className="font-semibold text-green-800 text-sm">✅ Sucesso:</h5>
+                <pre className="text-green-700 text-xs overflow-auto max-h-32">
+                  {JSON.stringify(ngrokTestResult, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Footer - Altura fixa */}
       <div className="flex-shrink-0 p-4 sm:p-6 border-t border-slate-200 bg-slate-50">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">

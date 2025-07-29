@@ -108,6 +108,31 @@ async function decryptData(encryptedData: string, key: string): Promise<string> 
   return decoder.decode(decrypted);
 }
 
+// Função para corrigir encoding de caracteres
+function fixEncoding(text: string): string {
+  if (!text) return text;
+  
+  try {
+    // Verificar se parece estar double-encoded
+    if (text.includes('ÃƒÂ£') || text.includes('Ã°ÂŸÂŸÂ¢')) {
+      console.log('🔧 Detected encoding issues, attempting to fix:', text);
+      
+      // Tentar decodificar UTF-8
+      const buffer = new Uint8Array(text.split('').map(c => c.charCodeAt(0)));
+      const decoder = new TextDecoder('utf-8');
+      const decoded = decoder.decode(buffer);
+      
+      console.log('✅ Fixed encoding:', decoded);
+      return decoded;
+    }
+    
+    return text;
+  } catch (error) {
+    console.log('⚠️ Could not fix encoding for text:', text);
+    return text;
+  }
+}
+
 // Função para criar boundary único para MIME
 function generateBoundary(): string {
   return `----=_NextPart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -176,18 +201,23 @@ Deno.serve(async (req) => {
     
     const { to, subject, htmlBody, textBody, threadId, attachments }: SendEmailRequest = requestBody;
 
+    // Aplicar correção de encoding nos dados do email
+    const fixedSubject = fixEncoding(subject);
+    const fixedHtmlBody = htmlBody ? fixEncoding(htmlBody) : undefined;
+    const fixedTextBody = textBody ? fixEncoding(textBody) : undefined;
+
     console.log('📧 send-gmail-message: Request received:', {
       to,
-      subject,
-      hasHtmlBody: !!htmlBody,
-      hasTextBody: !!textBody,
-      htmlBodyLength: htmlBody?.length || 0,
-      textBodyLength: textBody?.length || 0,
+      subject: fixedSubject,
+      hasHtmlBody: !!fixedHtmlBody,
+      hasTextBody: !!fixedTextBody,
+      htmlBodyLength: fixedHtmlBody?.length || 0,
+      textBodyLength: fixedTextBody?.length || 0,
       threadId,
       attachmentsCount: attachments?.length || 0
     });
 
-    if (!to || !subject || (!htmlBody && !textBody)) {
+    if (!to || !fixedSubject || (!fixedHtmlBody && !fixedTextBody)) {
       throw new Error('Missing required fields: to, subject, and either htmlBody or textBody');
     }
 
@@ -246,12 +276,12 @@ Deno.serve(async (req) => {
         .eq('id', connection.id);
     }
 
-    // Create MIME message
+    // Create MIME message with fixed encoding
     const mimeMessage = createMimeMessage({
       to,
-      subject,
-      htmlBody,
-      textBody,
+      subject: fixedSubject,
+      htmlBody: fixedHtmlBody,
+      textBody: fixedTextBody,
       attachments
     });
 
@@ -296,7 +326,7 @@ Deno.serve(async (req) => {
       messageId: result.id,
       threadId: result.threadId,
       to: to,
-      subject: subject,
+      subject: fixedSubject,
       attachmentsCount: attachments?.length || 0,
       timestamp: new Date().toISOString()
     });
@@ -308,7 +338,7 @@ Deno.serve(async (req) => {
         threadId: result.threadId,
         sentAt: new Date().toISOString(),
         to: to,
-        subject: subject
+        subject: fixedSubject
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -517,7 +517,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                       <input
                         id="name"
-                        name="name"
+                        name="full_name"
                         type="text"
                         required
                         value={formData.full_name || ''}

@@ -386,6 +386,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setUserProfile(null); 
     setLoading(false);
+    
+    // Se estiver na página de inbox, fazer refresh para limpar os emails
+    if (window.location.pathname.includes('/inbox')) {
+      console.log('🔄 Logout from inbox page - refreshing to clear emails...');
+      window.location.reload();
+    }
   };
 
   const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => {

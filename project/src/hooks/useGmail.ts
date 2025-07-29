@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { config } from '../lib/config';
 import { useGmailConnection } from './useGmailConnection';
@@ -31,6 +31,8 @@ interface UseGmailReturn {
   isConnected: boolean;
   hasMoreEmails: boolean;
   nextPageToken?: string;
+  checkUnreadEmails: () => Promise<void>;
+  autoRefreshStatus: 'idle' | 'checking' | 'success' | 'error';
 }
 
 export const useGmail = (): UseGmailReturn => {
@@ -39,6 +41,7 @@ export const useGmail = (): UseGmailReturn => {
   const [error, setError] = useState<string | null>(null);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
   const [hasMoreEmails, setHasMoreEmails] = useState(true);
+  const [autoRefreshStatus, setAutoRefreshStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
   const { activeConnection, checkConnections } = useGmailConnection();
 
   // Log quando activeConnection muda
@@ -68,6 +71,8 @@ export const useGmail = (): UseGmailReturn => {
   useEffect(() => {
     checkConnections();
   }, [checkConnections]);
+
+  // Auto-refresh removido - agora será manual
 
   const fetchEmails = useCallback(async (options: { maxResults?: number; labelIds?: string[]; query?: string; pageToken?: string } = {}) => {
     if (!activeConnection) {
@@ -201,6 +206,84 @@ export const useGmail = (): UseGmailReturn => {
     }
   }, [activeConnection]);
 
+  // Função manual para processar novos emails (envia apenas 1 novo por vez)
+  const checkUnreadEmails = useCallback(async () => {
+    if (!activeConnection) {
+      setError('Gmail not connected. Please connect your Gmail account first.');
+      return;
+    }
+
+    console.log('🔍 checkUnreadEmails: Processing new emails...');
+    setAutoRefreshStatus('checking');
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('❌ checkUnreadEmails: No session found');
+        setAutoRefreshStatus('error');
+        return;
+      }
+
+      // Chamar a nova função para processar apenas novos emails
+      const functionUrl = `${config.getSupabaseUrl()}/functions/v1/process-new-emails`;
+      const requestBody = {
+        maxResults: 10, // Buscar até 10 emails não lidos, mas processar apenas 1
+        targetEmail: activeConnection.email
+      };
+      
+      console.log('🔍 checkUnreadEmails: Chamando função:', {
+        url: functionUrl,
+        body: requestBody,
+        sessionToken: session.access_token ? 'Present' : 'Missing',
+        supabaseUrl: config.getSupabaseUrl()
+      });
+      
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('🔍 checkUnreadEmails: Resposta recebida:', {
+        status: response.status,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
+      const result = await response.json();
+      console.log('🔍 checkUnreadEmails: Resultado:', result);
+
+      if (response.ok && result.success) {
+        console.log('✅ checkUnreadEmails: New email processing completed', {
+          processed: result.processed,
+          skipped: result.skipped,
+          message: result.message
+        });
+        
+        if (result.processed > 0) {
+          console.log('📧 Email processed and sent to n8n:', result.email);
+        }
+        
+        setAutoRefreshStatus('success');
+        // Reset para idle após 2 segundos
+        setTimeout(() => setAutoRefreshStatus('idle'), 2000);
+      } else {
+        console.error('❌ checkUnreadEmails: Failed to process new emails', result);
+        setAutoRefreshStatus('error');
+        // Reset para idle após 3 segundos
+        setTimeout(() => setAutoRefreshStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('❌ checkUnreadEmails error:', error);
+      setAutoRefreshStatus('error');
+      // Reset para idle após 3 segundos
+      setTimeout(() => setAutoRefreshStatus('idle'), 3000);
+    }
+  }, [activeConnection?.email]);
+
   return {
     emails,
     loading,
@@ -213,5 +296,7 @@ export const useGmail = (): UseGmailReturn => {
     isConnected: !!activeConnection,
     hasMoreEmails,
     nextPageToken,
+    checkUnreadEmails,
+    autoRefreshStatus,
   };
 }; 

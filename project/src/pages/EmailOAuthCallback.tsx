@@ -83,6 +83,33 @@ const EmailOAuthCallback: React.FC = () => {
             setMessage('Erro ao salvar conexão de email');
           } else {
             console.log('✅ Conexão salva com sucesso:', connectionData);
+            
+            // 🔧 CONFIGURAR GMAIL WATCH AUTOMATICAMENTE
+            if (provider === 'google') {
+              try {
+                console.log('🔧 Configurando Gmail Watch automaticamente...');
+                setMessage('Configurando monitoramento de emails...');
+                
+                const watchResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/setup-all-gmail-watches`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                  }
+                });
+
+                if (watchResponse.ok) {
+                  const watchResult = await watchResponse.json();
+                  console.log('✅ Gmail Watch configurado:', watchResult);
+                } else {
+                  console.warn('⚠️ Erro ao configurar Gmail Watch:', watchResponse.status);
+                }
+              } catch (watchError) {
+                console.warn('⚠️ Erro ao configurar Gmail Watch:', watchError);
+                // Não falhar o processo se o Watch der erro
+              }
+            }
+            
             setStatus('success');
             setMessage(`${provider} conectado com sucesso! Redirecionando...`);
             

@@ -1,0 +1,17 @@
+{
+  "name": "gmail-webhook",
+  "version": "1.0.0",
+  "description": "Cloud Function para processar notificações do Gmail e enviar para n8n",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "gcloud functions deploy gmail-webhook --runtime nodejs18 --trigger-topic gmail-notifications --entry-point handleGmailNotification --source . --allow-unauthenticated"
+  },
+  "dependencies": {
+    "@google-cloud/pubsub": "^4.0.0",
+    "node-fetch": "^2.6.7",
+    "google-auth-library": "^9.0.0"
+  },
+  "engines": {
+    "node": "18"
+  }
+} 

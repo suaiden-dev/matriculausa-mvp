@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Shield,
   Brain,
-  Mail
+  Mail,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -50,7 +51,9 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/students')) return 'students';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
+    if (path.includes('/ai-settings')) return 'ai-settings';
     if (path.includes('/inbox')) return 'inbox';
+    if (path.includes('/whatsapp')) return 'whatsapp';
     return 'overview';
   };
 
@@ -81,7 +84,9 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
-    { id: 'ai-solutions', label: 'AI Solutions', icon: Brain, path: '/school/dashboard/ai-solutions', badge: null }
+    { id: 'ai-solutions', label: 'AI Solutions', icon: Brain, path: '/school/dashboard/ai-solutions', badge: null },
+    { id: 'ai-settings', label: 'AI Settings', icon: Settings, path: '/school/dashboard/ai-settings', badge: null },
+    { id: 'whatsapp', label: 'WhatsApp Connection', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
   ];
 
   return (

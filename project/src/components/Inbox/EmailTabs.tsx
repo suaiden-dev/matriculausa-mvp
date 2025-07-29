@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Bell } from 'lucide-react';
 
 interface EmailTab {
   id: string;
@@ -15,6 +15,8 @@ interface EmailTabsProps {
   loading: boolean;
   onTabChange: (tabId: string) => void;
   onRefresh: () => void;
+  onCheckUnread?: () => void;
+  checkUnreadStatus?: 'idle' | 'checking' | 'success' | 'error';
 }
 
 const EmailTabs: React.FC<EmailTabsProps> = ({
@@ -23,7 +25,9 @@ const EmailTabs: React.FC<EmailTabsProps> = ({
   emailCounts,
   loading,
   onTabChange,
-  onRefresh
+  onRefresh,
+  onCheckUnread,
+  checkUnreadStatus = 'idle'
 }) => {
   // Filtrar abas que devem ser mostradas
   const visibleTabs = tabs.filter(tab => {
@@ -71,6 +75,26 @@ const EmailTabs: React.FC<EmailTabsProps> = ({
             </button>
           ))}
         </div>
+        
+        {/* Check Unread Button */}
+        {onCheckUnread && (
+          <button
+            onClick={onCheckUnread}
+            disabled={checkUnreadStatus === 'checking'}
+            className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0 ml-2 ${
+              checkUnreadStatus === 'success' 
+                ? 'text-green-600 bg-green-50 hover:bg-green-100' 
+                : checkUnreadStatus === 'error'
+                ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+            title="Check unread emails and send to ngrok"
+            aria-label="Check unread emails and send to ngrok"
+          >
+            <Bell className={`h-5 w-5 ${checkUnreadStatus === 'checking' ? 'animate-pulse' : ''}`} />
+            <span className="text-base hidden sm:inline">Check Unread</span>
+          </button>
+        )}
         
         {/* Refresh Button */}
         <button

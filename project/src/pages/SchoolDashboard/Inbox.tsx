@@ -391,7 +391,7 @@ interface EmailTab {
 const Inbox: React.FC = () => {
   const { user } = useAuth();
   const { connections, activeConnection, loading: isConnecting, connectGmail, disconnectGmail, setActiveConnection, checkConnections } = useGmailConnection();
-  const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails, clearEmails } = useGmail();
+  const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails, clearEmails, autoRefreshStatus, checkUnreadEmails } = useGmail();
   
   // Estados para controle do layout
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -554,9 +554,17 @@ const Inbox: React.FC = () => {
 
 
 
+
+
   const handleRefresh = () => {
     if (activeConnection) {
       fetchEmails();
+    }
+  };
+
+  const handleCheckUnreadEmails = () => {
+    if (activeConnection) {
+      checkUnreadEmails();
     }
   };
 
@@ -898,6 +906,7 @@ const Inbox: React.FC = () => {
             onShowEmailIntegration={() => setShowEmailIntegration(true)}
             onShowManageConnections={() => setShowManageConnections(true)}
             connection={activeConnection}
+            autoRefreshStatus={autoRefreshStatus}
             onAccountChange={(email) => {
               console.log('🔄 Inbox: onAccountChange called with:', email);
               console.log('🔄 Inbox: Current activeConnection before change:', activeConnection?.email);
@@ -933,6 +942,8 @@ const Inbox: React.FC = () => {
               fetchEmailsForTab(activeTab);
               updateEmailCounts(activeConnection?.email);
             }}
+            onCheckUnread={handleCheckUnreadEmails}
+            checkUnreadStatus={autoRefreshStatus}
           />
 
           {/* Email Content - Layout Expandido */}

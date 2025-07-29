@@ -82,6 +82,19 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   return data.access_token;
 }
 
+
+
+// Função para registrar email como processado (simplificada)
+async function markEmailAsProcessed(emailData: any, connectionEmail: string): Promise<void> {
+  try {
+    console.log('✅ Email processed successfully:', emailData.id);
+  } catch (error) {
+    console.error('❌ Error in markEmailAsProcessed:', error);
+  }
+}
+
+
+
 // Função para decodificar conteúdo base64 com encoding correto
 function decodeBase64WithEncoding(base64Data: string, encoding: string = 'UTF-8'): string {
   try {
@@ -258,7 +271,12 @@ interface Email {
 }
 
 Deno.serve(async (req) => {
+  console.log('📧 get-gmail-inbox: ===== FUNCTION CALLED =====');
+  console.log('📧 get-gmail-inbox: Request method:', req.method);
+  console.log('📧 get-gmail-inbox: Request URL:', req.url);
+  
   if (req.method === 'OPTIONS') {
+    console.log('📧 get-gmail-inbox: OPTIONS request, returning CORS headers');
     return new Response('ok', { headers: corsHeaders });
   }
 
@@ -363,6 +381,9 @@ Deno.serve(async (req) => {
       console.log('✅ Access token refreshed successfully');
     }
 
+    console.log('✅ Access token ready for Gmail API calls');
+    console.log('📧 Connection email:', connection.email);
+
     // Se for apenas para contar, buscar apenas o total
     if (countOnly) {
       // Para obter contagem precisa, vamos buscar uma quantidade maior e contar
@@ -416,10 +437,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Construir URL da API Gmail
+    // Construir URL da API Gmail - Buscar apenas emails não lidos
     const params = new URLSearchParams({
       maxResults: maxResults.toString(),
-      ...(labelIds.length > 0 && { labelIds: labelIds.join(',') }),
+      labelIds: 'UNREAD', // Apenas emails não lidos
       ...(query && { q: query }),
       ...(pageToken && { pageToken: pageToken })
     });
@@ -446,7 +467,7 @@ Deno.serve(async (req) => {
 
     const gmailData = await gmailResponse.json();
 
-    // Buscar detalhes de cada e-mail
+    // Buscar detalhes de cada e-mail (apenas não lidos para o frontend também)
     const emails: Email[] = await Promise.all(
       gmailData.messages?.slice(0, maxResults).map(async (message: any) => {
         const detailResponse = await fetch(
@@ -604,7 +625,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        return {
+        const emailData = {
           id: message.id,
           threadId: message.threadId,
           from: from,
@@ -620,6 +641,10 @@ Deno.serve(async (req) => {
           priority: priority,
           labels: detail.labelIds || []
         };
+
+
+
+        return emailData;
       }) || []
     );
 
@@ -633,6 +658,9 @@ Deno.serve(async (req) => {
       user: connection.email,
       timestamp: new Date().toISOString()
     });
+    
+    console.log('📊 Processing emails for ngrok...');
+    console.log('📊 Total emails to check:', validEmails.length);
 
     return new Response(JSON.stringify({
       success: true,

@@ -40,6 +40,14 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
     checkConnections();
   }, []);
 
+  // 🔧 CONFIGURAR GMAIL WATCH AUTOMATICAMENTE quando conexões são detectadas
+  useEffect(() => {
+    if (connections.length > 0 && !loading) {
+      console.log('🔧 useGmailConnection: Conexões Gmail detectadas, configurando Watch...');
+      setupGmailWatch();
+    }
+  }, [connections.length, loading]);
+
   // Monitorar mudanças na activeConnection
   useEffect(() => {
     console.log('🔄 useGmailConnection: activeConnection changed to:', activeConnection?.email);
@@ -206,6 +214,10 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
         }
         
         console.log('✅ Disconnected Gmail account:', email);
+        
+        // Fazer refresh completo da página para limpar os emails da interface
+        console.log('🔄 Refreshing page to clear emails from interface...');
+        window.location.reload();
       } else {
         // Desconectar todas as contas (comportamento antigo)
         const { error } = await supabase
@@ -222,6 +234,10 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
         setActiveConnection(null);
         localStorage.removeItem(ACTIVE_CONNECTION_KEY);
         console.log('✅ Disconnected all Gmail accounts');
+        
+        // Fazer refresh completo da página para limpar os emails da interface
+        console.log('🔄 Refreshing page to clear emails from interface...');
+        window.location.reload();
       }
     } catch (err: any) {
       setError(err.message || 'Failed to disconnect Gmail');
@@ -230,6 +246,32 @@ export const useGmailConnection = (): UseGmailConnectionReturn => {
       setLoading(false);
     }
   }, [activeConnection]);
+
+  // 🔧 Função para configurar Gmail Watch automaticamente
+  const setupGmailWatch = useCallback(async () => {
+    try {
+      console.log('🔧 setupGmailWatch: Iniciando configuração do Gmail Watch...');
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/setup-all-gmail-watches`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ setupGmailWatch: Gmail Watch configurado com sucesso:', result);
+      } else {
+        console.warn('⚠️ setupGmailWatch: Erro ao configurar Gmail Watch:', response.status);
+        const errorText = await response.text();
+        console.warn('⚠️ setupGmailWatch: Detalhes do erro:', errorText);
+      }
+    } catch (error) {
+      console.warn('⚠️ setupGmailWatch: Erro inesperado:', error);
+    }
+  }, []);
 
   return {
     connections,

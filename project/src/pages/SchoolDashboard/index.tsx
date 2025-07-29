@@ -12,7 +12,10 @@ import StudentDetails from './StudentDetails';
 import PaymentManagement from './PaymentManagement';
 import UniversityGlobalDocumentRequests from './UniversityGlobalDocumentRequests';
 import AISolutions from './AISolutions';
+import AISettings from './AISettings';
+import AIConversations from './AIConversations';
 import Inbox from './Inbox';
+import WhatsAppConnection from './WhatsAppConnection';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
@@ -37,6 +40,9 @@ const SchoolDashboard: React.FC = () => {
             <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />
             <Route path="inbox" element={<Inbox />} />
             <Route path="ai-solutions" element={<AISolutions />} />
+            <Route path="ai-settings" element={<AISettings />} />
+            <Route path="ai-conversations" element={<AIConversations />} />
+            <Route path="whatsapp" element={<WhatsAppConnection />} />
           </Route>
         </Routes>
       </UniversityProvider>
