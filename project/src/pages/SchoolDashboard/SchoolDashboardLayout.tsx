@@ -105,15 +105,17 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
                 className="h-12 w-auto"
               />
             </Link>
-            <button
-              onClick={() => {
-                setSidebarOpen(false);
-                setUserMenuOpen(false);
-              }}
-              className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
+                          <button
+                onClick={() => {
+                  setSidebarOpen(false);
+                  setUserMenuOpen(false);
+                }}
+                className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                title="Close sidebar"
+              >
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close sidebar</span>
+              </button>
           </div>
 
           {/* University Status */}
@@ -239,8 +241,10 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
                   setUserMenuOpen(false);
                 }}
                 className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                title="Open sidebar"
               >
                 <Menu className="h-5 w-5" />
+                <span className="sr-only">Open sidebar</span>
               </button>
               
               <div className="hidden md:block">
@@ -285,7 +289,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
                   <div className="absolute right-0 mt-2 w-56 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">
                     <div className="px-4 py-3 border-b border-slate-200">
                       <p className="font-semibold text-slate-900">{user?.name}</p>
-                      <p className="text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
+                      <p className="text-sm text-slate-500 truncate max-w-[180px] text-left whitespace-nowrap overflow-hidden" title={user?.email}>{user?.email}</p>
                     </div>
                     
                     <Link

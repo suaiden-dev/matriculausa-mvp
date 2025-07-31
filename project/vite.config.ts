@@ -26,6 +26,10 @@ export default defineConfig({
   // Configurações para desenvolvimento
   define: {
     // Desabilita recarregamento desnecessário
-    __VITE_IS_MODERN__: true
+    __VITE_IS_MODERN__: true,
+    'process.env': {
+      VITE_NWH_BASE_URL: 'https://nwh.suaiden.com',
+      VITE_CHAT_WEBHOOK_ID: 'chatbot-test'
+    }
   }
 });

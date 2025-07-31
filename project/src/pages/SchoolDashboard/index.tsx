@@ -16,10 +16,11 @@ import AISettings from './AISettings';
 import AIConversations from './AIConversations';
 import Inbox from './Inbox';
 import WhatsAppConnection from './WhatsAppConnection';
+import ConnectWhatsApp from './ConnectWhatsApp';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
-const SchoolDashboard: React.FC = () => {
+export const SchoolDashboard: React.FC = () => {
   const { user } = useAuth();
 
   return (
@@ -50,4 +51,3 @@ const SchoolDashboard: React.FC = () => {
   );
 };
 
-export default SchoolDashboard;

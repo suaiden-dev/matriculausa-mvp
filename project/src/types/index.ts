@@ -163,3 +163,44 @@ export interface Email {
   labels?: string[];
   avatar?: string;
 }
+
+export interface ChatwootAccount {
+  id: string;
+  user_id: string;
+  chatwoot_user_name?: string;
+  chatwoot_email?: string;
+  chatwoot_password?: string;
+  chatwoot_access_token?: string;
+  chatwoot_instance_name?: string;
+  chatwoot_user_id?: string;
+  chatwoot_account_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateChatwootAccountData {
+  user_name: string;
+  user_id: string;
+  instance_name: string;
+  email: string;
+}
+
+export interface ChatwootAccountResponse {
+  success: boolean;
+  access_token?: string;
+  error?: string;
+}
+
+export interface AIConfiguration {
+  id: string;
+  user_id: string;
+  university_id?: string;
+  ai_name: string;
+  company_name: string;
+  agent_type: string;
+  personality: string;
+  custom_prompt?: string;
+  has_tested: boolean;
+  created_at?: string;
+  updated_at?: string;
+}

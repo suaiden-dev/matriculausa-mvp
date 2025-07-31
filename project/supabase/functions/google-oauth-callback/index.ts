@@ -12,7 +12,21 @@ const corsHeaders = {
 function getFrontendUrl(req: Request): string {
   console.log('🔍 Debug: Starting frontend URL detection...');
   
-  // Detectar baseado no referer (de onde veio a requisição) - PRIORIDADE ALTA
+  // PRIORIDADE 1: Variáveis de ambiente (mais confiável)
+  const isProduction = Deno.env.get('IS_PRODUCTION');
+  const isDevelopment = Deno.env.get('IS_DEVELOPMENT');
+  
+  if (isProduction === 'true') {
+    console.log('🔧 Using production URL from IS_PRODUCTION environment variable');
+    return 'https://matriculausa.com';
+  }
+  
+  if (isDevelopment === 'true') {
+    console.log('🔧 Using development URL from IS_DEVELOPMENT environment variable');
+    return 'http://localhost:5173';
+  }
+  
+  // PRIORIDADE 2: Detectar baseado no referer (se não for do Google)
   const referer = req.headers.get('referer');
   console.log('🔍 Debug: Referer header:', referer);
   
@@ -31,14 +45,14 @@ function getFrontendUrl(req: Request): string {
         // Se é localhost, é desenvolvimento
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
           const devUrl = `http://${hostname}:${refererUrl.port || '5173'}`;
-          console.log('🔧 Detected development environment:', devUrl);
+          console.log('🔧 Detected development environment from referer:', devUrl);
           return devUrl;
         }
         
-        // Se é um domínio real, é produção
-        if (hostname.includes('.') && !hostname.includes('localhost')) {
+        // Se é matriculausa.com, é produção
+        if (hostname.includes('matriculausa.com')) {
           const prodUrl = `${refererUrl.protocol}//${hostname}`;
-          console.log('🔧 Detected production environment:', prodUrl);
+          console.log('🔧 Detected production environment from referer:', prodUrl);
           return prodUrl;
         }
         
@@ -51,24 +65,7 @@ function getFrontendUrl(req: Request): string {
     console.log('🔍 Debug: No referer header found');
   }
 
-  // IGNORAR FRONTEND_URL do ambiente - usar apenas detecção automática
-  const envFrontendUrl = Deno.env.get('FRONTEND_URL');
-  if (envFrontendUrl) {
-    console.log('🔧 IGNORING FRONTEND_URL from environment (using auto-detection instead):', envFrontendUrl);
-  }
-
-  // Verificar se há uma variável de ambiente para produção
-  const isProduction = Deno.env.get('IS_PRODUCTION');
-  if (isProduction === 'true') {
-    console.log('🔧 Using production URL from environment variable');
-    return 'https://matriculausa.com';
-  }
-
-  // Detectar baseado no User-Agent ou outras headers
-  const userAgent = req.headers.get('user-agent');
-  console.log('🔍 Debug: User-Agent:', userAgent);
-  
-  // Detectar baseado no Origin header
+  // PRIORIDADE 3: Detectar baseado no Origin header
   const origin = req.headers.get('origin');
   console.log('🔍 Debug: Origin header:', origin);
   
@@ -96,40 +93,47 @@ function getFrontendUrl(req: Request): string {
     }
   }
 
-  // Fallback inteligente baseado no ambiente do Supabase
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  console.log('🔍 Debug: Supabase URL:', supabaseUrl);
+  // PRIORIDADE 4: Detectar baseado no Host header
+  const host = req.headers.get('host');
+  console.log('🔍 Debug: Host header:', host);
   
-  // Verificar se há uma variável de ambiente específica para desenvolvimento
-  const isDevelopment = Deno.env.get('IS_DEVELOPMENT');
-  if (isDevelopment === 'true') {
-    console.log('🔧 Using development URL from environment variable');
-    return 'http://localhost:5173';
-  }
-  
-  // Verificar se há uma variável de ambiente específica para produção (já declarada acima)
-  if (isProduction === 'true') {
-    console.log('🔧 Using production URL from environment variable');
-    return 'https://matriculausa.com';
-  }
-
-  // Fallback baseado no referer (se disponível)
-  if (referer) {
-    try {
-      const refererUrl = new URL(referer);
-      const hostname = refererUrl.hostname;
-      
-      // Se o referer contém matriculausa.com, é produção
-      if (hostname.includes('matriculausa.com')) {
-        console.log('🔧 Using production URL based on referer pattern');
-        return 'https://matriculausa.com';
-      }
-    } catch (error) {
-      console.error('Error parsing referer for fallback:', error);
+  if (host) {
+    // Se o host contém matriculausa.com, é produção
+    if (host.includes('matriculausa.com')) {
+      console.log('🔧 Detected production environment from host header');
+      return 'https://matriculausa.com';
+    }
+    
+    // Se o host contém localhost, é desenvolvimento
+    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+      console.log('🔧 Detected development environment from host header');
+      return 'http://localhost:5173';
     }
   }
 
-  // Fallback para desenvolvimento (mais seguro)
+  // PRIORIDADE 5: Detectar baseado no Supabase URL
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  console.log('🔍 Debug: Supabase URL:', supabaseUrl);
+  
+  if (supabaseUrl) {
+    // Se o Supabase URL contém 'supabase.co', provavelmente é produção
+    if (supabaseUrl.includes('supabase.co')) {
+      console.log('🔧 Detected production environment from Supabase URL');
+      return 'https://matriculausa.com';
+    }
+  }
+
+  // PRIORIDADE 6: Detectar baseado no domínio da edge function
+  const currentUrl = new URL(req.url);
+  const edgeFunctionHost = currentUrl.hostname;
+  console.log('🔍 Debug: Edge function host:', edgeFunctionHost);
+  
+  if (edgeFunctionHost.includes('supabase.co')) {
+    console.log('🔧 Detected production environment from edge function host');
+    return 'https://matriculausa.com';
+  }
+
+  // FALLBACK: Usar desenvolvimento como padrão (mais seguro)
   console.log('🔧 Using default development URL: http://localhost:5173');
   return 'http://localhost:5173';
 }
@@ -451,6 +455,8 @@ Deno.serve(async (req) => {
     console.log('🔄 Redirecting to:', redirectUrl);
     console.log('🔄 Frontend URL:', frontendUrl);
     console.log('🔄 User email:', userEmail);
+    console.log('🔄 Request headers:', Object.fromEntries(req.headers.entries()));
+    console.log('🔄 Request URL:', req.url);
     
     return new Response(null, {
       status: 302,

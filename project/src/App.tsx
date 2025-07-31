@@ -12,7 +12,7 @@ import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
 import TermsAndConditions from './pages/TermsAndConditions';
 import SchoolProfileSetup from './pages/SchoolProfileSetup';
-import SchoolDashboard from './pages/SchoolDashboard/index';
+import { SchoolDashboard } from './pages/SchoolDashboard/index';
 import StudentDashboard from './pages/StudentDashboard/index';
 import AdminDashboard from './pages/AdminDashboard/index';
 import NewScholarship from './pages/SchoolDashboard/NewScholarship';
