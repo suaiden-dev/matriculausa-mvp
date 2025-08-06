@@ -204,3 +204,58 @@ export interface AIConfiguration {
   created_at?: string;
   updated_at?: string;
 }
+
+// Sistema de Afiliados - Matricula Rewards
+export interface AffiliateCode {
+  id: string;
+  user_id: string;
+  code: string;
+  is_active: boolean;
+  total_referrals: number;
+  total_earnings: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AffiliateReferral {
+  id: string;
+  referrer_id: string;
+  referred_id: string;
+  affiliate_code: string;
+  payment_amount: number;
+  credits_earned: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  payment_session_id?: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface MatriculacoinCredits {
+  id: string;
+  user_id: string;
+  balance: number;
+  total_earned: number;
+  total_spent: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatriculacoinTransaction {
+  id: string;
+  user_id: string;
+  type: 'earned' | 'spent' | 'expired' | 'refunded';
+  amount: number;
+  description?: string;
+  reference_id?: string;
+  reference_type?: string;
+  balance_after: number;
+  created_at: string;
+}
+
+export interface AffiliateStats {
+  totalReferrals: number;
+  totalEarnings: number;
+  currentBalance: number;
+  recentTransactions: MatriculacoinTransaction[];
+  recentReferrals: AffiliateReferral[];
+}

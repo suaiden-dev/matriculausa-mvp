@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { price_id, success_url, cancel_url, mode, fee_type, metadata } = await req.json();
+    const { price_id, success_url, cancel_url, mode, fee_type, metadata, credits_to_use } = await req.json();
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
-    console.log('[stripe-checkout] Received payload:', { price_id, success_url, cancel_url, mode, fee_type, metadata });
+    console.log('[stripe-checkout] Received payload:', { price_id, success_url, cancel_url, mode, fee_type, metadata, credits_to_use });
 
     let applicationId = null;
     let sessionMetadata = {
@@ -123,6 +123,41 @@ Deno.serve(async (req) => {
       return corsResponse({ error: `fee_type inválido: ${fee_type}` }, 400);
     }
 
+    // NOVO: Processar créditos se fornecidos
+    let discountAmount = 0;
+    if (credits_to_use && credits_to_use > 0) {
+      try {
+        // Verifica se o usuário tem créditos suficientes
+        const { data: creditsData, error: creditsError } = await supabase
+          .from('matriculacoin_credits')
+          .select('balance')
+          .eq('user_id', user.id)
+          .single();
+
+        if (creditsError) {
+          console.error('[stripe-checkout] Erro ao verificar créditos:', creditsError);
+          return corsResponse({ error: 'Error checking credits' }, 400);
+        }
+
+        if (!creditsData || creditsData.balance < credits_to_use) {
+          return corsResponse({ error: 'Insufficient credits' }, 400);
+        }
+
+        discountAmount = credits_to_use;
+        sessionMetadata.credits_used = credits_to_use;
+        
+        console.log('[stripe-checkout] Créditos aplicados:', { credits_to_use, discountAmount });
+      } catch (error) {
+        console.error('[stripe-checkout] Erro ao processar créditos:', error);
+        return corsResponse({ error: 'Error processing credits' }, 400);
+      }
+    }
+
+    // Busca o preço original para calcular o desconto
+    const price = await stripe.prices.retrieve(price_id);
+    const originalAmount = price.unit_amount || 0;
+    const finalAmount = Math.max(0, originalAmount - (discountAmount * 100)); // Stripe usa centavos
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       client_reference_id: user.id,
@@ -137,9 +172,39 @@ Deno.serve(async (req) => {
       success_url: success_url,
       cancel_url: cancel_url,
       metadata: sessionMetadata,
+      // Aplica desconto se houver créditos
+      ...(discountAmount > 0 && {
+        discounts: [{
+          coupon: 'MATRICULA_REWARDS',
+          amount_off: discountAmount * 100, // Stripe usa centavos
+        }],
+      }),
     });
 
     console.log('[stripe-checkout] Created Stripe session with metadata:', session.metadata);
+
+    // Se créditos foram usados, deduz do saldo
+    if (discountAmount > 0) {
+      try {
+        const { error: deductError } = await supabase
+          .rpc('deduct_credits_from_user', {
+            user_id_param: user.id,
+            amount_param: discountAmount,
+            reference_id_param: session.id,
+            reference_type_param: 'payment',
+            description_param: 'Créditos utilizados no checkout'
+          });
+
+        if (deductError) {
+          console.error('[stripe-checkout] Erro ao deduzir créditos:', deductError);
+          // Não falha o checkout se não conseguir deduzir créditos
+        } else {
+          console.log('[stripe-checkout] Créditos deduzidos com sucesso:', discountAmount);
+        }
+      } catch (error) {
+        console.error('[stripe-checkout] Erro ao processar dedução de créditos:', error);
+      }
+    }
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {

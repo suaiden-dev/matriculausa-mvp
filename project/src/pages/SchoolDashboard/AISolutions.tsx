@@ -361,12 +361,36 @@ const AISolutions: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {aiSolutions.map((solution) => (
-              <div 
-                key={solution.id}
-                className="bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 overflow-hidden border border-slate-200"
-                onClick={() => setSelectedSolution(solution.id)}
-              >
+            {aiSolutions.map((solution) => {
+              // Definir as rotas para cada solução
+              const getSolutionRoute = (solutionId: string) => {
+                switch (solutionId) {
+                  case 'whatsapp':
+                    return '/school/dashboard/whatsapp';
+                  case 'email':
+                    return '/school/dashboard/inbox';
+                  default:
+                    return '#';
+                }
+              };
+
+              const solutionRoute = getSolutionRoute(solution.id);
+              const isClickable = solution.id === 'whatsapp' || solution.id === 'email';
+
+              return (
+                <div 
+                  key={solution.id}
+                  className={`bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden border border-slate-200 ${
+                    isClickable ? 'cursor-pointer' : 'cursor-default'
+                  }`}
+                  onClick={() => {
+                    if (isClickable) {
+                      window.location.href = solutionRoute;
+                    } else {
+                      setSelectedSolution(solution.id);
+                    }
+                  }}
+                >
                 {/* Image Section */}
                 <div className="relative h-48 overflow-hidden">
                   <img 
@@ -404,13 +428,22 @@ const AISolutions: React.FC = () => {
                       <Clock className="h-3 w-3 text-slate-400" />
                       <span className="text-xs text-slate-500">{solution.implementation}</span>
                     </div>
-                    <div className={`bg-gradient-to-r ${solution.color} text-white px-3 py-1 rounded-full text-xs font-medium`}>
-                      Learn more
+                    <div 
+                      className={`bg-gradient-to-r ${solution.color} text-white px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isClickable) {
+                          window.location.href = solutionRoute;
+                        }
+                      }}
+                    >
+                      {isClickable ? 'Get Started' : 'Learn more'}
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       </div>

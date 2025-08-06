@@ -24,6 +24,7 @@ import ApplicationFeeError from './ApplicationFeeError';
 import ApplicationChatPage from './ApplicationChatPage';
 import ApplicationFeePage from './ApplicationFeePage';
 import Layout from '../../components/Layout';
+import MatriculaRewards from './MatriculaRewards';
 
 interface StudentProfile {
   id: string;
@@ -343,6 +344,7 @@ const StudentDashboard: React.FC = () => {
           <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
           <Route path="/application-fee-error" element={<ApplicationFeeError />} />
           <Route path="application-fee" element={<ApplicationFeePage />} />
+          <Route path="rewards" element={<MatriculaRewards />} />
         </Routes>
       </StudentDashboardLayout>
   );

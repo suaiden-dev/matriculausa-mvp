@@ -34,7 +34,19 @@ const EmailOAuthCallback: React.FC = () => {
 
         // Extrair provider do state
         const provider = state.split('_')[0] as 'google' | 'microsoft';
-        const redirectUri = `${window.location.origin}/email-oauth-callback`;
+        
+        // Detectar se está em desenvolvimento ou produção
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const redirectUri = isDevelopment 
+          ? `http://localhost:5173/email-oauth-callback`
+          : `${window.location.origin}/email-oauth-callback`;
+        
+        console.log('🔍 DEBUG: OAuth Callback Environment detection:', {
+          hostname: window.location.hostname,
+          isDevelopment,
+          redirectUri,
+          provider
+        });
 
         console.log('✅ OAuth bem-sucedido! Processando...');
         setMessage(`Processando tokens do ${provider}...`);

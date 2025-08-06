@@ -14,6 +14,7 @@ import UniversityGlobalDocumentRequests from './UniversityGlobalDocumentRequests
 import AISolutions from './AISolutions';
 import AISettings from './AISettings';
 import AIConversations from './AIConversations';
+
 import Inbox from './Inbox';
 import WhatsAppConnection from './WhatsAppConnection';
 import ConnectWhatsApp from './ConnectWhatsApp';

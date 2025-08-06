@@ -16,7 +16,8 @@ import {
   Star as StarIcon,
   FileText,
   AlertTriangle,
-  Trash
+  Trash,
+  BookOpen
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useGmail } from '../../hooks/useGmail';
@@ -30,6 +31,7 @@ import EmailDetail from '../../components/Inbox/EmailDetail';
 import EmailTabs from '../../components/Inbox/EmailTabs';
 import InboxHeader from '../../components/Inbox/InboxHeader';
 import SearchAndFilters from '../../components/Inbox/SearchAndFilters';
+import InboxKnowledgeUpload from '../../components/InboxKnowledgeUpload';
 import { supabase } from '../../lib/supabase';
 import { config } from '../../lib/config';
 import { formatDateUS } from '../../lib/dateUtils';
@@ -407,6 +409,7 @@ const Inbox: React.FC = () => {
   const [showEmailIntegration, setShowEmailIntegration] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [emailCounts, setEmailCounts] = useState<Record<string, number>>({});
+  const [knowledgeDocuments, setKnowledgeDocuments] = useState<any[]>([]);
 
   // Definição das abas disponíveis
   const emailTabs: EmailTab[] = [
@@ -452,7 +455,13 @@ const Inbox: React.FC = () => {
       labelIds: ['TRASH'],
       color: 'text-gray-500'
     },
-
+    {
+      id: 'knowledge',
+      label: 'Knowledge Base',
+      icon: <BookOpen className="h-4 w-4" />,
+      labelIds: ['KNOWLEDGE'],
+      color: 'text-purple-600'
+    },
   ];
 
   // Função para atualizar contagens de emails
@@ -969,12 +978,22 @@ const Inbox: React.FC = () => {
           
             {/* Email Detail - Mais espaço para conteúdo */}
             <div className="flex-1 flex flex-col bg-white min-h-0">
-              <EmailDetail
-                email={selectedEmail}
-                onReply={handleReply}
-                onForward={handleForwardEmail}
-                formatDate={formatDate}
-              />
+              {activeTab === 'knowledge' ? (
+                <div className="flex-1 p-6 overflow-y-auto">
+                  <InboxKnowledgeUpload
+                    universityId={user?.user_metadata?.university_id || user?.user_metadata?.universityId || '09a32358-9210-4da7-b465-556ed429d82a'}
+                    onDocumentsChange={setKnowledgeDocuments}
+                    existingDocuments={knowledgeDocuments}
+                  />
+                </div>
+              ) : (
+                <EmailDetail
+                  email={selectedEmail}
+                  onReply={handleReply}
+                  onForward={handleForwardEmail}
+                  formatDate={formatDate}
+                />
+              )}
             </div>
           </div>
         </div>

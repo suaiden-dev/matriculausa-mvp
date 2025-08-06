@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Amatricula Chat Widget</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #555;
+            margin-bottom: 15px;
+        }
+        .test-section p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Amatricula Chat Widget</h1>
+        
+        <div class="test-section">
+            <h2>📋 Instructions</h2>
+            <p>This page is for testing the Amatricula Chat Widget. The widget should appear as a floating chat button in the bottom-right corner of this page.</p>
+            
+            <div class="highlight">
+                <strong>Note:</strong> Make sure your development server is running on <code>http://localhost:5173</code> for the widget to work properly.
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 What to Test</h2>
+            <ul>
+                <li>✅ Widget button appears in bottom-right corner</li>
+                <li>✅ Button has correct colors (red and blue gradient)</li>
+                <li>✅ Clicking button opens chat window</li>
+                <li>✅ Chat window shows correct header text</li>
+                <li>✅ Welcome message appears</li>
+                <li>✅ Can type and send messages</li>
+                <li>✅ AI responds to messages</li>
+                <li>✅ Close button works</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Configuration</h2>
+            <p>The widget is configured with:</p>
+            <ul>
+                <li><strong>Agent ID:</strong> 22d88237-5080-4fd0-b539-397a81181015</li>
+                <li><strong>User ID:</strong> b9a70af8-bb86-4832-812f-7c30a286bf64</li>
+                <li><strong>Primary Color:</strong> #dc2626 (Red)</li>
+                <li><strong>Secondary Color:</strong> #2563eb (Blue)</li>
+                <li><strong>Position:</strong> bottom-right</li>
+                <li><strong>Header Text:</strong> "Chat with victurib ia"</li>
+                <li><strong>Welcome Message:</strong> "Hello! How can I help you today?"</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Sample Questions to Test</h2>
+            <p>Try asking the AI these questions:</p>
+            <ul>
+                <li>"Hello, can you help me with university admissions?"</li>
+                <li>"What scholarships are available for international students?"</li>
+                <li>"How do I apply for a student visa?"</li>
+                <li>"What documents do I need for university application?"</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Amatricula USA Chat Widget -->
+    <script>
+    (function() {
+      window.AmatriculaChatConfig = {
+        "agentId": "22d88237-5080-4fd0-b539-397a81181015",
+        "userId": "b9a70af8-bb86-4832-812f-7c30a286bf64",
+        "primaryColor": "#dc2626",
+        "secondaryColor": "#2563eb",
+        "position": "bottom-right",
+        "showHeader": true,
+        "headerText": "Chat with victurib ia",
+        "welcomeMessage": "Hello! How can I help you today?",
+        "enabled": true
+      };
+      
+      var script = document.createElement('script');
+      script.src = 'http://localhost:5173/embed.js';
+      script.async = true;
+      document.head.appendChild(script);
+    })();
+    </script>
+</body>
+</html> 

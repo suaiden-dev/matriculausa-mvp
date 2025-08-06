@@ -348,13 +348,34 @@ async function handleEvent(event: Stripe.Event) {
           } else {
             console.log('Selection process fee payment processed successfully for user:', userId);
           }
-          // Notificar endpoint externo (sucesso)
-          await notifySelectionProcessWebhook({
-            userName: userData.name,
-            userEmail: userData.email,
-            content: 'Your application process payment was processed successfully!',
-          origin: paymentOrigin1,
-          });
+        }
+      }
+
+      // NOVO: Processar indicação de afiliado se houver código
+      const affiliateCode = metadata?.affiliate_code;
+      if (affiliateCode && userId) {
+        console.log('[stripe-webhook] Processando indicação de afiliado:', { affiliateCode, userId });
+        try {
+          const { data: referralResult, error: referralError } = await supabase
+            .rpc('process_affiliate_referral', {
+              affiliate_code_param: affiliateCode,
+              referred_user_id_param: userId,
+              payment_amount_param: amount_total ? amount_total / 100 : 0,
+              payment_session_id_param: session.id
+            });
+
+          if (referralError) {
+            console.error('[stripe-webhook] Erro ao processar indicação:', referralError);
+          } else {
+            console.log('[stripe-webhook] Indicação processada com sucesso:', referralResult);
+            
+            // Enviar notificação por e-mail para o referenciador
+            if (referralResult) {
+              await sendAffiliateNotification(affiliateCode, userId, 50); // $50 créditos
+            }
+          }
+        } catch (error) {
+          console.error('[stripe-webhook] Erro ao processar indicação de afiliado:', error);
         }
       }
 
@@ -408,11 +429,68 @@ async function handleEvent(event: Stripe.Event) {
         }
         console.info(`Successfully processed one-time payment for session: ${checkout_session_id}`);
       } catch (error) {
-        console.error('Error processing one-time payment:', error);
+        console.error('Error processing payment:', error);
       }
-  } else {
-    // Ignora outros eventos para envio de e-mail
-    console.log(`[stripe-webhook] Evento ignorado para envio de e-mail: ${event.type}`);
+    }
+  }
+}
+
+// NOVA: Função para enviar notificação de afiliado
+async function sendAffiliateNotification(affiliateCode: string, referredUserId: string, creditsEarned: number) {
+  try {
+    // Busca dados do referenciador
+    const { data: affiliateCodeData } = await supabase
+      .from('affiliate_codes')
+      .select('user_id')
+      .eq('code', affiliateCode)
+      .single();
+
+    if (!affiliateCodeData) {
+      console.log('[affiliate-notification] Código de afiliado não encontrado:', affiliateCode);
+      return;
+    }
+
+    // Busca dados do usuário referenciador
+    const { data: referrerData } = await supabase
+      .from('user_profiles')
+      .select('full_name')
+      .eq('user_id', affiliateCodeData.user_id)
+      .single();
+
+    // Busca dados do usuário referenciado
+    const { data: referredData } = await supabase
+      .from('user_profiles')
+      .select('full_name')
+      .eq('user_id', referredUserId)
+      .single();
+
+    if (!referrerData || !referredData) {
+      console.log('[affiliate-notification] Dados do usuário não encontrados');
+      return;
+    }
+
+    // Busca e-mail do referenciador
+    const { data: userData } = await supabase.auth.admin.getUserById(affiliateCodeData.user_id);
+    
+    if (!userData.user?.email) {
+      console.log('[affiliate-notification] E-mail do referenciador não encontrado');
+      return;
+    }
+
+    // Envia e-mail de notificação
+    const emailResult = await sendEmail({
+      eventType: 'payment_success',
+      userEmail: userData.user.email,
+      userName: referrerData.full_name || 'Usuário',
+      paymentAmount: creditsEarned,
+      paymentType: 'affiliate_referral',
+      sessionId: 'affiliate-system',
+      origin: 'affiliate'
+    });
+
+    console.log('[affiliate-notification] E-mail enviado com sucesso:', emailResult);
+  } catch (error) {
+    console.error('[affiliate-notification] Erro ao enviar notificação:', error);
   }
 }
 

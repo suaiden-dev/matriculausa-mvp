@@ -1,0 +1,477 @@
+{
+  "name": "AI Email Auto-Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-email-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "ai-email-autoresponder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrair dados do webhook\nconst emailData = $input.first().json;\n\n// Validar dados obrigatórios\nif (!emailData.userId || !emailData.content || !emailData.from) {\n  throw new Error('Dados obrigatórios ausentes no webhook');\n}\n\n// Extrair informações do email\nconst emailInfo = {\n  userId: emailData.userId,\n  from: emailData.from,\n  subject: emailData.subject || 'Sem assunto',\n  content: emailData.content,\n  timestamp: emailData.timestamp,\n  messageId: emailData.messageId || `msg_${Date.now()}`,\n  // Extrair domínio do remetente\n  senderDomain: emailData.from.split('@')[1] || '',\n  // Detectar se é email de universidade\n  isUniversityEmail: emailData.from.toLowerCase().includes('university') || \n                     emailData.from.toLowerCase().includes('edu') ||\n                     emailData.from.toLowerCase().includes('college'),\n  // Detectar urgência\n  isUrgent: (emailData.subject || '').toLowerCase().includes('urgent') ||\n            (emailData.subject || '').toLowerCase().includes('asap') ||\n            (emailData.content || '').toLowerCase().includes('urgent'),\n  // Detectar tipo de email\n  emailType: detectEmailType(emailData.subject, emailData.content)\n};\n\nfunction detectEmailType(subject, content) {\n  const subjectLower = (subject || '').toLowerCase();\n  const contentLower = (content || '').toLowerCase();\n  \n  if (subjectLower.includes('application') || contentLower.includes('application')) {\n    return 'application';\n  }\n  if (subjectLower.includes('document') || contentLower.includes('document')) {\n    return 'document_request';\n  }\n  if (subjectLower.includes('payment') || contentLower.includes('payment')) {\n    return 'payment';\n  }\n  if (subjectLower.includes('scholarship') || contentLower.includes('scholarship')) {\n    return 'scholarship';\n  }\n  if (subjectLower.includes('admission') || contentLower.includes('admission')) {\n    return 'admission';\n  }\n  return 'general';\n}\n\nreturn [{\n  json: emailInfo\n}];"
+      },
+      "id": "email-parser",
+      "name": "Email Parser",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  u.id as user_id,\n  u.email as user_email,\n  u.full_name as user_name,\n  u.role,\n  ec.email as connected_email,\n  ec.provider\nFROM users u\nLEFT JOIN email_connections ec ON u.id = ec.user_id\nWHERE u.id = $1\nLIMIT 1",
+        "options": {}
+      },
+      "id": "get-user-info",
+      "name": "Get User Info",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-credentials",
+          "name": "Supabase Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  id,\n  name,\n  contact,\n  email_domain\nFROM universities \nWHERE contact->>'email' ILIKE $1 \n   OR contact->>'admissionsEmail' ILIKE $1\n   OR email_domain = $2\nLIMIT 1",
+        "options": {}
+      },
+      "id": "get-university-info",
+      "name": "Get University Info",
+      "typeVersion": 2.4,
+      "position": [900, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-credentials",
+          "name": "Supabase Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  id,\n  email_type,\n  response_template,\n  ai_prompt,\n  auto_reply_enabled,\n  requires_human_review\nFROM email_response_templates \nWHERE email_type = $1 \n   OR email_type = 'general'\nORDER BY email_type = $1 DESC\nLIMIT 1",
+        "options": {}
+      },
+      "id": "get-response-template",
+      "name": "Get Response Template",
+      "typeVersion": 2.4,
+      "position": [1120, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-credentials",
+          "name": "Supabase Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar dados para análise de IA\nconst emailData = $input.first().json;\nconst userInfo = $('Get User Info').first().json;\nconst universityInfo = $('Get University Info').first().json;\nconst templateInfo = $('Get Response Template').first().json;\n\n// Construir contexto para IA\nconst context = {\n  emailType: emailData.emailType,\n  isUrgent: emailData.isUrgent,\n  isUniversityEmail: emailData.isUniversityEmail,\n  userRole: userInfo?.role || 'student',\n  userName: userInfo?.user_name || 'User',\n  universityName: universityInfo?.name || 'University',\n  originalEmail: {\n    from: emailData.from,\n    subject: emailData.subject,\n    content: emailData.content,\n    timestamp: emailData.timestamp\n  },\n  template: templateInfo?.ai_prompt || 'Respond professionally to this email',\n  requiresHumanReview: templateInfo?.requires_human_review || false\n};\n\n// Determinar se deve usar IA ou template fixo\nconst shouldUseAI = !context.requiresHumanReview && \n                    (context.emailType !== 'general' || context.isUrgent);\n\nreturn [{\n  json: {\n    ...context,\n    shouldUseAI,\n    templateId: templateInfo?.id,\n    responseTemplate: templateInfo?.response_template\n  }\n}];"
+      },
+      "id": "prepare-ai-context",
+      "name": "Prepare AI Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "authentication": "apiKey",
+        "model": "gpt-4",
+        "messages": {
+          "message": [
+            {
+              "role": "system",
+              "content": "You are an AI assistant for Matrícula USA, a platform that helps students apply to US universities. You need to respond to emails professionally and helpfully.\n\nContext:\n- User Role: {{ $json.userRole }}\n- University: {{ $json.universityName }}\n- Email Type: {{ $json.emailType }}\n- Is Urgent: {{ $json.isUrgent }}\n\nInstructions:\n1. Respond in English\n2. Be professional and helpful\n3. If urgent, prioritize the response\n4. If it's a document request, guide them to upload\n5. If it's a payment issue, provide payment instructions\n6. If it's an application question, provide guidance\n7. Keep responses concise but informative\n8. Always include a professional signature\n\nTemplate: {{ $json.template }}"
+            },
+            {
+              "role": "user",
+              "content": "Original Email:\nFrom: {{ $json.originalEmail.from }}\nSubject: {{ $json.originalEmail.subject }}\nContent: {{ $json.originalEmail.content }}\n\nPlease generate an appropriate response."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 500
+        }
+      },
+      "id": "ai-response-generator",
+      "name": "AI Response Generator",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Processar resposta da IA\nconst aiResponse = $input.first().json;\nconst context = $('Prepare AI Context').first().json;\n\n// Extrair resposta da IA\nconst aiContent = aiResponse.choices?.[0]?.message?.content || 'Thank you for your email. We will get back to you soon.';\n\n// Preparar email de resposta\nconst responseEmail = {\n  to: context.originalEmail.from,\n  subject: `Re: ${context.originalEmail.subject}`,\n  content: aiContent,\n  isUrgent: context.isUrgent,\n  emailType: context.emailType,\n  templateId: context.templateId,\n  generatedBy: 'ai'\n};\n\n// Se não deve usar IA, usar template fixo\nif (!context.shouldUseAI && context.responseTemplate) {\n  responseEmail.content = context.responseTemplate\n    .replace('{{userName}}', context.userName)\n    .replace('{{universityName}}', context.universityName);\n  responseEmail.generatedBy = 'template';\n}\n\nreturn [{\n  json: responseEmail\n}];"
+      },
+      "id": "process-response",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "fromEmail": "support@matriculausa.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.content }}",
+        "additionalFields": {
+          "html": "={{ $json.content }}"
+        }
+      },
+      "id": "send-email-response",
+      "name": "Send Email Response",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "credentials": {
+        "emailSend": {
+          "id": "email-credentials",
+          "name": "Email Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO email_interactions (\n  user_id,\n  original_email_id,\n  sender_email,\n  subject,\n  original_content,\n  response_content,\n  response_type,\n  template_id,\n  is_urgent,\n  email_type,\n  processed_at,\n  status\n) VALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), 'processed'\n) RETURNING id",
+        "options": {}
+      },
+      "id": "log-interaction",
+      "name": "Log Interaction",
+      "typeVersion": 2.4,
+      "position": [2220, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-credentials",
+          "name": "Supabase Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "urgent-check",
+              "leftValue": "={{ $json.isUrgent }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "urgent-check",
+      "name": "Urgent Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2440, 200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "fromEmail": "alerts@matriculausa.com",
+        "toEmail": "admin@matriculausa.com",
+        "subject": "🚨 URGENT EMAIL PROCESSED",
+        "text": "An urgent email was automatically processed and responded to.\n\nDetails:\n- From: {{ $json.originalEmail.from }}\n- Subject: {{ $json.originalEmail.subject }}\n- User: {{ $json.userName }}\n- Response Type: {{ $json.generatedBy }}\n\nPlease review if manual intervention is needed.",
+        "additionalFields": {
+          "html": "<h2>🚨 URGENT EMAIL PROCESSED</h2><p>An urgent email was automatically processed and responded to.</p><ul><li><strong>From:</strong> {{ $json.originalEmail.from }}</li><li><strong>Subject:</strong> {{ $json.originalEmail.subject }}</li><li><strong>User:</strong> {{ $json.userName }}</li><li><strong>Response Type:</strong> {{ $json.generatedBy }}</li></ul><p>Please review if manual intervention is needed.</p>"
+        }
+      },
+      "id": "send-urgent-alert",
+      "name": "Send Urgent Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [2660, 200],
+      "credentials": {
+        "emailSend": {
+          "id": "email-credentials",
+          "name": "Email Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "human-review-check",
+              "leftValue": "={{ $json.requiresHumanReview }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "human-review-check",
+      "name": "Human Review Check",
+      "typeVersion": 2,
+      "position": [2440, 400]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "fromEmail": "review@matriculausa.com",
+        "toEmail": "support@matriculausa.com",
+        "subject": "📋 EMAIL REQUIRES HUMAN REVIEW",
+        "text": "An email requires human review before responding.\n\nDetails:\n- From: {{ $json.originalEmail.from }}\n- Subject: {{ $json.originalEmail.subject }}\n- User: {{ $json.userName }}\n- Email Type: {{ $json.emailType }}\n\nPlease review and respond manually.",
+        "additionalFields": {
+          "html": "<h2>📋 EMAIL REQUIRES HUMAN REVIEW</h2><p>An email requires human review before responding.</p><ul><li><strong>From:</strong> {{ $json.originalEmail.from }}</li><li><strong>Subject:</strong> {{ $json.originalEmail.subject }}</li><li><strong>User:</strong> {{ $json.userName }}</li><li><strong>Email Type:</strong> {{ $json.emailType }}</li></ul><p>Please review and respond manually.</p>"
+        }
+      },
+      "id": "send-review-request",
+      "name": "Send Review Request",
+      "typeVersion": 2,
+      "position": [2660, 400],
+      "credentials": {
+        "emailSend": {
+          "id": "email-credentials",
+          "name": "Email Service"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Email processed successfully\",\n  \"data\": {\n    \"emailType\": \"{{ $json.emailType }}\",\n    \"isUrgent\": {{ $json.isUrgent }},\n    \"responseGenerated\": \"{{ $json.generatedBy }}\",\n    \"timestamp\": \"{{ $json.timestamp }}\"\n  }\n}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2880, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Email Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Parser": {
+      "main": [
+        [
+          {
+            "node": "Get User Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Info": {
+      "main": [
+        [
+          {
+            "node": "Get University Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get University Info": {
+      "main": [
+        [
+          {
+            "node": "Get Response Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Response Template": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Context": {
+      "main": [
+        [
+          {
+            "node": "AI Response Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Response Generator": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          {
+            "node": "Send Email Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Response": {
+      "main": [
+        [
+          {
+            "node": "Log Interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Interaction": {
+      "main": [
+        [
+          {
+            "node": "Urgent Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgent Check": {
+      "main": [
+        [
+          {
+            "node": "Send Urgent Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Human Review Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Review Check": {
+      "main": [
+        [
+          {
+            "node": "Send Review Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Urgent Alert": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Review Request": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-20T10:00:00.000Z",
+      "updatedAt": "2025-01-20T10:00:00.000Z",
+      "id": "ai-email-autoresponder",
+      "name": "AI Email Auto-Responder"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-20T10:00:00.000Z",
+  "versionId": "1"
+} 

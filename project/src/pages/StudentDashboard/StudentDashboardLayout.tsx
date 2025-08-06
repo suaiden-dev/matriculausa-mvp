@@ -14,7 +14,8 @@ import {
   ChevronDown,
   Shield,
   Star,
-  CreditCard
+  CreditCard,
+  Gift
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { StripeCheckout } from '../../components/StripeCheckout';
@@ -72,6 +73,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     { id: 'scholarships', label: 'Browse Scholarships', icon: Award, path: '/student/dashboard/scholarships' },
     { id: 'cart', label: 'Selected Scholarships', icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: 'My Applications', icon: FileText, path: '/student/dashboard/applications' },
+    { id: 'rewards', label: 'Matricula Rewards', icon: Gift, path: '/student/dashboard/rewards' },
     { id: 'profile', label: 'Profile', icon: User, path: '/student/dashboard/profile' }
   ];
 

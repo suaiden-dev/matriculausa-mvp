@@ -12,131 +12,12 @@ const corsHeaders = {
 function getFrontendUrl(req: Request): string {
   console.log('🔍 Debug: Starting frontend URL detection...');
   
-  // PRIORIDADE 1: Variáveis de ambiente (mais confiável)
-  const isProduction = Deno.env.get('IS_PRODUCTION');
-  const isDevelopment = Deno.env.get('IS_DEVELOPMENT');
-  
-  if (isProduction === 'true') {
-    console.log('🔧 Using production URL from IS_PRODUCTION environment variable');
-    return 'https://matriculausa.com';
-  }
-  
-  if (isDevelopment === 'true') {
-    console.log('🔧 Using development URL from IS_DEVELOPMENT environment variable');
-    return 'http://localhost:5173';
-  }
-  
-  // PRIORIDADE 2: Detectar baseado no referer (se não for do Google)
-  const referer = req.headers.get('referer');
-  console.log('🔍 Debug: Referer header:', referer);
-  
-  if (referer) {
-    try {
-      const refererUrl = new URL(referer);
-      const hostname = refererUrl.hostname;
-      console.log('🔍 Debug: Parsed hostname from referer:', hostname);
-      
-      // IGNORAR Google OAuth domains
-      if (hostname.includes('accounts.google.com') || 
-          hostname.includes('google.com') || 
-          hostname.includes('googleapis.com')) {
-        console.log('🔍 Debug: Ignoring Google OAuth domain:', hostname);
-      } else {
-        // Se é localhost, é desenvolvimento
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          const devUrl = `http://${hostname}:${refererUrl.port || '5173'}`;
-          console.log('🔧 Detected development environment from referer:', devUrl);
-          return devUrl;
-        }
-        
-        // Se é matriculausa.com, é produção
-        if (hostname.includes('matriculausa.com')) {
-          const prodUrl = `${refererUrl.protocol}//${hostname}`;
-          console.log('🔧 Detected production environment from referer:', prodUrl);
-          return prodUrl;
-        }
-        
-        console.log('🔍 Debug: Hostname did not match any known pattern:', hostname);
-      }
-    } catch (error) {
-      console.error('Error parsing referer:', error);
-    }
-  } else {
-    console.log('🔍 Debug: No referer header found');
-  }
-
-  // PRIORIDADE 3: Detectar baseado no Origin header
-  const origin = req.headers.get('origin');
-  console.log('🔍 Debug: Origin header:', origin);
-  
-  if (origin) {
-    try {
-      const originUrl = new URL(origin);
-      const hostname = originUrl.hostname;
-      console.log('🔍 Debug: Parsed hostname from origin:', hostname);
-      
-      // Se é localhost, é desenvolvimento
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        const devUrl = `http://${hostname}:${originUrl.port || '5173'}`;
-        console.log('🔧 Detected development environment from origin:', devUrl);
-        return devUrl;
-      }
-      
-      // Se é matriculausa.com, é produção
-      if (hostname.includes('matriculausa.com')) {
-        const prodUrl = `${originUrl.protocol}//${hostname}`;
-        console.log('🔧 Detected production environment from origin:', prodUrl);
-        return prodUrl;
-      }
-    } catch (error) {
-      console.error('Error parsing origin:', error);
-    }
-  }
-
-  // PRIORIDADE 4: Detectar baseado no Host header
-  const host = req.headers.get('host');
-  console.log('🔍 Debug: Host header:', host);
-  
-  if (host) {
-    // Se o host contém matriculausa.com, é produção
-    if (host.includes('matriculausa.com')) {
-      console.log('🔧 Detected production environment from host header');
-      return 'https://matriculausa.com';
-    }
-    
-    // Se o host contém localhost, é desenvolvimento
-    if (host.includes('localhost') || host.includes('127.0.0.1')) {
-      console.log('🔧 Detected development environment from host header');
-      return 'http://localhost:5173';
-    }
-  }
-
-  // PRIORIDADE 5: Detectar baseado no Supabase URL
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  console.log('🔍 Debug: Supabase URL:', supabaseUrl);
-  
-  if (supabaseUrl) {
-    // Se o Supabase URL contém 'supabase.co', provavelmente é produção
-    if (supabaseUrl.includes('supabase.co')) {
-      console.log('🔧 Detected production environment from Supabase URL');
-      return 'https://matriculausa.com';
-    }
-  }
-
-  // PRIORIDADE 6: Detectar baseado no domínio da edge function
-  const currentUrl = new URL(req.url);
-  const edgeFunctionHost = currentUrl.hostname;
-  console.log('🔍 Debug: Edge function host:', edgeFunctionHost);
-  
-  if (edgeFunctionHost.includes('supabase.co')) {
-    console.log('🔧 Detected production environment from edge function host');
-    return 'https://matriculausa.com';
-  }
-
-  // FALLBACK: Usar desenvolvimento como padrão (mais seguro)
-  console.log('🔧 Using default development URL: http://localhost:5173');
+  // FORÇAR APENAS DESENVOLVIMENTO - IGNORAR PRODUÇÃO COMPLETAMENTE
+  console.log('🔧 FORCING DEVELOPMENT ENVIRONMENT ONLY: http://localhost:5173');
   return 'http://localhost:5173';
 }
+
+
 
 // Função para criptografar dados
 async function encryptData(data: string, key: string): Promise<string> {
@@ -448,7 +329,7 @@ Deno.serve(async (req) => {
     });
 
     // Redirecionar de volta para o Inbox com sucesso
-    // Usar a URL base do frontend em vez da URL da Edge Function
+    // FORÇAR APENAS DESENVOLVIMENTO - SEMPRE LOCALHOST
     const frontendUrl = getFrontendUrl(req);
     const redirectUrl = `${frontendUrl}/school/dashboard/inbox?status=success&email=${encodeURIComponent(userEmail)}`;
     

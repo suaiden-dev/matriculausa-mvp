@@ -33,6 +33,8 @@ const EmailTabs: React.FC<EmailTabsProps> = ({
   const visibleTabs = tabs.filter(tab => {
     // Sempre mostrar a aba ativa
     if (activeTab === tab.id) return true;
+    // Sempre mostrar a aba "knowledge" (Base de Conhecimento) - é especial
+    if (tab.id === 'knowledge') return true;
     // Mostrar outras abas apenas se tiverem emails
     return emailCounts[tab.id] && emailCounts[tab.id] > 0;
   });
