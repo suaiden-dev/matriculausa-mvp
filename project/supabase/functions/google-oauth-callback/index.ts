@@ -12,9 +12,30 @@ const corsHeaders = {
 function getFrontendUrl(req: Request): string {
   console.log('🔍 Debug: Starting frontend URL detection...');
   
-  // FORÇAR APENAS DESENVOLVIMENTO - IGNORAR PRODUÇÃO COMPLETAMENTE
-  console.log('🔧 FORCING DEVELOPMENT ENVIRONMENT ONLY: http://localhost:5173');
-  return 'http://localhost:5173';
+  // Detectar se estamos em produção ou desenvolvimento
+  const host = req.headers.get('host') || '';
+  const referer = req.headers.get('referer') || '';
+  const userAgent = req.headers.get('user-agent') || '';
+  
+  console.log('🔍 Host:', host);
+  console.log('🔍 Referer:', referer);
+  console.log('🔍 User-Agent:', userAgent);
+  
+  // Se o host contém 'supabase.co' ou 'matriculausa.com', estamos em produção
+  if (host.includes('supabase.co') || referer.includes('matriculausa.com') || host.includes('matriculausa.com')) {
+    console.log('🚀 Production environment detected: matriculausa.com');
+    return 'https://matriculausa.com';
+  }
+  
+  // Se o host contém 'localhost' ou '127.0.0.1', estamos em desenvolvimento
+  if (host.includes('localhost') || host.includes('127.0.0.1') || referer.includes('localhost')) {
+    console.log('🔧 Development environment detected: localhost:5173');
+    return 'http://localhost:5173';
+  }
+  
+  // Padrão: produção (matriculausa.com)
+  console.log('🚀 Defaulting to production environment: matriculausa.com');
+  return 'https://matriculausa.com';
 }
 
 
@@ -329,7 +350,6 @@ Deno.serve(async (req) => {
     });
 
     // Redirecionar de volta para o Inbox com sucesso
-    // FORÇAR APENAS DESENVOLVIMENTO - SEMPRE LOCALHOST
     const frontendUrl = getFrontendUrl(req);
     const redirectUrl = `${frontendUrl}/school/dashboard/inbox?status=success&email=${encodeURIComponent(userEmail)}`;
     
