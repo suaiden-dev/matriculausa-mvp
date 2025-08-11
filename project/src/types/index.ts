@@ -134,6 +134,7 @@ export interface UserProfile {
   i20_control_fee_due_date?: string | null;
   i20_control_fee_payment_intent_id?: string | null;
   is_scholarship_fee_paid: boolean;
+  avatar_url?: string | null;
 }
 
 export interface EmailAttachment {

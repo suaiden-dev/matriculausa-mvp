@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   User, 
   Edit, 
@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ProfileManagementProps {
   profile: any;
@@ -30,7 +32,15 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
   profile,
   onUpdateProfile
 }) => {
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(profile?.avatar_url);
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     phone: profile?.phone || '',
@@ -46,15 +56,114 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       ...prev,
       [field]: value
     }));
+    
+    // Clear error messages when user starts typing
+    if (saveError) setSaveError(null);
   };
 
-  const handleSave = () => {
-    const updatedData = {
-      ...formData,
-      gpa: parseFloat(formData.gpa) || 0
-    };
-    onUpdateProfile(updatedData);
-    setIsEditing(false);
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+         try {
+       // Validate file type
+       if (!file.type.startsWith('image/')) {
+         throw new Error('Please select an image file');
+       }
+
+       // Validate file size (max 5MB)
+       if (file.size > 5 * 1024 * 1024) {
+         throw new Error('File size must be less than 5MB');
+       }
+
+       const fileExt = file.name.split('.').pop();
+       const fileName = `${user.id}/avatar_${Date.now()}.${fileExt}`;
+       
+       console.log('Uploading to bucket: user-avatars');
+       console.log('File name:', fileName);
+       console.log('User ID:', user.id);
+
+       // Upload file to Supabase Storage
+       const { data: uploadData, error: uploadError } = await supabase.storage
+         .from('user-avatars')
+         .upload(fileName, file, { 
+           upsert: true,
+           contentType: file.type
+         });
+         
+       if (uploadError) {
+         console.error('Upload error:', uploadError);
+         throw new Error(`Upload failed: ${uploadError.message}`);
+       }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(fileName);
+
+      const publicUrl = publicUrlData?.publicUrl;
+      if (!publicUrl) throw new Error('Could not get image URL');
+
+      // Update user profile with new avatar URL using RPC function
+      const { data: updateResult, error: updateError } = await supabase.rpc('update_user_avatar', {
+        user_id_param: user.id,
+        avatar_url_param: publicUrl
+      });
+
+      if (updateError) throw updateError;
+      
+      if (!updateResult?.success) {
+        throw new Error(updateResult?.message || 'Failed to update avatar');
+      }
+
+      setAvatarUrl(publicUrl);
+      
+      // Call the parent component's update function
+      onUpdateProfile({ 
+        ...formData, 
+        avatar_url: publicUrl 
+      });
+
+    } catch (err: any) {
+      setUploadError(err.message || 'Failed to upload avatar. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    setSuccessMessage(null);
+
+    try {
+      const updatedData = {
+        ...formData,
+        gpa: parseFloat(formData.gpa) || 0
+      };
+      
+      await onUpdateProfile(updatedData);
+      
+      setIsEditing(false);
+      setSuccessMessage('Profile updated successfully!');
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
+      
+    } catch (err: any) {
+      setSaveError(err.message || 'Failed to save profile changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -67,6 +176,8 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       gpa: profile?.gpa?.toString() || '',
       english_proficiency: profile?.english_proficiency || ''
     });
+    setSaveError(null);
+    setSuccessMessage(null);
     setIsEditing(false);
   };
 
@@ -87,7 +198,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
   const completeness = getProfileCompleteness();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -97,7 +208,11 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         
         {!isEditing && (
           <button
-            onClick={() => setIsEditing(true)}
+            onClick={() => {
+              setIsEditing(true);
+              setSaveError(null);
+              setSuccessMessage(null);
+            }}
             className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Edit className="h-4 w-4 mr-2" />
@@ -146,14 +261,25 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               <div className="flex space-x-3">
                 <button
                   onClick={handleSave}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center"
+                  disabled={saving}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium flex items-center"
+                  disabled={saving}
+                  className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -268,12 +394,36 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
             {/* Profile Header */}
             <div className="flex items-center space-x-6 mb-8">
               <div className="relative">
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <User className="h-12 w-12 text-white" />
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+                  {avatarUrl ? (
+                    <img 
+                      src={avatarUrl} 
+                      alt="Profile Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-12 w-12 text-white" />
+                  )}
                 </div>
-                <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200">
-                  <Camera className="h-4 w-4" />
+                <button 
+                  onClick={handleCameraClick}
+                  disabled={uploading}
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Change profile picture"
+                >
+                  {uploading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
               </div>
               
               <div>
@@ -291,6 +441,36 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Upload Error Message */}
+            {uploadError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                  <p className="text-red-700 text-sm">{uploadError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <p className="text-green-700 text-sm">{successMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Save Error Message */}
+            {saveError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                  <p className="text-red-700 text-sm">{saveError}</p>
+                </div>
+              </div>
+            )}
 
             {/* Profile Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

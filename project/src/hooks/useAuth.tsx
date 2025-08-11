@@ -38,6 +38,8 @@ export interface UserProfile {
   documents_uploaded?: boolean;
   selected_scholarship_id?: string | null;
   has_paid_college_enrollment_fee?: boolean;
+  // Campo para avatar
+  avatar_url?: string | null;
   // ... outras colunas se existirem
 }
 
@@ -522,7 +524,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
         console.log('🎯 [USEAUTH] Status da resposta:', response?.error ? 'error' : 'success');
         console.log('🎯 [USEAUTH] Resposta da Edge Function:', response);
-      } catch (couponError) {
+      } catch (couponError: any) {
         console.error('❌ [USEAUTH] Erro ao chamar função de cupom:', couponError);
         console.error('❌ [USEAUTH] Tipo do erro:', typeof couponError);
         console.error('❌ [USEAUTH] Mensagem do erro:', couponError?.message);
