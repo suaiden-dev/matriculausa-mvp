@@ -45,6 +45,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     if (path.includes('/scholarships')) return 'scholarships';
     if (path.includes('/cart')) return 'cart';
     if (path.includes('/applications') || path.includes('/application/')) return 'applications';
+    if (path.includes('/rewards')) return 'rewards';
     if (path.includes('/profile')) return 'profile';
     return 'overview';
   };
