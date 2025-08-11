@@ -28,7 +28,8 @@ export interface UserProfile {
   updated_at: string | null;
   is_application_fee_paid: boolean;
   has_paid_selection_process_fee: boolean;
-  is_admin: boolean;
+  is_admin: boolean; // legado: mantido por compatibilidade
+  role?: 'student' | 'school' | 'admin';
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
   university_id?: string | null;
@@ -89,15 +90,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    const buildUser = (sessionUser: any, currentProfile: UserProfile | null): User => {
-      let role = sessionUser?.user_metadata?.role;
-      if (!role && currentProfile) {
-        if (currentProfile.is_admin) role = 'admin';
-        else role = 'student';
-      }
+    const buildUser = async (sessionUser: any, currentProfile: UserProfile | null): Promise<User> => {
+      // Prioridade: perfil.role -> user_metadata.role -> verificar se é universidade -> perfil.is_admin -> fallback por email
+      let role = currentProfile?.role as User['role'] | undefined;
+      if (!role) role = sessionUser?.user_metadata?.role as User['role'] | undefined;
+      
+      // Se ainda não tem role, verificar se é uma universidade
       if (!role) {
-        role = getDefaultRole(sessionUser?.email || '');
+        try {
+          const { data: university } = await supabase
+            .from('universities')
+            .select('id')
+            .eq('user_id', sessionUser.id)
+            .single();
+          
+          if (university) {
+            role = 'school';
+          }
+        } catch (error) {
+          // Se não encontrar universidade, continuar com a lógica normal
+        }
       }
+      
+      if (!role && currentProfile) role = currentProfile.is_admin ? 'admin' : undefined;
+      if (!role) role = getDefaultRole(sessionUser?.email || '');
+      
       const builtUser: User = {
         id: sessionUser.id,
         email: sessionUser.email,
@@ -149,10 +166,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             const pendingFullName = localStorage.getItem('pending_full_name');
             const pendingPhone = localStorage.getItem('pending_phone');
+            const pendingAffiliateCode = localStorage.getItem('pending_affiliate_code');
             
             console.log('🔍 [USEAUTH] Dados do localStorage:');
             console.log('🔍 [USEAUTH] - pendingFullName:', pendingFullName);
             console.log('🔍 [USEAUTH] - pendingPhone:', pendingPhone);
+            console.log('🔍 [USEAUTH] - pendingAffiliateCode:', pendingAffiliateCode);
             
             const fullName = pendingFullName || 
               session.user.user_metadata?.full_name || 
@@ -235,6 +254,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('✅ [USEAUTH] Perfil criado com sucesso:', newProfile);
               console.log('🔍 [USEAUTH] Telefone no perfil criado:', newProfile?.phone);
               profile = newProfile;
+              
+              // Processar código de afiliado se existir
+              if (pendingAffiliateCode) {
+                console.log('🎁 [USEAUTH] Processando código de afiliado:', pendingAffiliateCode);
+                try {
+                  // Verificar se o código é válido
+                  const { data: affiliateCodeData, error: affiliateError } = await supabase
+                    .from('affiliate_codes')
+                    .select('user_id, code')
+                    .eq('code', pendingAffiliateCode)
+                    .eq('is_active', true)
+                    .single();
+                  
+                  if (affiliateError || !affiliateCodeData) {
+                    console.log('❌ [USEAUTH] Código de afiliado inválido:', pendingAffiliateCode);
+                  } else {
+                    // Verificar se não é auto-indicação
+                    if (affiliateCodeData.user_id === session.user.id) {
+                      console.log('⚠️ [USEAUTH] Tentativa de auto-indicação detectada');
+                    } else {
+                      // Criar registro de indicação
+                      const { error: referralError } = await supabase
+                        .from('affiliate_referrals')
+                        .insert({
+                          referrer_id: affiliateCodeData.user_id,
+                          referred_id: session.user.id,
+                          affiliate_code: pendingAffiliateCode,
+                          status: 'pending',
+                          credits_earned: 200 // 200 Matricula Coins
+                        });
+                      
+                      if (referralError) {
+                        console.log('❌ [USEAUTH] Erro ao criar indicação:', referralError);
+                      } else {
+                        console.log('✅ [USEAUTH] Indicação criada com sucesso');
+                        // Limpar código do localStorage
+                        localStorage.removeItem('pending_affiliate_code');
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('❌ [USEAUTH] Erro ao processar código de afiliado:', error);
+                }
+              }
+              
               if (session.user.user_metadata?.role === 'school') {
                 try {
                   const { error: universityError } = await supabase
@@ -276,7 +340,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
         setUserProfile(profile);
-        setUser(buildUser(session.user, profile));
+        setUser(await buildUser(session.user, profile));
         setSupabaseUser(session.user);
 
         // Sincronizar telefone do user_metadata se o perfil não tiver
@@ -411,6 +475,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('pending_full_name', userData.full_name);
     localStorage.setItem('pending_phone', userData.phone || '');
     
+    // Salvar código de afiliado se existir
+    if (userData.affiliate_code) {
+      localStorage.setItem('pending_affiliate_code', userData.affiliate_code);
+      console.log('💾 [USEAUTH] - pending_affiliate_code:', userData.affiliate_code);
+    }
+    
     // Filtrar valores undefined/null do userData
     const cleanUserData = Object.fromEntries(
       Object.entries(userData).filter(([key, value]) => value !== undefined && value !== null)
@@ -434,6 +504,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         data: signUpData,
       }
     });
+
+    // Se o registro foi bem-sucedido e há código de afiliado, processar cupom automaticamente
+    if (!error && data.user && userData.affiliate_code) {
+      console.log('🎯 [USEAUTH] Processando cupom de desconto automaticamente...');
+      console.log('🎯 [USEAUTH] User ID:', data.user.id);
+      console.log('🎯 [USEAUTH] Affiliate Code:', userData.affiliate_code);
+      console.log('🎯 [USEAUTH] User Data completo:', userData);
+
+      try {
+        console.log('🎯 [USEAUTH] Chamando Edge Function process-registration-coupon...');
+        const response = await supabase.functions.invoke('process-registration-coupon', {
+          body: {
+            user_id: data.user.id,
+            affiliate_code: userData.affiliate_code
+          }
+        });
+        console.log('🎯 [USEAUTH] Status da resposta:', response?.error ? 'error' : 'success');
+        console.log('🎯 [USEAUTH] Resposta da Edge Function:', response);
+      } catch (couponError) {
+        console.error('❌ [USEAUTH] Erro ao chamar função de cupom:', couponError);
+        console.error('❌ [USEAUTH] Tipo do erro:', typeof couponError);
+        console.error('❌ [USEAUTH] Mensagem do erro:', couponError?.message);
+      }
+    } else {
+      console.log('⚠️ [USEAUTH] Não processando cupom automático:');
+      console.log('⚠️ [USEAUTH] - Error:', error);
+      console.log('⚠️ [USEAUTH] - Data user:', data?.user);
+      console.log('⚠️ [USEAUTH] - Affiliate code:', userData.affiliate_code);
+    }
 
     if (error) {
       console.log('❌ [USEAUTH] Erro no signUp:', error);

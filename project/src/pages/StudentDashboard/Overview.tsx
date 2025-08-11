@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Award, 
@@ -14,10 +14,14 @@ import {
   Building,
   Star,
   Eye,
-  CreditCard
+  CreditCard,
+  Gift,
+  X,
+  Tag
 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
+import { useReferralCode } from '../../hooks/useReferralCode';
 import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
@@ -36,6 +40,40 @@ interface OverviewProps {
   recentApplications?: any[];
 }
 
+// Componente de mensagem de boas‑vindas (compacto, em inglês e estilizado para o hero)
+const WelcomeMessage: React.FC = () => {
+  const [showWelcome, setShowWelcome] = useState(false);
+  const { user } = useAuth();
+
+  if (!showWelcome || !user) return null;
+
+  return (
+    <div className="mb-4 rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm p-4 text-white shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+            <Gift className="h-5 w-5 text-white" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-semibold">Welcome gift: $50 discount</h3>
+            <p className="text-sm text-white/90">
+              A $50 discount has been automatically applied and will be used on your next application fee checkout.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowWelcome(false)}
+          className="text-white/70 hover:text-white transition-colors"
+          title="Dismiss welcome message"
+          aria-label="Dismiss welcome message"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Overview: React.FC<OverviewProps> = ({ 
   profile, 
   scholarships, 
@@ -44,6 +82,10 @@ const Overview: React.FC<OverviewProps> = ({
   onApplyScholarship,
   recentApplications = []
 }) => {
+  console.log('🔍 [Overview] Componente Overview renderizando');
+  
+  const { activeDiscount, testReferralCode } = useReferralCode();
+  
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -158,8 +200,8 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
-  } else if (!userProfile?.is_scholarship_fee_paid) {
-    // Pagou até Application Fee
+  } else if (!userProfile?.has_paid_college_enrollment_fee) {
+    // Pagou Application Fee
     steps = [
       {
         label: 'Selection Process Fee',
@@ -186,8 +228,8 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
-  } else if (!userProfile?.has_paid_i20_control_fee) {
-    // Pagou até Scholarship Fee
+  } else {
+    // Pagou tudo
     steps = [
       {
         label: 'Selection Process Fee',
@@ -214,46 +256,24 @@ const Overview: React.FC<OverviewProps> = ({
         current: true,
       },
     ];
-  } else {
-    // Tudo completo
-    steps = [
-      {
-        label: 'Selection Process Fee',
-        description: 'Completed!',
-        completed: true,
-        current: false,
-      },
-      {
-        label: 'Application Fee',
-        description: 'Completed!',
-        completed: true,
-        current: false,
-      },
-      {
-        label: 'Scholarship Fee',
-        description: 'Completed!',
-        completed: true,
-        current: false,
-      },
-      {
-        label: 'I-20 Control Fee',
-        description: 'Completed!',
-        completed: true,
-        current: false,
-      },
-    ];
   }
 
   const allCompleted = steps.every(step => step.completed);
 
   return (
     <div className="overview-dashboard-container">
-      {/* Welcome Message */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-4 md:p-6 text-white relative overflow-hidden">
+
+      
+      {/* Mensagem de boas‑vindas movida para o hero */}
+      
+      {/* Alerta de desconto duplicado removido para evitar repetição com a mensagem de boas‑vindas */}
+      
+      {/* Welcome Message / Hero */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 md:p-6 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
           <div className="flex items-center space-x-2 mb-2">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
               <Award className="h-7 w-7 text-white" />
             </div>
             <div>
@@ -263,10 +283,13 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           </div>
 
+          {/* Welcome banner inside hero */}
+          <WelcomeMessage />
+
           {/* Progress Bar dentro do bloco azul */}
           {!allCompleted && (
             <>
-              <div className="text-center text-white text-sm md:text-base font-semibold mb-1">
+              <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
                 This is your application fee progress bar. Complete each step to move forward.
               </div>
               <div className="mb-2 md:mb-4">
@@ -285,10 +308,32 @@ const Overview: React.FC<OverviewProps> = ({
                     <p className="text-blue-100 text-sm">Complete your application process</p>
                   </div>
                 </div>
-                <div className="text-xl md:text-2xl font-bold text-white">$350</div>
+                <div className="text-right">
+                  {activeDiscount?.has_discount ? (
+                    <div className="text-center">
+                      <div className="text-xl md:text-2xl font-bold text-white line-through">$350</div>
+                      <div className="text-lg md:text-xl font-bold text-green-300">
+                        ${350 - (activeDiscount.discount_amount || 0)}
+                      </div>
+                      <div className="flex items-center justify-center mt-1">
+                        <Tag className="h-3 w-3 text-green-300 mr-1" />
+                        <span className="text-xs text-green-300 font-medium">
+                          Coupon applied: -${activeDiscount.discount_amount}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xl md:text-2xl font-bold text-white">$350</div>
+                  )}
+                </div>
               </div>
               <p className="text-blue-100 text-sm mb-2">
                 Start your journey to American education by completing our comprehensive selection process.
+                {activeDiscount?.has_discount && (
+                  <span className="block mt-1 text-green-300 font-medium">
+                    ✨ You have a discount coupon applied!
+                  </span>
+                )}
               </p>
               <StripeCheckout 
                 productId="selectionProcess"
@@ -301,30 +346,13 @@ const Overview: React.FC<OverviewProps> = ({
               />
             </div>
           )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-2">
-            <div className="bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-white/20">
-              <Award className="h-7 w-7 text-white mb-3" />
-              <h3 className="font-bold text-white mb-1 md:mb-2">Discover Scholarships</h3>
-              <p className="text-blue-100 text-xs md:text-sm">Find opportunities that match your profile</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-white/20">
-              <FileText className="h-7 w-7 text-yellow-400 mb-3" />
-              <h3 className="font-bold text-white mb-1 md:mb-2">Apply with Confidence</h3>
-              <p className="text-blue-100 text-xs md:text-sm">Get guidance throughout the process</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-white/20">
-              <CheckCircle className="h-7 w-7 text-green-400 mb-3" />
-              <h3 className="font-bold text-white mb-1 md:mb-2">Track Your Progress</h3>
-              <p className="text-blue-100 text-xs md:text-sm">Monitor applications in real-time</p>
-            </div>
-          </div>
+          {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 flex flex-col justify-between">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-6.518-3.89A1 1 0 007 8.618v6.764a1 1 0 001.234.97l6.518-1.878a1 1 0 00.748-.97v-2.764a1 1 0 00-.748-.97z" /></svg>
@@ -337,7 +365,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">My Applications</p>
@@ -353,7 +381,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Approved</p>
@@ -369,7 +397,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Pending</p>
@@ -404,6 +432,7 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="overview-card-count">{action.count}</div>
               )}
             </div>
+            <ArrowUpRight className="ml-auto h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
           </Link>
         ))}
       </div>
@@ -431,7 +460,7 @@ const Overview: React.FC<OverviewProps> = ({
       {/* Recent Applications */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6 mt-6 max-w-2xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-6 mb-6 mt-6 max-w-2xl mx-auto">
             <h3 className="text-2xl font-extrabold text-blue-900 mb-4">Recent Applications</h3>
             {recentApplications.length === 0 ? (
               <div className="text-slate-500">No recent applications found.</div>
@@ -465,7 +494,7 @@ const Overview: React.FC<OverviewProps> = ({
                         </div>
                     </div>
                       <span className={`ml-auto bg-green-100 text-green-700 font-semibold px-4 py-1 rounded-full text-sm shadow-sm w-fit`}>
-                      {app.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                     </span>
                   </li>
                   );
@@ -478,7 +507,7 @@ const Overview: React.FC<OverviewProps> = ({
         {/* Recommended Scholarships & Profile Status */}
         <div className="space-y-6">
           {/* Profile Completion */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+          <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
               <Target className="h-5 w-5 mr-2 text-blue-500" />
               Profile Status
@@ -515,7 +544,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Study Tips */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg text-white p-6">
+          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-md text-white p-6 ring-1 ring-white/10">
             <h3 className="text-lg font-bold mb-4 flex items-center">
               <BookOpen className="h-5 w-5 mr-2" />
               💡 Success Tips

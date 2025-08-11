@@ -59,7 +59,39 @@ Deno.serve(async (req) => {
       ...metadata,
     };
 
-    const session = await stripe.checkout.sessions.create({
+    // NOVO: Verificar se usuário tem desconto ativo
+    let activeDiscount = null;
+    try {
+      console.log('[stripe-checkout-selection-process-fee] 🎯 VERIFICANDO DESCONTO PARA USUÁRIO');
+      console.log('[stripe-checkout-selection-process-fee] User ID:', user.id);
+      console.log('[stripe-checkout-selection-process-fee] User Email:', user.email);
+      
+      const { data: discountData, error: discountError } = await supabase
+        .rpc('get_user_active_discount', {
+          user_id_param: user.id
+        });
+
+      console.log('[stripe-checkout-selection-process-fee] 📊 Resultado da consulta de desconto:');
+      console.log('[stripe-checkout-selection-process-fee] Data:', discountData);
+      console.log('[stripe-checkout-selection-process-fee] Error:', discountError);
+
+      if (discountError) {
+        console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao buscar desconto:', discountError);
+      } else if (discountData && discountData.has_discount) {
+        activeDiscount = discountData;
+        console.log('[stripe-checkout-selection-process-fee] ✅ Desconto ativo encontrado!');
+        console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
+        console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
+        console.log('[stripe-checkout-selection-process-fee] Affiliate Code:', activeDiscount.affiliate_code);
+      } else {
+        console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto ativo encontrado para o usuário');
+      }
+    } catch (error) {
+      console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao verificar desconto:', error);
+    }
+
+    // Configuração da sessão Stripe
+    const sessionConfig: any = {
       payment_method_types: ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
@@ -73,13 +105,35 @@ Deno.serve(async (req) => {
       success_url: success_url,
       cancel_url: cancel_url,
       metadata: sessionMetadata,
-    });
+      // NOVO: Exibir campo de promoção no Checkout Stripe
+      allow_promotion_codes: true,
+    };
+
+    // Aplica desconto se houver (além do campo manual de promoção)
+    if (activeDiscount && activeDiscount.stripe_coupon_id) {
+      console.log('[stripe-checkout-selection-process-fee] 🎯 APLICANDO DESCONTO');
+      console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
+      console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
+      
+      sessionConfig.discounts = [{ coupon: activeDiscount.stripe_coupon_id }];
+      
+      sessionMetadata.referral_discount = true;
+      sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
+      sessionMetadata.referrer_id = activeDiscount.referrer_id;
+      sessionMetadata.discount_amount = activeDiscount.discount_amount;
+      
+      console.log('[stripe-checkout-selection-process-fee] ✅ Desconto aplicado na sessão!');
+    } else {
+      console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto para aplicar');
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     console.log('[stripe-checkout-selection-process-fee] Created Stripe session with metadata:', session.metadata);
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {
     console.error('Checkout error:', error);
-    return corsResponse({ error: 'Internal server error' }, 500);
+    return corsResponse({ error: 'Failed to create checkout session' }, 500);
   }
 }); 

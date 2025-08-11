@@ -55,6 +55,12 @@
     z-index: 99998 !important;
     pointer-events: none !important;
   }
+
+  /* Classe utilitária para quebra de palavras em emails longos */
+  .break-words {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
   
   /* CSS específico para mobile */
   @media (max-width: 640px) {
@@ -308,4 +314,159 @@
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Indicador visual para rolagem horizontal nas abas */
+.tab-scroll-container {
+  position: relative;
+}
+
+.tab-scroll-container::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 20px;
+  background: linear-gradient(to left, white 10%, transparent 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 5;
+}
+
+.tab-scroll-container.has-overflow::after {
+  opacity: 1;
+}
+
+/* Para fundos escuros ou diferentes cores */
+.tab-scroll-container.bg-gray-50::after {
+  background: linear-gradient(to left, #f9fafb 10%, transparent 100%);
+}
+
+.tab-scroll-container.bg-white::after {
+  background: linear-gradient(to left, white 10%, transparent 100%);
+}
+
+/* Ajuste para diferentes temas */
+.tab-scroll-container.bg-gray-100::after {
+  background: linear-gradient(to left, #f3f4f6 10%, transparent 100%);
+}
+
+.tab-scroll-container.bg-slate-50::after {
+  background: linear-gradient(to left, #f8fafc 10%, transparent 100%);
+}
+
+/* Barra de ações horizontal para cards de agentes */
+.actions-container {
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  gap: 10px;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.actions-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Garantir que os botões na barra de ações tenham tamanho consistente */
+.actions-container button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Efeito fade dinâmico para indicar rolagem horizontal */
+.horizontal-scroll-fade {
+  position: relative;
+}
+
+/* Sombra esquerda - degradê da esquerda para a direita */
+.horizontal-scroll-fade::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 50px;
+  background: linear-gradient(to right, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Sombra direita - degradê da direita para a esquerda */
+.horizontal-scroll-fade::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 50px;
+  background: linear-gradient(to left, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+  z-index: 5;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Classes de estado para controlar as sombras */
+.horizontal-scroll-fade.is-scrolled-from-start::before {
+  opacity: 1;
+}
+
+.horizontal-scroll-fade.is-scrolled-to-end::after {
+  opacity: 0;
+}
+
+/* Remover sombras quando a aba "whatsapp" estiver ativa */
+.horizontal-scroll-fade.whatsapp-active::before,
+.horizontal-scroll-fade.whatsapp-active::after {
+  opacity: 0 !important;
+}
+
+/* Ajustes para diferentes fundos */
+.horizontal-scroll-fade.bg-gray-50::before,
+.horizontal-scroll-fade.bg-gray-50::after {
+  background: linear-gradient(to right, #f9fafb 20%, rgba(249, 250, 251, 0) 100%);
+}
+
+.horizontal-scroll-fade.bg-gray-50::after {
+  background: linear-gradient(to left, #f9fafb 20%, rgba(249, 250, 251, 0) 100%);
+}
+
+.horizontal-scroll-fade.bg-gray-100::before,
+.horizontal-scroll-fade.bg-gray-100::after {
+  background: linear-gradient(to right, #f3f4f6 20%, rgba(243, 244, 246, 0) 100%);
+}
+
+.horizontal-scroll-fade.bg-gray-100::after {
+  background: linear-gradient(to left, #f3f4f6 20%, rgba(243, 244, 246, 0) 100%);
+}
+
+.horizontal-scroll-fade.bg-white::before,
+.horizontal-scroll-fade.bg-white::after {
+  background: linear-gradient(to right, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+}
+
+.horizontal-scroll-fade.bg-white::after {
+  background: linear-gradient(to left, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* Animação para notificações customizadas */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
 

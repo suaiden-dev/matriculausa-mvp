@@ -256,6 +256,109 @@ export interface AffiliateStats {
   totalReferrals: number;
   totalEarnings: number;
   currentBalance: number;
+  total_shares?: number;
+  total_clicks?: number;
+  conversion_rate?: number;
   recentTransactions: MatriculacoinTransaction[];
   recentReferrals: AffiliateReferral[];
+}
+
+// Novos tipos para o sistema de Tuition Rewards
+export interface TuitionDiscount {
+  id: string;
+  name: string;
+  description: string;
+  cost_coins: number;
+  discount_amount: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TuitionRedemption {
+  id: string;
+  user_id: string;
+  university_id: string;
+  discount_id: string;
+  cost_coins_paid: number;
+  discount_amount: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'expired';
+  redeemed_at: string;
+  confirmed_at?: string;
+  expires_at?: string;
+  metadata?: {
+    university_name: string;
+    university_location: string;
+    discount_name: string;
+  };
+  // Relacionamentos
+  discount?: TuitionDiscount;
+  university?: University;
+}
+
+export interface UniversityRewardsAccount {
+  id: string;
+  university_id: string;
+  total_received_coins: number;
+  total_discounts_sent: number;
+  total_discount_amount: number;
+  balance_coins: number;
+  created_at: string;
+  updated_at: string;
+  // Relacionamento
+  university?: University;
+}
+
+export interface UniversityConfirmationData {
+  id: string;
+  name: string;
+  location: string;
+  website?: string;
+  established_year?: number;
+  student_count?: number;
+  type?: string;
+  campus_size?: string;
+}
+
+export interface TuitionRedemptionResult {
+  redemption_id: string;
+  university_name: string;
+  university_location: string;
+  discount_amount: number;
+  cost_coins: number;
+  status: string;
+}
+
+// Payouts
+export type PayoutMethod = 'zelle' | 'bank_transfer' | 'stripe';
+
+export interface UniversityPayoutRequest {
+  id: string;
+  university_id: string;
+  requested_by: string | null;
+  amount_coins: number;
+  amount_usd: number;
+  payout_method: PayoutMethod;
+  payout_details_preview: any | null;
+  status: 'pending' | 'approved' | 'paid' | 'rejected' | 'cancelled';
+  admin_notes?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  paid_by?: string | null;
+  paid_at?: string | null;
+  cancelled_by?: string | null;
+  cancelled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PayoutInvoice {
+  id: string;
+  payout_request_id: string;
+  invoice_number: string;
+  issued_at: string;
+  due_at?: string | null;
+  total_usd: number;
+  status: 'issued' | 'voided';
+  created_at: string;
 }

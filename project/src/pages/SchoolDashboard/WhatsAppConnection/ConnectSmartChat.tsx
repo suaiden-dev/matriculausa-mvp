@@ -141,28 +141,26 @@ const ConnectSmartChat = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="bg-gray-50 rounded-3xl shadow-sm border border-gray-200 p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-[#05294E] rounded-2xl flex items-center justify-center shadow-lg">
-              <MessageSquare className="h-8 w-8 text-white" />
-            </div>
+      <div className="bg-gray-50 rounded-3xl shadow-sm border border-gray-200 p-6 md:p-8 lg:p-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4 md:gap-6">
+          <div className="flex items-center gap-3 md:gap-4">
+            <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-[#05294E]" />
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Connect SmartChat</h2>
-              <p className="text-gray-600 text-lg">Access your SmartChat dashboard and manage conversations</p>
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 md:mb-3">Connect SmartChat</h2>
+              <p className="text-gray-600 text-sm md:text-base lg:text-lg">Access your SmartChat dashboard and manage conversations</p>
             </div>
           </div>
           <button
             onClick={handleOpenSmartChat}
             disabled={buttonLoading}
-            className="flex items-center gap-3 px-6 py-3 bg-[#D0151C] text-white rounded-2xl hover:bg-[#D0151C]/90 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full md:w-auto flex items-center justify-center gap-2 md:gap-3 px-4 md:px-6 py-2.5 md:py-3 bg-[#D0151C] text-white rounded-xl md:rounded-2xl hover:bg-[#D0151C]/90 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
           >
             {buttonLoading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-white"></div>
             ) : (
-              <ExternalLink className="h-5 w-5" />
+              <ExternalLink className="h-4 w-4 md:h-5 md:w-5" />
             )}
             {buttonLoading ? 'Getting SSO Link...' : 'Open SmartChat'}
           </button>
@@ -171,97 +169,91 @@ const ConnectSmartChat = () => {
 
       {/* Message Display */}
       {message && (
-        <div className={`p-4 rounded-2xl border ${
+        <div className={`p-4 md:p-6 rounded-xl md:rounded-2xl border ${
           message.type === 'success' 
             ? 'bg-green-50 border-green-200 text-green-800' 
             : 'bg-red-50 border-red-200 text-red-800'
         }`}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 md:gap-3">
             {message.type === 'success' ? (
-              <CheckCircle className="h-5 w-5" />
+              <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
             ) : (
-              <AlertCircle className="h-5 w-5" />
+              <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
             )}
-            <p className="font-medium">{message.text}</p>
+            <p className="font-medium text-sm md:text-base">{message.text}</p>
           </div>
         </div>
       )}
 
       {/* Credentials Section */}
       {chatwootAccount ? (
-        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-[#05294E]/10 rounded-xl flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-[#05294E]" />
-            </div>
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 md:p-8 lg:p-10">
+          <div className="flex items-center gap-3 mb-6 md:mb-8">
+            <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-[#05294E]" />
             <div>
-              <h3 className="text-xl font-bold text-gray-900">Your SmartChat Credentials</h3>
-              <p className="text-gray-600">Use these credentials to log in to SmartChat (Chatwoot)</p>
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">Your SmartChat Credentials</h3>
+              <p className="text-gray-600 mt-1 text-sm md:text-base">Use these credentials to log in to SmartChat (Chatwoot)</p>
             </div>
           </div>
 
-          <div className="grid gap-6">
+          <div className="grid gap-6 md:gap-8">
             {/* Email */}
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#05294E]/10 rounded-xl flex items-center justify-center">
-                    <Mail className="h-6 w-6 text-[#05294E]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Email</p>
-                    <p className="text-xl font-mono text-gray-900 font-medium">{chatwootAccount.chatwoot_email}</p>
+            <div className="bg-gray-50 rounded-xl md:rounded-2xl p-4 md:p-6 lg:p-8 border border-gray-200">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
+                <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+                  <Mail className="h-5 w-5 md:h-6 md:w-6 text-[#05294E]" />
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold text-gray-700 mb-1 md:mb-2">Email</p>
+                    <p className="text-base md:text-lg lg:text-xl font-mono text-gray-900 font-medium break-words">{chatwootAccount.chatwoot_email}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleCopyToClipboard(chatwootAccount.chatwoot_email, 'email')}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-[#05294E] transition-all duration-200 font-medium"
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-white border-2 border-gray-300 rounded-lg md:rounded-xl hover:bg-gray-50 hover:border-[#05294E] transition-all duration-200 font-medium text-sm md:text-base"
                 >
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-3 w-3 md:h-4 md:w-4" />
                   {copiedField === 'email' ? 'Copied!' : 'Copy'}
                 </button>
               </div>
             </div>
 
             {/* Password */}
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#D0151C]/10 rounded-xl flex items-center justify-center">
-                    <Lock className="h-6 w-6 text-[#D0151C]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Password</p>
-                    <div className="flex items-center gap-3">
-                      <p className="text-xl font-mono text-gray-900 font-medium">
+            <div className="bg-gray-50 rounded-xl md:rounded-2xl p-4 md:p-6 lg:p-8 border border-gray-200">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
+                <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+                  <Lock className="h-5 w-5 md:h-6 md:w-6 text-[#D0151C]" />
+                  <div className="flex flex-col">
+                    <p className="text-sm font-semibold text-gray-700 mb-1 md:mb-2">Password</p>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <p className="text-base md:text-lg lg:text-xl font-mono text-gray-900 font-medium">
                         {showPassword ? chatwootAccount.chatwoot_password : '••••••••••••••••'}
                       </p>
                       <button
                         onClick={() => setShowPassword(!showPassword)}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                       >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showPassword ? <EyeOff className="h-4 w-4 md:h-5 md:w-5" /> : <Eye className="h-4 w-4 md:h-5 md:w-5" />}
                       </button>
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => handleCopyToClipboard(chatwootAccount.chatwoot_password, 'password')}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-[#D0151C] transition-all duration-200 font-medium"
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-white border-2 border-gray-300 rounded-lg md:rounded-xl hover:bg-gray-50 hover:border-[#D0151C] transition-all duration-200 font-medium text-sm md:text-base"
                 >
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-3 w-3 md:h-4 md:w-4" />
                   {copiedField === 'password' ? 'Copied!' : 'Copy'}
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="mt-8 p-6 bg-[#05294E]/5 border border-[#05294E]/20 rounded-2xl">
+          <div className="mt-8 md:mt-10 p-4 md:p-6 lg:p-8 bg-[#05294E]/5 border border-[#05294E]/20 rounded-xl md:rounded-2xl">
             <div className="flex items-center gap-3 text-[#05294E]">
-              <CheckCircle className="h-6 w-6" />
+              <CheckCircle className="h-5 w-5 md:h-6 md:w-6" />
               <div>
-                <p className="font-bold text-lg">Account Successfully Configured!</p>
-                <p className="text-[#05294E]/80 mt-1">
+                <p className="font-bold text-base md:text-lg">Account Successfully Configured!</p>
+                <p className="text-[#05294E]/80 mt-1 text-sm md:text-base">
                   Your credentials were automatically generated. Use them to log in to SmartChat.
                 </p>
               </div>
@@ -269,14 +261,12 @@ const ConnectSmartChat = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-yellow-50 rounded-3xl border border-yellow-200 p-8">
-          <div className="flex items-center gap-4 text-yellow-800">
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-              <AlertCircle className="h-6 w-6 text-yellow-600" />
-            </div>
+        <div className="bg-yellow-50 rounded-3xl border border-yellow-200 p-6 md:p-8 lg:p-10">
+          <div className="flex items-center gap-3 md:gap-4 text-yellow-800">
+            <AlertCircle className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
             <div>
-              <p className="font-bold text-lg">Account Not Configured</p>
-              <p className="text-yellow-700 mt-1">
+              <p className="font-bold text-base md:text-lg">Account Not Configured</p>
+              <p className="text-yellow-700 mt-1 text-sm md:text-base">
                 Your SmartChat credentials haven't been generated yet. Configure WhatsApp integration first.
               </p>
             </div>
@@ -285,28 +275,28 @@ const ConnectSmartChat = () => {
       )}
 
       {/* Help Section */}
-      <div className="bg-gray-50 rounded-3xl border border-gray-200 p-8">
-        <h3 className="text-xl font-bold text-[#05294E] mb-6">How to Connect to SmartChat</h3>
-        <div className="grid gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-[#05294E] rounded-full flex items-center justify-center text-white font-bold text-sm mt-1">1</div>
+      <div className="bg-gray-50 rounded-3xl border border-gray-200 p-6 md:p-8 lg:p-10">
+        <h3 className="text-lg md:text-xl font-bold text-[#05294E] mb-6 md:mb-8">How to Connect to SmartChat</h3>
+        <div className="grid gap-6 md:gap-8">
+          <div className="flex items-start gap-3 md:gap-4">
+            <div className="w-6 h-6 md:w-8 md:h-8 bg-[#05294E] rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm mt-0.5 md:mt-1">1</div>
             <div>
-              <p className="font-semibold text-[#05294E] text-lg">Get SSO Link</p>
-              <p className="text-gray-700 mt-1">Click the "Open SmartChat" button to get your personalized login link.</p>
+              <p className="font-semibold text-[#05294E] text-base md:text-lg">Get SSO Link</p>
+              <p className="text-gray-700 mt-1 md:mt-2 text-sm md:text-base">Click the "Open SmartChat" button to get your personalized login link.</p>
             </div>
           </div>
-          <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-[#05294E] rounded-full flex items-center justify-center text-white font-bold text-sm mt-1">2</div>
+          <div className="flex items-start gap-3 md:gap-4">
+            <div className="w-6 h-6 md:w-8 md:h-8 bg-[#05294E] rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm mt-0.5 md:mt-1">2</div>
             <div>
-              <p className="font-semibold text-[#05294E] text-lg">Automatic Login</p>
-              <p className="text-gray-700 mt-1">The SSO link will automatically log you in to your SmartChat dashboard.</p>
+              <p className="font-semibold text-[#05294E] text-base md:text-lg">Automatic Login</p>
+              <p className="text-gray-700 mt-1 md:mt-2 text-sm md:text-base">The SSO link will automatically log you in to your SmartChat dashboard.</p>
             </div>
           </div>
-          <div className="flex items-start gap-4">
-            <div className="w-8 h-8 bg-[#05294E] rounded-full flex items-center justify-center text-white font-bold text-sm mt-1">3</div>
+          <div className="flex items-start gap-3 md:gap-4">
+            <div className="w-6 h-6 md:w-8 md:h-8 bg-[#05294E] rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm mt-0.5 md:mt-1">3</div>
             <div>
-              <p className="font-semibold text-[#05294E] text-lg">Manage Your Conversations</p>
-              <p className="text-gray-700 mt-1">You'll be automatically logged in and can manage all your WhatsApp conversations.</p>
+              <p className="font-semibold text-[#05294E] text-base md:text-lg">Manage Your Conversations</p>
+              <p className="text-gray-700 mt-1 md:mt-2 text-sm md:text-base">You'll be automatically logged in and can manage all your WhatsApp conversations.</p>
             </div>
           </div>
         </div>

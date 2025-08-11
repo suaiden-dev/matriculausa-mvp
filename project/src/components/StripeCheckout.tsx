@@ -40,7 +40,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [loading, setLoading] = useState(false);
   const { isAuthenticated, updateUserProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  
+
   const product = STRIPE_PRODUCTS[productId as keyof typeof STRIPE_PRODUCTS];
   
   if (!product) {

@@ -23,6 +23,7 @@ import {
   Grid3X3,
   List,
   Send,
+  Wifi,
 } from 'lucide-react';
 
 import { useAuth } from '../../hooks/useAuth';
@@ -130,6 +131,79 @@ export default function WhatsAppConnection() {
   const { getAllAgentTypes, addCustomAgentType, isAgentTypeExists, loading: customTypesLoading } = useCustomAgentTypes();
   
   const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp' | 'smartchat' | 'knowledge'>('agents');
+  const tabNavRef = useRef<HTMLElement>(null);
+
+  // Estados para agentes - MOVIDO PARA O TOPO
+  const [agents, setAgents] = useState<any[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(true);
+
+  // Hook para detectar overflow nas abas
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (tabNavRef.current) {
+        const hasOverflow = tabNavRef.current.scrollWidth > tabNavRef.current.clientWidth;
+        tabNavRef.current.classList.toggle('has-overflow', hasOverflow);
+      }
+    };
+
+    // Verificar overflow inicial
+    checkOverflow();
+
+    // Verificar overflow quando a janela é redimensionada
+    const handleResize = () => {
+      setTimeout(checkOverflow, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [activeTab]);
+
+  // Hook para gerenciar o efeito fade dinâmico das abas
+  useEffect(() => {
+    const scrollContainer = tabNavRef.current;
+
+    const handleScroll = () => {
+      if (!scrollContainer) return;
+
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
+      const isOverflowing = scrollWidth > clientWidth;
+
+      if (!isOverflowing) {
+        scrollContainer.classList.remove('is-scrolled-from-start', 'is-scrolled-to-end');
+      } else {
+        const isAtStart = scrollLeft === 0;
+        const isAtEnd = scrollLeft + clientWidth >= scrollWidth;
+
+        scrollContainer.classList.toggle('is-scrolled-from-start', !isAtStart);
+        scrollContainer.classList.toggle('is-scrolled-to-end', isAtEnd);
+      }
+    };
+
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      handleScroll(); // Verificar estado inicial
+
+      const handleResize = () => {
+        setTimeout(handleScroll, 100);
+      };
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, [activeTab]);
+
+  const handleTabScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement;
+    const hasOverflow = target.scrollWidth > target.clientWidth;
+    const isScrolledToEnd = target.scrollLeft + target.clientWidth >= target.scrollWidth;
+    target.classList.toggle('has-overflow', hasOverflow && !isScrolledToEnd);
+  }, []);
 
   const [testMessage, setTestMessage] = useState('');
   const [testLoading, setTestLoading] = useState(false);
@@ -148,8 +222,6 @@ export default function WhatsAppConnection() {
     custom_prompt: ""
   });
   const [formLoading, setFormLoading] = useState(false);
-  const [agents, setAgents] = useState<any[]>([]);
-  const [agentsLoading, setAgentsLoading] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastCreatedAgent, setLastCreatedAgent] = useState<any>(null);
   const [showTestModal, setShowTestModal] = useState(false);
@@ -975,50 +1047,247 @@ ${fullText}`;
 
       clearTimeout(timeoutId);
 
-      if (response.ok) {
-        // Aguardar e validar o retorno do webhook
+      // ADICIONAR VERIFICAÇÃO DE RESPOSTA ANTES DE PROCESSAR
+      if (!response.ok) {
+        console.error('[sendAgentWebhook] Webhook failed:', response.status, response.statusText);
+        const errorText = await response.text().catch(() => 'No error details available');
+        console.error('[sendAgentWebhook] Error response body:', errorText);
+        showNotification('error', `Erro ao enviar webhook: ${response.status} ${response.statusText}`);
+        return false;
+      }
+
+      // Aguardar e validar o retorno do webhook
+      try {
+        const responseText = await response.text();
+        console.log('[sendAgentWebhook] Resposta do webhook:', responseText);
+        
+        let webhookData;
         try {
-          const responseText = await response.text();
-          console.log('[sendAgentWebhook] Resposta do webhook:', responseText);
-          
-          let webhookData;
-          try {
+          // Verificar se a resposta não está vazia antes de tentar fazer parse
+          if (!responseText || responseText.trim() === '') {
+            console.warn('[sendAgentWebhook] Empty response from webhook');
+            webhookData = null;
+          } else {
             webhookData = JSON.parse(responseText);
             console.log('[sendAgentWebhook] webhookData parseado:', webhookData);
-          } catch (parseError) {
-            console.error('[sendAgentWebhook] Failed to parse webhook response as JSON:', parseError);
-            webhookData = null;
+          }
+        } catch (parseError) {
+          console.error('[sendAgentWebhook] Failed to parse webhook response as JSON:', parseError);
+          console.error('[sendAgentWebhook] Response text that failed to parse:', responseText);
+          webhookData = null;
+        }
+
+        // Validar se há dados de processamento (diferentes formatos possíveis)
+        const hasTranscription = webhookData?.transcription || webhookData?.text || webhookData?.content || webhookData?.merged_text;
+        const hasStatus = webhookData?.status || webhookData?.processed || webhookData?.result;
+        const hasCourses = webhookData?.courses && Array.isArray(webhookData.courses) && webhookData.courses.length > 0;
+        
+        console.log('[sendAgentWebhook] Validação de dados:', { hasTranscription, hasStatus, hasCourses });
+        
+        if (hasTranscription || hasStatus || hasCourses) {
+          // Determinar qual campo usar para transcrição
+          let transcription = '';
+          
+          if (hasTranscription) {
+            transcription = webhookData.transcription || webhookData.text || webhookData.content || webhookData.merged_text || '';
+          } else if (hasCourses) {
+            // Se não há transcrição direta, mas há courses, juntar o array courses
+            transcription = webhookData.courses.join('\n');
+          } else {
+            // Se não há transcrição nem courses, tentar usar outros campos
+            transcription = webhookData.position || webhookData.title || webhookData.date || JSON.stringify(webhookData);
+          }
+          
+          console.log('[sendAgentWebhook] Transcrição extraída:', transcription);
+          
+          // Buscar o documento específico baseado no file_url que foi enviado no payload
+          const { data: knowledgeDocs, error: docsError } = await supabase
+            .from('ai_agent_knowledge_documents')
+            .select('id, document_name, file_url, created_at')
+            .eq('ai_configuration_id', payload.agent_id)
+            .eq('file_url', payload.file_url) // Buscar pelo file_url específico
+            .order('created_at', { ascending: false }) // Ordenar por data de criação (mais recente primeiro)
+            .limit(1) // Limitar a 1 resultado
+            .maybeSingle();
+
+          if (docsError) {
+            console.error('[sendAgentWebhook] Error fetching knowledge documents:', docsError);
           }
 
-          // Validar se há dados de processamento (diferentes formatos possíveis)
-          const hasTranscription = webhookData?.transcription || webhookData?.text || webhookData?.content || webhookData?.merged_text;
-          const hasStatus = webhookData?.status || webhookData?.processed || webhookData?.result;
-          const hasCourses = webhookData?.courses && Array.isArray(webhookData.courses) && webhookData.courses.length > 0;
-          
-          console.log('[sendAgentWebhook] Validação de dados:', { hasTranscription, hasStatus, hasCourses });
-          
-          if (hasTranscription || hasStatus || hasCourses) {
-            // Determinar qual campo usar para transcrição
-            let transcription = '';
+          console.log('[sendAgentWebhook] Documento encontrado:', knowledgeDocs);
+
+          if (knowledgeDocs) {
+            // Preparar dados para update
+            const updateData = {
+              transcription: transcription,
+              transcription_status: 'completed',
+              transcription_processed_at: new Date().toISOString(),
+              webhook_result: webhookData, // Salvar o resultado completo do webhook
+              updated_at: new Date().toISOString()
+            };
             
-            if (hasTranscription) {
-              transcription = webhookData.transcription || webhookData.text || webhookData.content || webhookData.merged_text || '';
-            } else if (hasCourses) {
-              // Se não há transcrição direta, mas há courses, juntar o array courses
-              transcription = webhookData.courses.join('\n');
+            console.log('[sendAgentWebhook] Dados para update:', updateData);
+            
+            // Verificar se webhookData é válido
+            if (webhookData && typeof webhookData === 'object') {
+              // Verificar se webhookData pode ser serializado para JSON
+              try {
+                JSON.stringify(webhookData);
+                console.log('[sendAgentWebhook] webhookData é válido para JSON');
+                // Garantir que webhook_result seja um objeto válido
+                updateData.webhook_result = webhookData;
+              } catch (jsonError) {
+                console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON:', jsonError);
+                // Se não puder ser serializado, criar um objeto válido
+                updateData.webhook_result = {
+                  error: 'Invalid JSON data',
+                  original_data: String(webhookData),
+                  timestamp: new Date().toISOString()
+                };
+              }
             } else {
-              // Se não há transcrição nem courses, tentar usar outros campos
-              transcription = webhookData.position || webhookData.title || webhookData.date || JSON.stringify(webhookData);
+              // Se webhookData não for válido, criar um objeto padrão
+              updateData.webhook_result = {
+                error: 'No valid webhook data received',
+                timestamp: new Date().toISOString()
+              };
             }
             
-            console.log('[sendAgentWebhook] Transcrição extraída:', transcription);
+            // Salvar a transcrição na tabela ai_agent_knowledge_documents
+            const { error: updateError } = await supabase
+              .from('ai_agent_knowledge_documents')
+              .update(updateData)
+              .eq('id', knowledgeDocs.id);
+
+            if (updateError) {
+              console.error('[sendAgentWebhook] Error saving transcription:', updateError);
+              showNotification('error', `Erro ao salvar transcrição: ${updateError.message}`);
+            } else {
+              console.log('[sendAgentWebhook] Transcrição salva com sucesso');
+              showNotification('success', `Agente processado com sucesso!`);
+            }
+          } else {
+            // Busca alternativa: buscar pelo nome do arquivo
+            const fileName = payload.file_name;
+            console.log('[sendAgentWebhook] Buscando documento alternativo por nome:', fileName);
+            
+            const { data: altDocs, error: altError } = await supabase
+              .from('ai_agent_knowledge_documents')
+              .select('id, document_name, file_url, created_at')
+              .eq('ai_configuration_id', payload.agent_id)
+              .ilike('document_name', `%${fileName}%`)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (altError) {
+              console.error('[sendAgentWebhook] Error in alternative search:', altError);
+            }
+
+            console.log('[sendAgentWebhook] Documento alternativo encontrado:', altDocs);
+
+            if (altDocs) {
+              // Preparar dados para update
+              const updateData = {
+                transcription_status: 'completed',
+                transcription_processed_at: new Date().toISOString(),
+                webhook_result: webhookData,
+                updated_at: new Date().toISOString()
+              };
+              
+              console.log('[sendAgentWebhook] Dados para update (alternativo):', updateData);
+              
+              // Verificar se webhookData é válido para o caso alternativo também
+              if (webhookData && typeof webhookData === 'object') {
+                try {
+                  JSON.stringify(webhookData);
+                  console.log('[sendAgentWebhook] webhookData é válido para JSON (alternativo)');
+                  updateData.webhook_result = webhookData;
+                } catch (jsonError) {
+                  console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON (alternativo):', jsonError);
+                  updateData.webhook_result = {
+                    error: 'Invalid JSON data',
+                    original_data: String(webhookData),
+                    timestamp: new Date().toISOString()
+                  };
+                }
+              } else {
+                updateData.webhook_result = {
+                  error: 'No valid webhook data received',
+                  timestamp: new Date().toISOString()
+                };
+              }
+              
+              const { error: updateError } = await supabase
+                .from('ai_agent_knowledge_documents')
+                .update(updateData)
+                .eq('id', altDocs.id);
+
+              if (updateError) {
+                console.error('[sendAgentWebhook] Error saving webhook_result (alternative):', updateError);
+                showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
+              } else {
+                console.log('[sendAgentWebhook] webhook_result salvo com sucesso (alternativo)');
+                showNotification('success', `Agente processado com sucesso!`);
+              }
+            } else {
+              console.log('[sendAgentWebhook] Documento não encontrado');
+              showNotification('info', `Agente processado, mas documento não encontrado`);
+            }
+          }
+
+          // Também salvar o status do webhook na tabela ai_configurations
+          const configUpdateData = {
+            webhook_status: webhookData.status || 'processed',
+            webhook_result: webhookData.result || webhookData,
+            webhook_processed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          console.log('[sendAgentWebhook] Atualizando configuração:', configUpdateData);
+          
+          // Verificar se webhookData é válido para a configuração também
+          if (webhookData && typeof webhookData === 'object') {
+            try {
+              JSON.stringify(webhookData);
+              console.log('[sendAgentWebhook] webhookData é válido para JSON (configuração)');
+              configUpdateData.webhook_result = webhookData.result || webhookData;
+            } catch (jsonError) {
+              console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON (configuração):', jsonError);
+              configUpdateData.webhook_result = {
+                error: 'Invalid JSON data',
+                original_data: String(webhookData),
+                timestamp: new Date().toISOString()
+              };
+            }
+          } else {
+            configUpdateData.webhook_result = {
+              error: 'No valid webhook data received',
+              timestamp: new Date().toISOString()
+            };
+          }
+          
+          const { error: configError } = await supabase
+            .from('ai_configurations')
+            .update(configUpdateData)
+            .eq('id', payload.agent_id);
+
+          if (configError) {
+            console.error('[sendAgentWebhook] Error saving webhook status:', configError);
+          } else {
+            console.log('[sendAgentWebhook] Status do webhook salvo com sucesso');
+          }
+        } else {
+          // Mesmo sem dados de processamento, salvar o webhook_result se houver dados
+          if (webhookData && Object.keys(webhookData).length > 0) {
+            console.log('[sendAgentWebhook] Salvando webhook_result sem dados de processamento');
             
             // Buscar o documento específico baseado no file_url que foi enviado no payload
             const { data: knowledgeDocs, error: docsError } = await supabase
               .from('ai_agent_knowledge_documents')
               .select('id, document_name, file_url, created_at')
               .eq('ai_configuration_id', payload.agent_id)
-              .eq('file_url', payload.file_url) // Buscar pelo file_url específico
+              .eq('file_url', payload.file_url)
               .order('created_at', { ascending: false }) // Ordenar por data de criação (mais recente primeiro)
               .limit(1) // Limitar a 1 resultado
               .maybeSingle();
@@ -1027,31 +1296,25 @@ ${fullText}`;
               console.error('[sendAgentWebhook] Error fetching knowledge documents:', docsError);
             }
 
-            console.log('[sendAgentWebhook] Documento encontrado:', knowledgeDocs);
-
             if (knowledgeDocs) {
               // Preparar dados para update
               const updateData = {
-                transcription: transcription,
                 transcription_status: 'completed',
                 transcription_processed_at: new Date().toISOString(),
                 webhook_result: webhookData, // Salvar o resultado completo do webhook
                 updated_at: new Date().toISOString()
               };
               
-              console.log('[sendAgentWebhook] Dados para update:', updateData);
+              console.log('[sendAgentWebhook] Dados para update (sem processamento):', updateData);
               
-              // Verificar se webhookData é válido
+              // Verificar se webhookData é válido para o caso sem processamento também
               if (webhookData && typeof webhookData === 'object') {
-                // Verificar se webhookData pode ser serializado para JSON
                 try {
                   JSON.stringify(webhookData);
-                  console.log('[sendAgentWebhook] webhookData é válido para JSON');
-                  // Garantir que webhook_result seja um objeto válido
+                  console.log('[sendAgentWebhook] webhookData é válido para JSON (sem processamento)');
                   updateData.webhook_result = webhookData;
                 } catch (jsonError) {
-                  console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON:', jsonError);
-                  // Se não puder ser serializado, criar um objeto válido
+                  console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON (sem processamento):', jsonError);
                   updateData.webhook_result = {
                     error: 'Invalid JSON data',
                     original_data: String(webhookData),
@@ -1059,217 +1322,36 @@ ${fullText}`;
                   };
                 }
               } else {
-                // Se webhookData não for válido, criar um objeto padrão
                 updateData.webhook_result = {
                   error: 'No valid webhook data received',
                   timestamp: new Date().toISOString()
                 };
               }
               
-              // Salvar a transcrição na tabela ai_agent_knowledge_documents
               const { error: updateError } = await supabase
                 .from('ai_agent_knowledge_documents')
                 .update(updateData)
                 .eq('id', knowledgeDocs.id);
 
               if (updateError) {
-                console.error('[sendAgentWebhook] Error saving transcription:', updateError);
-                showNotification('error', `Erro ao salvar transcrição: ${updateError.message}`);
+                console.error('[sendAgentWebhook] Error saving webhook_result:', updateError);
+                showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
               } else {
-                console.log('[sendAgentWebhook] Transcrição salva com sucesso');
+                console.log('[sendAgentWebhook] webhook_result salvo com sucesso (sem processamento)');
                 showNotification('success', `Agente processado com sucesso!`);
               }
             } else {
-              // Busca alternativa: buscar pelo nome do arquivo
-              const fileName = payload.file_name;
-              console.log('[sendAgentWebhook] Buscando documento alternativo por nome:', fileName);
-              
-              const { data: altDocs, error: altError } = await supabase
-                .from('ai_agent_knowledge_documents')
-                .select('id, document_name, file_url, created_at')
-                .eq('ai_configuration_id', payload.agent_id)
-                .ilike('document_name', `%${fileName}%`)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-              if (altError) {
-                console.error('[sendAgentWebhook] Error in alternative search:', altError);
-              }
-
-              console.log('[sendAgentWebhook] Documento alternativo encontrado:', altDocs);
-
-              if (altDocs) {
-                // Preparar dados para update
-                const updateData = {
-                  transcription_status: 'completed',
-                  transcription_processed_at: new Date().toISOString(),
-                  webhook_result: webhookData,
-                  updated_at: new Date().toISOString()
-                };
-                
-                console.log('[sendAgentWebhook] Dados para update (alternativo):', updateData);
-                
-                // Verificar se webhookData é válido para o caso alternativo também
-                if (webhookData && typeof webhookData === 'object') {
-                  try {
-                    JSON.stringify(webhookData);
-                    console.log('[sendAgentWebhook] webhookData é válido para JSON (alternativo)');
-                    updateData.webhook_result = webhookData;
-                  } catch (jsonError) {
-                    console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON (alternativo):', jsonError);
-                    updateData.webhook_result = {
-                      error: 'Invalid JSON data',
-                      original_data: String(webhookData),
-                      timestamp: new Date().toISOString()
-                    };
-                  }
-                } else {
-                  updateData.webhook_result = {
-                    error: 'No valid webhook data received',
-                    timestamp: new Date().toISOString()
-                  };
-                }
-                
-                const { error: updateError } = await supabase
-                  .from('ai_agent_knowledge_documents')
-                  .update(updateData)
-                  .eq('id', altDocs.id);
-
-                if (updateError) {
-                  console.error('[sendAgentWebhook] Error saving webhook_result (alternative):', updateError);
-                  showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
-                } else {
-                  console.log('[sendAgentWebhook] webhook_result salvo com sucesso (alternativo)');
-                  showNotification('success', `Agente processado com sucesso!`);
-                }
-              } else {
-                console.log('[sendAgentWebhook] Documento não encontrado');
-                showNotification('info', `Agente processado, mas documento não encontrado`);
-              }
-            }
-
-            // Também salvar o status do webhook na tabela ai_configurations
-            const configUpdateData = {
-              webhook_status: webhookData.status || 'processed',
-              webhook_result: webhookData.result || webhookData,
-              webhook_processed_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-            
-            console.log('[sendAgentWebhook] Atualizando configuração:', configUpdateData);
-            
-            // Verificar se webhookData é válido para a configuração também
-            if (webhookData && typeof webhookData === 'object') {
-              try {
-                JSON.stringify(webhookData);
-                console.log('[sendAgentWebhook] webhookData é válido para JSON (configuração)');
-                configUpdateData.webhook_result = webhookData.result || webhookData;
-              } catch (jsonError) {
-                console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON (configuração):', jsonError);
-                configUpdateData.webhook_result = {
-                  error: 'Invalid JSON data',
-                  original_data: String(webhookData),
-                  timestamp: new Date().toISOString()
-                };
-              }
-            } else {
-              configUpdateData.webhook_result = {
-                error: 'No valid webhook data received',
-                timestamp: new Date().toISOString()
-              };
-            }
-            
-            const { error: configError } = await supabase
-              .from('ai_configurations')
-              .update(configUpdateData)
-              .eq('id', payload.agent_id);
-
-            if (configError) {
-              console.error('[sendAgentWebhook] Error saving webhook status:', configError);
-            } else {
-              console.log('[sendAgentWebhook] Status do webhook salvo com sucesso');
+              showNotification('info', `Agente processado, mas documento não encontrado`);
             }
           } else {
-            // Mesmo sem dados de processamento, salvar o webhook_result se houver dados
-            if (webhookData && Object.keys(webhookData).length > 0) {
-              console.log('[sendAgentWebhook] Salvando webhook_result sem dados de processamento');
-              
-              // Buscar o documento específico baseado no file_url que foi enviado no payload
-              const { data: knowledgeDocs, error: docsError } = await supabase
-                .from('ai_agent_knowledge_documents')
-                .select('id, document_name, file_url, created_at')
-                .eq('ai_configuration_id', payload.agent_id)
-                .eq('file_url', payload.file_url)
-                .order('created_at', { ascending: false }) // Ordenar por data de criação (mais recente primeiro)
-                .limit(1) // Limitar a 1 resultado
-                .maybeSingle();
-
-              if (docsError) {
-                console.error('[sendAgentWebhook] Error fetching knowledge documents:', docsError);
-              }
-
-              if (knowledgeDocs) {
-                // Preparar dados para update
-                const updateData = {
-                  transcription_status: 'completed',
-                  transcription_processed_at: new Date().toISOString(),
-                  webhook_result: webhookData, // Salvar o resultado completo do webhook
-                  updated_at: new Date().toISOString()
-                };
-                
-                console.log('[sendAgentWebhook] Dados para update (sem processamento):', updateData);
-                
-                // Verificar se webhookData é válido para o caso sem processamento também
-                if (webhookData && typeof webhookData === 'object') {
-                  try {
-                    JSON.stringify(webhookData);
-                    console.log('[sendAgentWebhook] webhookData é válido para JSON (sem processamento)');
-                    updateData.webhook_result = webhookData;
-                  } catch (jsonError) {
-                    console.error('[sendAgentWebhook] webhookData cannot be serialized to JSON (sem processamento):', jsonError);
-                    updateData.webhook_result = {
-                      error: 'Invalid JSON data',
-                      original_data: String(webhookData),
-                      timestamp: new Date().toISOString()
-                    };
-                  }
-                } else {
-                  updateData.webhook_result = {
-                    error: 'No valid webhook data received',
-                    timestamp: new Date().toISOString()
-                  };
-                }
-                
-                const { error: updateError } = await supabase
-                  .from('ai_agent_knowledge_documents')
-                  .update(updateData)
-                  .eq('id', knowledgeDocs.id);
-
-                if (updateError) {
-                  console.error('[sendAgentWebhook] Error saving webhook_result:', updateError);
-                  showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
-                } else {
-                  console.log('[sendAgentWebhook] webhook_result salvo com sucesso (sem processamento)');
-                  showNotification('success', `Agente processado com sucesso!`);
-                }
-              } else {
-                showNotification('info', `Agente processado, mas documento não encontrado`);
-              }
-            } else {
-              showNotification('info', `Agente enviado, aguardando processamento...`);
-            }
+            showNotification('info', `Agente enviado, aguardando processamento...`);
           }
-
-          return true;
-        } catch (parseError) {
-          console.error('[sendAgentWebhook] Error parsing webhook response:', parseError);
-          showNotification('error', `Erro ao processar resposta do webhook`);
-          return false;
         }
-      } else {
-        console.error('[sendAgentWebhook] Webhook failed:', response.status, response.statusText);
-        showNotification('error', `Erro ao enviar webhook: ${response.status} ${response.statusText}`);
+
+        return true;
+      } catch (parseError) {
+        console.error('[sendAgentWebhook] Error parsing webhook response:', parseError);
+        showNotification('error', `Erro ao processar resposta do webhook`);
         return false;
       }
     } catch (error) {
@@ -1446,35 +1528,54 @@ ${fullText}`;
 
   const handleResetCustomPrompt = async () => {
     if (!editingAgent) {
-      showNotification('error', 'Can only reset final prompt for existing agents');
+      showNotification('error', 'Can only reset custom prompt for existing agents');
       return;
     }
 
     try {
-      const success = await resetFinalPromptToOriginal(editingAgent.id);
-      
-      if (success) {
-        showNotification('success', 'Final prompt reset to original version!');
-      } else {
-        showNotification('error', 'No original version found to reset to');
+      // Resetar o custom_prompt para vazio
+      const { error: updateError } = await supabase
+        .from('ai_configurations')
+        .update({ 
+          custom_prompt: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingAgent.id);
+
+      if (updateError) {
+        throw new Error(`Failed to reset custom prompt: ${updateError.message}`);
       }
+      
+      showNotification('success', 'Custom instructions reset successfully!');
+      
+      // Atualizar estado local
+      setFormData(prev => ({
+        ...prev,
+        custom_prompt: ''
+      }));
     } catch (error) {
-      console.error('Error resetting final prompt:', error);
-      showNotification('error', 'Failed to reset final prompt');
+      console.error('Error resetting custom prompt:', error);
+      showNotification('error', 'Failed to reset custom instructions');
     }
   };
 
   const handleConfirmEditingCustomPrompt = async () => {
     try {
       if (editingAgent) {
-        // Usar a nova função que atualiza o final_prompt diretamente
-        const success = await updateFinalPrompt(editingAgent.id, editingCustomPrompt);
-        
-        if (success) {
-          showNotification('success', 'Final prompt updated successfully!');
-        } else {
-          throw new Error('Failed to update final prompt');
+        // Atualizar o custom_prompt diretamente
+        const { error: updateError } = await supabase
+          .from('ai_configurations')
+          .update({ 
+            custom_prompt: editingCustomPrompt,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingAgent.id);
+
+        if (updateError) {
+          throw new Error(`Failed to update custom prompt: ${updateError.message}`);
         }
+        
+        showNotification('success', 'Custom instructions updated successfully!');
       } else {
         // Se está criando um novo agente, apenas atualizar o estado local
         showNotification('success', 'Custom instructions saved! They will be applied when you create the agent.');
@@ -1735,6 +1836,7 @@ Mantenha sempre o seguinte tom nas interações:
           company_name: formData.university_name,
           agent_type: formData.agent_type,
           personality: formData.personality,
+          custom_prompt: formData.custom_prompt,
           updated_at: new Date().toISOString()
         };
 
@@ -1960,6 +2062,85 @@ Mantenha sempre o seguinte tom nas interações:
     };
   }, [showQrModal, qrCodeUrl, qrLoading, connectionStatus, currentInstanceName]);
 
+  // Hook para detectar overflow nos containers de ações
+  useEffect(() => {
+    const checkActionsOverflow = () => {
+      const actionContainers = document.querySelectorAll('.actions-container');
+      actionContainers.forEach((container) => {
+        const hasOverflow = container.scrollWidth > container.clientWidth;
+        container.classList.toggle('has-overflow', hasOverflow);
+      });
+    };
+
+    // Verificar overflow inicial
+    checkActionsOverflow();
+
+    // Verificar overflow quando a janela é redimensionada
+    const handleResize = () => {
+      setTimeout(checkActionsOverflow, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [agents]); // Re-executar quando os agentes mudarem
+
+  // Hook para gerenciar o efeito fade dinâmico dos containers de ações
+  useEffect(() => {
+    const handleActionScroll = (el: HTMLElement) => {
+      const isOverflowing = el.scrollWidth > el.clientWidth;
+      
+      if (!isOverflowing) {
+        // Se não há overflow, esconder ambas as sombras
+        el.classList.remove('is-scrolled-from-start', 'is-scrolled-to-end');
+      } else {
+        // Se há overflow, aplicar a lógica de sombras
+        const isAtStart = el.scrollLeft === 0;
+        const isAtEnd = el.scrollWidth - el.scrollLeft - el.clientWidth < 1;
+
+        // Gerenciar classes de estado
+        el.classList.toggle('is-scrolled-from-start', !isAtStart);
+        el.classList.toggle('is-scrolled-to-end', isAtEnd);
+      }
+    };
+
+    const actionContainers = document.querySelectorAll('.actions-container');
+    const scrollHandlers: Array<{ element: HTMLElement; handler: () => void }> = [];
+
+    actionContainers.forEach((container) => {
+      const el = container as HTMLElement;
+      const handler = () => handleActionScroll(el);
+      
+      // Adicionar listener de scroll
+      el.addEventListener('scroll', handler);
+      scrollHandlers.push({ element: el, handler });
+      
+      // Verificar estado inicial
+      handleActionScroll(el);
+    });
+
+    // Adicionar listener de resize para todos os containers
+    const handleResize = () => {
+      setTimeout(() => {
+        actionContainers.forEach((container) => {
+          const el = container as HTMLElement;
+          handleActionScroll(el);
+        });
+      }, 100);
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      // Remover listeners
+      scrollHandlers.forEach(({ element, handler }) => {
+        element.removeEventListener('scroll', handler);
+      });
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [agents]); // Re-executar quando os agentes mudarem
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       {/* Notification Toast - Centro da tela */}
@@ -2040,10 +2221,16 @@ Mantenha sempre o seguinte tom nas interações:
         </div>
         
         <div className="bg-white rounded-xl border border-gray-200 p-1">
-          <nav className="flex space-x-1">
+          <nav 
+            ref={tabNavRef}
+            className={`flex space-x-1 overflow-x-auto whitespace-nowrap scrollbar-hide tab-scroll-container bg-white horizontal-scroll-fade ${
+              activeTab === 'whatsapp' ? 'whatsapp-active' : ''
+            }`}
+            onScroll={handleTabScroll}
+          >
             <button
               onClick={() => setActiveTab('agents')}
-              className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+              className={`flex-shrink-0 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                 activeTab === 'agents'
                   ? 'bg-[#05294E] text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -2055,7 +2242,7 @@ Mantenha sempre o seguinte tom nas interações:
 
             <button
               onClick={() => setActiveTab('whatsapp')}
-              className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+              className={`flex-shrink-0 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                 activeTab === 'whatsapp'
                   ? 'bg-[#05294E] text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -2067,7 +2254,7 @@ Mantenha sempre o seguinte tom nas interações:
 
             <button
               onClick={() => setActiveTab('smartchat')}
-              className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
+              className={`flex-shrink-0 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                 activeTab === 'smartchat'
                   ? 'bg-[#05294E] text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -2139,46 +2326,39 @@ Mantenha sempre o seguinte tom nas interações:
               </div>
             ) : viewMode === 'grid' ? (
               // Grid View
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {agents.map((agent) => (
                   <div key={agent.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 hover:-translate-y-1">
                     {/* Header */}
-                    <div className="p-6 pb-4">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center shadow-sm">
-                            <Bot className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900 truncate group-hover:text-[#05294E] transition-colors">
-                              {agent.ai_name}
-                            </h4>
-                            <p className="text-sm text-gray-500 truncate">{agent.company_name}</p>
-                          </div>
-                        </div>
+                    <div className="p-4 sm:p-6">
+                      {/* Nome do agente - maior destaque */}
+                      <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 group-hover:text-[#05294E] transition-colors">
+                        {agent.ai_name}
+                      </h4>
+                      
+                      {/* Nome da universidade - texto secundário */}
+                      <p className="text-sm text-gray-500 mb-3">{agent.company_name}</p>
+                      
+                      {/* Personalidade e Badges */}
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#05294E]/10 text-[#05294E] border border-[#05294E]/20">
                           {agent.agent_type}
                         </span>
-                      </div>
-                      
-                      {/* Agent Details */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-gray-500">Personality:</span>
-                          <span className="text-sm text-gray-700">{agent.personality}</span>
-                        </div>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                          {agent.personality}
+                        </span>
                         {agent.has_documents && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <FileText className="h-3 w-3 text-[#05294E]" />
-                            <span className="text-xs text-[#05294E]">Has knowledge base</span>
+                            <span className="text-xs text-[#05294E]">Knowledge base</span>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="px-6 pb-6">
-                      <div className="flex gap-2">
+                    {/* Barra de Ações Horizontal e Rolável */}
+                    <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                      <div className="actions-container horizontal-scroll-fade bg-white">
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
@@ -2187,7 +2367,7 @@ Mantenha sempre o seguinte tom nas interações:
                             setChatHistory([]);
                             setCurrentTestConversationId(`conv_${Date.now()}`);
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#05294E] bg-[#05294E]/10 border border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/20 hover:border-[#05294E]/30 transition-colors"
+                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#05294E] bg-[#05294E]/10 border border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/20 hover:border-[#05294E]/30 transition-colors"
                         >
                           <Bot className="h-4 w-4" />
                           Test
@@ -2198,20 +2378,17 @@ Mantenha sempre o seguinte tom nas interações:
                             setActiveTab('whatsapp');
                             handleCreateConnection(agent.id);
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#D0151C] bg-[#D0151C]/10 border border-[#D0151C]/20 rounded-lg hover:bg-[#D0151C]/20 hover:border-[#D0151C]/30 transition-colors"
+                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#D0151C] bg-[#D0151C]/10 border border-[#D0151C]/20 rounded-lg hover:bg-[#D0151C]/20 hover:border-[#D0151C]/30 transition-colors"
                         >
                           <MessageSquare className="h-4 w-4" />
                           Connect
                         </button>
-                      </div>
-                      
-                      <div className="flex gap-2 mt-2">
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
                             handleEmbedAgent(agent);
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
                         >
                           <ExternalLink className="h-4 w-4" />
                           Embed
@@ -2221,7 +2398,7 @@ Mantenha sempre o seguinte tom nas interações:
                             e.preventDefault();
                             handleEditAgent(agent);
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
                         >
                           <Edit className="h-4 w-4" />
                           Edit
@@ -2231,7 +2408,7 @@ Mantenha sempre o seguinte tom nas interações:
                             e.preventDefault();
                             handleDeleteAgent(agent.id);
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
+                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
                         >
                           <Trash2 className="h-4 w-4" />
                           Delete
@@ -2245,28 +2422,33 @@ Mantenha sempre o seguinte tom nas interações:
               // List View
               <div className="space-y-4">
                 {agents.map((agent) => (
-                  <div key={agent.id} className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#05294E] rounded-lg flex items-center justify-center">
-                          <Bot className="h-5 w-5 text-white" />
+                  <div key={agent.id} className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                    {/* Nome do agente - maior destaque */}
+                    <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 group-hover:text-[#05294E] transition-colors">
+                      {agent.ai_name}
+                    </h4>
+                    
+                    {/* Nome da universidade - texto secundário */}
+                    <p className="text-sm text-gray-500 mb-3">{agent.company_name}</p>
+                    
+                    {/* Personalidade e Badges */}
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#05294E]/10 text-[#05294E] border border-[#05294E]/20">
+                        {agent.agent_type}
+                      </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        {agent.personality}
+                      </span>
+                      {agent.has_documents && (
+                        <div className="flex items-center gap-1">
+                          <FileText className="h-3 w-3 text-[#05294E]" />
+                          <span className="text-xs text-[#05294E]">Knowledge base</span>
                         </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900 text-lg">{agent.ai_name}</h4>
-                          <p className="text-sm text-gray-500">{agent.company_name}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#05294E]/10 text-[#05294E] border border-[#05294E]/20">
-                          {agent.agent_type}
-                        </span>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                          {agent.personality}
-                        </span>
-                      </div>
+                      )}
                     </div>
 
-                    <div className="flex justify-end gap-2">
+                    {/* Barra de Ações Horizontal e Rolável */}
+                    <div className="actions-container horizontal-scroll-fade bg-white">
                       <button
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
@@ -2275,7 +2457,7 @@ Mantenha sempre o seguinte tom nas interações:
                           setChatHistory([]);
                           setCurrentTestConversationId(`conv_${Date.now()}`);
                         }}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#05294E] bg-[#05294E]/10 border border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/20 hover:border-[#05294E]/30 transition-colors"
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#05294E] bg-[#05294E]/10 border border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/20 hover:border-[#05294E]/30 transition-colors"
                       >
                         <Bot className="h-4 w-4" />
                         Test
@@ -2286,7 +2468,7 @@ Mantenha sempre o seguinte tom nas interações:
                           setActiveTab('whatsapp');
                           handleCreateConnection(agent.id);
                         }}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#D0151C] bg-[#D0151C]/10 border border-[#D0151C]/20 rounded-lg hover:bg-[#D0151C]/20 hover:border-[#D0151C]/30 transition-colors"
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#D0151C] bg-[#D0151C]/10 border border-[#D0151C]/20 rounded-lg hover:bg-[#D0151C]/20 hover:border-[#D0151C]/30 transition-colors"
                       >
                         <MessageSquare className="h-4 w-4" />
                         Connect
@@ -2296,7 +2478,7 @@ Mantenha sempre o seguinte tom nas interações:
                           e.preventDefault();
                           handleEmbedAgent(agent);
                         }}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
                       >
                         <ExternalLink className="h-4 w-4" />
                         Embed
@@ -2306,7 +2488,7 @@ Mantenha sempre o seguinte tom nas interações:
                           e.preventDefault();
                           handleEditAgent(agent);
                         }}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
                       >
                         <Edit className="h-4 w-4" />
                         Edit
@@ -2316,7 +2498,7 @@ Mantenha sempre o seguinte tom nas interações:
                           e.preventDefault();
                           handleDeleteAgent(agent.id);
                         }}
-                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
                         Delete
@@ -2329,20 +2511,21 @@ Mantenha sempre o seguinte tom nas interações:
           </div>
 
           {/* Formulário de Criação */}
-          <div className="p-6 bg-gray-50 rounded-xl" id="agent-form">
+          <div className="p-4 sm:p-6 bg-gray-50 rounded-xl" id="agent-form">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-[#05294E] rounded-lg flex items-center justify-center">
                 <Bot className="h-4 w-4 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
                 {editingAgent ? 'Edit AI Agent' : 'Create New Agent'}
               </h3>
             </div>
             
-            <form onSubmit={handleSubmitAgent} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmitAgent} className="space-y-4 sm:space-y-6">
+              {/* Grid responsivo para campos principais */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Agent Name */}
-                <div>
+                <div className="w-full">
                   <label htmlFor="ai_name" className="block text-sm font-medium text-gray-700 mb-2">
                     Agent Name *
                   </label>
@@ -2352,13 +2535,13 @@ Mantenha sempre o seguinte tom nas interações:
                     value={formData.ai_name}
                     onChange={(e) => handleInputChange("ai_name", e.target.value)}
                     placeholder="e.g. Maria Assistant"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
                     required
                   />
                 </div>
 
                 {/* Agent Type */}
-                <div>
+                <div className="w-full">
                   <label htmlFor="agent_type" className="block text-sm font-medium text-gray-700 mb-2">
                     Agent Type *
                   </label>
@@ -2366,7 +2549,7 @@ Mantenha sempre o seguinte tom nas interações:
                     id="agent_type"
                     value={formData.agent_type}
                     onChange={(e) => handleInputChange("agent_type", e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
                     required
                   >
                     <option value="">Select agent type</option>
@@ -2377,7 +2560,7 @@ Mantenha sempre o seguinte tom nas interações:
                 </div>
 
                 {/* University/Department */}
-                <div>
+                <div className="w-full">
                   <label htmlFor="university_name" className="block text-sm font-medium text-gray-700 mb-2">
                     University/Department *
                   </label>
@@ -2387,14 +2570,14 @@ Mantenha sempre o seguinte tom nas interações:
                     value={formData.university_name}
                     onChange={(e) => handleInputChange("university_name", e.target.value)}
                     placeholder="e.g. Anderson University Admissions"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed text-base"
                     required
                     disabled
                   />
                 </div>
 
                 {/* Personality */}
-                <div>
+                <div className="w-full">
                   <label htmlFor="personality" className="block text-sm font-medium text-gray-700 mb-2">
                     Personality *
                   </label>
@@ -2402,7 +2585,7 @@ Mantenha sempre o seguinte tom nas interações:
                     id="personality"
                     value={formData.personality}
                     onChange={(e) => handleInputChange("personality", e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
                     required
                   >
                     <option value="">Select personality</option>
@@ -2413,16 +2596,16 @@ Mantenha sempre o seguinte tom nas interações:
                 </div>
               </div>
 
-              {/* Custom Agent Type */}
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
+              {/* Custom Agent Type - Full width */}
+              <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Add Custom Agent Type
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     placeholder="Enter custom agent type..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
+                    className="w-full px-3 sm:px-3 py-2 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm"
                     id="custom_agent_type"
                   />
                   <button
@@ -2435,7 +2618,7 @@ Mantenha sempre o seguinte tom nas interações:
                         input.value = '';
                       }
                     }}
-                    className="px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium"
+                    className="w-full sm:w-auto px-4 py-2 sm:py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium whitespace-nowrap"
                   >
                     Add
                   </button>
@@ -2443,19 +2626,19 @@ Mantenha sempre o seguinte tom nas interações:
               </div>
 
               {/* Custom Instructions - Collapsible */}
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
+              <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 mb-3">
                   <label className="text-sm font-medium text-gray-700">
                     Custom Instructions (Optional)
                   </label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {editingAgent && (
                       <>
                         <button
                           type="button"
                           onClick={handleStartEditingCustomPrompt}
                           disabled={isEditingCustomPrompt}
-                          className="flex items-center gap-1 px-3 py-1 text-sm bg-[#05294E]/10 text-[#05294E] rounded-lg hover:bg-[#05294E]/20 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1 px-3 py-2 sm:py-1 text-sm bg-[#05294E]/10 text-[#05294E] rounded-lg hover:bg-[#05294E]/20 transition-colors disabled:opacity-50"
                         >
                           <Edit className="w-3 h-3" />
                           Edit
@@ -2463,7 +2646,7 @@ Mantenha sempre o seguinte tom nas interações:
                         <button
                           type="button"
                           onClick={handleResetCustomPrompt}
-                          className="flex items-center gap-1 px-3 py-1 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                          className="flex items-center gap-1 px-3 py-2 sm:py-1 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                         >
                           <RotateCcw className="w-3 h-3" />
                           Reset
@@ -2473,7 +2656,7 @@ Mantenha sempre o seguinte tom nas interações:
                     <button
                       type="button"
                       onClick={() => setCustomInstructionsExpanded(!customInstructionsExpanded)}
-                      className="flex items-center gap-1 px-3 py-1 text-sm bg-[#05294E]/10 text-[#05294E] rounded-lg hover:bg-[#05294E]/20 transition-colors"
+                      className="flex items-center gap-1 px-3 py-2 sm:py-1 text-sm bg-[#05294E]/10 text-[#05294E] rounded-lg hover:bg-[#05294E]/20 transition-colors"
                     >
                       {customInstructionsExpanded ? (
                         <>
@@ -2498,21 +2681,21 @@ Mantenha sempre o seguinte tom nas interações:
                           value={editingCustomPrompt}
                           onChange={(e) => setEditingCustomPrompt(e.target.value)}
                           placeholder="e.g. Always respond succinctly and politely. Be proactive in offering help..."
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors resize-none"
+                          className="w-full px-3 sm:px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors resize-none text-base"
                           rows={4}
                         />
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <button
                             type="button"
                             onClick={handleConfirmEditingCustomPrompt}
-                            className="px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium"
+                            className="w-full sm:w-auto px-4 py-2 sm:py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium"
                           >
                             Save Changes
                           </button>
                           <button
                             type="button"
                             onClick={handleCancelEditingCustomPrompt}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                            className="w-full sm:w-auto px-4 py-2 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
                           >
                             Cancel
                           </button>
@@ -2524,7 +2707,7 @@ Mantenha sempre o seguinte tom nas interações:
                         value={formData.custom_prompt}
                         onChange={(e) => handleInputChange("custom_prompt", e.target.value)}
                         placeholder="e.g. Always respond succinctly and politely. Be proactive in offering help..."
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors resize-none"
+                        className="w-full px-3 sm:px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors resize-none text-base"
                         rows={4}
                       />
                     )}
@@ -2536,7 +2719,7 @@ Mantenha sempre o seguinte tom nas interações:
               </div>
 
               {/* Knowledge Base Documents */}
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2 mb-3">
                   <FileText className="w-4 h-4 text-[#05294E]" />
                   <label className="text-sm font-medium text-gray-700">
@@ -2580,7 +2763,7 @@ Mantenha sempre o seguinte tom nas interações:
                           custom_prompt: ""
                         });
                       }}
-                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 sm:px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
                     >
                       <X className="w-4 h-4" />
                       Cancel Edit
@@ -2590,7 +2773,7 @@ Mantenha sempre o seguinte tom nas interações:
                 <button 
                   type="submit" 
                   disabled={formLoading}
-                  className="w-full bg-[#05294E] hover:bg-[#05294E]/90 text-white px-6 py-4 rounded-lg font-semibold flex items-center justify-center gap-3 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="w-full bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold flex items-center justify-center gap-3 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl text-base"
                 >
                   {formLoading ? (
                     <>
@@ -2609,7 +2792,7 @@ Mantenha sempre o seguinte tom nas interações:
           </div>
 
           {/* Agent Capabilities Preview */}
-          <div className="p-6 bg-gray-50 rounded-xl">
+          <div className="p-4 sm:p-6 bg-gray-50 rounded-xl">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-[#05294E] rounded-lg flex items-center justify-center">
                 <BookOpen className="h-4 w-4 text-white" />
@@ -2618,7 +2801,7 @@ Mantenha sempre o seguinte tom nas interações:
                 Agent Capabilities
               </h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {agentCapabilities.map((capability, index) => {
                 const Icon = capability.icon;
                 return (
@@ -2638,21 +2821,21 @@ Mantenha sempre o seguinte tom nas interações:
         </div>
       ) : activeTab === 'whatsapp' ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="p-6 border-b border-slate-200">
-            <div className="flex items-center justify-between">
+          <div className="p-4 sm:p-6 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-[#05294E]" />
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-[#05294E]" />
                   WhatsApp Connections
                 </h2>
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600 mt-1 text-sm sm:text-base">
                   Manage your university's WhatsApp connections
                 </p>
               </div>
               <button 
                 onClick={handleCreateConnection}
                 disabled={!hasUserAgents}
-                className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors text-sm sm:text-base ${
                   hasUserAgents 
                     ? 'bg-[#05294E] hover:bg-[#05294E]/90 text-white' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -2667,8 +2850,8 @@ Mantenha sempre o seguinte tom nas interações:
             {/* Mensagem explicativa quando não há agentes */}
             {!hasUserAgents && (
               <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <div className="bg-yellow-100 p-2 rounded-lg">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  <div className="bg-yellow-100 p-2 rounded-lg self-start">
                     <Brain className="h-5 w-5 text-yellow-600" />
                   </div>
                   <div className="flex-1">
@@ -2678,7 +2861,7 @@ Mantenha sempre o seguinte tom nas interações:
                     </p>
                     <button
                       onClick={() => setActiveTab('agents')}
-                      className="bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors"
+                      className="bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors text-sm"
                     >
                       <Bot className="h-4 w-4" />
                       Create Your First AI Agent
@@ -2690,28 +2873,29 @@ Mantenha sempre o seguinte tom nas interações:
           </div>
 
           {loading ? (
-            <div className="p-8 text-center">
+            <div className="p-4 sm:p-8 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-[#05294E] mx-auto" />
             </div>
           ) : connections.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className="p-4 sm:p-8 text-center">
               <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No WhatsApp Connections</h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 mb-6 text-sm sm:text-base">
                 Connect your first WhatsApp number to get started.
               </p>
             </div>
           ) : (
             connections.map((connection) => (
-              <div key={connection.id} className="p-6 border-b border-slate-200 last:border-b-0">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
+              <div key={connection.id} className="p-4 sm:p-6 border-b border-slate-200 last:border-b-0">
+                {/* Barra de Ações no Topo */}
+                <div className="flex items-center justify-between mb-4">
+                  {/* Status Badge */}
+                  <div className="flex items-center gap-2">
                     {getStatusBadge(connection.connection_status)}
-                    <span className="text-sm text-gray-500 font-mono">
-                      {connection.instance_name}
-                    </span>
                   </div>
-                  <div className="flex gap-2">
+                  
+                  {/* Botões de Ação */}
+                  <div className="flex flex-wrap gap-2">
                     {connection.connection_status === 'connected' && (
                       <button
                         onClick={() => handleDisconnect(connection.id, connection.instance_name)}
@@ -2728,7 +2912,7 @@ Mantenha sempre o seguinte tom nas interações:
                         disabled={actionLoading === connection.id}
                         className="text-[#05294E] hover:text-[#05294E]/80 hover:bg-[#05294E]/10 px-3 py-1 rounded-lg border border-[#05294E]/20 text-sm font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <Wifi className="h-4 w-4" />
                         {actionLoading === connection.id ? "..." : "Reconnect"}
                       </button>
                     )}
@@ -2743,34 +2927,50 @@ Mantenha sempre o seguinte tom nas interações:
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">Phone Number:</span>
-                    <div className="text-gray-600">
-                      {connection.phone_number || <span className="italic">Not provided</span>}
-                    </div>
+                {/* Informações Organizadas Verticalmente */}
+                <div className="space-y-3">
+                  {/* Instance Name */}
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-700 text-sm">Instance Name:</span>
+                    <span className="text-gray-600 text-sm font-mono break-all">
+                      {connection.instance_name}
+                    </span>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Connected at:</span>
-                    <div className="text-gray-600">
+                  
+                  {/* Phone Number */}
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-700 text-sm">Phone Number:</span>
+                    <span className="text-gray-600 text-sm">
+                      {connection.phone_number || <span className="italic text-gray-500">Not provided</span>}
+                    </span>
+                  </div>
+                  
+                  {/* Connected At */}
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-700 text-sm">Connected at:</span>
+                    <span className="text-gray-600 text-sm">
                       {connection.connected_at 
                         ? new Date(connection.connected_at).toLocaleString()
-                        : <span className="italic">-</span>
+                        : <span className="italic text-gray-500">-</span>
                       }
-                    </div>
+                    </span>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-700">AI Agent:</span>
-                    <div className="text-gray-600">
+                  
+                  {/* AI Agent */}
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-gray-700 text-sm">AI Agent:</span>
+                    <div className="text-gray-600 text-sm">
                       {connection.ai_configuration ? (
-                        <div className="flex items-center gap-2">
-                          <span>{connection.ai_configuration.ai_name}</span>
-                          <span className="text-xs font-medium text-[#05294E] bg-[#05294E]/10 px-2 py-1 rounded border border-[#05294E]/20">
+                        <div className="flex flex-col gap-2">
+                          <span className="break-words">
+                            {connection.ai_configuration.ai_name}
+                          </span>
+                          <span className="text-xs font-medium text-[#05294E] bg-[#05294E]/10 px-2 py-1 rounded border border-[#05294E]/20 w-fit">
                             {connection.ai_configuration.agent_type}
                           </span>
                         </div>
                       ) : (
-                        <span className="italic">No agent connected</span>
+                        <span className="italic text-gray-500">No agent connected</span>
                       )}
                     </div>
                   </div>
@@ -2784,10 +2984,10 @@ Mantenha sempre o seguinte tom nas interações:
       )}
 
       {showQrModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Connect WhatsApp</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Connect WhatsApp</h3>
               <button 
                 onClick={handleCloseModal} 
                 className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -2797,16 +2997,16 @@ Mantenha sempre o seguinte tom nas interações:
                 <span className="sr-only">Close modal</span>
               </button>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
               Scan the QR Code with your phone to connect your WhatsApp account.
             </p>
             
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div className="flex justify-center">
                 {getStatusBadgeForModal()}
               </div>
 
-              <div className="flex flex-col items-center space-y-4 h-56 justify-center">
+              <div className="flex flex-col items-center space-y-4 h-48 sm:h-56 justify-center">
                 {qrLoading ? (
                   <>
                     <Loader2 className="h-8 w-8 animate-spin text-[#05294E]" />
@@ -2821,7 +3021,7 @@ Mantenha sempre o seguinte tom nas interações:
                   <img
                     src={`data:image/png;base64,${qrCodeUrl}`}
                     alt="QR Code for WhatsApp connection"
-                    className="mx-auto w-[200px] h-[200px]"
+                    className="mx-auto w-[180px] h-[180px] sm:w-[200px] sm:h-[200px]"
                   />
                 ) : null}
               </div>
@@ -2830,14 +3030,14 @@ Mantenha sempre o seguinte tom nas interações:
                 <button
                   onClick={handleRefreshQrCode}
                   disabled={qrLoading || connectionStatus === 'connected'}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2 font-medium transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2 font-medium transition-colors text-sm sm:text-base"
                 >
                   <RotateCcw className="h-4 w-4" />
                   {qrLoading ? "Generating..." : "Refresh QR Code"}
                 </button>
                 <button 
                   onClick={handleCloseModal} 
-                  className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-colors"
+                  className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
                 >
                   Cancel
                 </button>
@@ -2848,27 +3048,27 @@ Mantenha sempre o seguinte tom nas interações:
       )}
 
       {deleteConnectionId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
-            <div className="text-center mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full mx-4">
+            <div className="text-center mb-4 sm:mb-6">
               <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="h-6 w-6 text-red-500" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Connection</h3>
-              <p className="text-gray-600">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Delete Connection</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
                 Are you sure you want to delete the instance <strong className="font-mono">{deleteInstanceName}</strong>? This action cannot be undone.
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => setDeleteConnectionId(null)}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium transition-colors text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-3 bg-[#D0151C] text-white rounded-xl hover:bg-[#D0151C]/90 font-medium transition-colors"
+                className="flex-1 px-4 py-3 bg-[#D0151C] text-white rounded-xl hover:bg-[#D0151C]/90 font-medium transition-colors text-sm sm:text-base"
               >
                 Delete
               </button>

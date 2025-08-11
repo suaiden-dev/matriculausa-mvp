@@ -87,7 +87,9 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
+    { id: 'payout-requests', label: 'Payout Requests', icon: CreditCard, path: '/admin/dashboard/payout-requests', badge: null },
     { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
+    { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
     { id: 'settings', label: 'System Settings', icon: Settings, path: '/admin/dashboard/settings', badge: null }
   ];
 
@@ -110,6 +112,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
             <button
               onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
               className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              aria-label="Fechar menu lateral"
             >
               <X className="h-5 w-5" />
             </button>
@@ -199,6 +202,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               <button
                 onClick={() => { setSidebarOpen(true); setUserMenuOpen(false); }}
                 className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                aria-label="Abrir menu lateral"
               >
                 <Menu className="h-5 w-5" />
               </button>

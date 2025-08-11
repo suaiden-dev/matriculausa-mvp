@@ -20,7 +20,9 @@ import {
   Shield,
   Brain,
   Mail,
-  MessageSquare
+  MessageSquare,
+  Gift,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -54,6 +56,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     if (path.includes('/ai-settings')) return 'ai-settings';
     if (path.includes('/inbox')) return 'inbox';
     if (path.includes('/whatsapp')) return 'whatsapp';
+    if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     return 'overview';
   };
 
@@ -83,6 +86,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
+    { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
     { id: 'ai-solutions', label: 'AI Solutions', icon: Brain, path: '/school/dashboard/ai-solutions', badge: null },
     { id: 'ai-settings', label: 'AI Settings', icon: Settings, path: '/school/dashboard/ai-settings', badge: null },

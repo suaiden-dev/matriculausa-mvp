@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
+import WhatsAppIcon from './icons/WhatsApp';
 
 interface WhatsAppFloatingButtonProps {
   phoneNumber?: string;
@@ -13,6 +13,7 @@ const WhatsAppFloatingButton: React.FC<WhatsAppFloatingButtonProps> = ({
   className = "" 
 }) => {
   const whatsappUrl = `https://wa.me/${phoneNumber}`;
+
 
   return (
     <>
@@ -72,7 +73,7 @@ const WhatsAppFloatingButton: React.FC<WhatsAppFloatingButtonProps> = ({
           onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
           aria-label="Contact us via WhatsApp"
         >
-          <MessageCircle style={{ width: '28px', height: '28px', color: 'white' }} />
+          <WhatsAppIcon width={28} height={28} className="text-white" />
         </a>
       </div>
     </>

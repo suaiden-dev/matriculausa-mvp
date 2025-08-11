@@ -25,6 +25,10 @@ import ApplicationChatPage from './ApplicationChatPage';
 import ApplicationFeePage from './ApplicationFeePage';
 import Layout from '../../components/Layout';
 import MatriculaRewards from './MatriculaRewards';
+import RewardsStore from './RewardsStore';
+import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
+import { useReferralCode } from '../../hooks/useReferralCode';
+import WelcomeDiscountModal from '../../components/WelcomeDiscountModal';
 
 interface StudentProfile {
   id: string;
@@ -44,7 +48,7 @@ interface Application {
   id: string;
   scholarship_id: string;
   student_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review';
+  status: 'pending' | 'approved' | 'rejected' | 'under_review' | 'enrolled';
   applied_at: string;
   notes?: string;
   scholarship?: Scholarship;
@@ -61,12 +65,52 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
+  
+  // Fase 5: Referral Code System
+  const { 
+    activeDiscount, 
+    hasUsedReferralCode, 
+    applyReferralCodeFromURL,
+    loading: referralLoading 
+  } = useReferralCode();
+  const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
+  const [referralResult, setReferralResult] = useState<any>(null);
+  const [showWelcomeDiscount, setShowWelcomeDiscount] = useState(false);
 
   useEffect(() => {
     if (user && userProfile) {
       loadDashboardData();
     }
   }, [user, userProfile]);
+
+  // Fase 5: Aplicar código de referência da URL automaticamente
+  useEffect(() => {
+    const applyReferralCode = async () => {
+      if (user && !hasUsedReferralCode && !referralLoading) {
+        const result = await applyReferralCodeFromURL();
+        if (result && result.success) {
+          setReferralResult(result);
+          setShowCongratulationsModal(true);
+        }
+      }
+    };
+
+    applyReferralCode();
+  }, [user, hasUsedReferralCode, referralLoading, applyReferralCodeFromURL]);
+
+  // Welcome discount modal: show once per account when discount is active
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!activeDiscount?.has_discount) return;
+    // Avoid conflict with referral modal
+    if (showCongratulationsModal) return;
+    const storageKey = `welcome_discount_seen_${user.id}`;
+    const alreadySeen = localStorage.getItem(storageKey) === 'true';
+    if (!alreadySeen) {
+      setShowWelcomeDiscount(true);
+      localStorage.setItem(storageKey, 'true');
+    }
+  }, [user?.id, activeDiscount?.has_discount, showCongratulationsModal]);
 
   const loadDashboardData = async () => {
     if (!user || !userProfile) return;
@@ -345,7 +389,25 @@ const StudentDashboard: React.FC = () => {
           <Route path="/application-fee-error" element={<ApplicationFeeError />} />
           <Route path="application-fee" element={<ApplicationFeePage />} />
           <Route path="rewards" element={<MatriculaRewards />} />
+          <Route path="rewards/store" element={<RewardsStore />} />
         </Routes>
+        
+        {/* Fase 5: Modal de Parabéns para Código de Referência */}
+        {referralResult && (
+          <ReferralCongratulationsModal
+            isOpen={showCongratulationsModal}
+            onClose={() => setShowCongratulationsModal(false)}
+            discountAmount={referralResult.discount_amount || 50}
+            affiliateCode={referralResult.affiliate_code || 'N/A'}
+          />
+        )}
+
+        {/* Welcome discount modal (first visit only) */}
+        <WelcomeDiscountModal
+          isOpen={showWelcomeDiscount}
+          onClose={() => setShowWelcomeDiscount(false)}
+          amount={activeDiscount?.discount_amount || 50}
+        />
       </StudentDashboardLayout>
   );
 };
