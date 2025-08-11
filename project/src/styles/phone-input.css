@@ -1,0 +1,73 @@
+/* Estilos para PhoneInput no SchoolProfileSetup */
+
+/* Container base para PhoneInput */
+.phone-input-school,
+.fax-input-school {
+  @apply flex w-full;
+}
+
+/* Seletor de país */
+.phone-input-school .PhoneInputCountrySelect,
+.fax-input-school .PhoneInputCountrySelect {
+  @apply border border-gray-300 bg-white transition-all duration-150 ease-in-out;
+  border-radius: 8px 0 0 8px !important;
+  padding: 8px 4px !important;
+  margin-right: 0 !important;
+  height: 42px !important;
+}
+
+.phone-input-school .PhoneInputCountrySelect:focus,
+.fax-input-school .PhoneInputCountrySelect:focus {
+  @apply outline-none border-[#05294E] ring-2 ring-[#05294E];
+  outline: 2px solid transparent !important;
+  outline-offset: 2px !important;
+}
+
+/* Input principal */
+.phone-input-school .PhoneInputInput,
+.fax-input-school .PhoneInputInput {
+  @apply w-full bg-white text-gray-900 transition-all duration-150 ease-in-out border border-gray-300 border-l-0;
+  padding: 8px 12px !important;
+  border-radius: 0 8px 8px 0 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  height: 42px !important;
+  box-sizing: border-box !important;
+}
+
+.phone-input-school .PhoneInputInput:focus,
+.fax-input-school .PhoneInputInput:focus {
+  @apply outline-none border-[#05294E] ring-2 ring-[#05294E];
+  outline: 2px solid transparent !important;
+  outline-offset: 2px !important;
+}
+
+/* Placeholder */
+.phone-input-school .PhoneInputInput::placeholder,
+.fax-input-school .PhoneInputInput::placeholder {
+  @apply text-gray-500;
+}
+
+/* Estados de erro */
+.phone-input-school.error .PhoneInputInput,
+.fax-input-school.error .PhoneInputInput {
+  @apply border-red-300;
+}
+
+.phone-input-school.error .PhoneInputCountrySelect,
+.fax-input-school.error .PhoneInputCountrySelect {
+  @apply border-red-300;
+}
+
+/* Estados de hover */
+.phone-input-school:hover .PhoneInputInput:not(:focus),
+.fax-input-school:hover .PhoneInputInput:not(:focus) {
+  @apply border-gray-400;
+}
+
+.phone-input-school:hover .PhoneInputCountrySelect:not(:focus),
+.fax-input-school:hover .PhoneInputCountrySelect:not(:focus) {
+  @apply border-gray-400;
+}
+
+

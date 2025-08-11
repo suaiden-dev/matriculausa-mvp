@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
 import { CheckCircle, XCircle } from 'lucide-react';
+import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 interface StudentProfile {
   id: string;
@@ -121,8 +122,13 @@ const PaymentManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">Payment Management</h1>
+    <ProfileCompletionGuard 
+      isProfileCompleted={university?.profile_completed}
+      title="Complete your profile to manage payments"
+      description="Finish setting up your university profile to track and manage scholarship payments"
+    >
+      <div className="p-4 md:p-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-4">Payment Management</h1>
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <p>Here you can view student payments for your university's scholarships - only the selection process fee status is shown.</p>
         <div className="mt-4 flex items-center justify-between">
@@ -177,7 +183,8 @@ const PaymentManagement: React.FC = () => {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </ProfileCompletionGuard>
   );
 };
 

@@ -42,8 +42,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     if (path.includes('/scholarships')) return 'scholarships';
     if (path.includes('/cart')) return 'cart';
     if (path.includes('/applications') || path.includes('/application/')) return 'applications';
-    if (path.includes('/profile')) return 'profile';
     if (path.includes('/rewards')) return 'rewards';
+    if (path.includes('/profile')) return 'profile';
     return 'overview';
   };
 
@@ -108,8 +108,16 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             {/* User Profile */}
             <div className="px-6 py-4 border-b border-slate-200">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <GraduationCap className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                  {profile?.avatar_url ? (
+                    <img 
+                      src={profile.avatar_url} 
+                      alt="Profile Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <GraduationCap className="h-6 w-6 text-white" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-900 truncate">{profile?.name || user?.name}</h3>
@@ -210,8 +218,16 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   }}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt="Profile Avatar" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-4 w-4 text-white" />
+                    )}
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-slate-900 text-sm">{profile?.name || user?.name}</p>

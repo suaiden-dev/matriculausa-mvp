@@ -19,6 +19,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
+import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -572,8 +573,13 @@ const NewScholarship: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <ProfileCompletionGuard 
+      isProfileCompleted={university?.profile_completed}
+      title="Complete your profile to create scholarships"
+      description="Finish setting up your university profile to start creating scholarship opportunities for students"
+    >
+      <div className="min-h-screen bg-slate-50 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -1117,8 +1123,9 @@ const NewScholarship: React.FC = () => {
             </div>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </ProfileCompletionGuard>
   );
 };
 

@@ -733,25 +733,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   </div>
 
                   <div>
-                    <label htmlFor="position" className="block text-sm font-bold text-slate-900 mb-2">
-                      Role at University *
-                    </label>
-                    <div className="relative">
-                      <UserCheck className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      <input
-                        id="position"
-                        name="position"
-                        type="text"
-                        required
-                        value={formData.position || ''}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="e.g., Admissions Officer, Program Director"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
                     <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
                       Official Email *
                     </label>
@@ -769,43 +750,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       />
                     </div>
                   </div>
-
-                  <div>
-                    <label htmlFor="website" className="block text-sm font-bold text-slate-900 mb-2">
-                      University Website
-                    </label>
-                    <div className="relative">
-                      <Globe className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      <input
-                        id="website"
-                        name="website"
-                        type="url"
-                        value={formData.website || ''}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="https://university.edu"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="location" className="block text-sm font-bold text-slate-900 mb-2">
-                      Location *
-                    </label>
-                    <div className="relative">
-                      <MapPin className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      <input
-                        id="location"
-                        name="location"
-                        type="text"
-                        required
-                        value={formData.location || ''}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="City, State"
-                      />
-                    </div>
-                  </div>
+                  
 
                   <div>
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">

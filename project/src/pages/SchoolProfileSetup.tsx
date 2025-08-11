@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, MapPin, Phone, Mail, Globe, Users, CheckCircle, AlertCircle, Plus, X } from 'lucide-react';
+import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import '../styles/phone-input.css';
 
 const SchoolProfileSetup: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -73,18 +76,62 @@ const SchoolProfileSetup: React.FC = () => {
   const handleInputChange = (field: string, value: any) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...((prev[parent as keyof typeof prev] ?? {}) as object),
-          [child]: value
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          [parent]: {
+            ...((prev[parent as keyof typeof prev] ?? {}) as object),
+            [child]: value
+          }
+        };
+        
+        // Auto-populate location when city or state changes
+        if (parent === 'address' && (child === 'city' || child === 'state')) {
+          const address = newData.address as typeof formData.address;
+          if (address.city && address.state) {
+            newData.location = `${address.city}, ${address.state}`;
+          }
         }
-      }));
+        
+        return newData;
+      });
     } else {
       setFormData(prev => ({
         ...prev,
         [field]: value
       }));
+    }
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // Handler específico para PhoneInput
+  const handlePhoneChange = (field: string, value: string | undefined) => {
+    const phoneValue = value || '';
+    
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          [parent]: {
+            ...((prev[parent as keyof typeof prev] ?? {}) as object),
+            [child]: phoneValue
+          }
+        };
+        return newData;
+      });
+    } else {
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          [field]: phoneValue
+        };
+        return newData;
+      });
     }
     
     // Clear error when user starts typing
@@ -127,7 +174,7 @@ const SchoolProfileSetup: React.FC = () => {
         if (!formData.address.zipCode.trim()) newErrors['address.zipCode'] = 'ZIP code is required';
         break;
       case 3:
-        if (!formData.contact.phone.trim()) newErrors['contact.phone'] = 'Phone is required';
+        if (!formData.contact.phone || formData.contact.phone.length < 8) newErrors['contact.phone'] = 'Please enter a valid phone number with country code';
         if (!formData.contact.email.trim()) newErrors['contact.email'] = 'Email is required';
         if (!formData.contact.admissionsEmail.trim()) newErrors['contact.admissionsEmail'] = 'Admissions email is required';
         break;
@@ -191,7 +238,7 @@ const SchoolProfileSetup: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your University Profile</h1>
@@ -292,20 +339,6 @@ const SchoolProfileSetup: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location (City, State) *</label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
-                      errors.location ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Boston, Massachusetts"
-                  />
-                  {errors.location && <p className="text-red-600 text-xs mt-1">{errors.location}</p>}
-                </div>
-
-                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Street Address *</label>
                   <input
                     type="text"
@@ -345,6 +378,22 @@ const SchoolProfileSetup: React.FC = () => {
                     placeholder="Massachusetts"
                   />
                   {errors['address.state'] && <p className="text-red-600 text-xs mt-1">{errors['address.state']}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location (City, State) *</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange('location', e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] bg-gray-50 ${
+                      errors.location ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="Boston, Massachusetts"
+                    readOnly
+                  />
+                  {errors.location && <p className="text-red-600 text-xs mt-1">{errors.location}</p>}
+                  <p className="text-xs text-gray-500 mt-1">Este campo é preenchido automaticamente baseado na cidade e estado</p>
                 </div>
 
                 <div>
@@ -387,26 +436,38 @@ const SchoolProfileSetup: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                  <input
-                    type="tel"
+                  <PhoneInput
+                    international
+                    defaultCountry="US"
+                    addInternationalOption={false}
                     value={formData.contact.phone}
-                    onChange={(e) => handleInputChange('contact.phone', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${
-                      errors['contact.phone'] ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="+1 (555) 123-4567"
+                    onChange={(value) => handlePhoneChange('contact.phone', value)}
+                    style={{
+                      '--PhoneInputCountryFlag-height': '1.2em',
+                      '--PhoneInputCountrySelectArrow-opacity': '0.8',
+                      '--PhoneInput-color--focus': '#05294E'
+                    }}
+                    className={`phone-input-school ${errors['contact.phone'] ? 'error' : ''}`}
+                    placeholder="Enter your phone number"
                   />
                   {errors['contact.phone'] && <p className="text-red-600 text-xs mt-1">{errors['contact.phone']}</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Fax Number</label>
-                  <input
-                    type="tel"
+                  <PhoneInput
+                    international
+                    defaultCountry="US"
+                    addInternationalOption={false}
                     value={formData.contact.fax}
-                    onChange={(e) => handleInputChange('contact.fax', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                    placeholder="+1 (555) 123-4568"
+                    onChange={(value) => handlePhoneChange('contact.fax', value)}
+                    style={{
+                      '--PhoneInputCountryFlag-height': '1.2em',
+                      '--PhoneInputCountrySelectArrow-opacity': '0.8',
+                      '--PhoneInput-color--focus': '#05294E'
+                    }}
+                    className="fax-input-school"
+                    placeholder="Enter fax number"
                   />
                 </div>
 

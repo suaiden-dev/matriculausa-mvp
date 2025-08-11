@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useUniversity } from '../../context/UniversityContext';
 
 interface DocumentRequest {
   id: string;
@@ -14,6 +15,7 @@ interface DocumentRequest {
 
 const UniversityGlobalDocumentRequests: React.FC = () => {
   const { userProfile } = useAuth();
+  const { university } = useUniversity();
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -26,6 +28,9 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
   ];
   const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: ['all'] });
   const [creating, setCreating] = useState(false);
+
+  // Verificar se a universidade está aprovada
+  const isUniversityApproved = university?.is_approved === true;
 
   // Carrega os requests globais da universidade logada
   useEffect(() => {
@@ -53,14 +58,21 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
   }, [userProfile?.university_id, userProfile]);
 
   const handleNewRequest = async () => {
-    console.log('handleNewRequest called', { userProfile, newRequest });
+    console.log('handleNewRequest called', { userProfile, newRequest, university });
+    
+    // Verificar se a universidade está aprovada
+    if (!isUniversityApproved) {
+      setError('Your university must be approved before you can create global document requests. Please contact support for approval.');
+      return;
+    }
+    
     if (!userProfile?.university_id || !newRequest.title) {
       console.log('Blocked: missing university_id or title', { userProfile, newRequest });
       return;
     }
     setCreating(true);
     setError(null);
-    let attachment_url = undefined;
+    let attachment_url: string | undefined = undefined;
     try {
       if (newRequest.attachment) {
         const { data, error } = await supabase.storage.from('document-attachments').upload(`global/${Date.now()}_${newRequest.attachment.name}`, newRequest.attachment);
@@ -78,7 +90,8 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
         is_global: true,
         created_by: userProfile.user_id,
         scholarship_application_id: null,
-        applicable_student_types: newRequest.applicable_student_types
+        applicable_student_types: newRequest.applicable_student_types,
+        attachment_url
       };
       console.log('[DEBUG] Enviando para Edge Function create-document-request (global)', payload);
       const { data: { session } } = await supabase.auth.getSession();
@@ -136,10 +149,47 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
       </div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-[#05294E]">Global Document Requests</h2>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={() => setShowNewModal(true)}>
-          New Global Request
-        </button>
+        <div className="flex flex-col items-end">
+          <button 
+            className={`px-4 py-2 rounded font-medium transition-all duration-200 ${
+              isUniversityApproved 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            onClick={() => isUniversityApproved && setShowNewModal(true)}
+            disabled={!isUniversityApproved}
+            title={!isUniversityApproved ? 'University approval required to create global document requests' : ''}
+          >
+            New Global Request
+          </button>
+          {!isUniversityApproved && (
+            <p className="text-xs text-red-600 mt-1 max-w-xs text-right">
+              University approval required
+            </p>
+          )}
+        </div>
       </div>
+      
+      {/* Warning when university is not approved */}
+      {!isUniversityApproved && (
+        <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800">University Approval Required</h3>
+              <p className="mt-1 text-sm text-amber-700">
+                Your university is currently pending approval. Once approved by our team, you'll be able to create global document requests. 
+                Please contact support if you need assistance with the approval process.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {loading ? <div>Loading...</div> : null}
       {!loading && !userProfile?.university_id && (
         <div className="text-gray-500 mb-2">No university found for this user.</div>
