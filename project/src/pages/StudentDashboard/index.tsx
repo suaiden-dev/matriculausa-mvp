@@ -239,7 +239,6 @@ const StudentDashboard: React.FC = () => {
         updated_at: new Date().toISOString()
       };
       setProfile(updatedProfile);
-      alert('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Error updating profile. Please try again.');

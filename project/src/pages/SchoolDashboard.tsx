@@ -4,6 +4,7 @@ import { Building, Users, DollarSign, Award, Plus, Edit, Trash2, Eye, Calendar, 
 import { supabase } from '../lib/supabase';
 import type { University, Scholarship } from '../types';
 import { useAuth } from '../hooks/useAuth';
+import { FileText } from 'lucide-react';
 
 const SchoolDashboard: React.FC = () => {
   const [university, setUniversity] = useState<University | null>(null);
@@ -18,8 +19,6 @@ const SchoolDashboard: React.FC = () => {
       loadDashboardData();
     }
   }, [user]);
-
-
 
   const loadDashboardData = async () => {
     if (!user) return;
