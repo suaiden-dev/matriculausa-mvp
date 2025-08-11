@@ -98,7 +98,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                         
                         <div className="flex items-center text-sm text-slate-600 mb-2">
                           <Building className="h-4 w-4 mr-2" />
-                          {scholarship.universities?.name || scholarship.university_id || 'Unknown University'}
+                          {scholarship.universities?.name || scholarship.university_name || 'Unknown University'}
                         </div>
 
                         <div className="flex items-center space-x-4 text-sm">

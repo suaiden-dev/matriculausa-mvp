@@ -15,6 +15,8 @@ import {
   Gift
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+// import { StripeCheckout } from '../../components/StripeCheckout';
+// import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 
 interface StudentDashboardLayoutProps {
   user: any;
@@ -74,14 +76,14 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   ];
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row w-full overflow-x-hidden">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
-        min-h-screen h-full flex flex-col
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:left-0
+        h-screen flex flex-col overflow-y-auto
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
-        style={{ transitionProperty: 'transform, box-shadow', transitionDuration: '300ms' }}
+        style={{ transitionProperty: 'transform, box-shadow', transitionDuration: '300ms', WebkitOverflowScrolling: 'touch' as any }}
       >
         <div className="flex flex-col h-full flex-1 justify-between">
           <div>
@@ -188,9 +190,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-6 ml-2">
+      <div className="flex-1 ml-2 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-30">
+        <header className="bg-white border-b border-slate-200 py-4 sticky top-0 z-50 pl-4 pr-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
@@ -271,7 +273,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="bg-slate-50">
+        <main className="bg-slate-50 px-3 sm:px-6 lg:px-10 pb-6 max-w-full">
           {children}
         </main>
       </div>
