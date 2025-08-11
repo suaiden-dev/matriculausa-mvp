@@ -88,12 +88,54 @@ const AdminDashboard: React.FC = () => {
 
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  
+  // Estados para modais de confirmação
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    type: 'success' | 'warning' | 'danger';
+  } | null>(null);
+  
+  const [rejectionModal, setRejectionModal] = useState<{
+    isOpen: boolean;
+    universityId: string;
+    universityName: string;
+  } | null>(null);
+  
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     if (user && user.role === 'admin') {
       loadAdminData();
     }
   }, [user]);
+
+  const showConfirmationModal = (
+    title: string,
+    message: string,
+    confirmText: string,
+    cancelText: string,
+    onConfirm: () => void,
+    type: 'success' | 'warning' | 'danger' = 'warning'
+  ) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      cancelText,
+      onConfirm,
+      type
+    });
+  };
+
+  const closeConfirmationModal = () => {
+    setConfirmationModal(null);
+  };
 
   const loadAdminData = async () => {
     try {
@@ -258,131 +300,258 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleApproveUniversity = async (universityId: string) => {
+    const university = universities.find(u => u.id === universityId);
+    if (!university) return;
+
+    showConfirmationModal(
+      'Approve University',
+      `Are you sure you want to approve "${university.name}"? This will grant them access to create scholarships and manage students.`,
+      'Approve University',
+      'Cancel',
+      async () => {
+        try {
+          const { error } = await supabase.rpc('approve_university', {
+            university_id_param: universityId
+          });
+
+          if (error) throw error;
+
+          // Update local state
+          setUniversities(prev => prev.map(u => 
+            u.id === universityId ? { ...u, is_approved: true } : u
+          ));
+          
+          setStats(prev => ({
+            ...prev,
+            approvedUniversities: prev.approvedUniversities + 1,
+            pendingUniversities: prev.pendingUniversities - 1
+          }));
+
+          // Show success message
+          showConfirmationModal(
+            'Success!',
+            `${university.name} has been approved successfully.`,
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'success'
+          );
+        } catch (error: any) {
+          console.error('Error approving university:', error);
+          showConfirmationModal(
+            'Error',
+            `Failed to approve university: ${error.message}`,
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'danger'
+          );
+        }
+      },
+      'success'
+    );
+  };
+
+  const handleRejectUniversity = async (universityId: string) => {
+    const university = universities.find(u => u.id === universityId);
+    if (!university) return;
+
+    setRejectionModal({
+      isOpen: true,
+      universityId,
+      universityName: university.name
+    });
+  };
+
+  const confirmRejectUniversity = async () => {
+    if (!rejectionModal) return;
+
     try {
-      const { error } = await supabase.rpc('approve_university', {
-        university_id_param: universityId
+      const { error } = await supabase.rpc('reject_university', {
+        university_id_param: rejectionModal.universityId,
+        reason_text: rejectionReason || ''
       });
 
       if (error) throw error;
 
       // Update local state
-      setUniversities(prev => prev.map(u => 
-        u.id === universityId ? { ...u, is_approved: true } : u
-      ));
-      
+      setUniversities(prev => prev.filter(u => u.id !== rejectionModal.universityId));
       setStats(prev => ({
         ...prev,
-        approvedUniversities: prev.approvedUniversities + 1,
+        totalUniversities: prev.totalUniversities - 1,
         pendingUniversities: prev.pendingUniversities - 1
       }));
 
-      alert('University approved successfully!');
+      // Close modal and show success
+      setRejectionModal(null);
+      setRejectionReason('');
+      
+      showConfirmationModal(
+        'Success!',
+        `${rejectionModal.universityName} has been rejected and removed successfully.`,
+        'OK',
+        '',
+        () => closeConfirmationModal(),
+        'success'
+      );
     } catch (error: any) {
-      console.error('Error approving university:', error);
-      alert(`Error approving university: ${error.message}`);
-    }
-  };
-
-  const handleRejectUniversity = async (universityId: string) => {
-    const reason = prompt('Please provide a reason for rejection (optional):');
-    
-    if (confirm('Are you sure you want to reject this university? This action cannot be undone.')) {
-      try {
-        const { error } = await supabase.rpc('reject_university', {
-          university_id_param: universityId,
-          reason_text: reason || ''
-        });
-
-        if (error) throw error;
-
-        // Update local state
-        setUniversities(prev => prev.filter(u => u.id !== universityId));
-        setStats(prev => ({
-          ...prev,
-          totalUniversities: prev.totalUniversities - 1,
-          pendingUniversities: prev.pendingUniversities - 1
-        }));
-
-        alert('University rejected and removed successfully!');
-      } catch (error: any) {
-        console.error('Error rejecting university:', error);
-        alert(`Error rejecting university: ${error.message}`);
-      }
+      console.error('Error rejecting university:', error);
+      showConfirmationModal(
+        'Error',
+        `Failed to reject university: ${error.message}`,
+        'OK',
+        '',
+        () => closeConfirmationModal(),
+        'danger'
+      );
     }
   };
 
   const handlePromoteToAdmin = async (userId: string) => {
-    if (confirm('Are you sure you want to promote this user to admin?')) {
-      try {
-        const { error } = await supabase.rpc('promote_user_to_admin', {
-          target_user_id: userId
-        });
+    const userProfile = users.find(u => u.user_id === userId);
+    if (!userProfile) return;
 
-        if (error) throw error;
+    showConfirmationModal(
+      'Promote to Admin',
+      `Are you sure you want to promote "${userProfile.full_name}" to admin? This will grant them full administrative privileges.`,
+      'Promote to Admin',
+      'Cancel',
+      async () => {
+        try {
+          const { error } = await supabase.rpc('promote_user_to_admin', {
+            target_user_id: userId
+          });
 
-        alert('User promotion logged. Note: Actual role update must be done via Supabase admin panel.');
-      } catch (error: any) {
-        console.error('Error promoting user:', error);
-        alert(`Error promoting user: ${error.message}`);
-      }
-    }
+          if (error) throw error;
+
+          showConfirmationModal(
+            'Success!',
+            'User promotion has been logged. Note: Actual role update must be done via Supabase admin panel.',
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'success'
+          );
+        } catch (error: any) {
+          console.error('Error promoting user:', error);
+          showConfirmationModal(
+            'Error',
+            `Failed to promote user: ${error.message}`,
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'danger'
+          );
+        }
+      },
+      'warning'
+    );
   };
 
   const handleSuspendUser = async (userId: string) => {
-    if (confirm('Are you sure you want to suspend this user?')) {
-      try {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({ status: 'suspended' })
-          .eq('user_id', userId);
+    const userProfile = users.find(u => u.user_id === userId);
+    if (!userProfile) return;
 
-        if (error) throw error;
+    showConfirmationModal(
+      'Suspend User',
+      `Are you sure you want to suspend "${userProfile.full_name}"? This will prevent them from accessing the platform.`,
+      'Suspend User',
+      'Cancel',
+      async () => {
+        try {
+          const { error } = await supabase
+            .from('user_profiles')
+            .update({ status: 'suspended' })
+            .eq('user_id', userId);
 
-        // Log the action
-        await supabase.rpc('log_admin_action', {
-          action_text: 'suspend_user',
-          target_type_text: 'user',
-          target_id_param: userId
-        });
+          if (error) throw error;
 
-        // Update local state
-        setUsers(prev => prev.map(u => 
-          u.user_id === userId ? { ...u, status: 'suspended' } : u
-        ));
+          // Log the action
+          await supabase.rpc('log_admin_action', {
+            action_text: 'suspend_user',
+            target_type_text: 'user',
+            target_id_param: userId
+          });
 
-        alert('User suspended successfully!');
-      } catch (error: any) {
-        console.error('Error suspending user:', error);
-        alert(`Error suspending user: ${error.message}`);
-      }
-    }
+          // Update local state
+          setUsers(prev => prev.map(u => 
+            u.user_id === userId ? { ...u, status: 'suspended' } : u
+          ));
+
+          showConfirmationModal(
+            'Success!',
+            `${userProfile.full_name} has been suspended successfully.`,
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'success'
+          );
+        } catch (error: any) {
+          console.error('Error suspending user:', error);
+          showConfirmationModal(
+            'Error',
+            `Failed to suspend user: ${error.message}`,
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'danger'
+          );
+        }
+      },
+      'warning'
+    );
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      try {
-        // Log the action before deletion
-        await supabase.rpc('log_admin_action', {
-          action_text: 'delete_user',
-          target_type_text: 'user',
-          target_id_param: userId
-        });
+    const userProfile = users.find(u => u.user_id === userId);
+    if (!userProfile) return;
 
-        // Update user profile status to inactive
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({ status: 'inactive' })
-          .eq('user_id', userId);
+    showConfirmationModal(
+      'Delete User',
+      `Are you sure you want to delete "${userProfile.full_name}"? This action cannot be undone and will mark the user as inactive.`,
+      'Delete User',
+      'Cancel',
+      async () => {
+        try {
+          // Log the action before deletion
+          await supabase.rpc('log_admin_action', {
+            action_text: 'delete_user',
+            target_type_text: 'user',
+            target_id_param: userId
+          });
 
-        if (error) throw error;
+          // Update user profile status to inactive
+          const { error } = await supabase
+            .from('user_profiles')
+            .update({ status: 'inactive' })
+            .eq('user_id', userId);
 
-        setUsers(prev => prev.filter(u => u.user_id !== userId));
-        alert('User marked as inactive successfully!');
-      } catch (error: any) {
-        console.error('Error deleting user:', error);
-        alert(`Error deleting user: ${error.message}`);
-      }
-    }
+          if (error) throw error;
+
+          setUsers(prev => prev.filter(u => u.user_id !== userId));
+          
+          showConfirmationModal(
+            'Success!',
+            `${userProfile.full_name} has been marked as inactive successfully.`,
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'success'
+          );
+        } catch (error: any) {
+          console.error('Error deleting user:', error);
+          showConfirmationModal(
+            'Error',
+            `Failed to delete user: ${error.message}`,
+            'OK',
+            '',
+            () => closeConfirmationModal(),
+            'danger'
+          );
+        }
+      },
+      'danger'
+    );
   };
 
   const formatAmount = (amount: number) => {
@@ -1101,6 +1270,118 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </Dialog>
+
+      {/* Confirmation Modal */}
+      {confirmationModal && (
+        <Dialog open={confirmationModal.isOpen} onClose={closeConfirmationModal} className="fixed z-50 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black opacity-30" />
+            <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-auto p-6 z-50">
+              <div className="flex items-center mb-4">
+                <div className={`p-2 rounded-lg ${
+                  confirmationModal.type === 'success' ? 'bg-green-100' :
+                  confirmationModal.type === 'warning' ? 'bg-yellow-100' :
+                  'bg-red-100'
+                }`}>
+                  {confirmationModal.type === 'success' ? (
+                    <CheckCircle className={`h-6 w-6 ${
+                      confirmationModal.type === 'success' ? 'text-green-600' :
+                      confirmationModal.type === 'warning' ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`} />
+                  ) : confirmationModal.type === 'warning' ? (
+                    <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                  ) : (
+                    <XCircle className="h-6 w-6 text-red-600" />
+                  )}
+                </div>
+                <Dialog.Title className="text-xl font-bold ml-3 text-gray-900">
+                  {confirmationModal.title}
+                </Dialog.Title>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                {confirmationModal.message}
+              </p>
+
+              <div className="flex space-x-3 justify-end">
+                {confirmationModal.cancelText && (
+                  <button
+                    onClick={closeConfirmationModal}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    {confirmationModal.cancelText}
+                  </button>
+                )}
+                <button
+                  onClick={confirmationModal.onConfirm}
+                  className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                    confirmationModal.type === 'success' ? 'bg-green-600 hover:bg-green-700' :
+                    confirmationModal.type === 'warning' ? 'bg-yellow-600 hover:bg-yellow-700' :
+                    'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {confirmationModal.confirmText}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Rejection Modal */}
+      {rejectionModal && (
+        <Dialog open={rejectionModal.isOpen} onClose={() => setRejectionModal(null)} className="fixed z-50 inset-0 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-black opacity-30" />
+            <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-auto p-6 z-50">
+              <div className="flex items-center mb-4">
+                <div className="p-2 rounded-lg bg-red-100">
+                  <XCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <Dialog.Title className="text-xl font-bold ml-3 text-gray-900">
+                  Reject University
+                </Dialog.Title>
+              </div>
+              
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to reject <strong>{rejectionModal.universityName}</strong>? This action cannot be undone.
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for rejection (optional)
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Provide a reason for rejection..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex space-x-3 justify-end">
+                <button
+                  onClick={() => {
+                    setRejectionModal(null);
+                    setRejectionReason('');
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRejectUniversity}
+                  className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Reject University
+                </button>
+              </div>
+            </div>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 };
