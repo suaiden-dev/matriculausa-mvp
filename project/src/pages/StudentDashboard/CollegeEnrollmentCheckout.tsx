@@ -39,7 +39,7 @@ const CollegeEnrollmentCheckout: React.FC = () => {
         {selectedScholarship ? (
           <div className="mb-6 p-4 rounded-xl border border-blue-200 bg-blue-50 shadow">
             <div className="font-bold text-slate-900 text-lg">{selectedScholarship.scholarships.title}</div>
-            <div className="text-slate-600 text-sm">{selectedScholarship.scholarships.universities?.name || 'Unknown University'}</div>
+            <div className="text-slate-600 text-sm">{selectedScholarship.scholarships.universities?.name || selectedScholarship.scholarships.university_name || 'Unknown University'}</div>
           </div>
         ) : (
           <div className="mb-6 text-red-600 text-center">No scholarship selected.</div>

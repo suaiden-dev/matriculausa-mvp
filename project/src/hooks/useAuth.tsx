@@ -191,11 +191,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('Debug - phone from user_metadata:', session.user.user_metadata?.phone);
             console.log('Debug - phone from localStorage:', pendingPhone);
             
+            const desiredRoleFromMetadata = (session.user.user_metadata?.role as 'student' | 'school' | 'admin' | undefined) || 'student';
+
             const profileData = {
               user_id: session.user.id,
               full_name: fullName,
               phone: phone,
-              status: 'active'
+              status: 'active',
+              role: desiredRoleFromMetadata
             };
             
             console.log('🔍 [USEAUTH] profileData que será inserido:', profileData);
@@ -339,6 +342,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error('❌ [USEAUTH] Erro geral ao criar perfil:', error);
           }
         }
+        // Garantir que o campo role do perfil esteja alinhado com o metadata e com dados de universidade
+        try {
+          const metadataRole = session.user.user_metadata?.role as 'student' | 'school' | 'admin' | undefined;
+          let finalRole: 'student' | 'school' | 'admin' | undefined = profile?.role || metadataRole;
+
+          if (!finalRole || (finalRole === 'student' && metadataRole === 'school')) {
+            // Se tiver universidade vinculada, forçar role 'school'
+            const { data: uni } = await supabase
+              .from('universities')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .single();
+            if (uni) {
+              finalRole = 'school';
+            }
+          }
+
+          if (finalRole && profile && profile.role !== finalRole) {
+            const { data: updated, error: roleUpdateError } = await supabase
+              .from('user_profiles')
+              .update({ role: finalRole })
+              .eq('user_id', session.user.id)
+              .select()
+              .single();
+            if (!roleUpdateError && updated) {
+              profile = updated as any;
+            }
+          }
+        } catch (e) {
+          // se falhar, seguimos com o profile atual
+        }
+
         setUserProfile(profile);
         setUser(await buildUser(session.user, profile));
         setSupabaseUser(session.user);
@@ -483,12 +518,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Filtrar valores undefined/null do userData
     const cleanUserData = Object.fromEntries(
-      Object.entries(userData).filter(([key, value]) => value !== undefined && value !== null)
+      Object.entries(userData).filter(([/*k*/ _k, value]) => value !== undefined && value !== null)
     );
     
     console.log('🔍 [USEAUTH] cleanUserData:', cleanUserData);
     console.log('🔍 [USEAUTH] Telefone no cleanUserData:', cleanUserData.phone);
     
+    // Validate password server-side as well to enforce allowed characters
+    // Only letters, numbers and @ # $ ! are allowed
+    const allowedPasswordRegex = /^[A-Za-z0-9@#$!]+$/;
+    if (!allowedPasswordRegex.test(password)) {
+      throw new Error('Password contains invalid characters. Only letters, numbers, and @ # $ ! are allowed.');
+    }
+
     const signUpData = {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
@@ -497,8 +539,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔍 [USEAUTH] signUpData que será enviado:', signUpData);
     console.log('🔍 [USEAUTH] Telefone no signUpData:', (signUpData as any).phone);
     
+    // Normaliza o e-mail para evitar duplicidade por case/espacos
+    const normalizedEmail = (email || '').trim().toLowerCase();
+
+    // Pré-checagem de e-mail existente via RPC (evita disparar signUp e receber email de confirmação duplicado)
+    {
+      const { data: exists, error: rpcError } = await supabase.rpc('email_exists', { in_email: normalizedEmail });
+      if (!rpcError && exists) {
+        throw new Error('This email address is already registered. Log in or use "Forgot my password."');
+      }
+      // Se a RPC falhar, seguimos para o signUp e deixamos o tratamento de erro abaixo
+    }
+
     const { error, data } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         data: signUpData,
@@ -525,17 +579,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } catch (couponError) {
         console.error('❌ [USEAUTH] Erro ao chamar função de cupom:', couponError);
         console.error('❌ [USEAUTH] Tipo do erro:', typeof couponError);
-        console.error('❌ [USEAUTH] Mensagem do erro:', couponError?.message);
+        console.error('❌ [USEAUTH] Mensagem do erro:', (couponError as any)?.message ?? String(couponError));
       }
     } else {
       console.log('⚠️ [USEAUTH] Não processando cupom automático:');
-      console.log('⚠️ [USEAUTH] - Error:', error);
+      console.log('⚠️ [USEAUTH] - Error:', error as any);
       console.log('⚠️ [USEAUTH] - Data user:', data?.user);
       console.log('⚠️ [USEAUTH] - Affiliate code:', userData.affiliate_code);
     }
 
     if (error) {
       console.log('❌ [USEAUTH] Erro no signUp:', error);
+      // Trata e-mail já existente de forma amigável
+      const status = (error as any)?.status;
+      const message = (error as any)?.message?.toLowerCase?.() || '';
+      const isDuplicate =
+        status === 400 || status === 409 || status === 422 ||
+        message.includes('already registered') ||
+        message.includes('already exists') ||
+        message.includes('user already') ||
+        message.includes('duplicate') ||
+        message.includes('email rate limit') ||
+        (message.includes('email') && message.includes('sent'));
+
+      if (isDuplicate) {
+        throw new Error('This email address is already registered. Log in or use "Forgot my password."');
+      }
+
       throw error;
     }
     

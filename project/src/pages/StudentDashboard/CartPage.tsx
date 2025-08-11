@@ -204,7 +204,7 @@ const CartPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-bold text-slate-900 text-lg">{item.scholarships.title}</div>
-                    <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
+                    <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || item.scholarships.university_name || 'Unknown University'}</div>
                   </div>
                   {cart.length > 1 && (
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -250,7 +250,7 @@ const CartPage: React.FC = () => {
               <div className="flex items-center gap-4 w-full">
                 <div>
                   <div className="font-bold text-slate-900">{item.scholarships.title}</div>
-                  <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || 'Unknown University'}</div>
+                  <div className="text-slate-600 text-sm">{item.scholarships.universities?.name || item.scholarships.university_name || 'Unknown University'}</div>
                 </div>
               </div>
             </li>

@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
-import StepByStepButton from './OnboardingTour/StepByStepButton';
-import GuideTestButton from './OnboardingTour/GuideTestButton';
+// import StepByStepButton from './OnboardingTour/StepByStepButton';
+// import GuideTestButton from './OnboardingTour/GuideTestButton';
 import { useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -14,18 +14,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const hideHeader = location.pathname.startsWith('/school') ||
                      location.pathname.startsWith('/admin') ||
                      location.pathname.startsWith('/student');
+  const hideFooter = hideHeader;
+  const isDashboard = hideHeader;
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col w-full overflow-x-hidden">
       {!hideHeader && <Header />}
-      <main className="flex-grow overflow-hidden">
+      <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-hidden'}`}>
         {children}
       </main>
-      <Footer />
+      {!hideFooter && <Footer />}
       {/* <StepByStepButton /> */}
       {/* <GuideTestButton /> */}
     </div>
