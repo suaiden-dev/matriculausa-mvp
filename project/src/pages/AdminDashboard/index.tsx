@@ -11,6 +11,8 @@ import PaymentManagement from './PaymentManagement';
 import SystemSettings from './SystemSettings';
 import ApplicationMonitoring from './ApplicationMonitoring';
 import AdminApplicationView from './AdminApplicationView';
+import MatriculaRewardsAdmin from './MatriculaRewardsAdmin';
+import AdminPayoutRequests from './PayoutRequests';
 
 interface AdminStats {
   totalUniversities: number;
@@ -136,7 +138,7 @@ const AdminDashboard: React.FC = () => {
             user_id: u.id,
             full_name: u.full_name || 'Unknown User',
             email: u.email || 'Email not available',
-            role: u.raw_user_meta_data?.role || 'student',
+            role: u.role || u.raw_user_meta_data?.role || 'student',
             country: u.country,
             field_of_interest: u.field_of_interest,
             status: u.status || 'active',
@@ -392,6 +394,8 @@ const AdminDashboard: React.FC = () => {
         />
         <Route path="/application-monitoring" element={<ApplicationMonitoring />} />
         <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
+        <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
+        <Route path="/payout-requests" element={<AdminPayoutRequests />} />
       </Routes>
     </AdminDashboardLayout>
   );

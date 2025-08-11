@@ -18,6 +18,7 @@ import AIConversations from './AIConversations';
 import Inbox from './Inbox';
 import WhatsAppConnection from './WhatsAppConnection';
 import ConnectWhatsApp from './ConnectWhatsApp';
+import UniversityRewardsDashboard from './UniversityRewardsDashboard';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
@@ -44,6 +45,7 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="ai-solutions" element={<AISolutions />} />
             <Route path="ai-settings" element={<AISettings />} />
             <Route path="ai-conversations" element={<AIConversations />} />
+            <Route path="matricula-rewards" element={<UniversityRewardsDashboard />} />
             <Route path="whatsapp" element={<WhatsAppConnection />} />
           </Route>
         </Routes>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, X, Scroll } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, X, Scroll, Gift } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 
@@ -25,7 +26,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     universityName: '',
     position: '',
     website: '',
-    location: ''
+    location: '',
+    // Affiliate code field
+    affiliateCode: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,11 +39,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasScrolledToBottomPrivacy, setHasScrolledToBottomPrivacy] = useState(false);
+  const [affiliateCodeValid, setAffiliateCodeValid] = useState<boolean | null>(null);
+  const [affiliateCodeLoading, setAffiliateCodeLoading] = useState(false);
+  const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
   const termsContentRef = useRef<HTMLDivElement>(null);
   const privacyContentRef = useRef<HTMLDivElement>(null);
   
   const { login, register, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Global scroll-to-top on login/register page load
   useEffect(() => {
@@ -50,6 +57,58 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }, 75);
     return () => clearTimeout(timer);
   }, []);
+
+  // Capture affiliate code from localStorage (captura global já feita no App.tsx)
+  useEffect(() => {
+    if (mode === 'register') {
+      const savedCode = localStorage.getItem('pending_referral_code');
+      if (savedCode) {
+        setFormData(prev => ({ ...prev, affiliateCode: savedCode }));
+        validateAffiliateCode(savedCode);
+        setIsReferralCodeLocked(true); // Bloqueia edição
+      }
+    }
+  }, [mode]);
+
+  // Validate affiliate code
+  const validateAffiliateCode = async (code: string) => {
+    if (!code || code.length < 4) {
+      setAffiliateCodeValid(false);
+      return;
+    }
+
+    setAffiliateCodeLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('affiliate_codes')
+        .select('code, is_active')
+        .eq('code', code)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        setAffiliateCodeValid(false);
+      } else {
+        setAffiliateCodeValid(true);
+      }
+    } catch (error) {
+      setAffiliateCodeValid(false);
+    } finally {
+      setAffiliateCodeLoading(false);
+    }
+  };
+
+  // Handle affiliate code change
+  const handleAffiliateCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const code = e.target.value.toUpperCase();
+    setFormData(prev => ({ ...prev, affiliateCode: code }));
+    
+    if (code.length >= 4) {
+      validateAffiliateCode(code);
+    } else {
+      setAffiliateCodeValid(null);
+    }
+  };
 
   // Handle scroll in terms modal
   const handleTermsScroll = () => {
@@ -145,7 +204,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           }),
           // Add phone for student
           ...(activeTab === 'student' && {
-            phone: formData.phone || ''
+            phone: formData.phone || '',
+            affiliate_code: formData.affiliateCode || null // Add affiliate code to user data
           })
         };
 
@@ -157,6 +217,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         localStorage.setItem('pending_phone', formData.phone || '');
         
         await register(formData.email, formData.password, userData);
+
+        // Limpar código de referência do localStorage após registro bem-sucedido
+        localStorage.removeItem('pending_referral_code');
 
         // Se for registro de universidade, mostra modal e retorna
         if (activeTab === 'university') {
@@ -278,6 +341,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   onChange={handleInputChange}
                   className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                   placeholder="Enter your email"
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -297,6 +361,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   onChange={handleInputChange}
                   className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                 />
               </div>
             </div>
@@ -507,6 +572,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Create a password"
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
@@ -526,8 +592,83 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Confirm your password"
+                        autoComplete="new-password"
                       />
                     </div>
+                  </div>
+
+                  {/* Affiliate Code Field */}
+                  <div>
+                    <label htmlFor="affiliateCode" className="block text-sm font-bold text-slate-900 mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Gift className="h-4 w-4 text-[#05294E]" />
+                        <span>Friend's Referral Code (Optional)</span>
+                      </div>
+                    </label>
+                    <div className="relative">
+                      {isReferralCodeLocked ? (
+                        <Lock className="absolute left-4 top-4 h-5 w-5 text-green-500" />
+                      ) : (
+                        <Gift className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      )}
+                      <input
+                        id="affiliateCode"
+                        name="affiliateCode"
+                        type="text"
+                        value={formData.affiliateCode || ''}
+                        onChange={handleAffiliateCodeChange}
+                        readOnly={isReferralCodeLocked}
+                        className={`w-full pl-12 pr-4 py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 ${
+                          isReferralCodeLocked 
+                            ? 'bg-gray-50 cursor-not-allowed' 
+                            : ''
+                        } ${
+                          affiliateCodeValid === true 
+                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
+                            : affiliateCodeValid === false 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                        }`}
+                        placeholder={isReferralCodeLocked ? "Referral code applied" : "Enter friend's referral code (e.g., MATR1234)"}
+                        maxLength={8}
+                      />
+                      {affiliateCodeLoading && (
+                        <div className="absolute right-4 top-4">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#05294E]"></div>
+                        </div>
+                      )}
+                      {affiliateCodeValid === true && (
+                        <div className="absolute right-4 top-4">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        </div>
+                      )}
+                      {affiliateCodeValid === false && formData.affiliateCode && (
+                        <div className="absolute right-4 top-4">
+                          <X className="h-4 w-4 text-red-500" />
+                        </div>
+                      )}
+                    </div>
+                    {formData.affiliateCode && (
+                      <div className="mt-2 text-sm">
+                        {affiliateCodeValid === true && (
+                          <p className="text-green-600 flex items-center">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Valid referral code! You'll get $50 off your selection process fee.
+                            {isReferralCodeLocked && (
+                              <span className="ml-2 text-blue-600">
+                                (Applied from referral link)
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        {affiliateCodeValid === false && (
+                          <p className="text-red-600 flex items-center">
+                            <X className="h-3 w-3 mr-1" />
+                            Invalid referral code. Please check and try again.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
@@ -700,6 +841,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Create a password"
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
@@ -719,6 +861,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Confirm your password"
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>

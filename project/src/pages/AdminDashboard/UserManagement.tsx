@@ -325,24 +325,55 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <td className="px-4 py-2 text-slate-600">{user.country || '-'}</td>
                   <td className="px-4 py-2 text-slate-600">{new Date(user.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-2">
-                    <button
-                      onClick={() => setSelectedUser(user)}
-                      className="bg-slate-100 text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-200 transition-colors text-xs font-medium"
-                      aria-label="View user details"
-                      title="View user details"
-                    >
-                      View
-                    </button>
-                    {user.status === 'active' && user.role !== 'admin' && (
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onSuspend(user.user_id)}
-                        className="ml-2 bg-red-100 text-red-700 py-1 px-3 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium"
-                        title="Suspend User"
-                        aria-label="Suspend user"
+                        onClick={() => setSelectedUser(user)}
+                        className="bg-slate-100 text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-200 transition-colors text-xs font-medium"
+                        aria-label="View user details"
+                        title="View user details"
                       >
-                        Suspend
+                        View
                       </button>
-                    )}
+                      {user.status === 'active' && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              // Atualiza diretamente em user_profiles.role
+                              const newRole = user.role === 'admin' ? 'student' : 'admin';
+                              const { error } = await (await import('../../lib/supabase')).supabase
+                                .from('user_profiles')
+                                .update({ role: newRole })
+                                .eq('user_id', user.user_id);
+                              if (error) {
+                                console.error('Failed to set role', error);
+                                alert('Failed to change role');
+                                return;
+                              }
+                              alert(`Role updated to ${newRole}. Refreshing list...`);
+                              window.location.reload();
+                            } catch (e) {
+                              console.error(e);
+                              alert('Unexpected error');
+                            }
+                          }}
+                          className={`py-1 px-3 rounded-lg text-xs font-medium transition-colors ${user.role === 'admin' ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                          title={user.role === 'admin' ? 'Demote to Student' : 'Promote to Admin'}
+                          aria-label="Toggle admin role"
+                        >
+                          {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                        </button>
+                      )}
+                      {user.status === 'active' && (
+                        <button
+                          onClick={() => onSuspend(user.user_id)}
+                          className="bg-red-100 text-red-700 py-1 px-3 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium"
+                          title="Suspend User"
+                          aria-label="Suspend user"
+                        >
+                          Suspend
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -371,6 +402,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                 <button
                   onClick={() => setSelectedUser(null)}
                   className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100"
+                  title="Close"
                 >
                   <UserX className="h-5 w-5" />
                 </button>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useUniversity } from '../../../context/UniversityContext';
 import { useSearchParams } from 'react-router-dom';
+import { Brain } from 'lucide-react';
 
 import { useWhatsAppConnection } from './hooks/useWhatsAppConnection';
 import { useQRCodeValidation } from './hooks/useQRCodeValidation';
@@ -44,14 +45,16 @@ export default function WhatsAppConnection() {
 
   const {
     qrCodeUrl,
+    setQrCodeUrl,
     qrLoading,
+    setQrLoading,
     qrError,
+    setQrError,
     isCheckingConnection,
     connectionStatus,
     isAutoRefreshing,
     countdown,
-    refreshQRCodeData,
-    handleCloseModal
+    refreshQRCodeData
   } = useQRCodeValidation(
     currentInstanceName,
     currentConnectionId,
@@ -70,7 +73,7 @@ export default function WhatsAppConnection() {
       setShowQrModal(true);
       setCurrentConnectionId('new');
 
-      const result = await createConnection(agentId);
+      const result = await createConnection(agentId || undefined);
       
       setCurrentInstanceName(result.instanceName);
       setQrCodeUrl(result.qrCodeData);
@@ -84,7 +87,6 @@ export default function WhatsAppConnection() {
   };
 
   const handleReconnect = async (id: string, instanceName: string) => {
-    setActionLoading(id);
     setCurrentConnectionId(id);
     setCurrentInstanceName(instanceName);
     setQrLoading(true);
@@ -92,23 +94,27 @@ export default function WhatsAppConnection() {
     setShowQrModal(true);
     
     try {
-      const qrCodeData = await refreshQRCodeData();
-      setQrCodeUrl(qrCodeData);
+      await refreshQRCodeData();
       fetchConnections();
     } catch (error) {
       console.error('Error reconnecting:', error);
       setShowQrModal(false);
     } finally {
-      setActionLoading(null);
       setQrLoading(false);
     }
   };
 
+  const handleCloseModal = () => {
+    setShowQrModal(false);
+    setCurrentConnectionId(null);
+    setCurrentInstanceName(null);
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">WhatsApp Connection</h1>
-        <p className="text-gray-600">
+    <div className="max-w-6xl mx-auto p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-3">WhatsApp Connection</h1>
+        <p className="text-gray-600 text-base md:text-lg">
           Connect your university's WhatsApp to enable automated conversations with AI assistants.
         </p>
       </div>
@@ -116,11 +122,11 @@ export default function WhatsAppConnection() {
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === 'agents' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div className="text-center py-8">
-            <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Agents Management</h3>
-            <p className="text-gray-600 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 lg:p-10">
+          <div className="text-center py-8 md:py-12">
+            <Brain className="h-10 w-10 md:h-12 md:w-12 text-[#05294E] mx-auto mb-4 md:mb-6" />
+            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2 md:mb-3">AI Agents Management</h3>
+            <p className="text-gray-600 mb-6 md:mb-8">
               Create and manage your AI agents before connecting them to WhatsApp.
             </p>
             <p className="text-sm text-gray-500">

@@ -35,62 +35,73 @@ import TermsOfService from './pages/TermsOfService';
 import ForUniversities from './pages/ForUniversities';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
+import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
+
+// Componente interno que usa o hook dentro do contexto do Router
+const AppContent = () => {
+  // Hook global para capturar códigos de referência em qualquer página
+  useReferralCodeCapture();
+
+  return (
+    <AuthProvider>
+      <AuthRedirect>
+        <Layout>
+          <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/login" element={<Auth mode="login" />} />
+          <Route path="/register" element={<Auth mode="register" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/admin/register" element={<AdminRegistration />} />
+          <Route path="/scholarships" element={<Scholarships />} />
+          <Route path="/schools" element={<Universities />} />
+          <Route path="/schools/:slug" element={<UniversityDetail />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          {/* Student/Admin Dashboard Switch - sempre renderize StudentDashboard por padrão */}
+          <Route path="/student/dashboard/*" element={<StudentDashboard />} />
+          {/* School Routes */}
+          <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
+          <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
+          <Route path="/school/scholarship/new" element={<NewScholarship />} />
+          <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
+          {/* Admin Dashboard Direct Route */}
+          <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
+          {/* Placeholder routes for other pages */}
+          <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
+          <Route path="/contact" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Contact page coming soon...</div></div>} />
+          <Route path="/checkout/success" element={<SuccessPage />} />
+          <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+          <Route path="/student/dashboard/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+          <Route path="/student/dashboard/application-fee/success" element={<ApplicationFeeSuccess />} />
+          <Route path="/application-fee/cancel" element={<ApplicationFeeCancel />} />
+          <Route path="/student/dashboard/payment-success" element={<SuccessPage />} />
+          <Route path="/student/dashboard/enrollment-fee-success" element={<SuccessPage />} />
+          <Route path="/student/dashboard/payment-error" element={<PaymentErrorPage />} />
+          <Route path="/student/dashboard/application-fee-success" element={<ApplicationFeeSuccess />} />
+          <Route path="/student/dashboard/application-fee-error" element={<ApplicationFeeError />} />
+          <Route path="/student/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
+          <Route path="/student/i20-control-fee-error" element={<I20ControlFeeError />} />
+          <Route path="/support-center" element={<SupportCenter />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/help-center" element={<HelpCenter />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/for-universities" element={<ForUniversities />} />
+          <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          </Routes>
+        </Layout>
+      </AuthRedirect>
+    </AuthProvider>
+  );
+};
 
 function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-    <AuthProvider>
-        <AuthRedirect>
-          <Layout>
-            <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/login" element={<Auth mode="login" />} />
-            <Route path="/register" element={<Auth mode="register" />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/admin/register" element={<AdminRegistration />} />
-            <Route path="/scholarships" element={<Scholarships />} />
-            <Route path="/schools" element={<Universities />} />
-            <Route path="/schools/:slug" element={<UniversityDetail />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            {/* Student/Admin Dashboard Switch - sempre renderize StudentDashboard por padrão */}
-            <Route path="/student/dashboard/*" element={<StudentDashboard />} />
-            {/* School Routes */}
-            <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
-            <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
-            <Route path="/school/scholarship/new" element={<NewScholarship />} />
-            <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
-            {/* Admin Dashboard Direct Route */}
-            <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
-            {/* Placeholder routes for other pages */}
-            <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
-            <Route path="/contact" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Contact page coming soon...</div></div>} />
-            <Route path="/checkout/success" element={<SuccessPage />} />
-            <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-            <Route path="/student/dashboard/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-            <Route path="/student/dashboard/application-fee/success" element={<ApplicationFeeSuccess />} />
-            <Route path="/application-fee/cancel" element={<ApplicationFeeCancel />} />
-            <Route path="/student/dashboard/payment-success" element={<SuccessPage />} />
-            <Route path="/student/dashboard/enrollment-fee-success" element={<SuccessPage />} />
-            <Route path="/student/dashboard/payment-error" element={<PaymentErrorPage />} />
-            <Route path="/student/dashboard/application-fee-success" element={<ApplicationFeeSuccess />} />
-            <Route path="/student/dashboard/application-fee-error" element={<ApplicationFeeError />} />
-            <Route path="/student/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
-            <Route path="/student/i20-control-fee-error" element={<I20ControlFeeError />} />
-            <Route path="/support-center" element={<SupportCenter />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/contact-us" element={<ContactUs />} />
-            <Route path="/help-center" element={<HelpCenter />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/for-universities" element={<ForUniversities />} />
-            <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            </Routes>
-          </Layout>
-        </AuthRedirect>
-      </AuthProvider>
-      </Router>
+      <AppContent />
+    </Router>
   );
 }
 

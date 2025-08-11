@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Gift, 
-  Share2, 
   Copy, 
   CheckCircle, 
   TrendingUp, 
@@ -9,7 +8,7 @@ import {
   Users,
   Clock,
   ArrowUpRight,
-  ExternalLink
+  Mail
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -20,8 +19,30 @@ import {
   MatriculacoinTransaction,
   AffiliateStats 
 } from '../../types';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Separator } from '../../components/ui/Separator';
+import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
+import WhatsAppIcon from '../../components/icons/WhatsApp';
 
 const MatriculaRewards: React.FC = () => {
+  // Logos oficiais em SVG simplificados (inline), sem dependências externas
+  const FacebookLogo = () => (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
+      <path d="M22 12.06C22 6.48 17.52 2 11.94 2 6.36 2 1.88 6.48 1.88 12.06c0 4.99 3.65 9.14 8.43 9.94v-7.03H7.9v-2.9h2.41V9.83c0-2.38 1.41-3.69 3.57-3.69 1.03 0 2.11.18 2.11.18v2.32h-1.19c-1.17 0-1.53.73-1.53 1.48v1.77h2.61l-.42 2.9h-2.19v7.03c4.78-.8 8.43-4.95 8.43-9.94z"/>
+    </svg>
+  );
+  const TwitterLogo = () => (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
+      <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.36 8.57 8.57 0 0 1-2.71 1.04 4.27 4.27 0 0 0-7.27 3.89A12.12 12.12 0 0 1 3.15 4.9a4.26 4.26 0 0 0 1.32 5.7c-.65-.02-1.26-.2-1.8-.5v.05a4.27 4.27 0 0 0 3.43 4.18c-.31.08-.64.12-.98.12-.24 0-.48-.02-.7-.07a4.27 4.27 0 0 0 3.98 2.96A8.56 8.56 0 0 1 2 19.54a12.08 12.08 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2v-.56c.84-.61 1.57-1.36 2.14-2.22-.78.35-1.62.58-2.5.68z"/>
+    </svg>
+  );
+  const LinkedInLogo = () => (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
+      <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.95v5.66H9.37V9h3.4v1.56h.05c.47-.9 1.6-1.85 3.29-1.85 3.52 0 4.17 2.32 4.17 5.34v6.4zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
+    </svg>
+  );
+  
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +54,14 @@ const MatriculaRewards: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       loadAffiliateData();
     } else {
       setLoading(false);
     }
-  }, [user]);
+    // Dispara apenas quando o identificador do usuário mudar,
+    // evitando re-fetch em eventos de refresh de token/visibility
+  }, [user?.id]);
 
   const loadAffiliateData = async () => {
     try {
@@ -184,10 +207,77 @@ const MatriculaRewards: React.FC = () => {
     return `${window.location.origin}?ref=${code}`;
   };
 
-  const formatCurrency = (amount: number) => {
+  const shareToSocialMedia = async (platform: string, url: string, text: string) => {
+    const shareData = {
+      title: 'Join MatriculaUSA with my referral code!',
+      text: text,
+      url: url
+    };
+
+    try {
+      switch (platform) {
+        case 'facebook':
+          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
+          break;
+        case 'twitter':
+          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+          break;
+        case 'linkedin':
+          window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+          break;
+        case 'whatsapp':
+          window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+          break;
+        case 'email':
+          window.open(`mailto:?subject=Join MatriculaUSA with my referral code!&body=${encodeURIComponent(text + '\n\n' + url)}`, '_blank');
+          break;
+        default:
+          if (navigator.share) {
+            await navigator.share(shareData);
+          } else {
+            await copyToClipboard(url);
+          }
+      }
+
+      // Registrar o compartilhamento
+      if (user?.id && affiliateCode) {
+        await supabase
+          .from('affiliate_shares')
+          .insert([
+            {
+              user_id: user.id,
+              affiliate_code_id: affiliateCode.id,
+              platform: platform,
+              shared_at: new Date().toISOString()
+            }
+          ]);
+      }
+    } catch (error) {
+      console.error('Erro ao compartilhar:', error);
+    }
+  };
+
+  // Mantido para referência futura: rastrear cliques em campanhas
+  // const trackClick = async () => {
+  //   if (user?.id && affiliateCode) {
+  //     try {
+  //       await supabase
+  //         .from('affiliate_clicks')
+  //         .insert([
+  //           {
+  //             user_id: user.id,
+  //             affiliate_code_id: affiliateCode.id,
+  //             clicked_at: new Date().toISOString()
+  //           }
+  //         ]);
+  //     } catch (error) {
+  //       console.error('Erro ao registrar clique:', error);
+  //     }
+  //   }
+  // };
+
+  const formatCoins = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
@@ -214,289 +304,247 @@ const MatriculaRewards: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-            <Gift className="h-6 w-6 text-red-600" />
-          </div>
-          <p className="text-slate-900 font-medium">Error loading Matricula Rewards</p>
-          <p className="text-slate-500 text-sm">{error}</p>
-          <button 
-            onClick={loadAffiliateData}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <CardTitle>Matricula Rewards</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertTitle>Error loading data</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Separator className="my-4" />
+            <button
+              onClick={loadAffiliateData}
+              className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* MatriculaCoin Header - Valor à esquerda, Moeda à direita */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center space-x-8 mb-6">
-            {/* Balance Display - Agora à esquerda */}
-            <div className="text-center">
-              <div className="text-4xl font-bold text-slate-900 mb-2">
-                {formatCurrency(credits?.balance || 0)}
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-10">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* Hero / Balance */}
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10" />
+          <div className="relative z-10 grid gap-6 p-6 md:grid-cols-3 md:items-center">
+            <div className="md:col-span-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Matricula Rewards</h1>
+              <p className="text-slate-600 mt-1">Earn credits by referring friends to MatriculaUSA</p>
+              <div className="mt-4 inline-flex items-baseline gap-2 rounded-xl bg-slate-100 px-4 py-2">
+                <span className="text-sm font-medium text-slate-600">Balance</span>
+                <span className="text-3xl font-extrabold text-slate-900">{formatCoins(credits?.balance || 0)}</span>
+                <span className="text-sm text-slate-500">coins</span>
               </div>
-              <div className="text-lg font-medium text-slate-600">
-                MatriculaCoins
+              {/* Stats */}
+              <div className="mt-4 grid grid-cols-2 gap-4 max-w-md">
+                <Card className="p-4 gap-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total Referrals</span>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><Users className="h-4 w-4"/></span>
+                  </div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">{stats?.totalReferrals || 0}</div>
+                </Card>
+                <Card className="p-4 gap-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total Earnings</span>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><TrendingUp className="h-4 w-4"/></span>
+                  </div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">{formatCoins(stats?.totalEarnings || 0)}</div>
+                </Card>
               </div>
             </div>
+            <div className="md:col-span-1 flex items-center justify-center">
+              <div className="h-28 w-28 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg ring-4 ring-white/60 flex items-center justify-center">
+                <img src="/favicon-branco.png" className="h-14 w-14 object-contain" alt="Coin" />
+              </div>
+            </div>
+          </div>
+        </Card>
 
-            {/* 3D Coin Animation with Favicon - Agora à direita */}
-            <div className="relative">
-              <div className="w-32 h-32 flex items-center justify-center">
-                <div className="coin-simple">
-                  <img 
-                    src="/favicon-branco.png" 
-                    alt="MatriculaCoin" 
-                    className="w-20 h-20 object-contain"
-                  />
+        {/* Referral Code + Share */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2 p-0">
+            <CardHeader className="pb-0">
+              <CardTitle className="text-lg">Your Referral Code</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 pb-6">
+            {affiliateCode && (
+              <div className="mt-4 grid gap-4">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                      <Gift className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Your Code</p>
+                      <p className="text-2xl font-bold tracking-wide text-slate-900">{affiliateCode.code}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(getShareUrl(affiliateCode.code))}
+                    className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                  >
+                    {copied ? <CheckCircle className="h-4 w-4"/> : <Copy className="h-4 w-4"/>}
+                    {copied ? 'Link Copied' : 'Copy Link'}
+                  </button>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Page Title */}
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Matricula Rewards</h1>
-            <p className="text-slate-600 text-lg">Earn credits by referring friends to MatriculaUSA</p>
-          </div>
-        </div>
-
-        {/* Stats Cards - Removido "Current Balance", apenas 2 cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 max-w-2xl mx-auto">
-          {/* Total Referrals */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Total Referrals</p>
-                <p className="text-3xl font-bold text-slate-900">
-                  {stats?.totalReferrals || 0}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Total Earnings */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Total Earnings</p>
-                <p className="text-3xl font-bold text-slate-900">
-                  {formatCurrency(stats?.totalEarnings || 0)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Affiliate Code Section */}
-        {affiliateCode && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">Your Affiliate Code</h2>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-slate-500">Earn $50 per referral</span>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600 mb-1">Share this code with friends</p>
-                  <div className="flex items-center space-x-3">
-                    <code className="text-2xl font-mono font-bold text-blue-600 bg-white px-4 py-2 rounded-lg border">
-                      {affiliateCode.code}
-                    </code>
+                  <p className="mb-2 text-sm font-medium text-slate-700">Share with Friends</p>
+                  <div className="flex flex-wrap gap-3">
                     <button
-                      onClick={() => copyToClipboard(affiliateCode.code)}
-                      className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      aria-label="Share on Facebook"
+                      onClick={() => shareToSocialMedia('facebook', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-3 py-2 text-white hover:brightness-95"
                     >
-                      {copied ? (
-                        <>
-                          <CheckCircle className="h-4 w-4" />
-                          <span>Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4" />
-                          <span>Copy</span>
-                        </>
-                      )}
+                      <FacebookLogo />
+                      <span className="hidden sm:inline">Facebook</span>
+                    </button>
+                    <button
+                      aria-label="Share on Twitter"
+                      onClick={() => shareToSocialMedia('twitter', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2] px-3 py-2 text-white hover:brightness-95"
+                    >
+                      <TwitterLogo />
+                      <span className="hidden sm:inline">Twitter</span>
+                    </button>
+                    <button
+                      aria-label="Share on LinkedIn"
+                      onClick={() => shareToSocialMedia('linkedin', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#0A66C2] px-3 py-2 text-white hover:brightness-95"
+                    >
+                      <LinkedInLogo />
+                      <span className="hidden sm:inline">LinkedIn</span>
+                    </button>
+                    <button
+                      aria-label="Share on WhatsApp"
+                      onClick={() => shareToSocialMedia('whatsapp', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-3 py-2 text-white hover:brightness-95"
+                    >
+                      <WhatsAppIcon width={16} height={16} className="text-white" />
+                      <span className="hidden sm:inline">WhatsApp</span>
+                    </button>
+                    <button
+                      aria-label="Share via Email"
+                      onClick={() => shareToSocialMedia('email', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-3 py-2 text-white hover:brightness-95"
+                    >
+                      <Mail className="h-4 w-4" />
+                      <span className="hidden sm:inline">Email</span>
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-col items-end space-y-2">
-                  <button
-                    onClick={() => window.open(getShareUrl(affiliateCode.code), '_blank')}
-                    className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    <Share2 className="h-4 w-4" />
-                    <span>Share</span>
-                  </button>
-                </div>
               </div>
-            </div>
+            )}
+            </CardContent>
+          </Card>
+
+          {/* CTA Store */}
+          <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white shadow-md">
+            <h3 className="text-lg font-semibold">Spend your coins</h3>
+            <p className="text-blue-100 mt-1">Visit our store and redeem perks using your MatriculaCoins.</p>
+            <Link to="/student/dashboard/rewards/store" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 ring-1 ring-white/20 hover:bg-white/20">
+              <Gift className="h-4 w-4"/>
+              Visit Rewards Store
+              <ArrowUpRight className="h-4 w-4"/>
+            </Link>
           </div>
-        )}
+        </div>
 
         {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Referrals */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Referrals</h2>
-            {referrals.length > 0 ? (
-              <div className="space-y-3">
-                {referrals.slice(0, 5).map((referral) => (
-                  <div key={referral.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <Users className="h-4 w-4 text-green-600" />
-                      </div>
+            {referrals.length ? (
+              <ul className="space-y-3">
+                {referrals.slice(0,5).map(referral => (
+                  <li key={referral.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600"><Users className="h-4 w-4"/></span>
                       <div>
-                        <p className="font-medium text-slate-900">Referral #{referral.id.slice(0, 8)}</p>
-                        <p className="text-sm text-slate-500">{formatDate(referral.created_at)}</p>
+                        <p className="font-medium text-slate-900">Referral #{referral.id.slice(0,8)}</p>
+                        <p className="text-xs text-slate-500">{formatDate(referral.created_at)}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-green-600">+{formatCurrency(referral.credits_earned)}</p>
+                      <p className="font-semibold text-green-600">+{formatCoins(referral.credits_earned)}</p>
                       <p className="text-xs text-slate-500">{referral.status}</p>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">No referrals yet</p>
-                <p className="text-sm text-slate-400">Share your code to start earning!</p>
-              </div>
+              <Alert className="py-4">
+                <AlertTitle>No referrals yet</AlertTitle>
+                <AlertDescription>Share your code to start earning.</AlertDescription>
+              </Alert>
             )}
-          </div>
-
-          {/* Recent Transactions */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          </Card>
+          <Card className="p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Transactions</h2>
-            {transactions.length > 0 ? (
-              <div className="space-y-3">
-                {transactions.slice(0, 5).map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        transaction.type === 'earned' ? 'bg-green-100' : 
-                        transaction.type === 'spent' ? 'bg-red-100' : 'bg-yellow-100'
-                      }`}>
-                        {transaction.type === 'earned' ? (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                        ) : transaction.type === 'spent' ? (
-                          <DollarSign className="h-4 w-4 text-red-600" />
-                        ) : (
-                          <Clock className="h-4 w-4 text-yellow-600" />
-                        )}
-                      </div>
+            {transactions.length ? (
+              <ul className="space-y-3">
+                {transactions.slice(0,5).map(tx => (
+                  <li key={tx.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${tx.type==='earned'?'bg-green-100 text-green-600':tx.type==='spent'?'bg-red-100 text-red-600':'bg-yellow-100 text-yellow-600'}`}>
+                        {tx.type==='earned'?<TrendingUp className="h-4 w-4"/>:tx.type==='spent'?<DollarSign className="h-4 w-4"/>:<Clock className="h-4 w-4"/>}
+                      </span>
                       <div>
-                        <p className="font-medium text-slate-900">{transaction.description || transaction.type}</p>
-                        <p className="text-sm text-slate-500">{formatDate(transaction.created_at)}</p>
+                        <p className="font-medium text-slate-900">{tx.description || tx.type}</p>
+                        <p className="text-xs text-slate-500">{formatDate(tx.created_at)}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-semibold ${
-                        transaction.type === 'earned' ? 'text-green-600' : 
-                        transaction.type === 'spent' ? 'text-red-600' : 'text-yellow-600'
-                      }`}>
-                        {transaction.type === 'earned' ? '+' : transaction.type === 'spent' ? '-' : ''}{formatCurrency(transaction.amount)}
-                      </p>
-                      <p className="text-xs text-slate-500">Balance: {formatCurrency(transaction.balance_after)}</p>
+                      <p className={`${tx.type==='earned'?'text-green-600':tx.type==='spent'?'text-red-600':'text-yellow-600'} font-semibold`}>{tx.type==='earned'?'+':tx.type==='spent'?'-':''}{formatCoins(tx.amount)}</p>
+                      <p className="text-xs text-slate-500">Balance: {formatCoins(tx.balance_after)}</p>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
-              <div className="text-center py-8">
-                <DollarSign className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">No transactions yet</p>
-                <p className="text-sm text-slate-400">Your transaction history will appear here</p>
-              </div>
+              <Alert className="py-4">
+                <AlertTitle>No transactions yet</AlertTitle>
+                <AlertDescription>Your transaction history will appear here.</AlertDescription>
+              </Alert>
             )}
-          </div>
+          </Card>
         </div>
 
-        {/* How It Works */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        {/* How it works */}
+        <Card className="p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">How It Works</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl font-bold text-blue-600">1</span>
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">Share Your Code</h3>
-              <p className="text-slate-600 text-sm">Share your unique affiliate code with friends and family</p>
+            <div className="rounded-xl border border-slate-200 p-5">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">1</div>
+              <h3 className="font-semibold text-slate-900">Share Your Code</h3>
+              <p className="text-sm text-slate-600 mt-1">Share your unique affiliate code with friends and family.</p>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl font-bold text-green-600">2</span>
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">They Sign Up</h3>
-              <p className="text-slate-600 text-sm">When they use your code and make a payment, you earn credits</p>
+            <div className="rounded-xl border border-slate-200 p-5">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">2</div>
+              <h3 className="font-semibold text-slate-900">Friends Join</h3>
+              <p className="text-sm text-slate-600 mt-1">They get $50 off their selection process fee.</p>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl font-bold text-purple-600">3</span>
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-2">Earn Rewards</h3>
-              <p className="text-slate-600 text-sm">Use your earned credits for discounts on future payments</p>
+            <div className="rounded-xl border border-slate-200 p-5">
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">3</div>
+              <h3 className="font-semibold text-slate-900">Earn Rewards</h3>
+              <p className="text-sm text-slate-600 mt-1">You earn 200 MatriculaCoins for each successful referral.</p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* CSS for Simple Coin Animation with Favicon */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .coin-simple {
-            width: 128px;
-            height: 128px;
-            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
-            border-radius: 50%;
-            border: 4px solid #1e3a8a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 
-              0 8px 32px rgba(0, 0, 0, 0.3),
-              inset 0 2px 4px rgba(255, 255, 255, 0.3),
-              inset 0 -2px 4px rgba(0, 0, 0, 0.2);
-            animation: coin-float 3s ease-in-out infinite;
-          }
-
-          @keyframes coin-float {
-            0%, 100% {
-              transform: translateY(0px) rotate(0deg);
-            }
-            50% {
-              transform: translateY(-10px) rotate(5deg);
-            }
-          }
-
-          .coin-simple:hover {
-            animation-play-state: paused;
-            transform: scale(1.05);
-            transition: transform 0.3s ease;
-          }
-        `
-      }} />
+      {/* Coin styling kept for subtle animation */}
+      <style dangerouslySetInnerHTML={{__html:`
+        .coin-simple{display:none}
+      `}} />
     </div>
   );
 };

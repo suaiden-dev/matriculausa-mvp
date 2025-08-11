@@ -10,7 +10,7 @@ export interface StripeProduct {
   mode: 'payment' | 'subscription';
 }
 
-const isProd = import.meta.env.MODE === 'production';
+const isProd = true; // Força uso das chaves de produção
 
 export const STRIPE_PRODUCTS = {
   controlFee: isProd
