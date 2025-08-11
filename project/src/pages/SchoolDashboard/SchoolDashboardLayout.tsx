@@ -8,7 +8,6 @@ import {
   Clock, 
   AlertCircle, 
   Settings, 
-  Plus,
   Home,
   Users,
   BarChart3,
@@ -21,8 +20,7 @@ import {
   Brain,
   Mail,
   MessageSquare,
-  Gift,
-  DollarSign
+  Gift
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -56,6 +54,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     if (path.includes('/ai-settings')) return 'ai-settings';
     if (path.includes('/inbox')) return 'inbox';
     if (path.includes('/whatsapp')) return 'whatsapp';
+    if (path.includes('/global-document-requests')) return 'global-docs';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     return 'overview';
   };
