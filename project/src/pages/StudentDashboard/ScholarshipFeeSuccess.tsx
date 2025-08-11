@@ -92,7 +92,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
   if (loading) {
     return (
       <StudentDashboardLayout user={user} profile={userProfile} loading={authLoading}>
-        <div className="min-h-[60vh] flex flex-col items-center justify-center bg-green-50 px-4">
+        <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
           <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
             <CustomLoading color="green" title="Verifying Payment..." message="Please wait while we confirm your payment." />
           </div>
@@ -120,7 +120,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
 
   return (
     <StudentDashboardLayout user={user} profile={userProfile} loading={authLoading}>
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-green-50 px-4">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
           <h1 className="text-3xl font-bold text-green-700 mb-2">Scholarship Fee Payment Successful!</h1>

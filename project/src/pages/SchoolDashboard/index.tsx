@@ -36,6 +36,7 @@ export const SchoolDashboard: React.FC = () => {
             <Route index element={<Overview />} />
             <Route path="scholarships" element={<ScholarshipManagement />} />
             <Route path="scholarship/new" element={<NewScholarship />} />
+            <Route path="scholarship/new" element={<NewScholarship />} />
             <Route path="profile" element={<ProfileManagement />} />
             <Route path="students" element={<StudentManagement />} />
             <Route path="student/:applicationId" element={<StudentDetails />} />

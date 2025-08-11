@@ -170,6 +170,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setLoading(false);
           return;
         }
+
+        // Validate allowed password characters: letters, numbers and @#$!
+        const allowedPasswordRegex = /^[A-Za-z0-9@#$!]+$/;
+        if (!allowedPasswordRegex.test(formData.password)) {
+          setError('Password contains invalid characters. Only letters, numbers, and @ # $ ! are allowed.');
+          setLoading(false);
+          return;
+        }
         
         // Validar telefone obrigatório e formato internacional
         if (!formData.phone || formData.phone.length < 8) {

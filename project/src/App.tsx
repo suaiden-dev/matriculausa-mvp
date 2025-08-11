@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
@@ -15,7 +15,6 @@ import SchoolProfileSetup from './pages/SchoolProfileSetup';
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
 import StudentDashboard from './pages/StudentDashboard/index';
 import AdminDashboard from './pages/AdminDashboard/index';
-import NewScholarship from './pages/SchoolDashboard/NewScholarship';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
 import SuccessPage from './pages/SuccessPage';
@@ -62,7 +61,7 @@ const AppContent = () => {
           {/* School Routes */}
           <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
           <Route path="/school/setup-profile" element={<SchoolProfileSetup />} />
-          <Route path="/school/scholarship/new" element={<NewScholarship />} />
+          {/* New Scholarship is nested inside SchoolDashboard provider */}
           <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
           {/* Admin Dashboard Direct Route */}
           <Route path="/admin/dashboard/*" element={<AdminDashboard />} />

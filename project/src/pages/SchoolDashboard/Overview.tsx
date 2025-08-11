@@ -103,83 +103,83 @@ const Overview: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-full overflow-x-hidden">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="bg-white p-3 sm:p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Scholarships</p>
-              <p className="text-3xl font-bold text-slate-900">{stats.totalScholarships}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{stats.totalScholarships}</p>
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
                 <span className="text-sm font-medium text-green-600">+12% this month</span>
               </div>
             </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-700 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Award className="h-7 w-7 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-[#05294E] to-blue-700 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Award className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <div className="bg-white p-3 sm:p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Active Scholarships</p>
-              <p className="text-3xl font-bold text-slate-900">{stats.activeScholarships}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{stats.activeScholarships}</p>
               <div className="flex items-center mt-2">
                 <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
                 <span className="text-sm font-medium text-green-600">Available</span>
               </div>
             </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <CheckCircle className="h-7 w-7 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <div className="bg-white p-3 sm:p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Funding</p>
-              <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.totalFunding)}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{formatCurrency(stats.totalFunding)}</p>
               <div className="flex items-center mt-2">
                 <DollarSign className="h-4 w-4 text-blue-500 mr-1" />
                 <span className="text-sm font-medium text-blue-600">Amount offered</span>
               </div>
             </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <DollarSign className="h-7 w-7 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+        <div className="bg-white p-3 sm:p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Average Amount</p>
-              <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.avgAmount)}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{formatCurrency(stats.avgAmount)}</p>
               <div className="flex items-center mt-2">
                 <Target className="h-4 w-4 text-purple-500 mr-1" />
                 <span className="text-sm font-medium text-purple-600">Per scholarship</span>
               </div>
             </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-              <Target className="h-7 w-7 text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Target className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-white" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         {quickActions.map((action, index) => {
           const Icon = action.icon;
           return (
             <Link
               key={index}
               to={action.enabled ? action.link : '#'}
-              className={`group block p-6 bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 ${
+              className={`group block p-6 bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 overflow-hidden ${
                 !action.enabled ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1'
               }`}
               onClick={(e) => !action.enabled && e.preventDefault()}
@@ -201,7 +201,7 @@ const Overview: React.FC = () => {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Recent Scholarships */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -212,13 +212,22 @@ const Overview: React.FC = () => {
                   <p className="text-slate-500 text-sm">Manage your scholarship opportunities</p>
                 </div>
                 {university?.profile_completed && (
-                  <Link
-                    to="/school/scholarship/new" 
-                    className="bg-gradient-to-r from-[#05294E] to-blue-700 text-white px-4 py-2 rounded-xl hover:from-[#05294E]/90 hover:to-blue-600 transition-all duration-300 font-medium text-sm flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    New Scholarship
-                  </Link>
+                  <>
+                    <Link
+                      to="/school/dashboard/scholarship/new" 
+                      className="hidden md:flex bg-gradient-to-r from-[#05294E] to-blue-700 text-white px-4 py-2 rounded-xl hover:from-[#05294E]/90 hover:to-blue-600 transition-all duration-300 font-medium text-sm items-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      New Scholarship
+                    </Link>
+                    <Link
+                      to="/school/dashboard/scholarship/new"
+                      className="md:hidden bg-[#05294E] text-white px-3 py-2 rounded-lg text-sm flex items-center"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      New
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
@@ -246,7 +255,7 @@ const Overview: React.FC = () => {
                   <h3 className="text-xl font-bold text-slate-900 mb-3">No scholarships yet</h3>
                   <p className="text-slate-500 mb-6">Start by creating your first scholarship opportunity</p>
                   <Link
-                    to="/school/scholarship/new" 
+                    to="/school/dashboard/scholarship/new" 
                     className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     Create First Scholarship
