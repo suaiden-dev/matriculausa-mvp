@@ -18,6 +18,7 @@ import {
   PlusCircle
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
+import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 const Overview: React.FC = () => {
   const { university, scholarships, applications } = useUniversity();
@@ -103,7 +104,12 @@ const Overview: React.FC = () => {
   );
 
   return (
-    <div className="space-y-8">
+    <ProfileCompletionGuard 
+      isProfileCompleted={university?.profile_completed}
+      title="Complete your profile to access the dashboard"
+      description="Finish setting up your university profile to view analytics, manage scholarships, and connect with students"
+    >
+      <div className="space-y-8">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
@@ -403,7 +409,8 @@ const Overview: React.FC = () => {
       </div>
 
       {renderApplicationsPanel()}
-    </div>
+      </div>
+    </ProfileCompletionGuard>
   );
 };
 

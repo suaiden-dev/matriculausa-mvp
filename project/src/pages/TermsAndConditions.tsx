@@ -259,7 +259,7 @@ const TermsAndConditions: React.FC = () => {
               </button>
               
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
                 disabled={loading}
                 className="flex-1 bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50"
               >

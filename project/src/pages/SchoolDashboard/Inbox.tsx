@@ -37,6 +37,7 @@ import { config } from '../../lib/config';
 import { formatDateUS } from '../../lib/dateUtils';
 import { Email } from '../../types';
 import GmailConnectionManager from '../../components/GmailConnectionManager';
+import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 // Estilos CSS personalizados para scroll das abas e melhor legibilidade
 const tabScrollStyles = `
@@ -900,159 +901,165 @@ const Inbox: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <style>{tabScrollStyles}</style>
-      <div className="min-h-screen flex flex-col">
-        {/* Main Inbox Container - Ocupando toda a tela */}
-        <div className="flex-1 bg-white overflow-hidden flex flex-col min-h-0">
-          {/* Header */}
-          <InboxHeader
-            activeTab={activeTab}
-            loading={loading}
-            filteredEmails={filteredEmails}
-            emailCounts={emailCounts}
-            onCompose={handleCompose}
-            onShowEmailIntegration={() => setShowEmailIntegration(true)}
-            onShowManageConnections={() => setShowManageConnections(true)}
-            connection={activeConnection}
-            autoRefreshStatus={autoRefreshStatus}
-            onAccountChange={(email) => {
-              console.log('🔄 Inbox: onAccountChange called with:', email);
-              console.log('🔄 Inbox: Current activeConnection before change:', activeConnection?.email);
-              
-              // Mudar para a nova conta
-              setActiveConnection(email);
-              
-              console.log('🔄 Inbox: Account changed to:', email);
-              console.log('🔄 Inbox: Refreshing page to load new account emails...');
-              
-              // Refresh da página para carregar os emails da nova conta
-              window.location.reload();
-            }}
-          />
-
-      {/* Search and Filters */}
-          <SearchAndFilters
-            searchTerm={searchTerm}
-            filter={filter}
-            onSearchChange={setSearchTerm}
-            onFilterChange={setFilter}
-            onSearch={handleSearch}
-          />
-
-          {/* Email Tabs Navigation */}
-          <EmailTabs
-            tabs={emailTabs}
-            activeTab={activeTab}
-            emailCounts={emailCounts}
-            loading={loading}
-            onTabChange={handleTabChange}
-            onRefresh={() => {
-              fetchEmailsForTab(activeTab);
-              updateEmailCounts(activeConnection?.email);
-            }}
-            onCheckUnread={handleCheckUnreadEmails}
-            checkUnreadStatus={autoRefreshStatus}
-          />
-
-          {/* Email Content - Layout Expandido */}
-          <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-            {/* Email List */}
-            <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto bg-white flex flex-col">
-              <EmailList
-                emails={filteredEmails}
-                selectedEmail={selectedEmail}
-                loading={loading}
-                error={error}
-                searchTerm={searchTerm}
-                activeTab={activeTab}
-                hasMoreEmails={hasMoreEmails}
-                emailCounts={emailCounts}
-                onEmailSelect={handleEmailSelect}
-                onLoadMore={handleLoadMore}
-                getPriorityColor={getPriorityColor}
-                getPriorityIcon={getPriorityIcon}
-                formatDate={formatDate}
+    <ProfileCompletionGuard 
+      isProfileCompleted={university?.profile_completed}
+      title="Profile setup required"
+      description="Complete your university profile to start creating and managing scholarships"
+    >
+      <div className="min-h-screen bg-gray-50">
+        <style>{tabScrollStyles}</style>
+        <div className="min-h-screen flex flex-col">
+          {/* Main Inbox Container - Ocupando toda a tela */}
+          <div className="flex-1 bg-white overflow-hidden flex flex-col min-h-0">
+            {/* Header */}
+            <InboxHeader
+              activeTab={activeTab}
+              loading={loading}
+              filteredEmails={filteredEmails}
+              emailCounts={emailCounts}
+              onCompose={handleCompose}
+              onShowEmailIntegration={() => setShowEmailIntegration(true)}
+              onShowManageConnections={() => setShowManageConnections(true)}
+              connection={activeConnection}
+              autoRefreshStatus={autoRefreshStatus}
+              onAccountChange={(email) => {
+                console.log('🔄 Inbox: onAccountChange called with:', email);
+                console.log('🔄 Inbox: Current activeConnection before change:', activeConnection?.email);
+                
+                // Mudar para a nova conta
+                setActiveConnection(email);
+                
+                console.log('🔄 Inbox: Account changed to:', email);
+                console.log('🔄 Inbox: Refreshing page to load new account emails...');
+                
+                // Refresh da página para carregar os emails da nova conta
+                window.location.reload();
+              }}
             />
-          </div>
-          
-            {/* Email Detail - Mais espaço para conteúdo */}
-            <div className="flex-1 flex flex-col bg-white min-h-0">
-              {activeTab === 'knowledge' ? (
-                <div className="flex-1 p-6 overflow-y-auto">
-                  <InboxKnowledgeUpload
-                    universityId={user?.user_metadata?.university_id || user?.user_metadata?.universityId || '09a32358-9210-4da7-b465-556ed429d82a'}
-                    onDocumentsChange={setKnowledgeDocuments}
-                    existingDocuments={knowledgeDocuments}
-                  />
-                </div>
-              ) : (
-                <EmailDetail
-                  email={selectedEmail}
-                  onReply={handleReply}
-                  onForward={handleForwardEmail}
+
+        {/* Search and Filters */}
+            <SearchAndFilters
+              searchTerm={searchTerm}
+              filter={filter}
+              onSearchChange={setSearchTerm}
+              onFilterChange={setFilter}
+              onSearch={handleSearch}
+            />
+
+            {/* Email Tabs Navigation */}
+            <EmailTabs
+              tabs={emailTabs}
+              activeTab={activeTab}
+              emailCounts={emailCounts}
+              loading={loading}
+              onTabChange={handleTabChange}
+              onRefresh={() => {
+                fetchEmailsForTab(activeTab);
+                updateEmailCounts(activeConnection?.email);
+              }}
+              onCheckUnread={handleCheckUnreadEmails}
+              checkUnreadStatus={autoRefreshStatus}
+            />
+
+            {/* Email Content - Layout Expandido */}
+            <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+              {/* Email List */}
+              <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto bg-white flex flex-col">
+                <EmailList
+                  emails={filteredEmails}
+                  selectedEmail={selectedEmail}
+                  loading={loading}
+                  error={error}
+                  searchTerm={searchTerm}
+                  activeTab={activeTab}
+                  hasMoreEmails={hasMoreEmails}
+                  emailCounts={emailCounts}
+                  onEmailSelect={handleEmailSelect}
+                  onLoadMore={handleLoadMore}
+                  getPriorityColor={getPriorityColor}
+                  getPriorityIcon={getPriorityIcon}
                   formatDate={formatDate}
-                />
-              )}
+              />
             </div>
-          </div>
-        </div>
-
-        {/* Email Composer for new emails only */}
-        <EmailComposer
-          isOpen={isComposing}
-          onClose={() => setIsComposing(false)}
-          onSend={handleSendEmail}
-          originalEmail={composerEmail}
-        />
-
-        {/* Reply Composer */}
-        <ReplyComposer
-          isOpen={isReplying}
-          onClose={() => setIsReplying(false)}
-          onSend={handleSendEmail}
-          originalEmail={replyEmail!}
-        />
-
-        {/* Forward Composer */}
-        <ForwardComposer
-          isOpen={isForwarding}
-          onClose={() => setIsForwarding(false)}
-          onSend={handleSendEmail}
-          originalEmail={forwardEmail!}
-        />
-
-                {/* Manage Connections Modal */}
-        {showManageConnections && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Manage Email Connections</h3>
-                <button
-                  onClick={() => setShowManageConnections(false)}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Close manage connections modal"
-                  aria-label="Close manage connections modal"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <GmailConnectionManager />
-              
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setShowManageConnections(false)}
-                  className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
-                >
-                  Close
-                </button>
+            
+              {/* Email Detail - Mais espaço para conteúdo */}
+              <div className="flex-1 flex flex-col bg-white min-h-0">
+                {activeTab === 'knowledge' ? (
+                  <div className="flex-1 p-6 overflow-y-auto">
+                    <InboxKnowledgeUpload
+                      universityId={user?.user_metadata?.university_id || user?.user_metadata?.universityId || '09a32358-9210-4da7-b465-556ed429d82a'}
+                      onDocumentsChange={setKnowledgeDocuments}
+                      existingDocuments={knowledgeDocuments}
+                    />
+                  </div>
+                ) : (
+                  <EmailDetail
+                    email={selectedEmail}
+                    onReply={handleReply}
+                    onForward={handleForwardEmail}
+                    formatDate={formatDate}
+                  />
+                )}
               </div>
             </div>
           </div>
-        )}
-        </div>
-    </div>
+
+          {/* Email Composer for new emails only */}
+          <EmailComposer
+            isOpen={isComposing}
+            onClose={() => setIsComposing(false)}
+            onSend={handleSendEmail}
+            originalEmail={composerEmail}
+          />
+
+          {/* Reply Composer */}
+          <ReplyComposer
+            isOpen={isReplying}
+            onClose={() => setIsReplying(false)}
+            onSend={handleSendEmail}
+            originalEmail={replyEmail!}
+          />
+
+          {/* Forward Composer */}
+          <ForwardComposer
+            isOpen={isForwarding}
+            onClose={() => setIsForwarding(false)}
+            onSend={handleSendEmail}
+            originalEmail={forwardEmail!}
+          />
+
+                  {/* Manage Connections Modal */}
+          {showManageConnections && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-900">Manage Email Connections</h3>
+                  <button
+                    onClick={() => setShowManageConnections(false)}
+                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Close manage connections modal"
+                    aria-label="Close manage connections modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <GmailConnectionManager />
+                
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={() => setShowManageConnections(false)}
+                    className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          </div>
+      </div>
+    </ProfileCompletionGuard>
   );
 };
 

@@ -6,7 +6,6 @@ import {
   Trash2, 
   CheckCircle, 
   Award, 
-  Settings,
   Search,
   Filter,
   DollarSign,
@@ -19,6 +18,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
+import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 const ScholarshipManagement: React.FC = () => {
   const { university, scholarships, handleDeleteScholarship, toggleScholarshipStatus } = useUniversity();
@@ -83,28 +83,15 @@ const ScholarshipManagement: React.FC = () => {
     }
   };
 
-  if (!university?.profile_completed) {
-    return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-        <div className="w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <Settings className="h-10 w-10 text-orange-600" />
-        </div>
-        <h3 className="text-2xl font-bold text-slate-900 mb-4">Profile setup required</h3>
-        <p className="text-slate-500 mb-8 max-w-md mx-auto">
-          Complete your university profile to start creating and managing scholarships
-        </p>
-        <Link
-          to="/school/setup-profile"
-          className="bg-gradient-to-r from-[#05294E] to-blue-700 text-white px-8 py-4 rounded-xl hover:from-[#05294E]/90 hover:to-blue-600 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          Complete University Profile
-        </Link>
-      </div>
-    );
-  }
+
 
   return (
-    <div className="space-y-8">
+    <ProfileCompletionGuard 
+      isProfileCompleted={university?.profile_completed}
+      title="Profile setup required"
+      description="Complete your university profile to start creating and managing scholarships"
+    >
+      <div className="space-y-8">
       {/* Header with Actions */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
         <div>
@@ -411,7 +398,8 @@ const ScholarshipManagement: React.FC = () => {
           )}
         </>
       )}
-    </div>
+      </div>
+    </ProfileCompletionGuard>
   );
 };
 
