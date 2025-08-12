@@ -43,7 +43,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps }) => {
       {/* Desktop: horizontal, Mobile: vertical */}
       <div className="w-full">
         <div className="hidden md:flex relative w-full max-w-2xl mx-auto overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-blue-50">
-          <div className="flex items-center w-full justify-between px-2 gap-4 md:gap-6 lg:gap-8">
+          <div className="flex items-center w-full justify-between px-2 gap-4 md:gap-6 lg:gap-8 py-4">
             {/* Linha de conexão */}
             <div className="absolute top-1/2 left-0 right-0 z-0 h-2 flex items-center pointer-events-none select-none">
               <div className="w-full h-2 rounded-full bg-gradient-to-r from-green-400 via-yellow-300 to-slate-300 opacity-60" />
