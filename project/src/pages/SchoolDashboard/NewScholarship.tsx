@@ -62,7 +62,15 @@ const NewScholarship: React.FC = () => {
     original_annual_value: '',
     original_value_per_credit: '',
     annual_value_with_scholarship: '',
+    work_permissions: [] as string[],
   });
+
+  // Helper texts for work permissions
+  const WORK_PERMISSION_DESCRIPTIONS: Record<string, string> = {
+    F1: 'F-1 student visa. On-campus work allowed (limited hours). Off-campus work usually requires CPT or OPT authorization.',
+    OPT: 'Optional Practical Training. Temporary employment directly related to the student\'s major area of study (pre- or post-completion).',
+    CPT: 'Curricular Practical Training. Work authorization as part of an academic program (e.g., internships/practicums) while enrolled.',
+  };
 
   // Função para salvar dados no localStorage
   const saveFormDataToStorage = useCallback((data: any) => {
@@ -140,6 +148,7 @@ const NewScholarship: React.FC = () => {
           original_annual_value: scholarship.original_annual_value?.toString() || '',
           original_value_per_credit: scholarship.original_value_per_credit?.toString() || '',
           annual_value_with_scholarship: scholarship.annual_value_with_scholarship?.toString() || '',
+          work_permissions: Array.isArray(scholarship.work_permissions) ? scholarship.work_permissions : [],
         });
 
         // Set image preview if exists
@@ -472,6 +481,7 @@ const NewScholarship: React.FC = () => {
         original_annual_value: Number(formData.original_annual_value),
         original_value_per_credit: Number(formData.original_value_per_credit),
         annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
+        work_permissions: formData.work_permissions,
       };
 
       let scholarshipId: string;
@@ -1003,6 +1013,39 @@ const NewScholarship: React.FC = () => {
               </h2>
               
               <div className="grid grid-cols-1 gap-6">
+              {/* Work Permissions */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Work Permission (F-1 / OPT / CPT)
+                </label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {['F1','OPT','CPT'].map((wp) => (
+                    <label
+                      key={wp}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer select-none"
+                      title={WORK_PERMISSION_DESCRIPTIONS[wp]}
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-[#05294E]"
+                        checked={formData.work_permissions.includes(wp)}
+                        onChange={(e) => {
+                          setFormData(prev => {
+                            const has = prev.work_permissions.includes(wp);
+                            const next = has
+                              ? prev.work_permissions.filter(x => x !== wp)
+                              : [...prev.work_permissions, wp];
+                            return { ...prev, work_permissions: next };
+                          });
+                        }}
+                      />
+                      <span className="text-sm text-slate-700 font-medium">{wp}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Select all work permissions allowed for this scholarship. Hover each option to see a brief explanation.</p>
+              </div>
+
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-slate-700">
