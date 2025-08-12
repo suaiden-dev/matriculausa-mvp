@@ -55,6 +55,7 @@ const NewScholarship: React.FC = () => {
     requirements: [''],
     field_of_study: '',
     level: 'undergraduate',
+    delivery_mode: 'in_person',
     eligibility: [''],
     benefits: [''],
     is_exclusive: false,
@@ -149,6 +150,7 @@ const NewScholarship: React.FC = () => {
           requirements: scholarship.requirements?.length ? scholarship.requirements : [''],
           field_of_study: scholarship.field_of_study || '',
           level: scholarship.level || 'undergraduate',
+          delivery_mode: scholarship.delivery_mode || 'in_person',
           eligibility: scholarship.eligibility?.length ? scholarship.eligibility : [''],
           benefits: scholarship.benefits?.length ? scholarship.benefits : [''],
           is_exclusive: scholarship.is_exclusive || false,
@@ -471,49 +473,69 @@ const NewScholarship: React.FC = () => {
     }
 
     try {
-      // Prepare data for submission
-      const scholarshipData = {
-        title: formData.title,
-        description: formData.description,
-        amount: Number(formData.amount),
-        deadline: formData.deadline,
-        requirements,
-        field_of_study: formData.field_of_study,
-        level: formData.level,
-        eligibility,
-        benefits,
-        is_exclusive: formData.is_exclusive,
-        is_active: formData.is_active,
-        university_id: university.id,
-        image_url: null, // Will be updated after image upload
-        original_annual_value: Number(formData.original_annual_value),
-        original_value_per_credit: Number(formData.original_value_per_credit),
-        annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
-        work_permissions: formData.work_permissions,
+      // Helper to build payload optionally without work_permissions (fallback when column not deployed yet)
+      const buildPayload = (includeWP: boolean, includeDM: boolean, activeOverride?: boolean) => {
+        const payload: any = {
+          title: formData.title,
+          description: formData.description,
+          amount: Number(formData.amount),
+          deadline: formData.deadline,
+          requirements,
+          field_of_study: formData.field_of_study,
+          level: formData.level,
+          eligibility,
+          benefits,
+          is_exclusive: formData.is_exclusive,
+          is_active: activeOverride !== undefined ? activeOverride : formData.is_active,
+          university_id: university.id,
+          image_url: null, // Will be updated after image upload
+          original_annual_value: Number(formData.original_annual_value),
+          original_value_per_credit: Number(formData.original_value_per_credit),
+          annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
+        };
+        if (includeWP) payload.work_permissions = formData.work_permissions;
+        if (includeDM) payload.delivery_mode = formData.delivery_mode;
+        return payload;
       };
 
       let scholarshipId: string;
-      
+
       if (isEditMode && editScholarshipId) {
-        // Update existing scholarship
-        const { error: updateError } = await supabase
+        // Update existing scholarship (try with WP first, fallback without)
+        let { error: updateErr } = await supabase
           .from('scholarships')
-          .update(scholarshipData)
+          .update(buildPayload(true, true))
           .eq('id', editScholarshipId)
           .eq('university_id', university.id);
 
-        if (updateError) throw updateError;
+        if (updateErr && (String(updateErr.message || '').includes('work_permissions') || String(updateErr.message || '').includes('delivery_mode'))) {
+          const res2 = await supabase
+            .from('scholarships')
+            .update(buildPayload(false, false))
+            .eq('id', editScholarshipId)
+            .eq('university_id', university.id);
+          updateErr = res2.error || null;
+        }
+        if (updateErr) throw updateErr;
         scholarshipId = editScholarshipId;
       } else {
-        // Insert new scholarship
-        const { data: newScholarship, error: submitError } = await supabase
+        // Insert new scholarship (try with WP first, fallback without)
+        let insertResp = await supabase
           .from('scholarships')
-          .insert(scholarshipData)
+          .insert(buildPayload(true, true, true))
           .select('id')
           .single();
 
-        if (submitError) throw submitError;
-        scholarshipId = newScholarship.id;
+        if (insertResp.error && (String(insertResp.error.message || '').includes('work_permissions') || String(insertResp.error.message || '').includes('delivery_mode'))) {
+          insertResp = await supabase
+            .from('scholarships')
+            .insert(buildPayload(false, false, true))
+            .select('id')
+            .single();
+        }
+
+        if (insertResp.error) throw insertResp.error;
+        scholarshipId = insertResp.data!.id;
       }
 
       // Upload image if provided
@@ -935,6 +957,24 @@ const NewScholarship: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Delivery Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Delivery Mode
+                  </label>
+                  <select
+                    name="delivery_mode"
+                    value={formData.delivery_mode}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    title="Select delivery mode"
+                  >
+                    <option value="in_person">In-person</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="online">Online</option>
+                  </select>
+                </div>
+
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-slate-700">
@@ -1122,24 +1162,7 @@ const NewScholarship: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    name="is_active"
-                    checked={formData.is_active}
-                    onChange={handleCheckboxChange}
-                    className="h-5 w-5 rounded border-slate-300 text-green-600 focus:ring-green-600"
-                  />
-                  <div>
-                    <label htmlFor="is_active" className="font-medium text-slate-900">
-                      Active Scholarship
-                    </label>
-                    <p className="text-sm text-slate-500">
-                      Make this scholarship immediately visible to students
-                    </p>
-                  </div>
-                </div>
+                {/* Active Scholarship removed as requested */}
               </div>
             </div>
 
