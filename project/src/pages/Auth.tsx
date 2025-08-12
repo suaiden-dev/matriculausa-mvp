@@ -79,19 +79,27 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
     setAffiliateCodeLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('affiliate_codes')
-        .select('code, is_active')
-        .eq('code', code)
-        .eq('is_active', true)
-        .single();
+      // Usar a edge function que já tem validação de auto-referência
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ affiliate_code: code }),
+      });
 
-      if (error || !data) {
-        setAffiliateCodeValid(false);
-      } else {
+      const result = await response.json();
+
+      if (result.success) {
         setAffiliateCodeValid(true);
+        console.log('✅ [Auth] Código de referência válido:', code);
+      } else {
+        setAffiliateCodeValid(false);
+        console.log('❌ [Auth] Código de referência inválido:', result.error);
       }
     } catch (error) {
+      console.error('❌ [Auth] Erro ao validar código de referência:', error);
       setAffiliateCodeValid(false);
     } finally {
       setAffiliateCodeLoading(false);
@@ -103,11 +111,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, affiliateCode: code }));
     
-    if (code.length >= 4) {
-      validateAffiliateCode(code);
-    } else {
+    // Validação imediata para códigos muito curtos
+    if (code.length < 4) {
       setAffiliateCodeValid(null);
+      return;
     }
+
+    // Validação adicional: verificar se não é o próprio código do usuário
+    if (user && (user as any).user_metadata?.affiliate_code === code) {
+      setAffiliateCodeValid(false);
+      console.log('⚠️ [Auth] Usuário tentando usar seu próprio código de referência');
+      return;
+    }
+    
+    // Se passou pelas validações básicas, validar com o backend
+    validateAffiliateCode(code);
   };
 
   // Handle scroll in terms modal
@@ -195,6 +213,22 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           setError('You must accept the Terms of Use and Privacy Policy to continue');
           setLoading(false);
           return;
+        }
+        
+        // Validar código de referência se fornecido
+        if (formData.affiliateCode && formData.affiliateCode.length >= 4) {
+          if (!affiliateCodeValid) {
+            setError('Please enter a valid referral code');
+            setLoading(false);
+            return;
+          }
+          
+          // Validação adicional: verificar se não é auto-referência
+          if (user && (user as any).user_metadata?.affiliate_code === formData.affiliateCode) {
+            setError('You cannot use your own referral code');
+            setLoading(false);
+            return;
+          }
         }
         
         console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
