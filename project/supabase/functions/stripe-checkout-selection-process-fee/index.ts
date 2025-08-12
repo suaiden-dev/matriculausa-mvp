@@ -83,6 +83,22 @@ Deno.serve(async (req) => {
         console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
         console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
         console.log('[stripe-checkout-selection-process-fee] Affiliate Code:', activeDiscount.affiliate_code);
+        console.log('[stripe-checkout-selection-process-fee] 🔍 DEBUG - Referrer ID:', activeDiscount.referrer_id);
+        console.log('[stripe-checkout-selection-process-fee] 🔍 DEBUG - User ID:', user.id);
+        console.log('[stripe-checkout-selection-process-fee] 🔍 DEBUG - São iguais?', activeDiscount.referrer_id === user.id);
+        
+        // 🔒 VALIDAÇÃO DE AUTO-REFERÊNCIA: Verificar se não é auto-referência
+        if (activeDiscount.referrer_id === user.id) {
+          console.error('[stripe-checkout-selection-process-fee] ❌ AUTO-REFERÊNCIA DETECTADA NO CHECKOUT!');
+          console.error('[stripe-checkout-selection-process-fee] Usuário tentando usar desconto do próprio código:', user.id);
+          console.error('[stripe-checkout-selection-process-fee] Referrer ID do desconto:', activeDiscount.referrer_id);
+          return corsResponse({ 
+            success: false, 
+            error: 'Desconto inválido: não é possível usar seu próprio código de referência' 
+          }, 400);
+        }
+        
+        console.log('[stripe-checkout-selection-process-fee] ✅ Validação de auto-referência passou');
       } else {
         console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto ativo encontrado para o usuário');
       }
@@ -105,17 +121,24 @@ Deno.serve(async (req) => {
       success_url: success_url,
       cancel_url: cancel_url,
       metadata: sessionMetadata,
-      // NOVO: Exibir campo de promoção no Checkout Stripe
+      // ✅ PERMITIR: Códigos de promoção para todos os usuários
       allow_promotion_codes: true,
     };
 
-    // Aplica desconto se houver (além do campo manual de promoção)
+    console.log('[stripe-checkout-selection-process-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
+
+    // Aplica desconto se houver
     if (activeDiscount && activeDiscount.stripe_coupon_id) {
       console.log('[stripe-checkout-selection-process-fee] 🎯 APLICANDO DESCONTO');
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       
+      // ✅ Validação já foi feita acima, não precisa repetir
+      console.log('[stripe-checkout-selection-process-fee] ✅ Validação de auto-referência já passou');
+      
       sessionConfig.discounts = [{ coupon: activeDiscount.stripe_coupon_id }];
+      // 🔒 REMOVER: allow_promotion_codes se houver desconto aplicado para evitar conflito
+      delete sessionConfig.allow_promotion_codes;
       
       sessionMetadata.referral_discount = true;
       sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
@@ -125,6 +148,8 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] ✅ Desconto aplicado na sessão!');
     } else {
       console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto para aplicar');
+      // 🔒 PERMITIR: Códigos de promoção apenas quando não há desconto automático
+      console.log('[stripe-checkout-selection-process-fee] ✅ Permitindo códigos de promoção manuais');
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig);

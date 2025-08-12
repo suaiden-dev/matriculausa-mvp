@@ -56,6 +56,45 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
     setLoading(true);
     try {
+      // 🔒 VALIDAÇÃO DE AUTO-REFERÊNCIA: Verificar se o usuário está tentando usar seu próprio código
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        try {
+          // Buscar o código de afiliado do usuário atual
+          const { data: userAffiliateCode, error: codeError } = await supabase
+            .from('affiliate_codes')
+            .select('code')
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .single();
+          
+          if (!codeError && userAffiliateCode) {
+            console.log('🔍 [StripeCheckout] Usuário tem código próprio:', userAffiliateCode.code);
+            console.log('⚠️ [StripeCheckout] ATENÇÃO: Usuário pode tentar usar seu próprio código no checkout!');
+            console.log('⚠️ [StripeCheckout] O Stripe não valida auto-referência automaticamente');
+            
+            // 🔒 BLOQUEAR: Mostrar aviso para o usuário
+            const userCode = userAffiliateCode.code;
+            const warningMessage = `⚠️ ATENÇÃO: Você tem o código de referência "${userCode}". 
+            
+❌ NÃO use seu próprio código para obter desconto - isso é considerado fraude e pode resultar em penalidades.
+
+✅ Use apenas códigos de outros usuários para obter descontos legítimos.
+
+Deseja continuar com o checkout?`;
+            
+            const shouldContinue = window.confirm(warningMessage);
+            if (!shouldContinue) {
+              setLoading(false);
+              setError('Checkout cancelado pelo usuário');
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('❌ [StripeCheckout] Erro ao verificar código próprio do usuário:', error);
+        }
+      }
+
       let applicationId = metadata?.application_id;
       if (beforeCheckout) {
         const result = await beforeCheckout();
