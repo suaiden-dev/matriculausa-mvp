@@ -38,6 +38,7 @@ import { formatDateUS } from '../../lib/dateUtils';
 import { Email } from '../../types';
 import GmailConnectionManager from '../../components/GmailConnectionManager';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
+import { useUniversity } from '../../context/UniversityContext';
 
 // Estilos CSS personalizados para scroll das abas e melhor legibilidade
 const tabScrollStyles = `
@@ -393,6 +394,7 @@ interface EmailTab {
 
 const Inbox: React.FC = () => {
   const { user } = useAuth();
+  const { university } = useUniversity();
   const { connections, activeConnection, loading: isConnecting, connectGmail, disconnectGmail, setActiveConnection, checkConnections } = useGmailConnection();
   const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails, clearEmails, autoRefreshStatus, checkUnreadEmails } = useGmail();
   
