@@ -129,7 +129,39 @@ const StudentDashboard: React.FC = () => {
         setScholarships([]);
         setDashboardError('Usuário não autenticado');
       } else {
-        const { data: realScholarships, error: scholarshipsError } = await supabase.rpc('get_scholarships_protected', { p_user_id: userId });
+        const { data: realScholarships, error: scholarshipsError } = await supabase
+          .from('scholarships')
+          .select(`
+            id,
+            title,
+            description,
+            amount,
+            deadline,
+            requirements,
+            field_of_study,
+            level,
+            delivery_mode,
+            eligibility,
+            benefits,
+            is_exclusive,
+            is_active,
+            university_id,
+            created_at,
+            updated_at,
+            needcpt,
+            visaassistance,
+            scholarshipvalue,
+            image_url,
+            original_value_per_credit,
+            original_annual_value,
+            annual_value_with_scholarship,
+            scholarship_type,
+            work_permissions,
+            university_name,
+            universities (id, name, logo_url, location, is_approved)
+          `)
+          .eq('is_active', true);
+          
         if (scholarshipsError) {
           setScholarships([]);
           setDashboardError('Error fetching scholarships.');
