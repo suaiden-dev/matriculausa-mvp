@@ -11,6 +11,8 @@ const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
+  const [selectedDeliveryMode, setSelectedDeliveryMode] = useState('all');
+  const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
   const { scholarships, loading, error } = useScholarships();
 
   // Get min and max scholarship values from data
@@ -25,6 +27,39 @@ const Scholarships: React.FC = () => {
   useEffect(() => {
     setMaxPrice(maxScholarshipValue);
   }, [maxScholarshipValue]);
+
+  // Salvar filtros no localStorage quando mudarem
+  useEffect(() => {
+    const filters = {
+      searchTerm,
+      selectedLevel,
+      selectedField,
+      selectedDeliveryMode,
+      selectedWorkPermission,
+      minPrice,
+      maxPrice
+    };
+    localStorage.setItem('scholarshipsPageFilters', JSON.stringify(filters));
+  }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, minPrice, maxPrice]);
+
+  // Restaurar filtros do localStorage ao carregar
+  useEffect(() => {
+    const savedFilters = localStorage.getItem('scholarshipsPageFilters');
+    if (savedFilters) {
+      try {
+        const filters = JSON.parse(savedFilters);
+        if (filters.searchTerm) setSearchTerm(filters.searchTerm);
+        if (filters.selectedLevel) setSelectedLevel(filters.selectedLevel);
+        if (filters.selectedField) setSelectedField(filters.selectedField);
+        if (filters.selectedDeliveryMode) setSelectedDeliveryMode(filters.selectedDeliveryMode);
+        if (filters.selectedWorkPermission) setSelectedWorkPermission(filters.selectedWorkPermission);
+        if (filters.minPrice !== undefined) setMinPrice(filters.minPrice);
+        // maxPrice será definido pelo useEffect do maxScholarshipValue
+      } catch (error) {
+        console.log('Error loading saved filters:', error);
+      }
+    }
+  }, []);
 
   const levelOptions = [
     { value: 'all', label: 'All Levels' },
@@ -42,7 +77,9 @@ const Scholarships: React.FC = () => {
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
-    return matchesSearch && matchesRange && matchesLevel && matchesField;
+    const matchesDeliveryMode = selectedDeliveryMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedDeliveryMode);
+    const matchesWorkPermission = selectedWorkPermission === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkPermission));
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
   });
 
   const formatAmount = (amount: any) => {
@@ -274,6 +311,30 @@ const Scholarships: React.FC = () => {
               <option value="business">Business</option>
               <option value="engineering">Engineering</option>
               <option value="any">Any Field</option>
+            </select>
+            <select
+              value={selectedDeliveryMode}
+              onChange={(e) => setSelectedDeliveryMode(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+              aria-label="Study Mode"
+              disabled={loading}
+            >
+              <option value="all">All Modes</option>
+              <option value="online">Online</option>
+              <option value="in_person">On Campus</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
+            <select
+              value={selectedWorkPermission}
+              onChange={(e) => setSelectedWorkPermission(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+              aria-label="Work Authorization"
+              disabled={loading}
+            >
+              <option value="all">All Permissions</option>
+              <option value="OPT">OPT</option>
+              <option value="CPT">CPT</option>
+              <option value="F1">F1</option>
             </select>
           </div>
 
@@ -551,8 +612,11 @@ const Scholarships: React.FC = () => {
                 setSearchTerm('');
                 setSelectedLevel('all');
                 setSelectedField('all');
+                setSelectedDeliveryMode('all');
+                setSelectedWorkPermission('all');
                 setMaxPrice(() => maxScholarshipValue);
                 setMinPrice(0);
+                localStorage.removeItem('scholarshipsPageFilters');
               }}
               className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"
             >
