@@ -126,17 +126,6 @@ Deno.serve(async (req) => {
     console.log('[process-registration-coupon] ✅ Código de afiliado válido encontrado');
     console.log('[process-registration-coupon] Referrer ID:', affiliateData.user_id);
 
-    // 🔒 NOVA VALIDAÇÃO: Verificar se não é auto-referência
-    if (affiliateData.user_id === targetUserId) {
-      console.log('[process-registration-coupon] ❌ AUTO-REFERÊNCIA DETECTADA!');
-      console.log('[process-registration-coupon] Usuário tentando usar seu próprio código:', targetUserId);
-      console.log('[process-registration-coupon] Código pertence ao usuário:', affiliateData.user_id);
-      return corsResponse({ 
-        success: false, 
-        error: 'Não é possível usar seu próprio código de referência' 
-      }, 400);
-    }
-
     // Verificar se o usuário já usou um código de referência
     const { data: existingUsage, error: usageError } = await supabase
       .from('used_referral_codes')

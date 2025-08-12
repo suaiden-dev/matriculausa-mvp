@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
@@ -77,42 +77,7 @@ const StudentDashboard: React.FC = () => {
   const [referralResult, setReferralResult] = useState<any>(null);
   const [showWelcomeDiscount, setShowWelcomeDiscount] = useState(false);
 
-  useEffect(() => {
-    if (user && userProfile) {
-      loadDashboardData();
-    }
-  }, [user, userProfile]);
-
-  // Fase 5: Aplicar código de referência da URL automaticamente
-  useEffect(() => {
-    const applyReferralCode = async () => {
-      if (user && !hasUsedReferralCode && !referralLoading) {
-        const result = await applyReferralCodeFromURL();
-        if (result && result.success) {
-          setReferralResult(result);
-          setShowCongratulationsModal(true);
-        }
-      }
-    };
-
-    applyReferralCode();
-  }, [user, hasUsedReferralCode, referralLoading, applyReferralCodeFromURL]);
-
-  // Welcome discount modal: show once per account when discount is active
-  useEffect(() => {
-    if (!user?.id) return;
-    if (!activeDiscount?.has_discount) return;
-    // Avoid conflict with referral modal
-    if (showCongratulationsModal) return;
-    const storageKey = `welcome_discount_seen_${user.id}`;
-    const alreadySeen = localStorage.getItem(storageKey) === 'true';
-    if (!alreadySeen) {
-      setShowWelcomeDiscount(true);
-      localStorage.setItem(storageKey, 'true');
-    }
-  }, [user?.id, activeDiscount?.has_discount, showCongratulationsModal]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!user || !userProfile) return;
 
     try {
@@ -176,11 +141,49 @@ const StudentDashboard: React.FC = () => {
       }
       setHasLoadedData(true);
     } catch (error) {
-      setDashboardError('Unexpected error loading dashboard data.');
+      console.error('Error loading dashboard data:', error);
+      setDashboardError('Error loading dashboard data');
     } finally {
       setDashboardLoading(false);
     }
-  };
+  }, [user, userProfile, hasLoadedData]);
+
+  useEffect(() => {
+    if (user && userProfile) {
+      loadDashboardData();
+    }
+  }, [user, userProfile, loadDashboardData]);
+
+  // Fase 5: Aplicar código de referência da URL automaticamente
+  useEffect(() => {
+    const applyReferralCode = async () => {
+      if (user && !hasUsedReferralCode && !referralLoading) {
+        const result = await applyReferralCodeFromURL();
+        if (result && result.success) {
+          setReferralResult(result);
+          setShowCongratulationsModal(true);
+        }
+      }
+    };
+
+    applyReferralCode();
+  }, [user, hasUsedReferralCode, referralLoading, applyReferralCodeFromURL]);
+
+  // Welcome discount modal: show once per account when discount is active
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!activeDiscount?.has_discount) return;
+    // Avoid conflict with referral modal
+    if (showCongratulationsModal) return;
+    // Don't show if user just applied a referral code
+    if (activeDiscount.applied_at && new Date(activeDiscount.applied_at).getTime() > Date.now() - 60000) return; // 1 minute ago
+    const storageKey = `welcome_discount_seen_${user.id}`;
+    const alreadySeen = localStorage.getItem(storageKey) === 'true';
+    if (!alreadySeen) {
+      setShowWelcomeDiscount(true);
+      localStorage.setItem(storageKey, 'true');
+    }
+  }, [user?.id, activeDiscount?.has_discount, activeDiscount?.applied_at, showCongratulationsModal]);
 
   const handleApplyScholarship = async (scholarshipId: string) => {
     if (!user) return;

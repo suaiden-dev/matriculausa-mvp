@@ -166,9 +166,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('🔍 [USEAUTH] session.user.id:', session.user.id);
             console.log('🔍 [USEAUTH] session.user.user_metadata:', session.user.user_metadata);
             
-            // 🔒 NOVA VARIÁVEL DE CONTROLE: Validação de código de afiliado
-            let isValidAffiliateCode = false;
-            
             const pendingFullName = localStorage.getItem('pending_full_name');
             const pendingPhone = localStorage.getItem('pending_phone');
             const pendingAffiliateCode = localStorage.getItem('pending_affiliate_code');
@@ -277,26 +274,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   
                   if (affiliateError || !affiliateCodeData) {
                     console.log('❌ [USEAUTH] Código de afiliado inválido:', pendingAffiliateCode);
-                    // 🔒 BLOQUEAR: Não é um código válido para processamento
-                    isValidAffiliateCode = false;
-                    // 💾 Salvar status no localStorage para uso posterior
-                    localStorage.setItem('affiliate_code_valid', 'false');
                   } else {
                     // Verificar se não é auto-indicação
                     if (affiliateCodeData.user_id === session.user.id) {
                       console.log('⚠️ [USEAUTH] Tentativa de auto-indicação detectada');
-                      console.log('❌ [USEAUTH] Usuário tentando usar seu próprio código de referência');
-                      // Não processar o código de auto-referência
-                      console.log('🚫 [USEAUTH] Código de auto-referência bloqueado');
-                      // 🔒 BLOQUEAR: Não é um código válido para processamento
-                      isValidAffiliateCode = false;
-                      // 💾 Salvar status no localStorage para uso posterior
-                      localStorage.setItem('affiliate_code_valid', 'false');
                     } else {
-                      // ✅ Código válido: processar indicação
-                      isValidAffiliateCode = true;
-                      // 💾 Salvar status no localStorage para uso posterior
-                      localStorage.setItem('affiliate_code_valid', 'true');
                       // Criar registro de indicação
                       const { error: referralError } = await supabase
                         .from('affiliate_referrals')
@@ -518,9 +500,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔍 [USEAUTH] userData recebido:', userData);
     console.log('🔍 [USEAUTH] Telefone no userData:', userData.phone);
     
-    // 🔒 NOVA VARIÁVEL DE CONTROLE: Validação de código de afiliado
-    let isValidAffiliateCode = false;
-    
     // Garantir que full_name não seja undefined
     if (!userData.full_name || userData.full_name.trim() === '') {
       throw new Error('Nome completo é obrigatório');
@@ -584,23 +563,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Se o registro foi bem-sucedido e há código de afiliado, processar cupom automaticamente
     if (!error && data.user && userData.affiliate_code) {
-      // 🔒 VERIFICAÇÃO ADICIONAL: Verificar se o código é válido antes de processar
-      const affiliateCodeValid = localStorage.getItem('affiliate_code_valid') === 'true';
-      
-      if (!affiliateCodeValid) {
-        console.log('🚫 [USEAUTH] Código de afiliado inválido ou auto-referência detectada. Não processando cupom.');
-        console.log('🚫 [USEAUTH] Affiliate Code:', userData.affiliate_code);
-        console.log('🚫 [USEAUTH] Status de validação:', localStorage.getItem('affiliate_code_valid'));
-        // Limpar localStorage
-        localStorage.removeItem('affiliate_code_valid');
-        return;
-      }
-      
       console.log('🎯 [USEAUTH] Processando cupom de desconto automaticamente...');
       console.log('🎯 [USEAUTH] User ID:', data.user.id);
       console.log('🎯 [USEAUTH] Affiliate Code:', userData.affiliate_code);
       console.log('🎯 [USEAUTH] User Data completo:', userData);
-      console.log('✅ [USEAUTH] Código de afiliado validado:', affiliateCodeValid);
 
       try {
         console.log('🎯 [USEAUTH] Chamando Edge Function process-registration-coupon...');
@@ -612,10 +578,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
         console.log('🎯 [USEAUTH] Status da resposta:', response?.error ? 'error' : 'success');
         console.log('🎯 [USEAUTH] Resposta da Edge Function:', response);
-        
-        // 🧹 Limpar localStorage após processamento
-        localStorage.removeItem('affiliate_code_valid');
-        console.log('🧹 [USEAUTH] localStorage limpo após processamento do cupom');
       } catch (couponError: any) {
         console.error('❌ [USEAUTH] Erro ao chamar função de cupom:', couponError);
         console.error('❌ [USEAUTH] Tipo do erro:', typeof couponError);

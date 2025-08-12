@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { useAuth } from '../hooks/useAuth';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
+import { PreCheckoutModal } from './PreCheckoutModal';
 
 interface StripeCheckoutProps {
   productId: keyof typeof STRIPE_PRODUCTS;
@@ -38,6 +39,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   beforeCheckout,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const { isAuthenticated, updateUserProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
@@ -48,53 +50,115 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     return <p className="text-red-500">Erro: Produto Stripe não encontrado. Contate o suporte.</p>;
   }
 
-  const handleCheckout = async () => {
+  const handleCheckoutClick = () => {
     if (!isAuthenticated) {
       onError?.('You must be logged in to checkout');
       return;
     }
 
-    setLoading(true);
+    // Mostrar modal de pre-checkout para selection_process apenas se não houver desconto ativo
+    if (feeType === 'selection_process') {
+      // Verificar se já há desconto ativo antes de mostrar o modal
+      checkActiveDiscount();
+    } else {
+      // Para outros tipos, ir direto para checkout
+      handleCheckout();
+    }
+  };
+
+  const checkActiveDiscount = async () => {
+    console.log('🔍 [StripeCheckout] Verificando desconto ativo...');
     try {
-      // 🔒 VALIDAÇÃO DE AUTO-REFERÊNCIA: Verificar se o usuário está tentando usar seu próprio código
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        try {
-          // Buscar o código de afiliado do usuário atual
-          const { data: userAffiliateCode, error: codeError } = await supabase
-            .from('affiliate_codes')
-            .select('code')
-            .eq('user_id', user.id)
-            .eq('is_active', true)
-            .single();
-          
-          if (!codeError && userAffiliateCode) {
-            console.log('🔍 [StripeCheckout] Usuário tem código próprio:', userAffiliateCode.code);
-            console.log('⚠️ [StripeCheckout] ATENÇÃO: Usuário pode tentar usar seu próprio código no checkout!');
-            console.log('⚠️ [StripeCheckout] O Stripe não valida auto-referência automaticamente');
-            
-            // 🔒 BLOQUEAR: Mostrar aviso para o usuário
-            const userCode = userAffiliateCode.code;
-            const warningMessage = `⚠️ ATENÇÃO: Você tem o código de referência "${userCode}". 
-            
-❌ NÃO use seu próprio código para obter desconto - isso é considerado fraude e pode resultar em penalidades.
-
-✅ Use apenas códigos de outros usuários para obter descontos legítimos.
-
-Deseja continuar com o checkout?`;
-            
-            const shouldContinue = window.confirm(warningMessage);
-            if (!shouldContinue) {
-              setLoading(false);
-              setError('Checkout cancelado pelo usuário');
-              return;
-            }
-          }
-        } catch (error) {
-          console.error('❌ [StripeCheckout] Erro ao verificar código próprio do usuário:', error);
-        }
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        console.log('🔍 [StripeCheckout] Sem token, mostrando modal');
+        setShowPreCheckoutModal(true);
+        return;
       }
 
+      // Verificar se já há desconto ativo usando função RPC diretamente
+      console.log('🔍 [StripeCheckout] Chamando get_user_active_discount via RPC...');
+      const { data: result, error } = await supabase.rpc('get_user_active_discount', {
+        user_id_param: sessionData.session?.user?.id
+      });
+
+      if (error) {
+        console.error('🔍 [StripeCheckout] Erro na função RPC:', error);
+        setShowPreCheckoutModal(true);
+        return;
+      }
+
+      console.log('🔍 [StripeCheckout] Resultado da verificação:', result);
+      
+      if (result && result.has_discount) {
+        console.log('🔍 [StripeCheckout] ✅ Desconto ativo encontrado, indo direto para checkout');
+        // Se já há desconto, ir direto para checkout
+        handleCheckout();
+      } else {
+        console.log('🔍 [StripeCheckout] ❌ Sem desconto ativo, mostrando modal');
+        // Se não há desconto, mostrar modal
+        setShowPreCheckoutModal(true);
+      }
+    } catch (error) {
+      console.error('🔍 [StripeCheckout] Erro ao verificar desconto:', error);
+      // Em caso de erro, mostrar modal por segurança
+      setShowPreCheckoutModal(true);
+    }
+  };
+
+  const handlePreCheckoutProceed = async (discountCode?: string) => {
+    console.log('🔍 [StripeCheckout] handlePreCheckoutProceed chamado com código:', discountCode);
+    
+    // Se há código de desconto, aplicar via edge function
+    if (discountCode) {
+      try {
+        console.log('🔍 [StripeCheckout] Aplicando código de desconto via edge function...');
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        
+        if (!token) {
+          throw new Error('Usuário não autenticado');
+        }
+
+        // Aplicar código de desconto
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ affiliate_code: discountCode }),
+        });
+
+        const result = await response.json();
+        console.log('🔍 [StripeCheckout] Resultado da aplicação do código:', result);
+        
+        if (!result.success) {
+          console.error('🔍 [StripeCheckout] ❌ Erro ao aplicar código:', result.error);
+          onError?.(result.error || 'Erro ao aplicar código de desconto');
+          return;
+        }
+        
+        console.log('🔍 [StripeCheckout] ✅ Código aplicado com sucesso');
+      } catch (error) {
+        console.error('🔍 [StripeCheckout] ❌ Erro ao aplicar código:', error);
+        onError?.(error instanceof Error ? error.message : 'Erro ao aplicar código de desconto');
+        return;
+      }
+    } else {
+      console.log('🔍 [StripeCheckout] Nenhum código de desconto fornecido');
+    }
+
+    // Continuar com o checkout
+    console.log('🔍 [StripeCheckout] Continuando para checkout...');
+    handleCheckout();
+  };
+
+  const handleCheckout = async () => {
+    setLoading(true);
+    try {
       let applicationId = metadata?.application_id;
       if (beforeCheckout) {
         const result = await beforeCheckout();
@@ -137,40 +201,28 @@ Deseja continuar com o checkout?`;
           fee_type: feeType,
           metadata: {
             ...metadata,
-            scholarships_ids: scholarshipsIds?.join(',') ?? undefined,
-            selected_scholarship_id: scholarshipsIds?.[0] ?? undefined,
-            student_process_type: studentProcessType ?? undefined,
             application_id: applicationId,
+            student_process_type: studentProcessType,
           },
-        })
+          scholarships_ids: scholarshipsIds,
+        }),
       });
 
-      const data = await response.json();
-      
-      if (!data || data.error) {
-        setLoading(false);
-        setError(data?.error || 'Erro ao criar sessão de pagamento. Tente novamente.');
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
       }
-      if (!data.session_url) {
-        setLoading(false);
-        setError('Falha ao criar sessão de pagamento. Tente novamente.');
-        return;
-      }
-      
-      if (data.session_url) {
-        window.location.href = data.session_url;
-        onSuccess?.();
-        setTimeout(() => {
-          updateUserProfile({});
-        }, 2000);
+
+      const { session_url } = await response.json();
+      if (session_url) {
+        window.location.href = session_url;
       } else {
-        console.error('DEBUG: data.session_url is falsy. Value:', data.session_url, 'Type:', typeof data.session_url);
-        throw new Error('No checkout URL returned');
+        throw new Error('URL da sessão não encontrada na resposta');
       }
     } catch (error: any) {
       console.error('Checkout error:', error);
-      onError?.(error.message || 'An error occurred during checkout');
+      setError(error.message || 'Erro ao processar checkout');
+      onError?.(error.message || 'Erro ao processar checkout');
     } finally {
       setLoading(false);
     }
@@ -179,21 +231,29 @@ Deseja continuar com o checkout?`;
   return (
     <>
       <button
-        onClick={handleCheckout}
-        disabled={loading || disabled}
-        className={`bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all duration-300 font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+        onClick={handleCheckoutClick}
+        disabled={disabled || loading}
+        className={`${className} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        {loading ? (
-          <div className="flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Processing...
-          </div>
-        ) : (
-          buttonText
-        )}
+        {loading ? 'Processing...' : buttonText}
       </button>
+
+      {/* Pre-Checkout Modal para Selection Process */}
+      {showPreCheckoutModal && (
+        <PreCheckoutModal
+          isOpen={showPreCheckoutModal}
+          onClose={() => setShowPreCheckoutModal(false)}
+          onProceedToCheckout={handlePreCheckoutProceed}
+          feeType={feeType}
+          productName={product.name}
+          productPrice={feeType === 'selection_process' ? 50 : 350}
+        />
+      )}
+
       {error && (
-        <p className="text-red-500 mt-2">{error}</p>
+        <div className="mt-2 text-red-600 text-sm">
+          {error}
+        </div>
       )}
     </>
   );

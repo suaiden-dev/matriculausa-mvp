@@ -82,8 +82,6 @@ const Overview: React.FC<OverviewProps> = ({
   onApplyScholarship,
   recentApplications = []
 }) => {
-  console.log('🔍 [Overview] Componente Overview renderizando');
-  
   const { activeDiscount, testReferralCode } = useReferralCode();
   
   const formatAmount = (amount: number) => {
@@ -340,7 +338,7 @@ const Overview: React.FC<OverviewProps> = ({
                 feeType="selection_process"
                 paymentType="selection_process"
                 buttonText="Start Selection Process"
-                className="border-2 border-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white"
                 successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                 cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
               />
