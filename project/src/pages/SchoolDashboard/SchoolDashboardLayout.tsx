@@ -46,7 +46,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
 
   const getActiveTab = () => {
     const path = location.pathname;
-    if (path.includes('/scholarships')) return 'scholarships';
+    // Consider both listing and creation routes as "scholarships"
+    if (path.includes('/scholarships') || path.includes('/scholarship/')) return 'scholarships';
     if (path.includes('/profile')) return 'profile';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/students')) return 'students';

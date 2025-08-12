@@ -29,6 +29,7 @@ import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import WelcomeDiscountModal from '../../components/WelcomeDiscountModal';
+import ManualReview from './manual-review';
 
 interface StudentProfile {
   id: string;
@@ -389,6 +390,7 @@ const StudentDashboard: React.FC = () => {
           <Route path="application-fee" element={<ApplicationFeePage />} />
           <Route path="rewards" element={<MatriculaRewards />} />
           <Route path="rewards/store" element={<RewardsStore />} />
+          <Route path="manual-review" element={<ManualReview />} />
         </Routes>
         
         {/* Fase 5: Modal de Parabéns para Código de Referência */}
