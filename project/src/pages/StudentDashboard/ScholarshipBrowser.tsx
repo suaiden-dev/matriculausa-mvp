@@ -55,9 +55,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
   const [deadlineDays, setDeadlineDays] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filtersApplied, setFiltersApplied] = useState(false);
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
 
   // Estados para filtros aplicados (separados dos valores dos campos)
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -69,42 +68,54 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [appliedMaxValue, setAppliedMaxValue] = useState('');
   const [appliedDeadlineDays, setAppliedDeadlineDays] = useState('');
 
-  // Removida a sincronização automática - agora os filtros são aplicados apenas manualmente
-
   // Função para aplicar filtros manualmente
-  const applyFilters = () => {
+  const applyFilters = (e?: React.MouseEvent) => {
+    // Prevenir qualquer comportamento padrão
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    setIsApplyingFilters(true);
+    
     // Aplicar todos os filtros de uma vez
-    setAppliedSearch(searchTerm);
+    setAppliedSearch(searchTerm.trim());
     setAppliedLevel(selectedLevel);
     setAppliedField(selectedField);
     setAppliedDeliveryMode(selectedDeliveryMode);
     setAppliedWorkPermission(selectedWorkPermission);
-    setAppliedMinValue(minValue);
-    setAppliedMaxValue(maxValue);
-    setAppliedDeadlineDays(deadlineDays);
+    setAppliedMinValue(minValue.trim());
+    setAppliedMaxValue(maxValue.trim());
+    setAppliedDeadlineDays(deadlineDays.trim());
     
     setFiltersApplied(true);
     
     // Feedback visual
-    setTimeout(() => setFiltersApplied(false), 2000);
+    setTimeout(() => {
+      setFiltersApplied(false);
+      setIsApplyingFilters(false);
+    }, 1500);
     
     // Log para debug
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Filters applied manually:', {
-        search: searchTerm,
-        level: selectedLevel,
-        field: selectedField,
-        deliveryMode: selectedDeliveryMode,
-        workPermission: selectedWorkPermission,
-        minValue,
-        maxValue,
-        deadlineDays
-      });
-    }
+    console.log('🔍 Filters applied:', {
+      search: searchTerm.trim(),
+      level: selectedLevel,
+      field: selectedField,
+      deliveryMode: selectedDeliveryMode,
+      workPermission: selectedWorkPermission,
+      minValue: minValue.trim(),
+      maxValue: maxValue.trim(),
+      deadlineDays: deadlineDays.trim()
+    });
   };
 
   // Função para limpar todos os filtros
-  const clearAllFilters = () => {
+  const clearAllFilters = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     // Limpar valores dos campos
     setSearchTerm('');
     setSelectedLevel('all');
@@ -126,7 +137,10 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     setAppliedDeadlineDays('');
     
     setFiltersApplied(false);
+    setIsApplyingFilters(false);
     localStorage.removeItem('scholarshipFilters');
+    
+    console.log('🗑️ All filters cleared');
   };
 
   // Função para preservar os valores dos filtros
@@ -141,8 +155,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       selectedWorkPermission,
       minValue,
       maxValue,
-      deadlineDays,
-      debouncedSearch
+      deadlineDays
     };
   };
 
@@ -202,19 +215,30 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   }, []);
 
-  // Limpeza do timeout ao desmontar o componente
+  // Log quando os filtros aplicados mudam
   useEffect(() => {
-    return () => {
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current);
-      }
-    };
-  }, []);
+    if (appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || appliedMinValue || appliedMaxValue || appliedDeadlineDays) {
+      console.log('📊 Active applied filters:', {
+        search: appliedSearch,
+        level: appliedLevel,
+        field: appliedField,
+        deliveryMode: appliedDeliveryMode,
+        workPermission: appliedWorkPermission,
+        minValue: appliedMinValue,
+        maxValue: appliedMaxValue,
+        deadlineDays: appliedDeadlineDays
+      });
+    }
+  }, [appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays]);
 
   const flyIconRef = useRef<HTMLDivElement | null>(null);
   // Remova o flyAnimation antigo e use Framer Motion
   const [flyingCard, setFlyingCard] = useState<null | { card: any, from: DOMRect, to: DOMRect }>(null);
   const [animating, setAnimating] = useState(false);
+  
+  // Refs para os cards de bolsas (não podem estar dentro do loop)
+  const scholarshipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   // Remover reload automático após pagamento
   // useEffect(() => {
@@ -338,24 +362,32 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   // Memoização dos filtros e ordenação
   const filteredScholarships = useMemo(() => {
+    console.log('🔄 Filtering scholarships with applied filters...');
+    console.log('📚 Total scholarships:', scholarships.length);
+    
     // Busca por múltiplas palavras-chave
     const searchWords = appliedSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    return scholarships.filter(scholarship => {
+    
+    const filtered = scholarships.filter(scholarship => {
       // Busca por palavras-chave
       const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
       const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
+      
       // Filtro de nível
       const matchesLevel = appliedLevel === 'all' || 
         (scholarship.level && typeof scholarship.level === 'string' && scholarship.level.toLowerCase() === appliedLevel.toLowerCase());
+      
       // Filtro de área
       const matchesField = appliedField === 'all' || 
         (scholarship.field_of_study && typeof scholarship.field_of_study === 'string' &&
          scholarship.field_of_study.toLowerCase() === appliedField.toLowerCase()) ||
         (appliedField === 'any' && scholarship.field_of_study === 'any field');
+      
       // Filtro de delivery mode
       const matchesDeliveryMode = appliedDeliveryMode === 'all' || 
         (scholarship.delivery_mode && typeof scholarship.delivery_mode === 'string' && 
          scholarship.delivery_mode.toLowerCase() === appliedDeliveryMode.toLowerCase());
+      
       // Filtro de work permissions
       const matchesWorkPermission = appliedWorkPermission === 'all' || 
         (scholarship.work_permissions && 
@@ -364,19 +396,44 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
          scholarship.work_permissions.some((perm: any) => 
            perm && typeof perm === 'string' && perm.toLowerCase() === appliedWorkPermission.toLowerCase()
          ));
+      
       // Filtro de valor
       const scholarshipValue = scholarship.annual_value_with_scholarship ?? scholarship.amount ?? 0;
-      const minValueNum = appliedMinValue && appliedMinValue.trim() !== '' && !isNaN(Number(appliedMinValue)) ? Number(appliedMinValue) : null;
-      const maxValueNum = appliedMaxValue && appliedMaxValue.trim() !== '' && !isNaN(Number(appliedMaxValue)) ? Number(appliedMaxValue) : null;
+      const minValueNum = appliedMinValue && appliedMinValue !== '' && !isNaN(Number(appliedMinValue)) ? Number(appliedMinValue) : null;
+      const maxValueNum = appliedMaxValue && appliedMaxValue !== '' && !isNaN(Number(appliedMaxValue)) ? Number(appliedMaxValue) : null;
       
       const matchesMin = minValueNum === null || (scholarshipValue >= minValueNum);
       const matchesMax = maxValueNum === null || (scholarshipValue <= maxValueNum);
-      // Filtro de deadline - corrigido para mostrar bolsas com mais dias restantes
+      
+      // Filtro de deadline - mostrar bolsas com pelo menos X dias restantes
       const daysLeft = getDaysUntilDeadline(scholarship.deadline);
-      const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays.trim() !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
+      const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
       const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
-      return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline;
-    }).sort((a, b) => {
+      
+      const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline;
+      
+      // Log detalhado para a primeira bolsa que não passa nos filtros (debug)
+      if (!passes && scholarships.indexOf(scholarship) === 0) {
+        console.log('❌ First scholarship failed filters:', {
+          title: scholarship.title,
+          matchesSearch,
+          matchesLevel,
+          matchesField,
+          matchesDeliveryMode,
+          matchesWorkPermission,
+          matchesMin,
+          matchesMax,
+          matchesDeadline
+        });
+      }
+      
+      return passes;
+    });
+    
+    console.log('✅ Filtered scholarships:', filtered.length);
+    
+    // Ordenação
+    const sorted = filtered.sort((a, b) => {
       switch (sortBy) {
         case 'amount':
           const valueA = a.annual_value_with_scholarship ?? a.amount ?? 0;
@@ -390,6 +447,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           return 0;
       }
     });
+    
+    return sorted;
   }, [scholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, sortBy]);
 
   // Memoização dos IDs aplicados e no carrinho
@@ -457,12 +516,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               placeholder="Search scholarships..."
               value={searchTerm}
               aria-label="Search scholarships"
-              onChange={(e) => {
-                const value = e.target.value;
-                setSearchTerm(value);
-                if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
-                debounceTimeout.current = setTimeout(() => setDebouncedSearch(value), 400);
-              }}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
             />
           </div>
@@ -603,17 +657,25 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         {/* Botões Apply e Clear Filters */}
         <div className="flex justify-start gap-3 mb-4">
           <button
-            onClick={applyFilters}
+            type="button"
+            onClick={(e) => applyFilters(e)}
+            disabled={isApplyingFilters}
             className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 ${
-              (searchTerm !== appliedSearch || selectedLevel !== appliedLevel || selectedField !== appliedField || selectedDeliveryMode !== appliedDeliveryMode || selectedWorkPermission !== appliedWorkPermission || minValue !== appliedMinValue || maxValue !== appliedMaxValue || deadlineDays !== appliedDeadlineDays)
+              (searchTerm.trim() !== appliedSearch || selectedLevel !== appliedLevel || selectedField !== appliedField || selectedDeliveryMode !== appliedDeliveryMode || selectedWorkPermission !== appliedWorkPermission || minValue.trim() !== appliedMinValue || maxValue.trim() !== appliedMaxValue || deadlineDays.trim() !== appliedDeadlineDays)
                 ? filtersApplied 
                   ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
+                  : isApplyingFilters
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white opacity-75'
                   : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
-                : 'bg-gradient-to-r from-slate-400 to-slate-500 text-white cursor-default'
+                : 'bg-gradient-to-r from-slate-400 to-slate-500 text-white cursor-not-allowed'
             }`}
-            disabled={!(searchTerm !== appliedSearch || selectedLevel !== appliedLevel || selectedField !== appliedField || selectedDeliveryMode !== appliedDeliveryMode || selectedWorkPermission !== appliedWorkPermission || minValue !== appliedMinValue || maxValue !== appliedMaxValue || deadlineDays !== appliedDeadlineDays) || filtersApplied}
           >
-            {filtersApplied ? (
+            {isApplyingFilters ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Applying...
+              </>
+            ) : filtersApplied ? (
               <>
                 <CheckCircle className="h-4 w-4" />
                 Filters Applied!
@@ -621,31 +683,23 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             ) : (
               <>
                 <Search className="h-4 w-4" />
-                Apply Filters
+                Apply Filters ({filteredScholarships.length})
               </>
             )}
           </button>
           
           {(appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || appliedMinValue || appliedMaxValue || appliedDeadlineDays) && (
             <button
-              onClick={clearAllFilters}
+              type="button"
+              onClick={(e) => clearAllFilters(e)}
               className="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-200 flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
-              Clear Filters
+              Clear All Filters
             </button>
           )}
         </div>
 
-        {/* Indicador de filtros pendentes */}
-        {(searchTerm !== appliedSearch || selectedLevel !== appliedLevel || selectedField !== appliedField || selectedDeliveryMode !== appliedDeliveryMode || selectedWorkPermission !== appliedWorkPermission || minValue !== appliedMinValue || maxValue !== appliedMaxValue || deadlineDays !== appliedDeadlineDays) && (
-          <div className="text-center mb-4">
-            <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-full text-sm font-medium">
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-              Filters ready to apply - click "Apply Filters"
-            </div>
-          </div>
-        )}
 
         {/* Tags de filtros ativos (apenas os aplicados) */}
         <div className="flex flex-wrap gap-2 mb-2">
@@ -674,13 +728,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           const deadlineStatus = getDeadlineStatus(scholarship.deadline);
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);
-          const addBtnRef = useRef<HTMLButtonElement>(null);
           const layoutId = `scholarship-card-${scholarship.id}`;
-          const cardRef = useRef<HTMLDivElement>(null);
+          
           return (
             <motion.div
               key={scholarship.id}
-              ref={cardRef}
+              ref={(el) => {
+                if (el) scholarshipRefs.current.set(scholarship.id, el);
+              }}
               layoutId={layoutId}
               className={
                 viewMode === 'grid'
@@ -824,7 +879,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 {/* Action Button */}
                 <div className={viewMode === 'grid' ? "mt-6 pt-4 border-t border-slate-100" : "mt-2"}>
                   <button
-                    ref={addBtnRef}
+                    ref={(el) => {
+                      if (el) buttonRefs.current.set(scholarship.id, el);
+                    }}
                     className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
                       inCart 
                         ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
@@ -863,8 +920,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         } else {
                           // ANIMAÇÃO: voar para o chapéu
                           const hat = document.getElementById('floating-cart-hat');
-                          if (cardRef.current && hat) {
-                            const from = cardRef.current.getBoundingClientRect();
+                          const cardElement = scholarshipRefs.current.get(scholarship.id);
+                          if (cardElement && hat) {
+                            const from = cardElement.getBoundingClientRect();
                             const to = hat.getBoundingClientRect();
                             setFlyingCard({ card: scholarship, from, to });
                             setAnimating(true);
@@ -900,21 +958,11 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           <h3 className="text-3xl font-bold text-slate-600 mb-4">No scholarships found</h3>
           <p className="text-slate-500 text-lg mb-8">Try adjusting your search criteria or clear filters to discover more opportunities.</p>
           <button 
-            onClick={() => {
-              setSearchTerm('');
-              setDebouncedSearch('');
-              setSelectedLevel('all');
-              setSelectedField('all');
-              setSelectedDeliveryMode('all');
-              setSelectedWorkPermission('all');
-              setMinValue('');
-              setMaxValue('');
-              setDeadlineDays('');
-              localStorage.removeItem('scholarshipFilters');
-            }}
+            type="button"
+            onClick={(e) => clearAllFilters(e)}
             className="bg-blue-600 text-white px-8 py-3 rounded-2xl hover:bg-blue-700 transition-all duration-300 font-bold"
           >
-            Clear filters
+            Clear All Filters
           </button>
         </div>
       )}
