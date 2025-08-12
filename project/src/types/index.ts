@@ -55,6 +55,7 @@ export interface Scholarship {
   original_annual_value?: number;
   annual_value_with_scholarship?: number;
   scholarship_type?: string;
+  work_permissions?: string[];
   // Algumas consultas retornam também um campo denormalizado com o nome da universidade
   // Usado como fallback quando o relacionamento "universities" não está carregado
   university_name?: string;

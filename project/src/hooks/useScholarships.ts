@@ -16,14 +16,43 @@ export function useScholarships() {
       }
       
       // Buscar user_id do usuário autenticado
-      const session = supabase.auth.session ? supabase.auth.session() : await supabase.auth.getSession();
-      const userId = session?.user?.id || session?.data?.session?.user?.id;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
       if (!userId) {
         // Visitante: buscar todas as bolsas ativas e o nome da universidade
         const { data, error } = await supabase
           .from('scholarships')
-          .select('*, universities (id, name, logo_url, location, is_approved)')
+          .select(`
+            id,
+            title,
+            description,
+            amount,
+            deadline,
+            requirements,
+            field_of_study,
+            level,
+            delivery_mode,
+            eligibility,
+            benefits,
+            is_exclusive,
+            is_active,
+            university_id,
+            created_at,
+            updated_at,
+            needcpt,
+            visaassistance,
+            scholarshipvalue,
+            image_url,
+            original_value_per_credit,
+            original_annual_value,
+            annual_value_with_scholarship,
+            scholarship_type,
+            work_permissions,
+            university_name,
+            universities (id, name, logo_url, location, is_approved)
+          `)
           .eq('is_active', true);
+        
         if (error) {
           setError(error.message);
           setScholarships([]);
@@ -34,8 +63,40 @@ export function useScholarships() {
         setHasLoadedData(true);
         return;
       }
-      // Chamar a função RPC
-      const { data, error } = await supabase.rpc('get_scholarships_protected', { p_user_id: userId });
+      
+      // Usuário autenticado: buscar todas as bolsas ativas com todos os campos
+      const { data, error } = await supabase
+        .from('scholarships')
+        .select(`
+          id,
+          title,
+          description,
+          amount,
+          deadline,
+          requirements,
+          field_of_study,
+          level,
+          delivery_mode,
+          eligibility,
+          benefits,
+          is_exclusive,
+          is_active,
+          university_id,
+          created_at,
+          updated_at,
+          needcpt,
+          visaassistance,
+          scholarshipvalue,
+          image_url,
+          original_value_per_credit,
+          original_annual_value,
+          annual_value_with_scholarship,
+          scholarship_type,
+          work_permissions,
+          universities (id, name, logo_url, location, is_approved)
+        `)
+        .eq('is_active', true);
+        
       if (error) {
         setError(error.message);
         setScholarships([]);
@@ -47,6 +108,5 @@ export function useScholarships() {
     }
     fetchScholarships();
   }, [hasLoadedData]);
-
   return { scholarships, loading, error };
 } 
