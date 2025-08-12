@@ -151,33 +151,8 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
           New Global Request
         </button>
       </div>
-<<<<<<< Updated upstream
       {loading ? <div>Loading...</div> : null}
-      {!loading && !userProfile?.university_id && (
-=======
-      
-      {/* Warning when university is not approved */}
-      {!isUniversityApproved && (
-        <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 rounded">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-amber-800">University Approval Required</h3>
-              <p className="mt-1 text-sm text-amber-700">
-                Your university is currently pending approval. Once approved by our team, you'll be able to create global document requests. 
-                Please contact support if you need assistance with the approval process.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {!loading && !userProfile?.university_id && requests.length === 0 && (
->>>>>>> Stashed changes
         <div className="text-gray-500 mb-2">No university found for this user.</div>
       )}
       <ul className="space-y-4">
