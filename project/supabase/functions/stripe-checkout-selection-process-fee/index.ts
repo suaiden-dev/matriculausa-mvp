@@ -128,7 +128,8 @@ Deno.serve(async (req) => {
       success_url: success_url,
       cancel_url: cancel_url,
       metadata: sessionMetadata,
-      allow_promotion_codes: true,
+      // Só permite códigos de promoção se não houver desconto aplicado
+      allow_promotion_codes: !activeDiscount || !activeDiscount.stripe_coupon_id,
     };
 
     console.log('[stripe-checkout-selection-process-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
@@ -140,6 +141,8 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       
       sessionConfig.discounts = [{ coupon: activeDiscount.stripe_coupon_id }];
+      // Remove allow_promotion_codes quando há desconto aplicado
+      delete sessionConfig.allow_promotion_codes;
       
       sessionMetadata.referral_discount = true;
       sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
