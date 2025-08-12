@@ -95,13 +95,11 @@ const ScholarshipManagement: React.FC = () => {
       {/* Header with Actions */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Manage Scholarships</h2>
-          <p className="text-slate-600">
-            {scholarships.length > 0 
-              ? `${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`
-              : 'No scholarships created yet'
-            }
-          </p>
+          {scholarships.length > 0 && (
+            <p className="text-slate-600">
+              {`${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`}
+            </p>
+          )}
         </div>
         
         <Link

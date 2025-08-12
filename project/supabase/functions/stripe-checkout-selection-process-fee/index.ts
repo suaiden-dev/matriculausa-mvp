@@ -31,25 +31,46 @@ function corsResponse(body: string | object | null, status = 200) {
 
 Deno.serve(async (req) => {
   try {
+    console.log('[stripe-checkout-selection-process-fee] 🚀 Iniciando função');
+    
     if (req.method === 'OPTIONS') {
       return corsResponse(null, 204);
     }
 
+    // Verificar se as variáveis de ambiente estão configuradas
+    if (!Deno.env.get('STRIPE_SECRET_KEY')) {
+      console.error('[stripe-checkout-selection-process-fee] ❌ STRIPE_SECRET_KEY não configurada');
+      return corsResponse({ error: 'Stripe configuration error' }, 500);
+    }
+
+    if (!Deno.env.get('SUPABASE_URL') || !Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+      console.error('[stripe-checkout-selection-process-fee] ❌ Variáveis do Supabase não configuradas');
+      return corsResponse({ error: 'Supabase configuration error' }, 500);
+    }
+
+    console.log('[stripe-checkout-selection-process-fee] ✅ Variáveis de ambiente verificadas');
+
     const { price_id, success_url, cancel_url, mode, metadata } = await req.json();
+    
+    console.log('[stripe-checkout-selection-process-fee] 📥 Payload recebido:', { price_id, success_url, cancel_url, mode, metadata });
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[stripe-checkout-selection-process-fee] ❌ Header de autorização não encontrado');
       return corsResponse({ error: 'No authorization header' }, 401);
     }
 
     const token = authHeader.replace('Bearer ', '');
+    console.log('[stripe-checkout-selection-process-fee] 🔑 Token extraído, verificando usuário...');
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('[stripe-checkout-selection-process-fee] ❌ Erro de autenticação:', authError);
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
-    console.log('[stripe-checkout-selection-process-fee] Received payload:', { price_id, success_url, cancel_url, mode, metadata });
+    console.log('[stripe-checkout-selection-process-fee] ✅ Usuário autenticado:', user.id);
 
     // Monta o metadata mínimo
     const sessionMetadata = {
@@ -59,10 +80,12 @@ Deno.serve(async (req) => {
       ...metadata,
     };
 
-    // NOVO: Verificar se usuário tem desconto ativo
+    console.log('[stripe-checkout-selection-process-fee] �� Metadata da sessão:', sessionMetadata);
+
+    // Verificar se usuário tem desconto ativo
     let activeDiscount = null;
     try {
-      console.log('[stripe-checkout-selection-process-fee] 🎯 VERIFICANDO DESCONTO PARA USUÁRIO');
+      console.log('[stripe-checkout-selection-process-fee] �� VERIFICANDO DESCONTO PARA USUÁRIO');
       console.log('[stripe-checkout-selection-process-fee] User ID:', user.id);
       console.log('[stripe-checkout-selection-process-fee] User Email:', user.email);
       
@@ -107,13 +130,17 @@ Deno.serve(async (req) => {
       metadata: sessionMetadata,
     };
 
+    console.log('[stripe-checkout-selection-process-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
+
     // Aplica desconto se houver
     if (activeDiscount && activeDiscount.stripe_coupon_id) {
-      console.log('[stripe-checkout-selection-process-fee] 🎯 APLICANDO DESCONTO');
+      console.log('[stripe-checkout-selection-process-fee] �� APLICANDO DESCONTO');
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       
       sessionConfig.discounts = [{ coupon: activeDiscount.stripe_coupon_id }];
+      // Remove allow_promotion_codes quando há desconto aplicado
+      delete sessionConfig.allow_promotion_codes;
       
       sessionMetadata.referral_discount = true;
       sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
@@ -121,19 +148,44 @@ Deno.serve(async (req) => {
       sessionMetadata.discount_amount = activeDiscount.discount_amount;
       
       console.log('[stripe-checkout-selection-process-fee] ✅ Desconto aplicado na sessão!');
+      console.log('[stripe-checkout-selection-process-fee] 📋 Metadata atualizada:', sessionMetadata);
     } else {
       console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto para aplicar');
       // Só permite códigos de promoção se não houver desconto aplicado
       sessionConfig.allow_promotion_codes = true;
     }
 
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    console.log('[stripe-checkout-selection-process-fee] 🚀 Criando sessão do Stripe...');
+    
+    try {
+      const session = await stripe.checkout.sessions.create(sessionConfig);
+      console.log('[stripe-checkout-selection-process-fee] ✅ Sessão Stripe criada com sucesso!');
+      console.log('[stripe-checkout-selection-process-fee] Session ID:', session.id);
+      console.log('[stripe-checkout-selection-process-fee] Session URL:', session.url);
+      console.log('[stripe-checkout-selection-process-fee] Metadata da sessão:', session.metadata);
 
-    console.log('[stripe-checkout-selection-process-fee] Created Stripe session with metadata:', session.metadata);
+      return corsResponse({ session_url: session.url }, 200);
+    } catch (stripeError: any) {
+      console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao criar sessão Stripe:', stripeError);
+      console.error('[stripe-checkout-selection-process-fee] Stripe Error Type:', stripeError.type);
+      console.error('[stripe-checkout-selection-process-fee] Stripe Error Message:', stripeError.message);
+      console.error('[stripe-checkout-selection-process-fee] Stripe Error Code:', stripeError.code);
+      
+      return corsResponse({ 
+        error: 'Failed to create Stripe checkout session',
+        details: stripeError.message,
+        code: stripeError.code 
+      }, 500);
+    }
 
-    return corsResponse({ session_url: session.url }, 200);
-  } catch (error) {
-    console.error('Checkout error:', error);
-    return corsResponse({ error: 'Failed to create checkout session' }, 500);
+  } catch (error: any) {
+    console.error('[stripe-checkout-selection-process-fee] ❌ Erro geral na função:', error);
+    console.error('[stripe-checkout-selection-process-fee] Error Stack:', error.stack);
+    console.error('[stripe-checkout-selection-process-fee] Error Message:', error.message);
+    
+    return corsResponse({ 
+      error: 'Internal server error',
+      details: error.message 
+    }, 500);
   }
-}); 
+});

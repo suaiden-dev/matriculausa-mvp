@@ -11,6 +11,8 @@ interface DocumentRequest {
   attachment_url?: string;
   status: string;
   created_at: string;
+  created_by?: string;
+  applicable_student_types?: string[];
 }
 
 const UniversityGlobalDocumentRequests: React.FC = () => {
@@ -28,6 +30,15 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
   ];
   const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: ['all'] });
   const [creating, setCreating] = useState(false);
+  // Edição
+  const [editingRequest, setEditingRequest] = useState<DocumentRequest | null>(null);
+  const [editForm, setEditForm] = useState<{ title: string; description: string; attachment: File | null; applicable_student_types: string[]; status: 'open' | 'closed' }>({
+    title: '',
+    description: '',
+    attachment: null,
+    applicable_student_types: ['all'],
+    status: 'open',
+  });
 
   // Verificar se a universidade está aprovada
   const isUniversityApproved = university?.is_approved === true;
@@ -191,21 +202,41 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
       )}
       
       {loading ? <div>Loading...</div> : null}
-      {!loading && !userProfile?.university_id && (
+      {!loading && !userProfile?.university_id && requests.length === 0 && (
         <div className="text-gray-500 mb-2">No university found for this user.</div>
       )}
-      {!loading && userProfile?.university_id && requests.length === 0 && (
-        <div className="text-red-500 font-bold">No global requests found. (DEBUG: Nenhum registro retornado do banco. Veja o console para detalhes.)</div>
-      )}
-      {error && <div className="text-red-500 mb-2">{error}</div>}
       <ul className="space-y-4">
         {requests.map(req => (
           <li key={req.id} className="bg-slate-50 p-4 rounded shadow flex flex-col gap-1">
-            <span className="font-semibold">{req.title || ''}</span>
-            <span className="text-sm text-gray-600">{req.description || ''}</span>
-            {req.due_date && <span className="text-xs text-gray-500">Due date: {req.due_date}</span>}
-            <span className="text-xs text-gray-400">Created at: {req.created_at ? new Date(req.created_at).toLocaleString() : ''}</span>
-            <span className="text-xs text-gray-400">Status: {req.status || ''}</span>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <span className="font-semibold">{req.title || ''}</span>
+                <span className="block text-sm text-gray-600">{req.description || ''}</span>
+                {req.due_date && <span className="block text-xs text-gray-500">Due date: {req.due_date}</span>}
+                <span className="block text-xs text-gray-400">Created at: {req.created_at ? new Date(req.created_at).toLocaleString() : ''}</span>
+                <span className="block text-xs text-gray-400">Status: {req.status || ''}</span>
+              </div>
+              {userProfile?.user_id && req.created_by === userProfile.user_id && (
+                <button
+                  className="text-blue-600 text-sm font-semibold px-3 py-1 rounded border border-blue-200 hover:bg-blue-50 self-start"
+                  onClick={() => {
+                    setEditingRequest(req);
+                    setEditForm({
+                      title: req.title || '',
+                      description: req.description || '',
+                      attachment: null,
+                      applicable_student_types: Array.isArray(req.applicable_student_types) && req.applicable_student_types.length > 0
+                        ? req.applicable_student_types!
+                        : ['all'],
+                      status: (req.status as 'open' | 'closed') || 'open',
+                    });
+                  }}
+                  title="Edit this global request"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>
@@ -315,6 +346,173 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
               </button>
               <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold transition" onClick={() => setShowNewModal(false)} disabled={creating}>
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de edição de request global */}
+      {editingRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg border border-slate-200 animate-fade-in">
+            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">Edit Global Document Request</h3>
+            {error && <div className="text-red-500 mb-4 text-center font-semibold">{error}</div>}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="edit-title">Title <span className="text-red-500">*</span></label>
+                <input
+                  id="edit-title"
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
+                  placeholder="Enter document title"
+                  value={editForm.title}
+                  onChange={e => setEditForm(r => ({ ...r, title: e.target.value }))}
+                  disabled={creating}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="edit-desc">Description</label>
+                <textarea
+                  id="edit-desc"
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base min-h-[60px] resize-vertical"
+                  placeholder="Describe the document or instructions (optional)"
+                  value={editForm.description}
+                  onChange={e => setEditForm(r => ({ ...r, description: e.target.value }))}
+                  disabled={creating}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Applicable Student Types <span className="text-red-500">*</span></label>
+                <div className="flex flex-col gap-2">
+                  {STUDENT_TYPE_OPTIONS.map(opt => (
+                    <label key={opt.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          opt.value === 'all'
+                            ? editForm.applicable_student_types.length === STUDENT_TYPE_OPTIONS.length - 1
+                            : editForm.applicable_student_types.includes(opt.value)
+                        }
+                        onChange={e => {
+                          if (opt.value === 'all') {
+                            if (e.target.checked) {
+                              setEditForm(r => ({ ...r, applicable_student_types: STUDENT_TYPE_OPTIONS.filter(o => o.value !== 'all').map(o => o.value) }));
+                            } else {
+                              setEditForm(r => ({ ...r, applicable_student_types: [] }));
+                            }
+                          } else {
+                            setEditForm(r => {
+                              const next = r.applicable_student_types.includes(opt.value)
+                                ? r.applicable_student_types.filter(v => v !== opt.value)
+                                : [...r.applicable_student_types, opt.value];
+                              return { ...r, applicable_student_types: next };
+                            });
+                          }
+                        }}
+                        disabled={creating}
+                        className={opt.value === 'all' ? 'accent-blue-600 font-bold' : editForm.applicable_student_types.includes(opt.value) ? 'accent-blue-600' : ''}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="edit-status">Status</label>
+                <select
+                  id="edit-status"
+                  className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
+                  value={editForm.status}
+                  onChange={e => setEditForm(r => ({ ...r, status: e.target.value as 'open' | 'closed' }))}
+                  disabled={creating}
+                >
+                  <option value="open">open</option>
+                  <option value="closed">closed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="edit-attachment">Attachment</label>
+                <div className="flex items-center gap-3">
+                  <label htmlFor="edit-attachment" className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" /></svg>
+                    <span>{editForm.attachment ? 'Change file' : 'Select file'}</span>
+                    <input
+                      id="edit-attachment"
+                      type="file"
+                      className="sr-only"
+                      onChange={e => setEditForm(r => ({ ...r, attachment: e.target.files ? e.target.files[0] : null }))}
+                      disabled={creating}
+                    />
+                  </label>
+                  {editingRequest.attachment_url && !editForm.attachment && (
+                    <span className="text-xs text-slate-500">Current: {editingRequest.attachment_url.split('/').pop()}</span>
+                  )}
+                  {editForm.attachment && (
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{editForm.attachment.name}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8 justify-center">
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold transition" onClick={() => { setEditingRequest(null); setEditForm({ title: '', description: '', attachment: null, applicable_student_types: ['all'], status: 'open' }); }} disabled={creating}>
+                Cancel
+              </button>
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={async () => {
+                  if (!editingRequest) return;
+                  if (!editForm.title) { setError('Title is required'); return; }
+                  setCreating(true);
+                  setError(null);
+                  try {
+                    let attachment_url: string | undefined = editingRequest.attachment_url;
+                    if (editForm.attachment) {
+                      const { data, error } = await supabase.storage.from('document-attachments').upload(`global/${Date.now()}_${editForm.attachment.name}`, editForm.attachment);
+                      if (error) {
+                        setError('Failed to upload attachment: ' + error.message);
+                        setCreating(false);
+                        return;
+                      }
+                      attachment_url = data?.path;
+                    }
+                    const updatePayload: any = {
+                      title: editForm.title,
+                      description: editForm.description,
+                      applicable_student_types: editForm.applicable_student_types,
+                      attachment_url,
+                      status: editForm.status,
+                    };
+                    const { error: updError } = await supabase
+                      .from('document_requests')
+                      .update(updatePayload)
+                      .eq('id', editingRequest.id)
+                      .eq('is_global', true)
+                      .eq('university_id', userProfile?.university_id || '')
+                      .eq('created_by', userProfile?.user_id || '');
+                    if (updError) {
+                      setError('Failed to update request: ' + updError.message);
+                      setCreating(false);
+                      return;
+                    }
+                    // Recarregar lista
+                    const { data: updated } = await supabase
+                      .from('document_requests')
+                      .select('*')
+                      .eq('is_global', true)
+                      .eq('university_id', userProfile?.university_id)
+                      .order('created_at', { ascending: false });
+                    setRequests(updated || []);
+                    setEditingRequest(null);
+                    setEditForm({ title: '', description: '', attachment: null, applicable_student_types: ['all'], status: 'open' });
+                  } catch (e: any) {
+                    setError('Unexpected error: ' + (e.message || e));
+                  } finally {
+                    setCreating(false);
+                  }
+                }}
+                disabled={creating}
+              >
+                Save Changes
               </button>
             </div>
           </div>

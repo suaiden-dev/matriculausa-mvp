@@ -18,6 +18,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { user, updateUserProfile, userProfile } = useAuth();
   const navigate = useNavigate();
 
@@ -33,6 +34,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
 
   const handleFileChange = (type: string, file: File | null) => {
     setFiles((prev) => ({ ...prev, [type]: file }));
+    // Limpa o erro do campo ao selecionar um novo arquivo
+    setFieldErrors(prev => ({ ...prev, [type]: '' }));
   };
 
   const handleUpload = async () => {
@@ -80,7 +83,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
       setAnalyzing(true);
       const webhookBody = {
         user_id: user.id,
-        student_name: userProfile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email || '',
+        student_name: userProfile?.full_name || (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || user.email || '',
         passport_url: docUrls['passport'],
         diploma_url: docUrls['diploma'],
         funds_proof_url: docUrls['funds_proof'],
@@ -111,7 +114,20 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
         n8nData = webhookResult;
       }
       if (n8nData) {
-        const allValid = n8nData.response_passaport === true && n8nData.response_funds === true && n8nData.response_degree === true;
+        // Normalize boolean and error-string responses
+        const respPassport = n8nData.response_passaport;
+        const respFunds = n8nData.response_funds;
+        const respDegree = n8nData.response_degree;
+
+        const passportOk = respPassport === true;
+        const fundsOk = respFunds === true;
+        const degreeOk = respDegree === true;
+
+        const passportErr = typeof respPassport === 'string' ? respPassport : (passportOk ? '' : (n8nData.details_passport || 'Invalid document.'));
+        const fundsErr = typeof respFunds === 'string' ? respFunds : (fundsOk ? '' : (n8nData.details_funds || 'Invalid document.'));
+        const degreeErr = typeof respDegree === 'string' ? respDegree : (degreeOk ? '' : (n8nData.details_degree || 'Invalid document.'));
+
+        const allValid = passportOk && fundsOk && degreeOk;
         if (allValid) {
           await supabase
             .from('user_profiles')
@@ -122,28 +138,35 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
             })
             .eq('user_id', user.id);
           setAnalyzing(false);
+          setFieldErrors({});
           onUploadSuccess();
           navigate('/student/dashboard/application-fee');
         } else {
-          // Monta mensagem de erro detalhada
-          let errorMsg = 'Some documents need to be re-uploaded:';
-          if (!n8nData.response_passaport) {
-            errorMsg += `\n- Passport: ${n8nData.details_passport || 'Invalid document.'}`;
+          // Define erros por campo para exibir abaixo de cada input
+          const nextFieldErrors: Record<string, string> = { ...fieldErrors };
+          if (!passportOk && (passportErr || respPassport !== undefined)) {
+            nextFieldErrors['passport'] = passportErr || 'Invalid document.';
           }
-          if (!n8nData.response_funds) {
-            errorMsg += `\n- Proof of Funds: ${n8nData.details_funds || 'Invalid document.'}`;
+          if (!fundsOk && (fundsErr || respFunds !== undefined)) {
+            nextFieldErrors['funds_proof'] = fundsErr || 'Invalid document.';
           }
-          if (!n8nData.response_degree) {
-            errorMsg += `\n- High School Diploma: ${n8nData.details_degree || 'Invalid document.'}`;
+          if (!degreeOk && (degreeErr || respDegree !== undefined)) {
+            nextFieldErrors['diploma'] = degreeErr || 'Invalid document.';
           }
           setAnalyzing(false);
-          setError(errorMsg);
+          setError(null);
+          setFieldErrors(nextFieldErrors);
+          // Persist context for manual review step
+          try {
+            window.localStorage.setItem('documentAnalysisErrors', JSON.stringify(nextFieldErrors));
+            window.localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
+          } catch {}
           // Limpa apenas os arquivos inválidos para reenvio
           setFiles(prev => {
             const updated = { ...prev };
-            if (!n8nData.response_passaport) updated['passport'] = null;
-            if (!n8nData.response_funds) updated['funds_proof'] = null;
-            if (!n8nData.response_degree) updated['diploma'] = null;
+            if (!passportOk && (passportErr || respPassport !== undefined)) updated['passport'] = null;
+            if (!fundsOk && (fundsErr || respFunds !== undefined)) updated['funds_proof'] = null;
+            if (!degreeOk && (degreeErr || respDegree !== undefined)) updated['diploma'] = null;
             return updated;
           });
         }
@@ -185,10 +208,22 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
                 className="border border-slate-200 rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition text-sm"
               />
               {files[doc.key] && <span className="text-xs text-slate-500 mt-1 truncate max-w-full">{files[doc.key]?.name}</span>}
+              {fieldErrors[doc.key] && (
+                <span className="text-xs text-red-500 mt-1">{fieldErrors[doc.key]}</span>
+              )}
             </div>
           ))}
         </div>
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+        {Object.values(fieldErrors).some(Boolean) && (
+          <button
+            onClick={() => navigate('/student/dashboard/manual-review')}
+            disabled={analyzing}
+            className="w-full py-2 rounded-2xl font-bold text-base bg-amber-500 hover:bg-amber-600 text-white shadow-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+          >
+            Continue to Manual Review
+          </button>
+        )}
         <button
           onClick={handleUpload}
           disabled={uploading || !allFilesSelected || analyzing}

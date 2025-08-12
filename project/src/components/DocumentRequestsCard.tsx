@@ -142,6 +142,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           .order('created_at', { ascending: false });
         if (globalError) throw globalError;
         globalRequests = (globalData || []).filter((req: any) => {
+          // Ocultar para estudantes quando status estiver fechado
+          if (!isSchool && (req.status || '').toLowerCase() === 'closed') return false;
           // Se não houver applicable_student_types ou não for array, mostra para todos
           if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types) || req.applicable_student_types.length === 0) return true;
           // Se o tipo do estudante estiver incluso, mostra
