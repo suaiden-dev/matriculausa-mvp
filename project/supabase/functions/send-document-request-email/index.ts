@@ -2,11 +2,16 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
-// Configurações do MailerSend
-const mailerSendApiKey = 'mlsn.b2e23b41cf2afd47427c4cd02eb718ca04baaa4e18b2b4ef835ff1f88f4c93b8'; // Troque para variável de ambiente em produção
-const mailerSendUrl = 'https://api.mailersend.com/v1/email';
-const fromEmail = 'support@matriculausa.com';
-const fromName = 'Matrícula USA';
+// Validação das variáveis de ambiente obrigatórias
+const mailerSendApiKey = Deno.env.get('MAILERSEND_API_KEY');
+if (!mailerSendApiKey) {
+  throw new Error('Missing required environment variable: MAILERSEND_API_KEY');
+}
+
+// Configurações do MailerSend com fallbacks
+const mailerSendUrl = Deno.env.get('MAILERSEND_URL') || 'https://api.mailersend.com/v1/email';
+const fromEmail = Deno.env.get('FROM_EMAIL') || 'support@matriculausa.com';
+const fromName = Deno.env.get('FROM_NAME') || 'Matrícula USA';
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
