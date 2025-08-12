@@ -395,6 +395,7 @@ interface EmailTab {
 const Inbox: React.FC = () => {
   const { user } = useAuth();
   const { university } = useUniversity();
+  
   const { connections, activeConnection, loading: isConnecting, connectGmail, disconnectGmail, setActiveConnection, checkConnections } = useGmailConnection();
   const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails, clearEmails, autoRefreshStatus, checkUnreadEmails } = useGmail();
   
@@ -721,6 +722,21 @@ const Inbox: React.FC = () => {
     }
   }, [activeConnection?.email, updateEmailCounts]);
 
+  // PRIMEIRO: Verificar se o perfil está completo ANTES de qualquer outra verificação
+  // Se perfil não estiver completo, mostrar o guard ANTES de qualquer verificação de email
+  if (university?.profile_completed !== true) {
+    return (
+      <ProfileCompletionGuard 
+        isProfileCompleted={university?.profile_completed}
+        title="Profile setup required"
+        description="Complete your university profile to start creating and managing scholarships"
+      >
+        {/* Este conteúdo nunca será renderizado porque o guard sempre mostrará a tela de setup */}
+        <div></div>
+      </ProfileCompletionGuard>
+    );
+  }
+
   // Se mostrar integração de email, renderizar a página de integração
   if (showEmailIntegration) {
     return (
@@ -902,12 +918,9 @@ const Inbox: React.FC = () => {
     );
   }
 
+  // Se chegou até aqui, o perfil está completo e a conexão Gmail está ativa
+  // Renderizar a interface principal do Inbox
   return (
-    <ProfileCompletionGuard 
-      isProfileCompleted={university?.profile_completed}
-      title="Profile setup required"
-      description="Complete your university profile to start creating and managing scholarships"
-    >
       <div className="min-h-screen bg-gray-50">
         <style>{tabScrollStyles}</style>
         <div className="min-h-screen flex flex-col">
@@ -923,7 +936,6 @@ const Inbox: React.FC = () => {
               onShowEmailIntegration={() => setShowEmailIntegration(true)}
               onShowManageConnections={() => setShowManageConnections(true)}
               connection={activeConnection}
-              autoRefreshStatus={autoRefreshStatus}
               onAccountChange={(email) => {
                 console.log('🔄 Inbox: onAccountChange called with:', email);
                 console.log('🔄 Inbox: Current activeConnection before change:', activeConnection?.email);
@@ -989,7 +1001,7 @@ const Inbox: React.FC = () => {
                 {activeTab === 'knowledge' ? (
                   <div className="flex-1 p-6 overflow-y-auto">
                     <InboxKnowledgeUpload
-                      universityId={user?.user_metadata?.university_id || user?.user_metadata?.universityId || '09a32358-9210-4da7-b465-556ed429d82a'}
+                      universityId={user?.university_id || university?.id || '09a32358-9210-4da7-b465-556ed429d82a'}
                       onDocumentsChange={setKnowledgeDocuments}
                       existingDocuments={knowledgeDocuments}
                     />
@@ -1061,7 +1073,6 @@ const Inbox: React.FC = () => {
           )}
           </div>
       </div>
-    </ProfileCompletionGuard>
   );
 };
 
