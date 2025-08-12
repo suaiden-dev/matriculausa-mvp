@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../lib/supabase';
+import React from 'react';
 
 interface ReferralCodeResponse {
   success: boolean;
-  discount_amount?: number;
-  stripe_coupon_id?: string;
-  message?: string;
   error?: string;
+  discount_amount?: number;
+  affiliate_code?: string;
   referrer_id?: string;
 }
 
@@ -29,20 +29,14 @@ export const useReferralCode = () => {
   const [activeDiscount, setActiveDiscount] = useState<ActiveDiscount | null>(null);
   const [hasUsedReferralCode, setHasUsedReferralCode] = useState(false);
 
-  // Verificar se usuário já usou código de referência
-  useEffect(() => {
-    if (user) {
-      checkReferralCodeUsage();
-      checkActiveDiscount();
-    }
-  }, [user]);
-
-  const checkReferralCodeUsage = async () => {
+  const checkReferralCodeUsage = useCallback(async () => {
+    if (!user?.id) return;
+    
     try {
       const { data, error } = await supabase
         .from('used_referral_codes')
         .select('id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .limit(1);
 
       if (error) {
@@ -53,30 +47,42 @@ export const useReferralCode = () => {
     } catch (error) {
       console.error('Error checking referral code usage:', error);
     }
-  };
+  }, [user?.id]);
 
-  const checkActiveDiscount = async () => {
+  const checkActiveDiscount = useCallback(async () => {
+    if (!user?.id) return;
+    
     try {
-      const { data, error } = await supabase
-        .rpc('get_user_active_discount', {
-          user_id_param: user?.id
-        });
+      console.log('🔍 [useReferralCode] Verificando desconto ativo para usuário:', user.id);
+      const { data, error } = await supabase.rpc('get_user_active_discount', {
+        user_id_param: user.id
+      });
 
       if (error) {
-        console.error('Error checking active discount:', error);
+        console.error('🔍 [useReferralCode] Erro ao verificar desconto:', error);
       } else {
+        console.log('🔍 [useReferralCode] Resultado da verificação:', data);
         setActiveDiscount(data);
       }
     } catch (error) {
-      console.error('Error checking active discount:', error);
+      console.error('🔍 [useReferralCode] Erro ao verificar desconto:', error);
     }
-  };
+  }, [user?.id]);
 
-  const validateReferralCode = async (affiliateCode: string): Promise<ReferralCodeResponse> => {
+  // Verificar se usuário já usou código de referência
+  useEffect(() => {
+    if (user?.id) {
+      checkReferralCodeUsage();
+      checkActiveDiscount();
+    }
+  }, [user?.id, checkReferralCodeUsage, checkActiveDiscount]);
+
+  const validateReferralCode = useCallback(async (affiliateCode: string): Promise<ReferralCodeResponse> => {
     if (!user) {
       return { success: false, error: 'Usuário não autenticado' };
     }
 
+    console.log('🔍 [useReferralCode] Validando código de referência:', affiliateCode);
     setLoading(true);
     setError(null);
 
@@ -91,30 +97,33 @@ export const useReferralCode = () => {
       });
 
       const result = await response.json();
+      console.log('🔍 [useReferralCode] Resultado da validação:', result);
 
       if (result.success) {
+        console.log('🔍 [useReferralCode] ✅ Código válido, atualizando estado local...');
         // Atualiza o estado local
         setHasUsedReferralCode(true);
         await checkActiveDiscount();
+        console.log('🔍 [useReferralCode] ✅ Estado atualizado com sucesso');
       }
 
       return result;
     } catch (error) {
-      console.error('Error validating referral code:', error);
+      console.error('🔍 [useReferralCode] Erro ao validar código:', error);
       const errorMessage = 'Erro ao validar código de referência';
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, checkActiveDiscount]);
 
-  const getReferralCodeFromURL = (): string | null => {
+  const getReferralCodeFromURL = useCallback((): string | null => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('ref');
-  };
+  }, []);
 
-  const applyReferralCodeFromURL = async (): Promise<ReferralCodeResponse | null> => {
+  const applyReferralCodeFromURL = useCallback(async (): Promise<ReferralCodeResponse | null> => {
     const codeFromURL = getReferralCodeFromURL();
     
     if (!codeFromURL || hasUsedReferralCode) {
@@ -122,17 +131,16 @@ export const useReferralCode = () => {
     }
 
     return await validateReferralCode(codeFromURL);
-  };
+  }, [getReferralCodeFromURL, hasUsedReferralCode, validateReferralCode]);
 
   // Função de teste para debug
-  const testReferralCode = async (testCode: string): Promise<ReferralCodeResponse> => {
+  const testReferralCode = useCallback(async (testCode: string): Promise<ReferralCodeResponse> => {
     console.log('🧪 TESTE: Aplicando código de referência:', testCode);
-    const result = await validateReferralCode(testCode);
-    console.log('🧪 TESTE: Resultado:', result);
-    return result;
-  };
+    return await validateReferralCode(testCode);
+  }, [validateReferralCode]);
 
-  return {
+  // Memoizar o retorno para evitar re-renderizações
+  const memoizedReturn = React.useMemo(() => ({
     loading,
     error,
     activeDiscount,
@@ -140,7 +148,17 @@ export const useReferralCode = () => {
     validateReferralCode,
     getReferralCodeFromURL,
     applyReferralCodeFromURL,
-    checkActiveDiscount,
-    testReferralCode, // Função de teste
-  };
+    testReferralCode
+  }), [
+    loading,
+    error,
+    activeDiscount,
+    hasUsedReferralCode,
+    validateReferralCode,
+    getReferralCodeFromURL,
+    applyReferralCodeFromURL,
+    testReferralCode
+  ]);
+
+  return memoizedReturn;
 };

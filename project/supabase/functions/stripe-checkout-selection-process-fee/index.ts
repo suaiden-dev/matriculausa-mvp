@@ -80,12 +80,12 @@ Deno.serve(async (req) => {
       ...metadata,
     };
 
-    console.log('[stripe-checkout-selection-process-fee] 📋 Metadata da sessão:', sessionMetadata);
+    console.log('[stripe-checkout-selection-process-fee] �� Metadata da sessão:', sessionMetadata);
 
     // Verificar se usuário tem desconto ativo
     let activeDiscount = null;
     try {
-      console.log('[stripe-checkout-selection-process-fee] 🎯 VERIFICANDO DESCONTO PARA USUÁRIO');
+      console.log('[stripe-checkout-selection-process-fee] �� VERIFICANDO DESCONTO PARA USUÁRIO');
       console.log('[stripe-checkout-selection-process-fee] User ID:', user.id);
       console.log('[stripe-checkout-selection-process-fee] User Email:', user.email);
       
@@ -128,15 +128,13 @@ Deno.serve(async (req) => {
       success_url: success_url,
       cancel_url: cancel_url,
       metadata: sessionMetadata,
-      // Só permite códigos de promoção se não houver desconto aplicado
-      allow_promotion_codes: !activeDiscount || !activeDiscount.stripe_coupon_id,
     };
 
     console.log('[stripe-checkout-selection-process-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
 
     // Aplica desconto se houver
     if (activeDiscount && activeDiscount.stripe_coupon_id) {
-      console.log('[stripe-checkout-selection-process-fee] 🎯 APLICANDO DESCONTO');
+      console.log('[stripe-checkout-selection-process-fee] �� APLICANDO DESCONTO');
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       
@@ -153,6 +151,8 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] 📋 Metadata atualizada:', sessionMetadata);
     } else {
       console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto para aplicar');
+      // Só permite códigos de promoção se não houver desconto aplicado
+      sessionConfig.allow_promotion_codes = true;
     }
 
     console.log('[stripe-checkout-selection-process-fee] 🚀 Criando sessão do Stripe...');
@@ -188,4 +188,4 @@ Deno.serve(async (req) => {
       details: error.message 
     }, 500);
   }
-}); 
+});

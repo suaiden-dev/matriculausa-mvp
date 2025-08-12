@@ -59,7 +59,7 @@ const Home: React.FC = () => {
               <div className="flex flex-col items-center sm:items-stretch sm:flex-row gap-4 mb-12 w-full">
                 <Link
                   to="/register"
-                  className={`group bg-[#D0151C] text-white px-8 py-4 rounded-2xl text-lg font-bold hover:bg-[#B01218] transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center ${isAuthenticated ? 'hidden' : ''}`}
+                  className={`group bg-[#D0151C] hover:bg-[#B01218] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0 ${isAuthenticated ? 'hidden' : ''}`}
                 >
                   Get Started
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -71,7 +71,7 @@ const Home: React.FC = () => {
                     paymentType="selection_process"
                     productId="selectionProcess"
                     buttonText="Start Selection Process"
-                    className="group px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
+                    className="group bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0"
                     onError={(error) => console.error('Checkout error:', error)}
                     successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                     cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
@@ -80,9 +80,9 @@ const Home: React.FC = () => {
                 {isAuthenticated && user && user.role === 'student' && userProfile && userProfile.has_paid_selection_process_fee && (
                   <Link
                     to={getDashboardPath()}
-                    className="group bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
+                    className="group bg-green-600 hover:bg-emerald-600 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0"
                   >
-                    Go to Dashboard
+                    🎯 Go to Dashboard
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 )}
@@ -90,7 +90,7 @@ const Home: React.FC = () => {
                 {isAuthenticated && user && (user.role === 'admin' || user.role === 'school') && (
                   <Link
                     to={getDashboardPath()}
-                    className="group bg-[#05294E] hover:bg-[#02172B] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl flex items-center justify-center"
+                    className="group bg-[#05294E] hover:bg-[#02172B] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center"
                   >
                     Go to Dashboard
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
