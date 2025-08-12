@@ -72,6 +72,14 @@ const NewScholarship: React.FC = () => {
     CPT: 'Curricular Practical Training. Work authorization as part of an academic program (e.g., internships/practicums) while enrolled.',
   };
 
+  const toggleWorkPermission = (wp: string) => {
+    setFormData(prev => {
+      const has = prev.work_permissions.includes(wp);
+      const next = has ? prev.work_permissions.filter(x => x !== wp) : [...prev.work_permissions, wp];
+      return { ...prev, work_permissions: next };
+    });
+  };
+
   // Função para salvar dados no localStorage
   const saveFormDataToStorage = useCallback((data: any) => {
     try {
@@ -1015,33 +1023,44 @@ const NewScholarship: React.FC = () => {
               <div className="grid grid-cols-1 gap-6">
               {/* Work Permissions */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Work Permission (F-1 / OPT / CPT)
-                </label>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {['F1','OPT','CPT'].map((wp) => (
-                    <label
-                      key={wp}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer select-none"
-                      title={WORK_PERMISSION_DESCRIPTIONS[wp]}
-                    >
-                      <input
-                        type="checkbox"
-                        className="accent-[#05294E]"
-                        checked={formData.work_permissions.includes(wp)}
-                        onChange={(e) => {
-                          setFormData(prev => {
-                            const has = prev.work_permissions.includes(wp);
-                            const next = has
-                              ? prev.work_permissions.filter(x => x !== wp)
-                              : [...prev.work_permissions, wp];
-                            return { ...prev, work_permissions: next };
-                          });
-                        }}
-                      />
-                      <span className="text-sm text-slate-700 font-medium">{wp}</span>
-                    </label>
-                  ))}
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Work Permission (F-1 / OPT / CPT)
+                  </label>
+                  {/* Single info icon explaining all options */}
+                  <div className="relative group">
+                    <Info className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                    <div className="pointer-events-none absolute left-1/2 z-10 hidden -translate-x-1/2 translate-y-2 whitespace-normal rounded-md bg-slate-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block w-80 text-left">
+                      <p className="font-semibold mb-1">What each option means</p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li><span className="font-semibold">F-1</span>: {WORK_PERMISSION_DESCRIPTIONS['F1']}</li>
+                        <li><span className="font-semibold">OPT</span>: {WORK_PERMISSION_DESCRIPTIONS['OPT']}</li>
+                        <li><span className="font-semibold">CPT</span>: {WORK_PERMISSION_DESCRIPTIONS['CPT']}</li>
+                      </ul>
+                      <span className="absolute -top-1 left-1/2 -translate-x-1/2 h-2 w-2 rotate-45 bg-slate-900"></span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {['F1','OPT','CPT'].map((wp) => {
+                    const checked = formData.work_permissions.includes(wp);
+                    return (
+                      <label
+                        key={wp}
+                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-md w-fit min-w-[150px] cursor-pointer transition-colors focus-within:ring-1 focus-within:ring-blue-200 ${
+                          checked ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-[#05294E]"
+                          checked={checked}
+                          onChange={() => toggleWorkPermission(wp)}
+                        />
+                        <span className="text-sm text-slate-700 font-medium leading-none">{wp}</span>
+                      </label>
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-slate-500 mt-1">Select all work permissions allowed for this scholarship. Hover each option to see a brief explanation.</p>
               </div>
