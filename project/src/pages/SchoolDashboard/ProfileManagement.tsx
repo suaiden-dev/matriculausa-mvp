@@ -1,70 +1,73 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Building, 
   Edit, 
   Settings, 
-  Phone, 
-  Mail, 
-  Globe, 
-  MapPin,
   Users,
   Award,
   CheckCircle,
   AlertCircle,
-  Camera,
   Save,
   X,
-  Eye,
-  EyeOff,
   ExternalLink,
   Plus,
-  Trash2
+  Trash2,
+  Globe,
+  MapPin,
+  Eye
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
+import { useProfileForm } from '../../hooks/useProfileForm';
+import { profileFieldsConfig } from '../../config/profileFields';
+import FormSection from '../../components/ProfileForm/FormSection';
 
 const ProfileManagement: React.FC = () => {
   const { university, refreshData } = useUniversity();
   const { user } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [showSensitiveInfo, setShowSensitiveInfo] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>(university?.image_url);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
-  // Form data state
-  const [formData, setFormData] = useState({
-    name: university?.name || '',
-    description: university?.description || '',
-    website: university?.website || '',
-    location: university?.location || '',
-    contact: {
-      phone: university?.contact?.phone || '',
-      email: university?.contact?.email || '',
-      admissionsEmail: university?.contact?.admissionsEmail || '',
-      fax: university?.contact?.fax || ''
-    },
-    programs: university?.programs || []
-  });
 
   // Academic programs editing state
   const [newProgram, setNewProgram] = useState('');
   const [programError, setProgramError] = useState<string | null>(null);
 
-  // Refs for form elements
-  const nameRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-  const websiteRef = useRef<HTMLInputElement>(null);
-  const locationRef = useRef<HTMLInputElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const admissionsEmailRef = useRef<HTMLInputElement>(null);
-  const faxRef = useRef<HTMLInputElement>(null);
+  // Hook personalizado para gerenciar o formulário
+  const {
+    formData,
+    isEditing,
+    saving,
+    showSensitiveInfo,
+    setIsEditing,
+    setShowSensitiveInfo,
+    handleSave,
+    handleCancel,
+    updateField,
+    updateImage,
+    getFieldRef
+  } = useProfileForm({
+    university,
+    onSuccess: () => {
+      refreshData();
+      setSuccessMessage('Profile updated successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    },
+    onError: (error) => {
+      setErrorMessage(error);
+    }
+  });
+
+  // Sincronizar imageUrl com dados da universidade
+  useEffect(() => {
+    if (university?.image_url) {
+      setImageUrl(university.image_url);
+    }
+  }, [university?.image_url]);
 
   const profileCompleteness = university ? (
     (university.name ? 20 : 0) +
@@ -76,36 +79,83 @@ const ProfileManagement: React.FC = () => {
     (university.programs && university.programs.length > 0 ? 10 : 0)
   ) : 0;
 
-  const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !university) return;
+
+
+  const handleImageUpload = async (file: File) => {
+    if (!university || !user) return;
+
     setUploading(true);
     setUploadError(null);
+
     try {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please select an image file');
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File size must be less than 5MB');
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `university_${university.id}_${Date.now()}.${fileExt}`;
+
+      // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from('university-profile-pictures')
-        .upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
+        .from('user-avatars')
+        .upload(fileName, file, { 
+          upsert: true,
+          contentType: file.type
+        });
+        
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        
+        // Tratamento específico para erros comuns
+        if (uploadError.message.includes('The resource was not found')) {
+          throw new Error('Storage bucket not configured. Please contact support.');
+        } else if (uploadError.message.includes('row-level security policy')) {
+          throw new Error('Permission denied. Please try logging in again.');
+        } else {
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
+      }
+
+      // Get public URL
       const { data: publicUrlData } = supabase.storage
-        .from('university-profile-pictures')
+        .from('user-avatars')
         .getPublicUrl(fileName);
+
       const publicUrl = publicUrlData?.publicUrl;
       if (!publicUrl) throw new Error('Could not get image URL');
+
       // Update university record
       const { error: updateError } = await supabase
         .from('universities')
         .update({ image_url: publicUrl })
         .eq('id', university.id);
+
       if (updateError) throw updateError;
+
+      // Update local state
       setImageUrl(publicUrl);
+      updateImage(publicUrl);
+      
+      // Refresh university data to update context
+      await refreshData();
+      
+      setSuccessMessage('University logo updated successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+
     } catch (err: any) {
-      setUploadError('Failed to upload image. Please try again.');
+      setUploadError(err.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
     }
   };
+
+
 
   const handleAddProgram = () => {
     if (!newProgram.trim()) {
@@ -124,19 +174,14 @@ const ProfileManagement: React.FC = () => {
       return;
     }
 
-    setFormData(prev => ({
-      ...prev,
-      programs: [...prev.programs, newProgram.trim()]
-    }));
+    updateField('programs', JSON.stringify([...formData.programs, newProgram.trim()]));
     setNewProgram('');
     setProgramError(null);
   };
 
   const handleRemoveProgram = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      programs: prev.programs.filter((_, i) => i !== index)
-    }));
+    const updatedPrograms = formData.programs.filter((_: string, i: number) => i !== index);
+    updateField('programs', JSON.stringify(updatedPrograms));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -146,116 +191,12 @@ const ProfileManagement: React.FC = () => {
     }
   };
 
-  const resetFormData = () => {
-    setFormData({
-      name: university?.name || '',
-      description: university?.description || '',
-      website: university?.website || '',
-      location: university?.location || '',
-      contact: {
-        phone: university?.contact?.phone || '',
-        email: university?.contact?.email || '',
-        admissionsEmail: university?.contact?.admissionsEmail || '',
-        fax: university?.contact?.fax || ''
-      },
-      programs: university?.programs || []
-    });
-  };
-
-  const handleCancel = () => {
-    if (isEditing) {
-      const hasChanges = (
-        formData.name !== (university?.name || '') ||
-        formData.description !== (university?.description || '') ||
-        formData.website !== (university?.website || '') ||
-        formData.location !== (university?.location || '') ||
-        formData.contact.phone !== (university?.contact?.phone || '') ||
-        formData.contact.email !== (university?.contact?.email || '') ||
-        formData.contact.admissionsEmail !== (university?.contact?.admissionsEmail || '') ||
-        formData.contact.fax !== (university?.contact?.fax || '') ||
-        JSON.stringify(formData.programs) !== JSON.stringify(university?.programs || [])
-      );
-
-      if (hasChanges) {
-        const confirmDiscard = window.confirm(
-          'You have unsaved changes. Are you sure you want to discard them?'
-        );
-        if (!confirmDiscard) return;
-      }
-    }
-
-    resetFormData();
-    setIsEditing(false);
+  const handleCancelWithCleanup = () => {
+    handleCancel();
     setNewProgram('');
     setProgramError(null);
     setSuccessMessage(null);
     setErrorMessage(null);
-  };
-
-  const handleSave = async () => {
-    if (!university || !user) return;
-
-    // Get current values from form inputs
-    const currentFormData = {
-      name: nameRef.current?.value || '',
-      description: descriptionRef.current?.value || '',
-      website: websiteRef.current?.value || '',
-      location: locationRef.current?.value || '',
-      contact: {
-        phone: phoneRef.current?.value || '',
-        email: emailRef.current?.value || '',
-        admissionsEmail: admissionsEmailRef.current?.value || '',
-        fax: faxRef.current?.value || ''
-      },
-      programs: formData.programs
-    };
-
-    // Basic validation
-    if (!currentFormData.name.trim()) {
-      setErrorMessage('University name is required');
-      return;
-    }
-
-    setSaving(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    try {
-      const updateData = {
-        name: currentFormData.name.trim(),
-        description: currentFormData.description.trim() || null,
-        website: currentFormData.website.trim() || null,
-        location: currentFormData.location.trim() || null,
-        contact: currentFormData.contact,
-        programs: currentFormData.programs,
-        updated_at: new Date().toISOString()
-      };
-
-      const { error } = await supabase
-        .from('universities')
-        .update(updateData)
-        .eq('id', university.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setFormData(currentFormData);
-      
-      // Refresh university data
-      await refreshData();
-      
-      setIsEditing(false);
-      setSuccessMessage('Profile updated successfully!');
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
-
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      setErrorMessage('Failed to update profile. Please try again.');
-    } finally {
-      setSaving(false);
-    }
   };
 
   if (!university) {
@@ -300,7 +241,7 @@ const ProfileManagement: React.FC = () => {
       )}
 
       {/* Profile Header */}
-      <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-4 sm:p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-4 sm:p-8 text-white relative overflow-hidden mt-6">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
@@ -313,31 +254,6 @@ const ProfileManagement: React.FC = () => {
                     <Building className="h-12 w-12 text-white" />
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg opacity-50 cursor-not-allowed"
-                  disabled
-                  title="Profile picture upload temporarily disabled"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-                <input
-                  id="university-profile-pic-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleProfilePicChange}
-                  disabled={uploading}
-                  aria-label="Upload university profile picture"
-                />
-                {uploading && (
-                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>
-                  </div>
-                )}
-                {uploadError && (
-                  <div className="absolute left-0 right-0 -bottom-8 text-red-200 text-xs mt-2 text-center">{uploadError}</div>
-                )}
               </div>
               <div className="flex-1 w-full">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{university.name}</h1>
@@ -382,7 +298,7 @@ const ProfileManagement: React.FC = () => {
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
-                onClick={isEditing ? handleCancel : () => setIsEditing(true)}
+                onClick={isEditing ? handleCancelWithCleanup : () => setIsEditing(true)}
                 disabled={saving}
                 className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-medium flex items-center shadow-lg justify-center disabled:opacity-50"
               >
@@ -427,243 +343,24 @@ const ProfileManagement: React.FC = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Basic Information */}
+        {/* Seções do formulário usando configuração */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Basic Information</h3>
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="text-[#05294E] hover:text-[#05294E]/80 font-medium text-sm flex items-center"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </button>
-              )}
-            </div>
-
-            {isEditing ? (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">University Name *</label>
-                  <input
-                    ref={nameRef}
-                    type="text"
-                    defaultValue={formData.name}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-                  <textarea
-                    ref={descriptionRef}
-                    rows={4}
-                    defaultValue={formData.description}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                    placeholder="Describe your university..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Website</label>
-                    <input
-                      ref={websiteRef}
-                      type="url"
-                      defaultValue={formData.website}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="https://university.edu"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Location</label>
-                    <input
-                      ref={locationRef}
-                      type="text"
-                      defaultValue={formData.location}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="City, State"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-500">University Name</label>
-                  <p className="text-lg font-semibold text-slate-900">{university.name}</p>
-                </div>
-
-                {university.description && (
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Description</label>
-                    <p className="text-slate-700 leading-relaxed mt-1">{university.description}</p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Website</label>
-                    {university.website ? (
-                      <a 
-                        href={university.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-[#05294E] hover:underline flex items-center mt-1"
-                      >
-                        {university.website}
-                        <ExternalLink className="h-4 w-4 ml-2" />
-                      </a>
-                    ) : (
-                      <p className="text-slate-400 mt-1">Not provided</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Location</label>
-                    <p className="text-slate-900 mt-1">{university.location}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Contact Information */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-900">Contact Information</h3>
-              {!isEditing && (
-              <button
-                onClick={() => setShowSensitiveInfo(!showSensitiveInfo)}
-                className="text-slate-500 hover:text-slate-700 flex items-center text-sm"
-              >
-                {showSensitiveInfo ? (
-                  <>
-                    <EyeOff className="h-4 w-4 mr-2" />
-                    Hide
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Show
-                  </>
-                )}
-              </button>
-              )}
-            </div>
-
-            {isEditing ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-                    <input
-                      ref={phoneRef}
-                      type="tel"
-                      defaultValue={formData.contact.phone}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">General Email</label>
-                    <input
-                      ref={emailRef}
-                      type="email"
-                      defaultValue={formData.contact.email}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="info@university.edu"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Admissions Email</label>
-                    <input
-                      ref={admissionsEmailRef}
-                      type="email"
-                      defaultValue={formData.contact.admissionsEmail}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="admissions@university.edu"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Fax</label>
-                    <input
-                      ref={faxRef}
-                      type="tel"
-                      defaultValue={formData.contact.fax}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                      placeholder="+1 (555) 123-4568"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-500 flex items-center">
-                    <Phone className="h-4 w-4 mr-2" />
-                    Phone
-                  </label>
-                  <p className="text-slate-900 mt-1">
-                    {showSensitiveInfo 
-                      ? university.contact?.phone || 'Not provided'
-                      : '•••••••••••'
-                    }
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-slate-500 flex items-center">
-                    <Mail className="h-4 w-4 mr-2" />
-                    General Email
-                  </label>
-                  <p className="text-slate-900 mt-1">
-                    {showSensitiveInfo 
-                      ? university.contact?.email || 'Not provided'
-                      : '•••••••••••@•••••••.com'
-                    }
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-slate-500 flex items-center">
-                    <Mail className="h-4 w-4 mr-2" />
-                    Admissions Email
-                  </label>
-                  <p className="text-slate-900 mt-1">
-                    {showSensitiveInfo 
-                      ? university.contact?.admissionsEmail || 'Not provided'
-                      : '•••••••••••@•••••••.com'
-                    }
-                  </p>
-                </div>
-
-                {university.contact?.fax && (
-                  <div>
-                    <label className="text-sm font-medium text-slate-500">Fax</label>
-                    <p className="text-slate-900 mt-1">
-                      {showSensitiveInfo 
-                        ? university.contact.fax
-                        : '•••••••••••'
-                      }
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-            )}
-          </div>
+          {profileFieldsConfig.map((sectionConfig) => (
+            <FormSection
+              key={sectionConfig.title}
+              config={sectionConfig}
+              data={formData}
+              isEditing={isEditing}
+              showSensitive={showSensitiveInfo}
+              onEdit={() => setIsEditing(true)}
+              onToggleSensitive={() => setShowSensitiveInfo(!showSensitiveInfo)}
+              onFieldChange={updateField}
+              onImageUpload={handleImageUpload}
+              imageUploading={uploading}
+              imageUploadError={uploadError}
+              getFieldRef={getFieldRef}
+            />
+          ))}
 
           {/* Academic Programs */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -785,7 +482,7 @@ const ProfileManagement: React.FC = () => {
                   )}
                 </button>
                 <button
-                  onClick={handleCancel}
+                  onClick={handleCancelWithCleanup}
                   disabled={saving}
                   className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium disabled:opacity-50"
                 >
