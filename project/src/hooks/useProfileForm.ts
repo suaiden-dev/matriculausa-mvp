@@ -21,6 +21,7 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
     description: university?.description || '',
     website: university?.website || '',
     location: university?.location || '',
+    image_url: university?.image_url || '',
     contact: {
       phone: university?.contact?.phone || '',
       email: university?.contact?.email || '',
@@ -35,10 +36,7 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
   // Sincronizar dados quando university muda
   useEffect(() => {
     if (university) {
-      const newFormData = initializeFormData();
-      console.log('University data:', university);
-      console.log('Initialized form data:', newFormData);
-      setFormData(newFormData);
+      setFormData(initializeFormData());
     }
   }, [university, initializeFormData]);
 
@@ -168,6 +166,14 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
     });
   }, []);
 
+  // Atualizar imagem diretamente
+  const updateImage = useCallback((imageUrl: string) => {
+    setFormData(prev => ({
+      ...prev,
+      image_url: imageUrl
+    }));
+  }, []);
+
   return {
     // Estados
     formData,
@@ -181,6 +187,7 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
     handleSave,
     handleCancel,
     updateField,
+    updateImage,
     resetFormData,
     
     // Utilidades

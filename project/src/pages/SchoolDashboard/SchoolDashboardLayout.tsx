@@ -128,8 +128,16 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
           {university && (
             <div className="px-6 py-4 border-b border-slate-200">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Building className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                  {university.image_url ? (
+                    <img 
+                      src={university.image_url} 
+                      alt={`${university.name} logo`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Building className="h-6 w-6 text-white" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-900 truncate">{university.name}</h3>
@@ -238,7 +246,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto">
         {/* Top Header */}
-        <header className="bg-white border-b border-slate-200 py-4 sticky top-0 z-50 pl-4 pr-4 sm:px-6 lg:px-10">
+        <header className="bg-white border-b border-slate-200 py-3 sticky top-0 z-50 pl-4 pr-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
@@ -281,8 +289,16 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
                   }}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-[#05294E] to-blue-700 rounded-lg flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
+                  <div className="w-8 h-8 bg-gradient-to-br from-[#05294E] to-blue-700 rounded-lg flex items-center justify-center overflow-hidden">
+                    {university?.image_url ? (
+                      <img 
+                        src={university.image_url} 
+                        alt={`${university.name} logo`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-4 w-4 text-white" />
+                    )}
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-slate-900 text-sm">{user?.name}</p>
@@ -346,8 +362,16 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
               <div className="absolute inset-0 bg-black/10"></div>
               <div className="relative">
                 <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                    <Building className="h-8 w-8 text-white" />
+                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
+                    {university?.image_url ? (
+                      <img 
+                        src={university.image_url} 
+                        alt={`${university.name} logo`}
+                        className="w-full h-full object-cover rounded-2xl"
+                      />
+                    ) : (
+                      <Building className="h-8 w-8 text-white" />
+                    )}
                   </div>
                   <div>
                     <h2 className="text-3xl font-bold mb-2">

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { LucideIcon, Edit, Eye, EyeOff, Building, Phone, Mail, Globe, MapPin } from 'lucide-react';
 import { FieldSection, ProfileFormData } from '../../types/profileConfig';
 import { getNestedValue } from '../../config/profileFields';
@@ -13,6 +13,9 @@ interface FormSectionProps {
   onToggleSensitive?: () => void;
   onFieldChange?: (key: string, value: string) => void;
   getFieldRef?: (key: string) => React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
+  onImageUpload?: (file: File) => void;
+  imageUploading?: boolean;
+  imageUploadError?: string | null;
 }
 
 // Mapeamento de ícones para seções
@@ -32,7 +35,10 @@ const FormSection: React.FC<FormSectionProps> = ({
   onEdit,
   onToggleSensitive,
   onFieldChange,
-  getFieldRef
+  getFieldRef,
+  onImageUpload,
+  imageUploading = false,
+  imageUploadError
 }) => {
   const SectionIcon = config.icon ? sectionIconMap[config.icon] : null;
   
@@ -110,6 +116,9 @@ const FormSection: React.FC<FormSectionProps> = ({
                     isEditing={isEditing}
                     showSensitive={showSensitive}
                     onChange={onFieldChange ? (value) => onFieldChange(field.key, value) : undefined}
+                    onImageUpload={onImageUpload}
+                    imageUploading={imageUploading}
+                    imageUploadError={imageUploadError}
                     ref={fieldRef}
                   />
                 );

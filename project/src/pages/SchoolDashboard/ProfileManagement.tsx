@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Building, 
@@ -8,7 +8,6 @@ import {
   Award,
   CheckCircle,
   AlertCircle,
-  Camera,
   Save,
   X,
   ExternalLink,
@@ -27,7 +26,7 @@ import FormSection from '../../components/ProfileForm/FormSection';
 
 const ProfileManagement: React.FC = () => {
   const { university, refreshData } = useUniversity();
-  const { } = useAuth();
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>(university?.image_url);
@@ -49,6 +48,7 @@ const ProfileManagement: React.FC = () => {
     handleSave,
     handleCancel,
     updateField,
+    updateImage,
     getFieldRef
   } = useProfileForm({
     university,
@@ -62,6 +62,13 @@ const ProfileManagement: React.FC = () => {
     }
   });
 
+  // Sincronizar imageUrl com dados da universidade
+  useEffect(() => {
+    if (university?.image_url) {
+      setImageUrl(university.image_url);
+    }
+  }, [university?.image_url]);
+
   const profileCompleteness = university ? (
     (university.name ? 20 : 0) +
     (university.description ? 20 : 0) +
@@ -72,36 +79,83 @@ const ProfileManagement: React.FC = () => {
     (university.programs && university.programs.length > 0 ? 10 : 0)
   ) : 0;
 
-  const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !university) return;
+
+
+  const handleImageUpload = async (file: File) => {
+    if (!university || !user) return;
+
     setUploading(true);
     setUploadError(null);
+
     try {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please select an image file');
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File size must be less than 5MB');
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `university_${university.id}_${Date.now()}.${fileExt}`;
+
+      // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from('university-profile-pictures')
-        .upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
+        .from('user-avatars')
+        .upload(fileName, file, { 
+          upsert: true,
+          contentType: file.type
+        });
+        
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        
+        // Tratamento específico para erros comuns
+        if (uploadError.message.includes('The resource was not found')) {
+          throw new Error('Storage bucket not configured. Please contact support.');
+        } else if (uploadError.message.includes('row-level security policy')) {
+          throw new Error('Permission denied. Please try logging in again.');
+        } else {
+          throw new Error(`Upload failed: ${uploadError.message}`);
+        }
+      }
+
+      // Get public URL
       const { data: publicUrlData } = supabase.storage
-        .from('university-profile-pictures')
+        .from('user-avatars')
         .getPublicUrl(fileName);
+
       const publicUrl = publicUrlData?.publicUrl;
       if (!publicUrl) throw new Error('Could not get image URL');
+
       // Update university record
       const { error: updateError } = await supabase
         .from('universities')
         .update({ image_url: publicUrl })
         .eq('id', university.id);
+
       if (updateError) throw updateError;
+
+      // Update local state
       setImageUrl(publicUrl);
+      updateImage(publicUrl);
+      
+      // Refresh university data to update context
+      await refreshData();
+      
+      setSuccessMessage('University logo updated successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+
     } catch (err: any) {
-      setUploadError('Failed to upload image. Please try again.');
+      setUploadError(err.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
     }
   };
+
+
 
   const handleAddProgram = () => {
     if (!newProgram.trim()) {
@@ -200,31 +254,6 @@ const ProfileManagement: React.FC = () => {
                     <Building className="h-12 w-12 text-white" />
                   )}
                 </div>
-                <button
-                  type="button"
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-[#05294E] rounded-lg flex items-center justify-center shadow-lg opacity-50 cursor-not-allowed"
-                  disabled
-                  title="Profile picture upload temporarily disabled"
-                >
-                  <Camera className="h-4 w-4" />
-                </button>
-                <input
-                  id="university-profile-pic-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleProfilePicChange}
-                  disabled={uploading}
-                  aria-label="Upload university profile picture"
-                />
-                {uploading && (
-                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>
-                  </div>
-                )}
-                {uploadError && (
-                  <div className="absolute left-0 right-0 -bottom-8 text-red-200 text-xs mt-2 text-center">{uploadError}</div>
-                )}
               </div>
               <div className="flex-1 w-full">
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{university.name}</h1>
@@ -326,6 +355,9 @@ const ProfileManagement: React.FC = () => {
               onEdit={() => setIsEditing(true)}
               onToggleSensitive={() => setShowSensitiveInfo(!showSensitiveInfo)}
               onFieldChange={updateField}
+              onImageUpload={handleImageUpload}
+              imageUploading={uploading}
+              imageUploadError={uploadError}
               getFieldRef={getFieldRef}
             />
           ))}

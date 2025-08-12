@@ -3,7 +3,7 @@
 export interface FieldConfig {
   key: string;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'url' | 'textarea';
+  type: 'text' | 'email' | 'tel' | 'url' | 'textarea' | 'image';
   placeholder?: string;
   required?: boolean;
   icon?: string;
@@ -24,6 +24,7 @@ export interface ProfileFormData {
   description: string;
   website: string;
   location: string;
+  image_url: string;
   contact: {
     phone: string;
     email: string;

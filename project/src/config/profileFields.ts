@@ -7,6 +7,12 @@ export const profileFieldsConfig: FieldSection[] = [
     icon: 'Building',
     fields: [
       {
+        key: 'image_url',
+        label: 'University Logo',
+        type: 'image',
+        placeholder: 'Upload university logo'
+      },
+      {
         key: 'name',
         label: 'University Name',
         type: 'text',
