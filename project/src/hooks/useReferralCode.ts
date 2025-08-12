@@ -53,7 +53,6 @@ export const useReferralCode = () => {
     if (!user?.id) return;
     
     try {
-      console.log('🔍 [useReferralCode] Verificando desconto ativo para usuário:', user.id);
       const { data, error } = await supabase.rpc('get_user_active_discount', {
         user_id_param: user.id
       });
@@ -61,7 +60,6 @@ export const useReferralCode = () => {
       if (error) {
         console.error('🔍 [useReferralCode] Erro ao verificar desconto:', error);
       } else {
-        console.log('🔍 [useReferralCode] Resultado da verificação:', data);
         setActiveDiscount(data);
       }
     } catch (error) {

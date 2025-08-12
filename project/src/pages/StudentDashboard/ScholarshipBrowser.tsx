@@ -95,18 +95,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       setFiltersApplied(false);
       setIsApplyingFilters(false);
     }, 1500);
-    
-    // Log para debug
-    console.log('🔍 Filters applied:', {
-      search: searchTerm.trim(),
-      level: selectedLevel,
-      field: selectedField,
-      deliveryMode: selectedDeliveryMode,
-      workPermission: selectedWorkPermission,
-      minValue: minValue.trim(),
-      maxValue: maxValue.trim(),
-      deadlineDays: deadlineDays.trim()
-    });
   };
 
   // Função para limpar todos os filtros
@@ -140,7 +128,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     setIsApplyingFilters(false);
     localStorage.removeItem('scholarshipFilters');
     
-    console.log('🗑️ All filters cleared');
   };
 
   // Função para preservar os valores dos filtros
@@ -214,22 +201,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       }
     }
   }, []);
-
-  // Log quando os filtros aplicados mudam
-  useEffect(() => {
-    if (appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || appliedMinValue || appliedMaxValue || appliedDeadlineDays) {
-      console.log('📊 Active applied filters:', {
-        search: appliedSearch,
-        level: appliedLevel,
-        field: appliedField,
-        deliveryMode: appliedDeliveryMode,
-        workPermission: appliedWorkPermission,
-        minValue: appliedMinValue,
-        maxValue: appliedMaxValue,
-        deadlineDays: appliedDeadlineDays
-      });
-    }
-  }, [appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays]);
 
   const flyIconRef = useRef<HTMLDivElement | null>(null);
   // Remova o flyAnimation antigo e use Framer Motion
@@ -362,8 +333,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   // Memoização dos filtros e ordenação
   const filteredScholarships = useMemo(() => {
-    console.log('🔄 Filtering scholarships with applied filters...');
-    console.log('📚 Total scholarships:', scholarships.length);
     
     // Busca por múltiplas palavras-chave
     const searchWords = appliedSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -430,8 +399,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       return passes;
     });
     
-    console.log('✅ Filtered scholarships:', filtered.length);
-    
     // Ordenação
     const sorted = filtered.sort((a, b) => {
       switch (sortBy) {
@@ -496,7 +463,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   });
 
   return (
-    <div className="space-y-8 pt-8" data-testid="scholarship-list">
+    <div className="space-y-8 pt-10" data-testid="scholarship-list">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
