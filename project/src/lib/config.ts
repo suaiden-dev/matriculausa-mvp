@@ -15,7 +15,7 @@ export const config = {
   // URLs dinâmicas baseadas no ambiente
   getFrontendUrl: () => {
     if (config.isDevelopment()) {
-      return 'http://localhost:5173'; // Vite dev server
+      return window.location.origin; // Usar URL atual em desenvolvimento
     } else if (config.isProduction()) {
       return 'https://matriculausa.com';
     }

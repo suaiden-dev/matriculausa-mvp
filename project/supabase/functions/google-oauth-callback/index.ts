@@ -29,8 +29,8 @@ function getFrontendUrl(req: Request): string {
   
   // Se o host contém 'localhost' ou '127.0.0.1', estamos em desenvolvimento
   if (host.includes('localhost') || host.includes('127.0.0.1') || referer.includes('localhost')) {
-    console.log('🔧 Development environment detected: localhost:5173');
-    return 'http://localhost:5173';
+    console.log('🔧 Development environment detected: localhost');
+    return 'http://localhost:5173'; // Manter localhost:5173 para desenvolvimento
   }
   
   // Padrão: produção (matriculausa.com)

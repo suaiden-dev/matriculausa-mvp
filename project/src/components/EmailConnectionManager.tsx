@@ -125,15 +125,11 @@ const EmailConnectionManager: React.FC = () => {
       // Criar URL de autorização do Google manualmente
       const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       
-      // Detectar se está em desenvolvimento ou produção
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const redirectUri = isDevelopment 
-        ? `http://localhost:5173/email-oauth-callback`
-        : `${window.location.origin}/email-oauth-callback`;
+      // Usar URL dinâmica baseada no ambiente atual
+      const redirectUri = `${window.location.origin}/email-oauth-callback`;
       
       console.log('🔍 DEBUG: Environment detection:', {
         hostname: window.location.hostname,
-        isDevelopment,
         redirectUri
       });
       
@@ -193,15 +189,11 @@ const EmailConnectionManager: React.FC = () => {
       // Criar URL de autorização do Microsoft manualmente
       const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID;
       
-      // Detectar se está em desenvolvimento ou produção
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const redirectUri = isDevelopment 
-        ? `http://localhost:5173/email-oauth-callback`
-        : `${window.location.origin}/email-oauth-callback`;
+      // Usar URL dinâmica baseada no ambiente atual
+      const redirectUri = `${window.location.origin}/email-oauth-callback`;
       
       console.log('🔍 DEBUG: Environment detection for Microsoft:', {
         hostname: window.location.hostname,
-        isDevelopment,
         redirectUri
       });
       

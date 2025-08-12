@@ -57,7 +57,7 @@
             <p>This page is for testing the Amatricula Chat Widget. The widget should appear as a floating chat button in the bottom-right corner of this page.</p>
             
             <div class="highlight">
-                <strong>Note:</strong> Make sure your development server is running on <code>http://localhost:5173</code> for the widget to work properly.
+                <strong>Note:</strong> Make sure your development server is running on <code>http://localhost:5173</code> for the widget to work properly. The widget will automatically adapt to any domain when deployed.
             </div>
         </div>
 
@@ -117,7 +117,7 @@
       };
       
       var script = document.createElement('script');
-      script.src = 'http://localhost:5173/embed.js';
+      script.src = `${window.location.origin}/embed.js`;
       script.async = true;
       document.head.appendChild(script);
     })();
