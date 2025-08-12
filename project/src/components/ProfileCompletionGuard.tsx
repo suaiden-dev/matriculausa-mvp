@@ -15,7 +15,8 @@ const ProfileCompletionGuard: React.FC<ProfileCompletionGuardProps> = ({
   title = "Profile setup required",
   description = "Complete your university profile to access this feature"
 }) => {
-  if (!isProfileCompleted) {
+  // Verificação mais rigorosa: mostrar guard se profile_completed não for explicitamente true
+  if (isProfileCompleted !== true) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
         <div className="w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center mx-auto mb-6">

@@ -33,6 +33,7 @@ import { supabase } from '../../lib/supabase';
 import { generateChatwootPassword } from '../../lib/chatwootUtils';
 import ConnectSmartChat from './WhatsAppConnection/ConnectSmartChat';
 import AIAgentKnowledgeUpload from '../../components/AIAgentKnowledgeUpload';
+import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 import { useCustomAgentTypes } from '../../hooks/useCustomAgentTypes';
 import { getAgentTypeBasePrompt } from '../../lib/agentPrompts';
@@ -2141,8 +2142,22 @@ Mantenha sempre o seguinte tom nas interações:
     };
   }, [agents]); // Re-executar quando os agentes mudarem
 
+  // Verificar se o perfil está completo ANTES de qualquer outra verificação
+  if (university?.profile_completed !== true) {
+    return (
+      <ProfileCompletionGuard 
+        isProfileCompleted={university?.profile_completed}
+        title="Profile setup required"
+        description="Complete your university profile to access WhatsApp connections and AI features"
+      >
+        {/* Este conteúdo nunca será renderizado porque o guard sempre mostrará a tela de setup */}
+        <div></div>
+      </ProfileCompletionGuard>
+    );
+  }
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="w-full overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
       {/* Notification Toast - Centro da tela */}
       {notification && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
