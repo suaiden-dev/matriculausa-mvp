@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Award, 
   FileText, 
   CheckCircle, 
   Clock, 
-  TrendingUp, 
   Search, 
   Target, 
   BookOpen,
   ArrowUpRight,
   Calendar,
   Building,
-  Star,
   Eye,
   CreditCard,
   Gift,
@@ -75,22 +73,17 @@ const WelcomeMessage: React.FC = () => {
 };
 
 const Overview: React.FC<OverviewProps> = ({ 
-  profile, 
-  scholarships, 
-  applications, 
   stats, 
-  onApplyScholarship,
   recentApplications = []
 }) => {
-  const { activeDiscount, testReferralCode } = useReferralCode();
+  const { activeDiscount } = useReferralCode();
+  const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
+  const hasMoreApplications = recentApplications.length > visibleApplications;
+  const displayedApplications = recentApplications.slice(0, visibleApplications);
+  
+  const handleLoadMore = () => {
+    setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
 
   const getStatusColor = (status: string) => {
@@ -458,46 +451,175 @@ const Overview: React.FC<OverviewProps> = ({
       {/* Recent Applications */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-6 mb-6 mt-6 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-extrabold text-blue-900 mb-4">Recent Applications</h3>
-            {recentApplications.length === 0 ? (
-              <div className="text-slate-500">No recent applications found.</div>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {recentApplications.map((app, idx) => {
-                  const scholarship = app.scholarship || app.scholarships;
-                  return (
-                    <li key={app.id} className="flex flex-col sm:flex-row sm:items-center py-4 gap-4">
-                      {/* Logo da universidade */}
-                      {scholarship?.universities?.logo_url && (
-                        <img src={scholarship.universities.logo_url} alt={scholarship.universities.name} className="w-12 h-12 rounded-full object-contain border border-slate-200 bg-white mr-4" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                          <div className="text-lg font-semibold text-slate-800 line-clamp-1">{scholarship?.title || 'Scholarship'}</div>
-                          <span className="ml-0 sm:ml-4 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">{scholarship?.level}</span>
-                          <span className="ml-0 sm:ml-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">{scholarship?.field_of_study}</span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-slate-600">
-                          <span className="font-medium">University:</span> {scholarship?.universities?.name}
-                          {scholarship?.amount && (
-                            <span className="ml-4 font-medium text-green-700">${scholarship.amount.toLocaleString()}</span>
-                          )}
-                          {scholarship?.deadline && (
-                            <span className="ml-4">Deadline: {new Date(scholarship.deadline).toLocaleDateString()}</span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
-                          <span>Applied on {new Date(app.applied_at).toLocaleDateString()}</span>
-                        </div>
+          <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">Recent Applications</h3>
+                  <p className="text-slate-600 text-sm">Track your latest scholarship submissions</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="flex items-baseline gap-2">
+                  <div className="text-2xl font-bold text-blue-600">{recentApplications.length}</div>
+                  {recentApplications.length > visibleApplications && (
+                    <div className="text-sm text-slate-500">
+                      ({visibleApplications} shown)
                     </div>
-                      <span className={`ml-auto bg-green-100 text-green-700 font-semibold px-4 py-1 rounded-full text-sm shadow-sm w-fit`}>
-                      {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                    </span>
-                  </li>
+                  )}
+                </div>
+                <div className="text-slate-500 text-xs">Total Applications</div>
+              </div>
+            </div>
+            
+            {recentApplications.length === 0 ? (
+              <div className="text-center py-6">
+                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-10 h-10 text-slate-400" />
+                </div>
+                <h4 className="text-lg font-semibold text-slate-700 mb-2">No applications yet</h4>
+                <p className="text-slate-500 mb-6">Start your journey by browsing and applying to scholarships</p>
+                <Link
+                  to="/student/dashboard/scholarships"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+                >
+                  <Search className="w-4 h-4" />
+                  Browse Scholarships
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {displayedApplications.map((app) => {
+                  const scholarship = app.scholarship || app.scholarships;
+                  const StatusIcon = getStatusIcon(app.status);
+                  
+                  return (
+                    <div key={app.id} className="group bg-slate-50 rounded-2xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-300">
+                      <div className="flex items-start gap-5">
+                        {/* University Logo */}
+                        <div className="flex-shrink-0">
+                          {scholarship?.universities?.logo_url ? (
+                            <div className="relative">
+                              <img 
+                                src={scholarship.universities.logo_url} 
+                                alt={scholarship.universities.name} 
+                                className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300" 
+                                onError={(e) => {
+                                  // Fallback para ícone se a imagem falhar
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="hidden w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-2 border-slate-200 shadow-lg">
+                                <Building className="w-10 h-10 text-white" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-2 border-slate-200 shadow-lg">
+                              <Building className="w-10 h-10 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h4 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                                {scholarship?.title || 'Scholarship Application'}
+                              </h4>
+                              <p className="text-slate-600 font-medium">
+                                {scholarship?.universities?.name || 'University'}
+                              </p>
+                            </div>
+                            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold ${getStatusColor(app.status)}`}>
+                              <StatusIcon className="w-4 h-4" />
+                              {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </div>
+                          </div>
+                          
+                          {/* Tags */}
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            {scholarship?.level && (
+                              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
+                                {scholarship.level}
+                              </span>
+                            )}
+                            {scholarship?.field_of_study && (
+                              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium">
+                                {scholarship.field_of_study}
+                              </span>
+                            )}
+                            {scholarship?.amount && (
+                              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">
+                                ${scholarship.amount.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Dates and Details */}
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              <span>Applied: {new Date(app.applied_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              })}</span>
+                            </div>
+                            {scholarship?.deadline && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                <span>Deadline: {new Date(scholarship.deadline).toLocaleDateString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  year: 'numeric' 
+                                })}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </ul>
+                
+                {/* Load More & View All */}
+                {recentApplications.length > 0 && (
+                  <div className="text-center space-y-4">
+                    {/* Contador de Applications */}
+                    <div className="text-sm text-slate-600">
+                      Showing {displayedApplications.length} of {recentApplications.length} applications
+                    </div>
+                    
+                    {/* Load More Button */}
+                    {hasMoreApplications && (
+                      <button
+                        onClick={handleLoadMore}
+                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-xl transition-all duration-200 font-semibold flex items-center justify-center gap-2 mb-4"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                        Load More Applications
+                      </button>
+                    )}
+                    
+                    {/* View All Link */}
+                    <Link
+                      to="/student/dashboard/applications"
+                      className="inline-flex items-center gap-2 px-6 py-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 font-semibold border-2 border-blue-200 hover:border-blue-300"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View All Applications
+                      <ArrowUpRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -507,7 +629,7 @@ const Overview: React.FC<OverviewProps> = ({
           {/* Profile Completion */}
           <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-              <Target className="h-5 w-5 mr-2 text-blue-500" />
+              <Target className="h-5 w-5 text-blue-500" />
               Profile Status
             </h3>
             
