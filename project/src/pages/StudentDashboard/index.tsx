@@ -259,7 +259,8 @@ const StudentDashboard: React.FC = () => {
           country: updatedData.country,
           field_of_interest: updatedData.field_of_interest,
           academic_level: updatedData.academic_level,
-          gpa: updatedData.gpa,
+          // Envia null quando vazio; limita a 2 casas decimais para evitar overflow de precisão
+          gpa: updatedData.gpa === undefined ? null : updatedData.gpa,
           english_proficiency: updatedData.english_proficiency,
           updated_at: new Date().toISOString()
         })
