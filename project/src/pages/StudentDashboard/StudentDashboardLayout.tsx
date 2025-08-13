@@ -88,17 +88,17 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         <div className="flex flex-col h-full flex-1 justify-between">
           <div>
             {/* Logo */}
-            <div className="flex items-center justify-between h-20 px-6 border-b border-slate-200">
+            <div className="flex items-center justify-between h-16 sm:h-20 px-4 sm:px-6 border-b border-slate-200">
               <Link to="/" className="flex items-center justify-center w-full">
                 <img 
                   src="/logo.png.png" 
                   alt="Matrícula USA" 
-                  className="h-12 w-auto"
+                  className="h-10 w-auto sm:h-12"
                 />
               </Link>
               <button
                 onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
-                className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="lg:hidden absolute right-3 sm:right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                 title="Fechar menu lateral"
               >
                 <X className="h-5 w-5" />
@@ -106,9 +106,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </div>
 
             {/* User Profile */}
-            <div className="px-6 py-4 border-b border-slate-200">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                <div className="w-12 h-12 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
                   {profile?.avatar_url ? (
                     <img 
                       src={profile.avatar_url} 
@@ -116,17 +116,17 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <GraduationCap className="h-6 w-6 text-white" />
+                    <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-900 truncate">{profile?.name || user?.name}</h3>
-                  <p className="text-sm text-slate-500 truncate">Student</p>
+                  <h3 className="font-semibold text-slate-900 truncate text-sm sm:text-base">{profile?.name || user?.name}</h3>
+                  <p className="text-xs sm:text-sm text-slate-500 truncate">Student</p>
                 </div>
               </div>
               
               <div className="flex items-center justify-center mt-3">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                   <Star className="h-3 w-3 mr-1" />
                   Active Student
                 </span>
@@ -134,7 +134,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-4 py-6 space-y-2">
+            <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 space-y-2">
               {sidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -143,7 +143,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   <Link
                     key={item.id}
                     to={item.path}
-                    className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-lg'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -152,9 +152,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       if (window.innerWidth < 1024) setSidebarOpen(false);
                     }}
                   >
-                    <div className="flex items-center space-x-3">
-                      <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                      <span className="text-sm">{item.label}</span>
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      <span className="text-xs sm:text-sm">{item.label}</span>
                     </div>
                   </Link>
                 );
@@ -162,15 +162,15 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </nav>
           </div>
           {/* Academic Support colado no final da sidebar, formato card */}
-          <div className="px-4 py-4 border-t border-slate-200 bg-white">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Shield className="h-4 w-4 text-blue-600" />
+          <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-slate-200 bg-white">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 border border-blue-200">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">Academic Support</h4>
-                  <p className="text-xs text-slate-500">24/7 assistance available</p>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-slate-900 text-xs sm:text-sm truncate">Academic Support</h4>
+                  <p className="text-xs text-slate-500 truncate">24/7 assistance available</p>
                 </div>
               </div>
             </div>
@@ -190,35 +190,35 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       )}
 
       {/* Main Content */}
-      <div className="flex-1 ml-2 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto">
+      <div className="flex-1 ml-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 py-4 sticky top-0 z-50 pt-3 pl-4 pr-4 sm:px-6 lg:px-10">
+        <header className="bg-white border-b border-slate-200 py-1 sm:py-4 sticky top-0 z-50 pt-3 pl-3 pr-3 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
                 aria-label="Open sidebar"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Student Dashboard</h1>
-                <p className="text-sm text-slate-500">Manage your scholarship applications</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">Student Dashboard</h1>
+                <p className="text-xs sm:text-sm text-slate-500 truncate">Manage your scholarship applications</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {/* User Menu */}
-              <div className="relative flex items-center gap-2">
+              <div className="relative flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={() => {
                     setUserMenuOpen(!userMenuOpen);
                     if (!userMenuOpen) setSidebarOpen(false);
                   }}
-                  className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                     {profile?.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
@@ -226,32 +226,30 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User className="h-4 w-4 text-white" />
+                      <User className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
                     )}
                   </div>
-                  <div className="hidden md:block text-left">
-                    <p className="font-semibold text-slate-900 text-sm">{profile?.name || user?.name}</p>
-                    <p className="text-xs text-slate-500">Student</p>
+                  <div className="hidden sm:block text-left min-w-0">
+                    <p className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{profile?.name || user?.name}</p>
+                    <p className="text-xs text-slate-500 truncate">Student</p>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                  <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
                 </button>
-                {/* Botão do Guia ao lado do perfil REMOVIDO */}
-                {/* <StepByStepButton /> */}
                 {/* User Dropdown */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">
-                    <div className="px-4 py-3 border-b border-slate-100">
-                      <p className="font-semibold text-slate-900">{profile?.name || user?.name}</p>
-                      <p className="text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
+                  <div className="absolute right-0 top-full mt-2 w-56 sm:w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">
+                    <div className="px-3 sm:px-4 py-3 border-b border-slate-100">
+                      <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">{profile?.name || user?.name}</p>
+                      <p className="text-xs sm:text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
                     </div>
                     
                     <div className="py-2">
                       <Link
                         to="/student/dashboard/profile"
-                        className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                        className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <User className="h-4 w-4 mr-3" />
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                         Profile Settings
                       </Link>
                     </div>
@@ -259,9 +257,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     <div className="border-t border-slate-100 pt-2">
                       <button
                         onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        className="flex items-center w-full px-3 sm:px-4 py-2 text-xs sm:text-sm text-red-600 hover:bg-red-50"
                       >
-                        <LogOut className="h-4 w-4 mr-3" />
+                        <LogOut className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                         Sign Out
                       </button>
                     </div>
