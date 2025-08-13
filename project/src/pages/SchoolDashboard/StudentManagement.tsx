@@ -51,7 +51,7 @@ const StudentManagement: React.FC = () => {
       title="Complete your profile to manage students"
       description="Finish setting up your university profile to view and manage student applications"
     >
-      <div className="p-4 md:p-6">
+      <div className="p-4 md:p-6 pt-10">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Student Management</h1>
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
