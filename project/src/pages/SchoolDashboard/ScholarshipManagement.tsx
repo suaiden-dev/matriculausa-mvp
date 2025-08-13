@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -15,16 +15,28 @@ import {
   Clock,
   Users,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
 const ScholarshipManagement: React.FC = () => {
-  const { university, scholarships, handleDeleteScholarship, toggleScholarshipStatus } = useUniversity();
+  const { 
+    university, 
+    scholarships, 
+    handleDeleteScholarship, 
+    toggleScholarshipStatus,
+    refreshData
+  } = useUniversity();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showActions, setShowActions] = useState<string | null>(null);
+
+  // Force refresh data when component mounts
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   const filteredScholarships = scholarships.filter(scholarship => {
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -82,8 +94,6 @@ const ScholarshipManagement: React.FC = () => {
         return 'bg-slate-600';
     }
   };
-
-
 
   return (
     <ProfileCompletionGuard 
@@ -168,6 +178,7 @@ const ScholarshipManagement: React.FC = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
+                  title="Filter by status"
                   className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                 >
                   <option value="all">All Status</option>
@@ -175,7 +186,10 @@ const ScholarshipManagement: React.FC = () => {
                   <option value="inactive">Inactive</option>
                 </select>
                 
-                <button className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors flex items-center">
+                <button 
+                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors flex items-center"
+                  aria-label="Filter scholarships"
+                >
                   <Filter className="h-5 w-5 text-slate-500" />
                 </button>
               </div>

@@ -6,6 +6,7 @@ import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import type { Scholarship } from '../types';
 import Header from '../components/Header';
+import { slugify } from '../utils/slugify';
 
 const UniversityDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -37,22 +38,77 @@ const UniversityDetail: React.FC = () => {
 
   useEffect(() => {
     const fetchUniversity = async () => {
-      // Try mock first
-      const uni = mockSchools.find(school => slugify(school.name) === slug);
-      if (uni) {
-        setUniversity(uni);
+      console.log('Fetching university with slug:', slug);
+      console.log('Testing slugify function:', slugify('Adelphi University'));
+      
+      if (!slug) {
+        setUniversity(null);
         setLoading(false);
         return;
       }
-      // Try Supabase
-      const { data } = await supabase
+      
+      // Try Supabase first - search by name using the slug
+      const { data, error } = await supabase
         .from('universities')
         .select('*')
-        .eq('slug', slug);
+        .eq('is_approved', true);
+      
+      console.log('Supabase search result:', { data, error });
+      
       if (data && data.length > 0) {
+        console.log('Available universities:', data.map(u => ({ name: u.name, slug: slugify(u.name) })));
+        
+        // Find the best match by comparing slugified names
+        const bestMatch = data.find(uni => slugify(uni.name) === slug);
+        console.log('Best match found:', bestMatch);
+        
+        if (bestMatch) {
+          setUniversity(bestMatch);
+          setLoading(false);
+          return;
+        }
+        
+        // If no exact match, try partial matching
+        const partialMatch = data.find(uni => {
+          const uniSlug = slugify(uni.name);
+          return uniSlug.includes(slug) || slug.includes(uniSlug);
+        });
+        
+        if (partialMatch) {
+          console.log('Partial match found:', partialMatch);
+          setUniversity(partialMatch);
+          setLoading(false);
+          return;
+        }
+        
+        // If no match at all, try fuzzy matching
+        const fuzzyMatch = data.find(uni => {
+          const uniName = uni.name.toLowerCase();
+          const searchName = slug.replace(/-/g, ' ').toLowerCase();
+          return uniName.includes(searchName) || searchName.includes(uniName);
+        });
+        
+        if (fuzzyMatch) {
+          console.log('Fuzzy match found:', fuzzyMatch);
+          setUniversity(fuzzyMatch);
+          setLoading(false);
+          return;
+        }
+        
+        // If no match at all, use the first result as fallback
+        console.log('No match found, using first result:', data[0]);
         setUniversity(data[0]);
       } else {
-        setUniversity(null);
+        // Try mock as fallback
+        console.log('No Supabase results, trying mock data');
+        const uni = mockSchools.find(school => slugify(school.name) === slug);
+        if (uni) {
+          console.log('Found in mock data:', uni);
+          setUniversity(uni);
+        } else {
+          console.log('University not found in mock data either');
+          setUniversity(null);
+        }
       }
       setLoading(false);
     };
@@ -552,7 +608,3 @@ const UniversityDetail: React.FC = () => {
 };
 
 export default UniversityDetail;
-
-function slugify(str: string) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
