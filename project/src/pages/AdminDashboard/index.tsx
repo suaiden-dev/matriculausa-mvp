@@ -14,6 +14,7 @@ import ApplicationMonitoring from './ApplicationMonitoring';
 import AdminApplicationView from './AdminApplicationView';
 import MatriculaRewardsAdmin from './MatriculaRewardsAdmin';
 import AdminPayoutRequests from './PayoutRequests';
+import FeaturedUniversitiesManagement from './FeaturedUniversitiesManagement';
 import { Dialog } from '@headlessui/react';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
@@ -520,6 +521,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/application-monitoring/:applicationId" element={<AdminApplicationView />} />
         <Route path="/matricula-rewards" element={<MatriculaRewardsAdmin />} />
         <Route path="/payout-requests" element={<AdminPayoutRequests />} />
+        <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
       </Routes>
 
       {/* Confirmation Modal */}

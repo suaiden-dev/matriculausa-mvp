@@ -17,7 +17,8 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
-  CreditCard
+  CreditCard,
+  Star
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -45,6 +46,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/users')) return 'users';
     if (path.includes('/scholarships')) return 'scholarships';
     if (path.includes('/payments')) return 'payments';
+    if (path.includes('/featured-universities')) return 'featured-universities';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -84,6 +86,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, path: '/admin/dashboard', badge: null },
     { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
+    { id: 'featured-universities', label: 'Universidades em Destaque', icon: Star, path: '/admin/dashboard/featured-universities', badge: null },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },

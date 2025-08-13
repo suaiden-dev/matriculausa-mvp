@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
 import type { Scholarship } from '../types';
+import { supabase } from '../lib/supabase';
 
 import SmartChat from '../components/SmartChat';
 
@@ -14,6 +15,8 @@ const Scholarships: React.FC = () => {
   const [selectedDeliveryMode, setSelectedDeliveryMode] = useState('all');
   const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
   const { scholarships, loading, error } = useScholarships();
+  const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
+  const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
 
   // Get min and max scholarship values from data
   const scholarshipValues = scholarships.map((s: Scholarship) => s.amount);
@@ -59,6 +62,40 @@ const Scholarships: React.FC = () => {
         console.log('Error loading saved filters:', error);
       }
     }
+  }, []);
+
+  // Buscar universidades em destaque e suas bolsas
+  useEffect(() => {
+    const fetchFeaturedUniversities = async () => {
+      try {
+        const { data: universitiesData, error: universitiesError } = await supabase
+          .from('universities')
+          .select('id, name, location, logo_url')
+          .eq('is_approved', true)
+          .eq('is_featured', true)
+          .order('featured_order');
+        
+        if (!universitiesError && universitiesData) {
+          setFeaturedUniversities(universitiesData);
+          
+          // Buscar bolsas das universidades em destaque
+          const universityIds = universitiesData.map(u => u.id);
+          const { data: scholarshipsData, error: scholarshipsError } = await supabase
+            .from('scholarships')
+            .select('*')
+            .in('university_id', universityIds)
+            .eq('is_active', true);
+          
+          if (!scholarshipsError && scholarshipsData) {
+            setFeaturedScholarships(scholarshipsData);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar universidades em destaque:', error);
+      }
+    };
+
+    fetchFeaturedUniversities();
   }, []);
 
   const levelOptions = [
@@ -345,6 +382,97 @@ const Scholarships: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {/* Featured Scholarships Section */}
+        {featuredScholarships.length > 0 && (
+          <div className="mb-12">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-6 py-2 mb-4">
+                <Star className="h-4 w-4 mr-2 fill-current" />
+                <span className="text-sm font-bold">Bolsa das Universidades em Destaque</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                <span className="text-[#05294E]">Destaques</span> da Semana
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Bolsas exclusivas das universidades selecionadas pelos nossos especialistas
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {featuredScholarships.slice(0, 6).map((scholarship) => (
+                <div key={scholarship.id} className="group bg-gradient-to-br from-white to-yellow-50 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-yellow-200 hover:border-yellow-300 hover:-translate-y-2 relative">
+                  {/* Featured Badge */}
+                  <div className="absolute top-4 right-4 z-10">
+                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center">
+                      <Star className="h-3 w-3 mr-1 fill-current" />
+                      Destaque
+                    </div>
+                  </div>
+                  
+                  {/* Scholarship Content */}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                          {scholarship.title}
+                        </h3>
+                        
+                        {/* University Info */}
+                        {featuredUniversities.find(u => u.id === scholarship.university_id) && (
+                          <div className="flex items-center text-slate-600 mb-3">
+                            <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                            <span className="text-sm font-medium">
+                              {featuredUniversities.find(u => u.id === scholarship.university_id)?.name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scholarship Details */}
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">Valor da Bolsa:</span>
+                        <span className="text-lg font-bold text-green-600">
+                          ${formatAmount(scholarship.amount)}
+                        </span>
+                      </div>
+                      
+                      {scholarship.level && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600">Nível:</span>
+                          <span className="text-sm font-medium text-slate-800 flex items-center">
+                            {getLevelIcon(scholarship.level)}
+                            <span className="ml-2 capitalize">{scholarship.level}</span>
+                          </span>
+                        </div>
+                      )}
+                      
+                      {scholarship.field_of_study && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600">Área:</span>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                            {scholarship.field_of_study}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      onClick={() => navigate(`/scholarships/${scholarship.id}`)}
+                      className="w-full bg-[#05294E] hover:bg-[#02172B] text-white px-4 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center hover:scale-105"
+                    >
+                      Ver Detalhes
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Scholarships Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

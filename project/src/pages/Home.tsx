@@ -10,7 +10,37 @@ import SmartChat from '../components/SmartChat';
 
 const Home: React.FC = () => {
   const { universities, loading: universitiesLoading } = useUniversities();
-  const featuredSchools = universities.slice(0, 6);
+  
+  // Buscar universidades em destaque
+  const [featuredSchools, setFeaturedSchools] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchFeaturedUniversities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('universities')
+          .select('id, name, location, logo_url, programs, description, website, address, type')
+          .eq('is_approved', true)
+          .eq('is_featured', true)
+          .order('featured_order');
+        
+        if (!error && data) {
+          setFeaturedSchools(data);
+        } else {
+          // Fallback para as primeiras 6 universidades se não houver destaque
+          setFeaturedSchools(universities.slice(0, 6));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar universidades em destaque:', error);
+        // Fallback para as primeiras 6 universidades
+        setFeaturedSchools(universities.slice(0, 6));
+      }
+    };
+
+    if (universities.length > 0) {
+      fetchFeaturedUniversities();
+    }
+  }, [universities]);
   const { isAuthenticated, user, userProfile } = useAuth();
   const { hasPaidProcess, loading: subscriptionLoading } = useSubscription();
 
