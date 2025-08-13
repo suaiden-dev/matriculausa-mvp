@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, ArrowRight, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import StudentDashboardLayout from './StudentDashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
@@ -33,38 +33,6 @@ const ApplicationFeeSuccess: React.FC = () => {
           throw new Error(`Verification failed: ${functionError.message}`);
         }
         
-        // Marcar pagamento (application fee) sem alterar o status da aplicação (mantém 'approved')
-        try {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('id')
-            .eq('user_id', user?.id || '')
-            .single();
-          if (profile?.id) {
-            // Atualiza a aplicação mais recente do aluno
-            const { data: app } = await supabase
-              .from('scholarship_applications')
-              .select('id, status')
-              .eq('student_id', profile.id)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (app?.id) {
-              await supabase
-                .from('scholarship_applications')
-                .update({ is_application_fee_paid: true, status: 'approved' })
-                .eq('id', app.id);
-            }
-          }
-          // Opcional: refletir no perfil
-          if (user?.id) {
-            await supabase
-              .from('user_profiles')
-              .update({ is_application_fee_paid: true })
-              .eq('user_id', user.id);
-          }
-        } catch {}
-
         setStatus('success');
 
       } catch (e: any) {
@@ -116,7 +84,7 @@ const ApplicationFeeSuccess: React.FC = () => {
 
   return (
     <StudentDashboardLayout user={user} profile={userProfile} loading={loading}>
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-green-50 px-4">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           {renderContent()}
         </div>

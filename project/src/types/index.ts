@@ -88,7 +88,7 @@ export interface Application {
   id: string;
   scholarship_id: string;
   student_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review' | 'pending_scholarship_fee' | 'enrolled';
+  status: 'pending' | 'approved' | 'rejected' | 'under_review' | 'pending_scholarship_fee' | 'enrolled' | 'selected';
   applied_at: string;
   documents: string[];
   notes?: string;

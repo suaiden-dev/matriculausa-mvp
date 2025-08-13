@@ -139,68 +139,83 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
             })
             .eq('user_id', user.id);
 
-          // Garantir application e anexar documentos
+          // Garantir applications para TODAS as bolsas selecionadas e anexar documentos
           try {
             const { data: profile } = await supabase
               .from('user_profiles')
               .select('id, selected_scholarship_id')
               .eq('user_id', user.id)
               .single();
-
-            let placeholderScholarship = (userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id || null;
-            if (!placeholderScholarship) {
-              const { data: cartRow } = await supabase
+            const scholarshipIds: string[] = [];
+            {
+              const { data: cartRows } = await supabase
                 .from('user_cart')
                 .select('scholarship_id')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              placeholderScholarship = cartRow?.scholarship_id || null;
-            }
-
-            let applicationId: string | null = null;
-            if (placeholderScholarship && profile?.id) {
-              const { data: existingApp } = await supabase
-                .from('scholarship_applications')
-                .select('id')
-                .eq('student_id', profile.id)
-                .eq('scholarship_id', placeholderScholarship)
-                .maybeSingle();
-              if (!existingApp) {
-                const { data: newApp } = await supabase
-                  .from('scholarship_applications')
-                  .insert({ student_id: profile.id, scholarship_id: placeholderScholarship, status: 'pending' })
-                  .select('id')
-                  .single();
-                applicationId = newApp?.id || null;
-              } else {
-                applicationId = existingApp.id;
+                .eq('user_id', user.id);
+              if (Array.isArray(cartRows)) {
+                for (const row of cartRows) {
+                  if (row?.scholarship_id && !scholarshipIds.includes(row.scholarship_id)) {
+                    scholarshipIds.push(row.scholarship_id);
+                  }
+                }
               }
             }
-
-            // Fallback: se não encontrou pela bolsa selecionada, usa a aplicação mais recente do aluno
-            if (!applicationId && profile?.id) {
-              const { data: latestApp } = await supabase
-                .from('scholarship_applications')
-                .select('id')
-                .eq('student_id', profile.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              applicationId = latestApp?.id || null;
+            if (scholarshipIds.length === 0 && ((userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id)) {
+              const sel = (userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id;
+              if (sel) scholarshipIds.push(sel);
             }
 
-            if (applicationId) {
-              const finalDocs = [
-                { type: 'passport', url: docUrls['passport'] },
-                { type: 'diploma', url: docUrls['diploma'] },
-                { type: 'funds_proof', url: docUrls['funds_proof'] },
-              ].filter(d => d.url);
-              await supabase
-                .from('scholarship_applications')
-                .update({ documents: finalDocs.map(d => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' })) })
-                .eq('id', applicationId);
+            if (profile?.id) {
+              if (scholarshipIds.length > 0) {
+                for (const scholarshipId of scholarshipIds) {
+                  const { data: existingApp } = await supabase
+                    .from('scholarship_applications')
+                    .select('id')
+                    .eq('student_id', profile.id)
+                    .eq('scholarship_id', scholarshipId)
+                    .maybeSingle();
+                  let applicationId: string | null = existingApp?.id || null;
+                  if (!applicationId) {
+                    const { data: newApp } = await supabase
+                      .from('scholarship_applications')
+                      .insert({ student_id: profile.id, scholarship_id: scholarshipId, status: 'pending' })
+                      .select('id')
+                      .single();
+                    applicationId = newApp?.id || null;
+                  }
+                  if (applicationId) {
+                    const finalDocs = [
+                      { type: 'passport', url: docUrls['passport'] },
+                      { type: 'diploma', url: docUrls['diploma'] },
+                      { type: 'funds_proof', url: docUrls['funds_proof'] },
+                    ].filter(d => (d as any).url);
+                    await supabase
+                      .from('scholarship_applications')
+                      .update({ documents: (finalDocs as any).map((d: any) => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' })) })
+                      .eq('id', applicationId);
+                  }
+                }
+              } else {
+                const { data: latestApp } = await supabase
+                  .from('scholarship_applications')
+                  .select('id')
+                  .eq('student_id', profile.id)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                const applicationId = latestApp?.id || null;
+                if (applicationId) {
+                  const finalDocs = [
+                    { type: 'passport', url: docUrls['passport'] },
+                    { type: 'diploma', url: docUrls['diploma'] },
+                    { type: 'funds_proof', url: docUrls['funds_proof'] },
+                  ].filter(d => (d as any).url);
+                  await supabase
+                    .from('scholarship_applications')
+                    .update({ documents: (finalDocs as any).map((d: any) => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' })) })
+                    .eq('id', applicationId);
+                }
+              }
             }
 
             // Limpar carrinho do usuário
@@ -244,7 +259,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
             window.localStorage.setItem('documentAnalysisErrors', JSON.stringify(nextFieldErrors));
             window.localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
           } catch {}
-          // Atualiza estado do perfil e garante application com anexos para a universidade
+          // Atualiza estado do perfil e garante applications com anexos para a universidade (todas do carrinho)
           try {
             await supabase
               .from('user_profiles')
@@ -255,56 +270,85 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
               })
               .eq('user_id', user.id);
 
-            // Garantir application e anexar documentos disponíveis
+            // Garantir applications e anexar documentos disponíveis
             const { data: profile } = await supabase
               .from('user_profiles')
               .select('id, selected_scholarship_id')
               .eq('user_id', user.id)
               .single();
-
-            let placeholderScholarship = (userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id || null;
-            if (!placeholderScholarship) {
-              const { data: cartRow } = await supabase
+            const scholarshipIds: string[] = [];
+            {
+              const { data: cartRows } = await supabase
                 .from('user_cart')
                 .select('scholarship_id')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              placeholderScholarship = cartRow?.scholarship_id || null;
-            }
-
-            let applicationId: string | null = null;
-            if (placeholderScholarship && profile?.id) {
-              const { data: existingApp } = await supabase
-                .from('scholarship_applications')
-                .select('id')
-                .eq('student_id', profile.id)
-                .eq('scholarship_id', placeholderScholarship)
-                .maybeSingle();
-              if (!existingApp) {
-                const { data: newApp } = await supabase
-                  .from('scholarship_applications')
-                  .insert({ student_id: profile.id, scholarship_id: placeholderScholarship, status: 'pending' })
-                  .select('id')
-                  .single();
-                applicationId = newApp?.id || null;
-              } else {
-                applicationId = existingApp.id;
+                .eq('user_id', user.id);
+              if (Array.isArray(cartRows)) {
+                for (const row of cartRows) {
+                  if (row?.scholarship_id && !scholarshipIds.includes(row.scholarship_id)) {
+                    scholarshipIds.push(row.scholarship_id);
+                  }
+                }
               }
             }
+            if (scholarshipIds.length === 0 && ((userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id)) {
+              const sel = (userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id;
+              if (sel) scholarshipIds.push(sel);
+            }
 
-            if (applicationId) {
-              const finalDocs = [
-                docUrls['passport'] ? { type: 'passport', url: docUrls['passport'] } : null,
-                docUrls['diploma'] ? { type: 'diploma', url: docUrls['diploma'] } : null,
-                docUrls['funds_proof'] ? { type: 'funds_proof', url: docUrls['funds_proof'] } : null,
-              ].filter(Boolean).map((d: any) => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' }));
-              if (finalDocs.length > 0) {
-                await supabase
+            if (profile?.id) {
+              if (scholarshipIds.length > 0) {
+                for (const scholarshipId of scholarshipIds) {
+                  const { data: existingApp } = await supabase
+                    .from('scholarship_applications')
+                    .select('id')
+                    .eq('student_id', profile.id)
+                    .eq('scholarship_id', scholarshipId)
+                    .maybeSingle();
+                  let applicationId: string | null = existingApp?.id || null;
+                  if (!applicationId) {
+                    const { data: newApp } = await supabase
+                      .from('scholarship_applications')
+                      .insert({ student_id: profile.id, scholarship_id: scholarshipId, status: 'pending' })
+                      .select('id')
+                      .single();
+                    applicationId = newApp?.id || null;
+                  }
+                  if (applicationId) {
+                    const finalDocs = [
+                      docUrls['passport'] ? { type: 'passport', url: docUrls['passport'] } : null,
+                      docUrls['diploma'] ? { type: 'diploma', url: docUrls['diploma'] } : null,
+                      docUrls['funds_proof'] ? { type: 'funds_proof', url: docUrls['funds_proof'] } : null,
+                    ].filter(Boolean).map((d: any) => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' }));
+                    if (finalDocs.length > 0) {
+                      await supabase
+                        .from('scholarship_applications')
+                        .update({ documents: finalDocs })
+                        .eq('id', applicationId);
+                    }
+                  }
+                }
+              } else {
+                const { data: latestApp } = await supabase
                   .from('scholarship_applications')
-                  .update({ documents: finalDocs })
-                  .eq('id', applicationId);
+                  .select('id')
+                  .eq('student_id', profile.id)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                const applicationId = latestApp?.id || null;
+                if (applicationId) {
+                  const finalDocs = [
+                    docUrls['passport'] ? { type: 'passport', url: docUrls['passport'] } : null,
+                    docUrls['diploma'] ? { type: 'diploma', url: docUrls['diploma'] } : null,
+                    docUrls['funds_proof'] ? { type: 'funds_proof', url: docUrls['funds_proof'] } : null,
+                  ].filter(Boolean).map((d: any) => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' }));
+                  if (finalDocs.length > 0) {
+                    await supabase
+                      .from('scholarship_applications')
+                      .update({ documents: finalDocs })
+                      .eq('id', applicationId);
+                  }
+                }
               }
             }
 

@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { price_id, success_url, cancel_url, mode, metadata } = await req.json();
+    // scholarships_ids pode vir como array (frontend envia string[])
+    const { price_id, success_url, cancel_url, mode, metadata, scholarships_ids } = await req.json();
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -51,11 +52,16 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-scholarship-fee] Received payload:', { price_id, success_url, cancel_url, mode, metadata });
 
-    // Monta o metadata mínimo
+    // Normaliza scholarships_ids para string (comma-separated) e monta o metadata
+    const normalizedScholarshipsIds = Array.isArray(scholarships_ids)
+      ? scholarships_ids.join(',')
+      : (scholarships_ids || undefined);
+
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'scholarship_fee',
       ...metadata,
+      ...(normalizedScholarshipsIds ? { scholarships_ids: normalizedScholarshipsIds } : {}),
     };
 
     const session = await stripe.checkout.sessions.create({
