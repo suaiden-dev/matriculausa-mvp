@@ -2157,7 +2157,7 @@ Mantenha sempre o seguinte tom nas interações:
   }
 
   return (
-    <div className="w-full overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 180px)' }}>
+    <div className="w-full flex flex-col" style={{ minHeight: 'calc(100vh - 180px)' }}>
       {/* Notification Toast - Centro da tela */}
       {notification && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
