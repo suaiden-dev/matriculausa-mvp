@@ -27,9 +27,10 @@ import { useUniversity } from '../../context/UniversityContext';
 
 interface SchoolDashboardLayoutProps {
   user: any;
+  children: React.ReactNode;
 }
 
-const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) => {
+const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -427,7 +428,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
             </div>
           )}
 
-          <Outlet />
+          {children}
         </main>
       </div>
     </div>

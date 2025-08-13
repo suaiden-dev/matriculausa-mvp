@@ -19,8 +19,8 @@ const Scholarships: React.FC = () => {
   const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
 
   // Get min and max scholarship values from data
-  const scholarshipValues = scholarships.map((s: Scholarship) => s.amount);
-  const maxScholarshipValue = Math.max(...scholarshipValues);
+  const scholarshipValues = scholarships.map((s: Scholarship) => s.amount).filter(val => val && val > 0);
+  const maxScholarshipValue = scholarshipValues.length > 0 ? Math.max(...scholarshipValues) : 100000;
 
   // Range state
   const [maxPrice, setMaxPrice] = useState(() => maxScholarshipValue);
@@ -64,38 +64,43 @@ const Scholarships: React.FC = () => {
     }
   }, []);
 
-  // Buscar universidades em destaque e suas bolsas
+  // Fetch featured scholarships directly from the scholarships table
   useEffect(() => {
-    const fetchFeaturedUniversities = async () => {
+    const fetchFeaturedScholarships = async () => {
       try {
-        const { data: universitiesData, error: universitiesError } = await supabase
-          .from('universities')
-          .select('id, name, location, logo_url')
-          .eq('is_approved', true)
-          .eq('is_featured', true)
-          .order('featured_order');
+        // Fetch scholarships marked as featured
+        const { data: scholarshipsData, error: scholarshipsError } = await supabase
+          .from('scholarships')
+          .select(`
+            *,
+            universities (id, name, location, logo_url)
+          `)
+          .eq('is_active', true)
+          .eq('is_highlighted', true)
+          .order('featured_order', { ascending: true });
         
-        if (!universitiesError && universitiesData) {
-          setFeaturedUniversities(universitiesData);
+        if (!scholarshipsError && scholarshipsData) {
+          setFeaturedScholarships(scholarshipsData);
           
-          // Buscar bolsas das universidades em destaque
-          const universityIds = universitiesData.map(u => u.id);
-          const { data: scholarshipsData, error: scholarshipsError } = await supabase
-            .from('scholarships')
-            .select('*')
-            .in('university_id', universityIds)
-            .eq('is_active', true);
-          
-          if (!scholarshipsError && scholarshipsData) {
-            setFeaturedScholarships(scholarshipsData);
+          // Fetch universities of featured scholarships to display information
+          const universityIds = scholarshipsData.map(s => s.university_id).filter(Boolean);
+          if (universityIds.length > 0) {
+            const { data: universitiesData, error: universitiesError } = await supabase
+              .from('universities')
+              .select('id, name, location, logo_url')
+              .in('id', universityIds);
+            
+            if (!universitiesError && universitiesData) {
+              setFeaturedUniversities(universitiesData);
+            }
           }
         }
       } catch (error) {
-        console.error('Erro ao carregar universidades em destaque:', error);
+        console.error('Error loading featured scholarships:', error);
       }
     };
 
-    fetchFeaturedUniversities();
+    fetchFeaturedScholarships();
   }, []);
 
   const levelOptions = [
@@ -109,6 +114,11 @@ const Scholarships: React.FC = () => {
   const navigate = useNavigate();
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
+    // Exclude featured scholarships from the general list to avoid duplication
+    if (scholarship.is_highlighted) {
+      return false;
+    }
+    
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
     const value = scholarship.annual_value_with_scholarship ?? 0;
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
@@ -221,14 +231,22 @@ const Scholarships: React.FC = () => {
     setTotalCount(filteredScholarships.length);
   }, [filteredScholarships]);
 
-  // Exibir apenas bolsas com deadline hoje ou futuro
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const visibleScholarships = filteredScholarships.filter(s => {
-    const deadlineDate = new Date(s.deadline);
-    return deadlineDate >= today;
-  });
+  // Display all filtered scholarships
+  const visibleScholarships = filteredScholarships;
   const paginatedScholarships = visibleScholarships.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, minPrice, maxPrice]);
+
+  // Debug: check how many scholarships we have (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Total scholarships:', scholarships.length);
+    console.log('Filtered scholarships:', filteredScholarships.length);
+    
+    console.log('Paginated scholarships:', paginatedScholarships.length);
+  }
 
   return (
     <div className="bg-white min-h-screen">
@@ -389,343 +407,535 @@ const Scholarships: React.FC = () => {
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-6 py-2 mb-4">
                 <Star className="h-4 w-4 mr-2 fill-current" />
-                <span className="text-sm font-bold">Bolsa das Universidades em Destaque</span>
+                <span className="text-sm font-bold">Featured Scholarships</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">Destaques</span> da Semana
+                <span className="text-[#05294E]">Weekly</span> Highlights
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Bolsas exclusivas das universidades selecionadas pelos nossos especialistas
+                Scholarships selected by our experts for you
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {featuredScholarships.slice(0, 6).map((scholarship) => (
-                <div key={scholarship.id} className="group bg-gradient-to-br from-white to-yellow-50 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-yellow-200 hover:border-yellow-300 hover:-translate-y-2 relative">
-                  {/* Featured Badge */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center">
-                      <Star className="h-3 w-3 mr-1 fill-current" />
-                      Destaque
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+              {featuredScholarships.slice(0, 6).map((scholarship) => {
+                const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+                const daysLeft = getDaysUntilDeadline(scholarship.deadline);
+                const originalValue = scholarship.original_annual_value ?? 0;
+                const scholarshipValue = scholarship.annual_value_with_scholarship ?? 0;
+                const savings = originalValue - scholarshipValue;
+                const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
+                
+                return (
+                  <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
+                    {/* Featured Badge - Top Right */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-current" />
+                        Featured
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Scholarship Content */}
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+
+                    {/* Deadline Urgency Indicator */}
+                    {daysLeft <= 7 && daysLeft > 0 && (
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>
+                    )}
+                    {daysLeft <= 3 && daysLeft > 0 && (
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600 z-10 animate-pulse"></div>
+                    )}
+
+                    {/* Scholarship Image */}
+                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                      {scholarship.image_url ? (
+                        <img
+                          src={scholarship.image_url}
+                          alt={scholarship.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                          <Building className="h-16 w-16 text-[#05294E]/30" />
+                        </div>
+                      )}
+                      
+                      {/* Gradient Overlay for better text contrast */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                      
+                      {/* Top Left Badges */}
+                      <div className="absolute top-4 left-4 flex flex-col gap-2">
+                        {/* Exclusive Badge */}
+                        {scholarship.is_exclusive && (
+                          <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                            <Star className="h-3 w-3" />
+                            Exclusive
+                          </div>
+                        )}
+                        
+                        {/* Savings Badge */}
+                        {savingsPercentage > 0 && (
+                          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            {savingsPercentage}% OFF
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Deadline Badge - Top Left (below other badges) */}
+                      <div className="absolute top-4 left-4" style={{ top: scholarship.is_exclusive || savingsPercentage > 0 ? '4.5rem' : '1rem' }}>
+                        <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                          <Clock className="h-3 w-3" />
+                          {daysLeft <= 0 ? 'Expired' : `${daysLeft} days`}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Card Content */}
+                    <div className="p-6">
+                      {/* Header Section */}
+                      <div className="mb-4">
+                        <h3 id={`featured-scholarship-title-${scholarship.id}`} className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300">
                           {scholarship.title}
                         </h3>
                         
+                        {/* Field and Level Badges */}
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
+                            <GraduationCap className="h-3 w-3 flex-shrink-0" />
+                            <span className="hidden sm:inline">{scholarship.field_of_study || 'Any Field'}</span>
+                            <span className="sm:hidden">{(scholarship.field_of_study || 'Any').slice(0, 4)}</span>
+                          </span>
+                          <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
+                            {getLevelIcon(scholarship.level || 'undergraduate')}
+                            <span className="hidden sm:inline">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
+                            <span className="sm:hidden">{(levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate').slice(0, 5)}</span>
+                          </span>
+                        </div>
+                        
                         {/* University Info */}
-                        {featuredUniversities.find(u => u.id === scholarship.university_id) && (
-                          <div className="flex items-center text-slate-600 mb-3">
-                            <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                            <span className="text-sm font-medium">
-                              {featuredUniversities.find(u => u.id === scholarship.university_id)?.name}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Scholarship Details */}
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600">Valor da Bolsa:</span>
-                        <span className="text-lg font-bold text-green-600">
-                          ${formatAmount(scholarship.amount)}
-                        </span>
-                      </div>
-                      
-                      {scholarship.level && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600">Nível:</span>
-                          <span className="text-sm font-medium text-slate-800 flex items-center">
-                            {getLevelIcon(scholarship.level)}
-                            <span className="ml-2 capitalize">{scholarship.level}</span>
+                        <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
+                          <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
+                          <span className="text-xs font-semibold mr-2 text-slate-500">University:</span>
+                          <span className="text-sm font-medium text-slate-700">
+                            {featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University'}
                           </span>
                         </div>
-                      )}
-                      
-                      {scholarship.field_of_study && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-600">Área:</span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                            {scholarship.field_of_study}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Button */}
-                    <button
-                      onClick={() => navigate(`/scholarships/${scholarship.id}`)}
-                      className="w-full bg-[#05294E] hover:bg-[#02172B] text-white px-4 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center hover:scale-105"
-                    >
-                      Ver Detalhes
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Scholarships Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {loading ? (
-            // Skeleton cards durante o carregamento
-            Array.from({ length: PAGE_SIZE }).map((_, i) => (
-              <div key={i} className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 animate-pulse">
-                <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
-                <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
-                <div className="space-y-3">
-                  <div className="h-10 bg-slate-200 rounded"></div>
-                  <div className="h-10 bg-slate-200 rounded"></div>
-                  <div className="h-10 bg-slate-200 rounded"></div>
-                </div>
-                <div className="mt-6 h-12 bg-slate-200 rounded-xl"></div>
-              </div>
-            ))
-          ) : error ? (
-            <div className="col-span-full text-center text-slate-500 py-12">
-              <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <p>{error}</p>
-            </div>
-          ) : paginatedScholarships.length === 0 ? (
-            <div className="col-span-full text-center text-slate-500 py-12">No scholarships found.</div>
-          ) : (
-            paginatedScholarships.map((scholarship: Scholarship) => {
-              const deadlineStatus = getDeadlineStatus(scholarship.deadline);
-              const daysLeft = getDaysUntilDeadline(scholarship.deadline);
-              const originalValue = scholarship.original_annual_value ?? 0;
-              const scholarshipValue = scholarship.annual_value_with_scholarship ?? 0;
-              const savings = originalValue - scholarshipValue;
-              const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
-              
-              return (
-                <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
-                  {/* Deadline Urgency Indicator */}
-                  {daysLeft <= 7 && daysLeft > 0 && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>
-                  )}
-                  {daysLeft <= 3 && daysLeft > 0 && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600 z-10 animate-pulse"></div>
-                  )}
-
-                  {/* Scholarship Image */}
-                  <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                    {scholarship.image_url ? (
-                      <img
-                        src={scholarship.image_url}
-                        alt={scholarship.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
-                        <Building className="h-16 w-16 text-[#05294E]/30" />
-                      </div>
-                    )}
-                    
-                    {/* Gradient Overlay for better text contrast */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
-                    
-                    {/* Top Right Badges */}
-                    <div className="absolute top-4 right-4 flex flex-col gap-2">
-                      {/* Exclusive Badge */}
-                      {scholarship.is_exclusive && (
-                        <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                          <Star className="h-3 w-3" />
-                          Exclusive
-                        </div>
-                      )}
-                      
-                      {/* Savings Badge */}
-                      {savingsPercentage > 0 && (
-                        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          {savingsPercentage}% OFF
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Deadline Badge - Top Left */}
-                    <div className="absolute top-4 left-4">
-                      <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                        <Clock className="h-3 w-3" />
-                        {daysLeft <= 0 ? 'Expired' : `${daysLeft} days`}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Card Content */}
-                  <div className="p-6">
-                    {/* Header Section */}
-                    <div className="mb-4">
-                      <h3 id={`scholarship-title-${scholarship.id}`} className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300">
-                        {scholarship.title}
-                      </h3>
-                      
-                      {/* Field and Level Badges */}
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
-                          <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                          <span className="hidden sm:inline">{scholarship.field_of_study || 'Any Field'}</span>
-                          <span className="sm:hidden">{(scholarship.field_of_study || 'Any').slice(0, 4)}</span>
-                        </span>
-                        <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
-                          {getLevelIcon(scholarship.level || 'undergraduate')}
-                          <span className="hidden sm:inline">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
-                          <span className="sm:hidden">{(levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate').slice(0, 5)}</span>
-                        </span>
-                      </div>
-                      
-                      {/* University Info */}
-                      <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
-                        <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
-                        <span className="text-xs font-semibold mr-2 text-slate-500">University:</span>
-                        <span className={`text-sm font-medium ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                          {userProfile?.has_paid_selection_process_fee
-                            ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
-                            : '********'}
-                        </span>
-                      </div>
-                      {/* Program Details */}
-                      <div className="grid grid-cols-1 gap-3 mb-4">
-                        {/* Delivery Mode */}
-                        {scholarship.delivery_mode && (
-                          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="flex items-center">
-                              {getDeliveryModeIcon(scholarship.delivery_mode)}
-                              <span className="text-xs font-medium text-slate-600 ml-2">Study Mode</span>
-                            </div>
-                            <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                              {getDeliveryModeLabel(scholarship.delivery_mode)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Work Permissions */}
-                        {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                          <div className="p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="flex items-center mb-2">
-                              <Briefcase className="h-3 w-3 text-emerald-600" />
-                              <span className="text-xs font-medium text-slate-600 ml-2">Work Authorization</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {scholarship.work_permissions.map((permission, index) => (
-                                <span
-                                  key={index}
-                                  className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
-                                >
-                                  {permission}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Financial Impact Section */}
-                    <div className="mb-6">
-                      <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                        <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-green-600" />
-                          Financial Overview
-                        </h4>
                         
-
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600">Original Price</span>
-                            <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
-                              ${formatAmount(originalValue)}
-                            </span>
-                          </div>
-                          {savingsPercentage > 0 && (
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-slate-600">With Scholarship</span>
-                              <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
+                        {/* Program Details */}
+                        <div className="grid grid-cols-1 gap-3 mb-4">
+                          {/* Delivery Mode */}
+                          {scholarship.delivery_mode && (
+                            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                              <div className="flex items-center">
+                                {getDeliveryModeIcon(scholarship.delivery_mode)}
+                                <span className="text-xs font-medium text-slate-600 ml-2">Study Mode</span>
+                              </div>
+                              <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                                {getDeliveryModeLabel(scholarship.delivery_mode)}
+                              </span>
                             </div>
                           )}
-                          <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-                            <span>Per Credit</span>
-                            <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
-                          </div>
-                          
-                          {/* Subtle discount indicator */}
-                          {savingsPercentage > 0 && (
-                            <div className="pt-3 border-t border-slate-200">
-                              <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                <span>Scholarship Discount</span>
-                                <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
+
+                          {/* Work Permissions */}
+                          {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
+                            <div className="p-3 bg-white rounded-lg border border-slate-200">
+                              <div className="flex items-center mb-2">
+                                <Briefcase className="h-3 w-3 text-emerald-600" />
+                                <span className="text-xs font-medium text-slate-600 ml-2">Work Authorization</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {scholarship.work_permissions.map((permission, index) => (
+                                  <span
+                                    key={index}
+                                    className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
+                                  >
+                                    {permission}
+                                  </span>
+                                ))}
                               </div>
                             </div>
                           )}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Application Status Indicator */}
-                    {userProfile?.has_paid_selection_process_fee && (
-                      <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-semibold text-blue-800">Eligible to Apply</span>
+                      {/* Financial Impact Section */}
+                      <div className="mb-6">
+                        <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            Financial Overview
+                          </h4>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-slate-600">Original Price</span>
+                              <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
+                                ${formatAmount(originalValue)}
+                              </span>
+                            </div>
+                            {savingsPercentage > 0 && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600">With Scholarship</span>
+                                <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
+                              <span>Per Credit</span>
+                              <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                            </div>
+                            
+                            {/* Subtle discount indicator */}
+                            {savingsPercentage > 0 && (
+                              <div className="pt-3 border-t border-slate-200">
+                                <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                                  <span>Scholarship Discount</span>
+                                  <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Action Button */}
-                  <div className="px-6 pb-6">
-                    {(!isAuthenticated) ? (
-                      <button
-                        className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                        onClick={() => navigate('/login')}
-                        aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                        <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                        <span className="relative z-10">Apply Now</span>
-                      </button>
-                    ) : (
-                      <button
-                        className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                        onClick={async () => {
-                          if (!userProfile?.has_paid_selection_process_fee) {
-                            navigate('/student/dashboard');
-                            return;
-                          }
-                          navigate('/student/dashboard/scholarships');
-                        }}
-                        aria-label={`Apply for ${scholarship.title} scholarship`}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                        <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                        <span className="relative z-10">Apply Now</span>
-                        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* Enhanced Hover Effect Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-                  
-                  {/* Subtle Border Animation */}
-                  <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                    <div className="absolute inset-0 rounded-3xl border-2 border-[#05294E]/20 animate-pulse"></div>
-                  </div>
-                </article>
-              );
-            })
-          )}
-        </div>
+                                         {/* Action Button */}
+                     <div className="px-6 pb-6">
+                       {(!isAuthenticated) ? (
+                         <button
+                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                           onClick={() => navigate('/login')}
+                           aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                         >
+                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                           <span className="relative z-10">Apply Now</span>
+                         </button>
+                       ) : (
+                         <button
+                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                           onClick={async () => {
+                             if (!userProfile?.has_paid_selection_process_fee) {
+                               navigate('/student/dashboard');
+                               return;
+                             }
+                             navigate('/student/dashboard/scholarships');
+                           }}
+                           aria-label={`Apply for ${scholarship.title} scholarship`}
+                         >
+                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                           <span className="relative z-10">Apply Now</span>
+                           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                         </button>
+                       )}
+                     </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+                 {/* All Scholarships Section */}
+         <div className="mb-12">
+           <div className="text-center mb-8">
+             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+               <span className="text-[#05294E]">All</span> Scholarships
+             </h2>
+             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+               Explore all available scholarship opportunities for international students
+               <br />
+               <span className="text-sm text-slate-500">(Featured scholarships appear only in the top section)</span>
+             </p>
+             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+               <p className="text-blue-800 font-medium">
+                 Recommending {filteredScholarships.length} scholarships for you
+               </p>
+             </div>
+             {/* Debug info - only in development */}
+             {process.env.NODE_ENV === 'development' && (
+               <div className="mt-4 p-3 bg-slate-100 rounded-lg text-sm text-slate-600">
+                 <p>Total: {scholarships.length} | Filtered: {filteredScholarships.length} | Featured: {featuredScholarships.length} | Visible: {visibleScholarships.length}</p>
+                 <p>Paginated: {paginatedScholarships.length} | Page: {page + 1}</p>
+                 <p className="text-green-600 font-medium">✓ Featured scholarships don't appear duplicated in the general list</p>
+                 <p className="text-blue-600 font-medium">ℹ Real total: {scholarships.length - featuredScholarships.length} scholarships + {featuredScholarships.length} featured</p>
+               </div>
+             )}
+           </div>
+           
+           {/* Scholarships Grid */}
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+             {loading ? (
+               // Skeleton cards during loading
+               Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                 <div key={i} className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 animate-pulse">
+                   <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
+                   <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
+                   <div className="space-y-3">
+                     <div className="h-10 bg-slate-200 rounded"></div>
+                     <div className="h-10 bg-slate-200 rounded"></div>
+                     <div className="h-10 bg-slate-200 rounded"></div>
+                   </div>
+                   <div className="mt-6 h-12 bg-slate-200 rounded-xl"></div>
+                 </div>
+               ))
+             ) : error ? (
+               <div className="col-span-full text-center text-slate-500 py-12">
+                 <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                 <p>{error}</p>
+               </div>
+             ) : paginatedScholarships.length === 0 ? (
+               <div className="col-span-full text-center text-slate-500 py-12">
+                 <div className="bg-gradient-to-br from-slate-100 to-slate-200 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+                   <Award className="h-16 w-16 text-slate-400" />
+                 </div>
+                 <h3 className="text-3xl font-bold text-slate-600 mb-4">No scholarships found</h3>
+                 <p className="text-slate-500 text-lg mb-8">Try adjusting your search criteria to discover more opportunities</p>
+                 <button 
+                   onClick={() => {
+                     setSearchTerm('');
+                     setSelectedLevel('all');
+                     setSelectedField('all');
+                     setSelectedDeliveryMode('all');
+                     setSelectedWorkPermission('all');
+                     setMaxPrice(() => maxScholarshipValue);
+                     setMinPrice(0);
+                     localStorage.removeItem('scholarshipsPageFilters');
+                   }}
+                   className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"
+                 >
+                   Clear Filters
+                 </button>
+               </div>
+             ) : (
+               paginatedScholarships.map((scholarship: Scholarship) => {
+                 const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+                 const daysLeft = getDaysUntilDeadline(scholarship.deadline);
+                 const originalValue = scholarship.original_annual_value ?? 0;
+                 const scholarshipValue = scholarship.annual_value_with_scholarship ?? 0;
+                 const savings = originalValue - scholarshipValue;
+                 const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
+                 
+                 return (
+                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
+                     {/* Deadline Urgency Indicator */}
+                     {daysLeft <= 7 && daysLeft > 0 && (
+                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>
+                     )}
+                     {daysLeft <= 3 && daysLeft > 0 && (
+                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600 z-10 animate-pulse"></div>
+                     )}
+
+                     {/* Scholarship Image */}
+                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                       {scholarship.image_url ? (
+                         <img
+                           src={scholarship.image_url}
+                           alt={scholarship.title}
+                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                         />
+                       ) : (
+                         <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                           <Building className="h-16 w-16 text-[#05294E]/30" />
+                         </div>
+                       )}
+                       
+                       {/* Gradient Overlay for better text contrast */}
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                       
+                       {/* Top Right Badges */}
+                       <div className="absolute top-4 right-4 flex flex-col gap-2">
+                         {/* Exclusive Badge */}
+                         {scholarship.is_exclusive && (
+                           <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                             <Star className="h-3 w-3" />
+                             Exclusive
+                           </div>
+                         )}
+                         
+                         {/* Savings Badge */}
+                         {savingsPercentage > 0 && (
+                           <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                             <DollarSign className="h-3 w-3" />
+                             {savingsPercentage}% OFF
+                           </div>
+                         )}
+                       </div>
+
+                       {/* Deadline Badge - Top Left */}
+                       <div className="absolute top-4 left-4">
+                         <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                           <Clock className="h-3 w-3" />
+                           {daysLeft <= 0 ? 'Expired' : `${daysLeft} days`}
+                         </div>
+                       </div>
+                     </div>
+                     
+                     {/* Card Content */}
+                     <div className="p-6">
+                       {/* Header Section */}
+                       <div className="mb-4">
+                         <h3 id={`scholarship-title-${scholarship.id}`} className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300">
+                           {scholarship.title}
+                         </h3>
+                         
+                         {/* Field and Level Badges */}
+                         <div className="flex flex-wrap items-center gap-2 mb-3">
+                           <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
+                             <GraduationCap className="h-3 w-3 flex-shrink-0" />
+                             <span className="hidden sm:inline">{scholarship.field_of_study || 'Any Field'}</span>
+                             <span className="sm:hidden">{(scholarship.field_of_study || 'Any').slice(0, 4)}</span>
+                           </span>
+                           <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
+                             {getLevelIcon(scholarship.level || 'undergraduate')}
+                             <span className="hidden sm:inline">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
+                             <span className="sm:hidden">{(levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate').slice(0, 5)}</span>
+                           </span>
+                         </div>
+                         
+                         {/* University Info */}
+                         <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
+                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
+                           <span className="text-xs font-semibold mr-2 text-slate-500">University:</span>
+                           <span className={`text-sm font-medium ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                             {userProfile?.has_paid_selection_process_fee
+                               ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
+                               : '********'}
+                           </span>
+                         </div>
+                         {/* Program Details */}
+                         <div className="grid grid-cols-1 gap-3 mb-4">
+                           {/* Delivery Mode */}
+                           {scholarship.delivery_mode && (
+                             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                               <div className="flex items-center">
+                                 {getDeliveryModeIcon(scholarship.delivery_mode)}
+                                 <span className="text-xs font-medium text-slate-600 ml-2">Study Mode</span>
+                               </div>
+                               <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                                 {getDeliveryModeLabel(scholarship.delivery_mode)}
+                               </span>
+                             </div>
+                           )}
+
+                           {/* Work Permissions */}
+                           {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
+                             <div className="p-3 bg-white rounded-lg border border-slate-200">
+                               <div className="flex items-center mb-2">
+                                 <Briefcase className="h-3 w-3 text-emerald-600" />
+                                 <span className="text-xs font-medium text-slate-600 ml-2">Work Authorization</span>
+                               </div>
+                               <div className="flex flex-wrap gap-1">
+                                 {scholarship.work_permissions.map((permission, index) => (
+                                   <span
+                                     key={index}
+                                     className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
+                                   >
+                                     {permission}
+                                   </span>
+                                 ))}
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       </div>
+
+                       {/* Financial Impact Section */}
+                       <div className="mb-6">
+                         <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                           <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                             <DollarSign className="h-4 w-4 text-green-600" />
+                             Financial Overview
+                           </h4>
+                           
+
+                           
+                           <div className="space-y-2">
+                             <div className="flex items-center justify-between text-sm">
+                               <span className="text-slate-600">Original Price</span>
+                               <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
+                                 ${formatAmount(originalValue)}
+                               </span>
+                             </div>
+                             {savingsPercentage > 0 && (
+                               <div className="flex items-center justify-between text-sm">
+                                 <span className="text-slate-600">With Scholarship</span>
+                                 <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
+                               </div>
+                             )}
+                             <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
+                               <span>Per Credit</span>
+                               <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                             </div>
+                             
+                             {/* Subtle discount indicator */}
+                             {savingsPercentage > 0 && (
+                               <div className="pt-3 border-t border-slate-200">
+                                 <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                                   <span>Scholarship Discount</span>
+                                   <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
+                                 </div>
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                       </div>
+
+                       {/* Application Status Indicator */}
+                       {userProfile?.has_paid_selection_process_fee && (
+                         <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                           <div className="flex items-center gap-2">
+                             <CheckCircle className="h-4 w-4 text-blue-600" />
+                             <span className="text-sm font-semibold text-blue-800">Eligible to Apply</span>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+
+                     {/* Action Button */}
+                     <div className="px-6 pb-6">
+                       {(!isAuthenticated) ? (
+                         <button
+                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                           onClick={() => navigate('/login')}
+                           aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                         >
+                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                           <span className="relative z-10">Apply Now</span>
+                         </button>
+                       ) : (
+                         <button
+                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                           onClick={async () => {
+                             if (!userProfile?.has_paid_selection_process_fee) {
+                               navigate('/student/dashboard');
+                               return;
+                             }
+                             navigate('/student/dashboard/scholarships');
+                           }}
+                           aria-label={`Apply for ${scholarship.title} scholarship`}
+                         >
+                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                           <span className="relative z-10">Apply Now</span>
+                           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                         </button>
+                       )}
+                     </div>
+                     
+                     {/* Enhanced Hover Effect Overlay */}
+                     <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                     
+                     {/* Subtle Border Animation */}
+                     <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                       <div className="absolute inset-0 rounded-3xl border-2 border-[#05294E]/20 animate-pulse"></div>
+                     </div>
+                   </article>
+                 );
+               })
+             )}
+           </div>
+         </div>
 
         {/* No Results */}
         {filteredScholarships.length === 0 && (

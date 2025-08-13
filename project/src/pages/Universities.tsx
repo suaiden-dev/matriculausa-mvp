@@ -4,13 +4,9 @@ import { Search, Filter, MapPin, Sparkles, Building, GraduationCap, ChevronRight
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import SmartChat from '../components/SmartChat';
+import { slugify } from '../utils/slugify';
 
 const PAGE_SIZE = 20;
-
-// Função utilitária para transformar nome em slug
-function slugify(str: string) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
 
 const Universities: React.FC = () => {
 
@@ -37,8 +33,9 @@ const Universities: React.FC = () => {
         setSearching(true);
         let query = supabase
           .from('universities')
-          .select('id, name, location, logo_url, programs, description, website, address')
+          .select('id, name, location, logo_url, programs, description, website, address, is_featured')
           .eq('is_approved', true)
+          .eq('is_featured', false) // Exclude featured universities from search results
           .ilike('name', `%${searchTerm}%`);
         if (selectedLocation !== 'all') {
           // Filtro por estado no address.street ou location
@@ -62,8 +59,9 @@ const Universities: React.FC = () => {
       const to = from + PAGE_SIZE - 1;
       let query = supabase
         .from('universities')
-        .select('id, name, location, logo_url, programs, description, website, address', { count: 'exact' })
+        .select('id, name, location, logo_url, programs, description, website, address, is_featured', { count: 'exact' })
         .eq('is_approved', true)
+        .eq('is_featured', false) // Exclude featured universities from paginated results
         .range(from, to);
       if (selectedLocation !== 'all') {
         query = query.or(`address->>street.ilike.%${selectedLocation}%,location.ilike.%${selectedLocation}%`);
@@ -94,7 +92,8 @@ const Universities: React.FC = () => {
       const { data, error } = await supabase
         .from('universities')
         .select('location, address')
-        .eq('is_approved', true);
+        .eq('is_approved', true)
+        .eq('is_featured', false); // Exclude featured universities from states filter
       if (!error && data) {
         setAllUniversities(data);
       } else {
@@ -104,22 +103,22 @@ const Universities: React.FC = () => {
     fetchAllUniversities();
   }, []);
 
-  // Buscar universidades em destaque
+  // Fetch featured universities
   useEffect(() => {
     const fetchFeaturedUniversities = async () => {
       try {
         const { data, error } = await supabase
           .from('universities')
-          .select('id, name, location, logo_url, programs, description, website, address, type')
+          .select('*')
           .eq('is_approved', true)
           .eq('is_featured', true)
-          .order('featured_order');
-        
-        if (!error && data) {
-          setFeaturedUniversities(data);
-        }
+          .order('featured_order', { ascending: true })
+          .limit(6);
+
+        if (error) throw error;
+        setFeaturedUniversities(data || []);
       } catch (error) {
-        console.error('Erro ao carregar universidades em destaque:', error);
+        console.error('Error loading featured universities:', error);
       }
     };
 
@@ -257,6 +256,11 @@ const Universities: React.FC = () => {
             <div className="flex items-center justify-center bg-white border border-slate-300 rounded-xl px-3 py-3">
               <span className="text-sm text-slate-600">
                 <span className="font-semibold text-[#05294E]">{filteredSchools.length}</span> universities
+                {featuredUniversities.length > 0 && (
+                  <span className="text-sm text-slate-500 ml-2">
+                    + {featuredUniversities.length} featured
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -268,24 +272,24 @@ const Universities: React.FC = () => {
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-4">
                 <Star className="h-4 w-4 mr-2 text-[#05294E]" />
-                <span className="text-sm font-bold text-[#05294E]">Universidades em Destaque</span>
+                <span className="text-sm font-bold text-[#05294E]">Featured Universities</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">Destaques</span> da Semana
+                <span className="text-[#05294E]">Weekly</span> Highlights
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Conheça as universidades selecionadas pelos nossos especialistas para você
+                Discover the universities selected by our experts for you
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
               {featuredUniversities.map((school) => (
-                <div key={school.id} className="group bg-gradient-to-br from-white to-blue-50 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-[#05294E]/20 hover:border-[#05294E]/40 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
+                <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
                   {/* Featured Badge */}
                   <div className="absolute top-4 right-4 z-10">
                     <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center">
                       <Star className="h-3 w-3 mr-1 fill-current" />
-                      Destaque
+                      Featured
                     </div>
                   </div>
                   
@@ -305,6 +309,15 @@ const Universities: React.FC = () => {
                         {school.type || (school.is_public ? 'Public' : 'Private')}
                       </span>
                     </div>
+                    
+                    {/* Ranking Badge */}
+                    {school.ranking && (
+                      <div className="absolute top-4 right-4">
+                        <span className="bg-yellow-500 text-black px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                          #{school.ranking}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* University Info */}
@@ -323,26 +336,28 @@ const Universities: React.FC = () => {
                     <div className="mb-6 flex-1">
                       <div className="flex flex-wrap gap-2">
                         {school.programs?.slice(0, 3).map((program: string, index: number) => (
-                          <span key={index} className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
+                          <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
                             {program}
                           </span>
                         ))}
                         {school.programs && school.programs.length > 3 && (
-                          <span className="bg-[#05294E]/20 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
-                            +{school.programs.length - 3} mais
+                          <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
+                            +{school.programs.length - 3} more
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Action Button */}
-                    <Link
-                      to={`/universities/${slugify(school.name)}`}
-                      className="mt-auto group/btn bg-[#05294E] hover:bg-[#02172B] text-white px-4 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center hover:scale-105"
-                    >
-                      Ver Detalhes
-                      <ChevronRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-                    </Link>
+                    {/* Learn More Button alinhado na base */}
+                    <div className="mt-auto">
+                      <Link
+                        to={`/schools/${slugify(school.name)}`}
+                        className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
+                      >
+                        Learn More
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -400,12 +415,12 @@ const Universities: React.FC = () => {
                 {/* Programs Preview */}
                 <div className="mb-6 flex-1">
                   <div className="flex flex-wrap gap-2">
-                    {school.programs.slice(0, 3).map((program: string, index: number) => (
+                    {school.programs?.slice(0, 3).map((program: string, index: number) => (
                       <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
                         {program}
                       </span>
                     ))}
-                    {school.programs.length > 3 && (
+                    {school.programs && school.programs.length > 3 && (
                       <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
                         +{school.programs.length - 3} more
                       </span>

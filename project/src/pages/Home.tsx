@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
 import SmartChat from '../components/SmartChat';
+import { slugify } from '../utils/slugify';
 
 const Home: React.FC = () => {
   const { universities, loading: universitiesLoading } = useUniversities();
@@ -283,7 +284,7 @@ const Home: React.FC = () => {
                   {/* Learn More Button alinhado na base */}
                   <div className="mt-auto">
                     <Link
-                      to={`/schools/${school.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
+                      to={`/schools/${slugify(school.name)}`}
                       className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
                     >
                       Learn More
@@ -734,7 +735,3 @@ const Home: React.FC = () => {
 };
 
 export default Home;
-
-function slugify(str: string) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
