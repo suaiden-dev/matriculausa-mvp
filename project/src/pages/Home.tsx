@@ -7,10 +7,41 @@ import { useAuth } from '../hooks/useAuth';
 import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
 import SmartChat from '../components/SmartChat';
+import { slugify } from '../utils/slugify';
 
 const Home: React.FC = () => {
   const { universities, loading: universitiesLoading } = useUniversities();
-  const featuredSchools = universities.slice(0, 6);
+  
+  // Buscar universidades em destaque
+  const [featuredSchools, setFeaturedSchools] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchFeaturedUniversities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('universities')
+          .select('id, name, location, logo_url, programs, description, website, address, type')
+          .eq('is_approved', true)
+          .eq('is_featured', true)
+          .order('featured_order');
+        
+        if (!error && data) {
+          setFeaturedSchools(data);
+        } else {
+          // Fallback para as primeiras 6 universidades se não houver destaque
+          setFeaturedSchools(universities.slice(0, 6));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar universidades em destaque:', error);
+        // Fallback para as primeiras 6 universidades
+        setFeaturedSchools(universities.slice(0, 6));
+      }
+    };
+
+    if (universities.length > 0) {
+      fetchFeaturedUniversities();
+    }
+  }, [universities]);
   const { isAuthenticated, user, userProfile } = useAuth();
   const { hasPaidProcess, loading: subscriptionLoading } = useSubscription();
 
@@ -253,7 +284,7 @@ const Home: React.FC = () => {
                   {/* Learn More Button alinhado na base */}
                   <div className="mt-auto">
                     <Link
-                      to={`/schools/${school.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}
+                      to={`/schools/${slugify(school.name)}`}
                       className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
                     >
                       Learn More
@@ -704,7 +735,3 @@ const Home: React.FC = () => {
 };
 
 export default Home;
-
-function slugify(str: string) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
