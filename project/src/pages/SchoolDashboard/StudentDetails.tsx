@@ -146,7 +146,6 @@ const StudentDetails: React.FC = () => {
   }
 
   const { user_profiles: student, scholarships: scholarship } = application;
-
   const latestDocByType = (type: string) => {
     const docs = (application as any)?.documents as any[] | undefined;
     const appDoc = Array.isArray(docs) ? docs.find((d) => d.type === type) : undefined;
@@ -212,204 +211,551 @@ const StudentDetails: React.FC = () => {
       setAcceptanceLoading(false);
     }
   };
-
   return (
-    <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Student Application Details</h1>
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto flex-nowrap scrollbar-hide" role="tablist">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            className={`flex items-center gap-2 px-5 py-2 md:px-5 md:py-2 px-3 py-1 text-sm md:text-base font-semibold rounded-t-lg border-b-2 transition-colors duration-200 focus:outline-none whitespace-nowrap ${activeTab === tab.id ? 'border-[#05294E] text-[#05294E] bg-white' : 'border-transparent text-slate-500 bg-slate-50 hover:text-[#05294E]'}`}
-            onClick={() => setActiveTab(tab.id as any)}
-            type="button"
-            aria-selected={activeTab === tab.id}
-            role="tab"
-          >
-            <tab.icon className="w-5 h-5" />
-            <span className="hidden xs:inline">{tab.label}</span>
-          </button>
-        ))}
-      </div>
-      {/* Conteúdo das abas */}
-      {activeTab === 'details' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Removido: Acceptance Letter Block e Modal de confirmação */}
-            {/* Aqui permanecem apenas os outros blocos de informações do aluno */}
-            {/* Student Information */}
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <h2 className="text-xl font-bold text-[#05294E] mb-4">Student Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>Name:</strong> {student.full_name}</div>
-                <div><strong>User ID:</strong> {student.user_id}</div>
-                <div><strong>Phone:</strong> {student.phone || 'N/A'}</div>
-                <div><strong>Country:</strong> {student.country || 'N/A'}</div>
-                <div><strong>Student Type:</strong> {
-                  application.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                  application.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                  application.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
-                  application.student_process_type || 'N/A'
-                }</div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <strong>Status: </strong>
-                {application.status === 'enrolled' || application.acceptance_letter_status === 'approved' ? (
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">Enrolled</span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">Waiting for acceptance letter</span>
-                )}
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+      {/* Header Section */}
+      <div className="bg-white shadow-sm border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                Student Application
+              </h1>
+              <p className="mt-1 text-sm text-slate-600">
+                Review and manage {student.full_name}'s application details
+              </p>
             </div>
-            {/* Exemplo de exibição condicional do botão do I-20 Control Fee */}
-            {application.acceptance_letter_status === 'approved' && (
-              <div className="mt-6">
-                {/* Aqui vai o botão do I-20 Control Fee, se já não estiver em outro lugar */}
-                {/* <ButtonI20ControlFee ... /> */}
-              </div>
-            )}
-            {/* Scholarship Information */}
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <h2 className="text-xl font-bold text-[#05294E] mb-4">Scholarship Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>Scholarship:</strong> {scholarship.title}</div>
-                <div><strong>Amount:</strong> ${Number(scholarship.annual_value_with_scholarship ?? 0).toLocaleString()}</div>
-                <div className="md:col-span-2"><strong>Description:</strong> {scholarship.description}</div>
-              </div>
-            </div>
-            {/* University Information */}
-            {scholarship.universities && (
-              <div className="bg-white p-6 rounded-xl shadow-md">
-                <h2 className="text-xl font-bold text-[#05294E] mb-4">University Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><strong>Name:</strong> {scholarship.universities.name || 'N/A'}</div>
-                  <div><strong>Location:</strong> {scholarship.universities.location || 'N/A'}</div>
-                  <div><strong>Email:</strong> {(scholarship.universities as any)?.contact?.email || (scholarship.universities as any)?.contact?.admissionsEmail || 'N/A'}</div>
-                  <div><strong>Phone:</strong> {(scholarship.universities as any)?.contact?.phone || 'N/A'}</div>
+            <div className="flex items-center space-x-3">
+              {application.status === 'enrolled' || application.acceptance_letter_status === 'approved' ? (
+                <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
+                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                  Enrolled
                 </div>
-              </div>
-            )}
-            {/* Student Documents Section */}
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <h2 className="text-xl font-bold text-[#05294E] mb-4">Student Documents</h2>
-              <ul className="space-y-6">
-                {DOCUMENTS_INFO.map((doc) => {
-                  const docUploaded = Array.isArray(application.documents)
-                    ? application.documents.includes(doc.key)
-                    : false;
-                  return (
-                    <li key={doc.key} className="border-b last:border-0 pb-4">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              ) : (
+                <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300">
+                  <div className="w-2 h-2 bg-slate-400 rounded-full mr-2 animate-pulse"></div>
+                  Pending Review
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex space-x-8 overflow-x-auto" role="tablist">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                  activeTab === tab.id 
+                    ? 'border-[#05294E] text-[#05294E]' 
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+                onClick={() => setActiveTab(tab.id as any)}
+                type="button"
+                aria-selected={activeTab === tab.id}
+                role="tab"
+              >
+                <tab.icon className={`w-5 h-5 mr-2 transition-colors ${
+                  activeTab === tab.id ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                }`} />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Conteúdo das abas */}
+        {activeTab === 'details' && (
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            <div className="xl:col-span-8 space-y-8">
+              {/* Student Information Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <UserCircle className="w-6 h-6 mr-3" />
+                    Student Information
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                         <div>
-                          <div className="font-semibold text-slate-800 text-base">{doc.label}</div>
-                          <div className="text-xs text-slate-500 mb-1">{doc.description}</div>
-                        </div>
-                        <div className="flex gap-2 mt-2 md:mt-0">
-                          {docUploaded ? (
-                            <span className="text-xs text-green-600">Uploaded</span>
-                          ) : (
-                            <span className="text-xs text-red-500">Not uploaded</span>
-                          )}
+                          <dt className="text-sm font-medium text-slate-600">Full Name</dt>
+                          <dd className="text-base font-semibold text-slate-900">{student.full_name}</dd>
                         </div>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-      {activeTab === 'chat' && (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-bold text-[#05294E] mb-4">Chat</h2>
-          <div className="flex-1 flex flex-col">
-          <ApplicationChat
-            messages={chat.messages}
-            onSend={chat.sendMessage as any}
-            loading={chat.loading}
-            isSending={chat.isSending}
-            error={chat.error}
-            currentUserId={user?.id || ''}
-            messageContainerClassName="gap-6 py-4"
-          />
-          </div>
-        </div>
-      )}
-      {activeTab === 'documents' && (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-bold text-[#05294E] mb-4">Document Requests</h2>
-            <DocumentRequestsCard
-              applicationId={applicationId!}
-              isSchool={true}
-              currentUserId={user?.id || ''}
-              studentType={(application.student_process_type || 'initial') as any}
-              studentUserId={student.user_id}
-            />
-        </div>
-      )}
-      {activeTab === 'review' && (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-bold text-[#05294E] mb-4">Manual Review</h2>
-          <div className="space-y-4">
-            {DOCUMENTS_INFO.map((doc) => {
-              const d = latestDocByType(doc.key);
-              return (
-                <div key={doc.key} className="border border-slate-200 rounded-lg p-4">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-slate-800">{doc.label}</div>
-                      <div className="text-xs text-slate-500">{doc.description}</div>
-                      <div className="mt-1 text-xs">
-                        <span className={`px-2 py-0.5 rounded-full ${d?.status === 'approved' ? 'bg-green-100 text-green-700' : d?.status === 'changes_requested' ? 'bg-red-100 text-red-700' : d?.status === 'under_review' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>{d?.status || 'not submitted'}</span>
+                      
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                        <div>
+                          <dt className="text-sm font-medium text-slate-600">Phone</dt>
+                          <dd className="text-base text-slate-900">{student.phone || 'Not provided'}</dd>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {d?.file_url && (
-                        <>
-                          <a className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50" href={d.file_url} target="_blank" rel="noreferrer">
-                            <Eye className="inline w-4 h-4 mr-1" /> Preview
-                          </a>
-                          <a className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50" href={d.file_url} download>
-                            <Download className="inline w-4 h-4 mr-1" /> Download
-                          </a>
-                        </>
-                      )}
-                      <button
-                        disabled={!d || updating === d.type || (d.status || '').toLowerCase() === 'approved'}
-                        onClick={() => d && approveDoc(d.type)}
-                        className="px-3 py-1.5 text-sm rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="inline w-4 h-4 mr-1" /> Approve
-                      </button>
-                      <button
-                        disabled={!d || updating === d.type || (d.status || '').toLowerCase() === 'approved'}
-                        onClick={() => d && requestChangesDoc(d.type)}
-                        className="px-3 py-1.5 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                      >
-                        <XCircle className="inline w-4 h-4 mr-1" /> Request changes
-                      </button>
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                        <div>
+                          <dt className="text-sm font-medium text-slate-600">Country</dt>
+                          <dd className="text-base text-slate-900">{student.country || 'Not specified'}</dd>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                        <div>
+                          <dt className="text-sm font-medium text-slate-600">Student Type</dt>
+                          <dd className="text-base text-slate-900">
+                            {application.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
+                             application.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
+                             application.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
+                             application.student_process_type || 'Not specified'}
+                          </dd>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+              {/* Scholarship Information Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    Scholarship Details
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-6">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
+                        <dd className="text-lg font-semibold text-slate-900">{scholarship.title}</dd>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <dt className="text-sm font-medium text-slate-600">Annual Value</dt>
+                        <dd className="text-2xl font-bold text-[#05294E]">
+                          ${Number(scholarship.annual_value_with_scholarship ?? 0).toLocaleString()}
+                        </dd>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <dt className="text-sm font-medium text-slate-600">Description</dt>
+                        <dd className="text-base text-slate-700 leading-relaxed">{scholarship.description}</dd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* University Information Card */}
+              {scholarship.universities && (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                    <h2 className="text-xl font-semibold text-white flex items-center">
+                      <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      University Information
+                    </h2>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                          <div>
+                            <dt className="text-sm font-medium text-slate-600">Institution Name</dt>
+                            <dd className="text-base font-semibold text-slate-900">{scholarship.universities.name || 'Not specified'}</dd>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                          <div>
+                            <dt className="text-sm font-medium text-slate-600">Location</dt>
+                            <dd className="text-base text-slate-900">{scholarship.universities.location || 'Not specified'}</dd>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                          <div>
+                            <dt className="text-sm font-medium text-slate-600">Contact Email</dt>
+                            <dd className="text-sm text-slate-900 break-all">
+                              {(scholarship.universities as any)?.contact?.email || 
+                               (scholarship.universities as any)?.contact?.admissionsEmail || 
+                               'Not provided'}
+                            </dd>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                          <div>
+                            <dt className="text-sm font-medium text-slate-600">Contact Phone</dt>
+                            <dd className="text-base text-slate-900">
+                              {(scholarship.universities as any)?.contact?.phone || 'Not provided'}
+                            </dd>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Student Documents Overview Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <FileText className="w-6 h-6 mr-3" />
+                    Document Status Overview
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {DOCUMENTS_INFO.map((doc) => {
+                      const docData = latestDocByType(doc.key);
+                      const status = docData?.status || 'not_submitted';
+                      const hasFile = !!docData?.file_url;
+                      
+                      return (
+                        <div key={doc.key} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                          <div className="flex items-start justify-between mb-3">
+                            <h3 className="font-medium text-slate-900 text-sm">{doc.label}</h3>
+                            <div className={`w-3 h-3 rounded-full ${
+                              status === 'approved' ? 'bg-green-500' :
+                              status === 'under_review' ? 'bg-slate-400' :
+                              status === 'changes_requested' ? 'bg-red-500' :
+                              'bg-slate-300'
+                            }`} />
+                          </div>
+                          <p className="text-xs text-slate-600 mb-3 leading-relaxed">{doc.description}</p>
+                          <div className="flex items-center justify-between">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              status === 'approved' ? 'bg-green-100 text-green-800' :
+                              status === 'under_review' ? 'bg-slate-100 text-slate-800' :
+                              status === 'changes_requested' ? 'bg-red-100 text-red-800' :
+                              'bg-slate-100 text-slate-800'
+                            }`}>
+                              {status === 'approved' ? 'Approved' :
+                               status === 'under_review' ? 'Under Review' :
+                               status === 'changes_requested' ? 'Changes Needed' :
+                               hasFile ? 'Submitted' : 'Not Submitted'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="xl:col-span-4 space-y-6">
+              {/* Quick Stats Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Application Summary</h3>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Submitted</span>
+                    <span className="text-sm text-slate-900">
+                      {new Date((application as any).created_at || Date.now()).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Documents</span>
+                    <span className="text-sm text-slate-900">
+                      {DOCUMENTS_INFO.filter(doc => {
+                        const d = latestDocByType(doc.key);
+                        return d?.status === 'approved';
+                      }).length} / {DOCUMENTS_INFO.length} approved
+                    </span>
+                  </div>
+                  <div className="pt-4 border-t border-slate-200">
+                    <div className="text-sm text-slate-600 mb-2">Progress</div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-[#05294E] to-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(DOCUMENTS_INFO.filter(doc => {
+                            const d = latestDocByType(doc.key);
+                            return d?.status === 'approved';
+                          }).length / DOCUMENTS_INFO.length) * 100}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-900">Application submitted</p>
+                        <p className="text-xs text-slate-500">{new Date((application as any).created_at || Date.now()).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    {(application as any).updated_at !== (application as any).created_at && (
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-900">Last updated</p>
+                          <p className="text-xs text-slate-500">{new Date((application as any).updated_at || Date.now()).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+                </div>
+                <div className="p-6 space-y-3">
+                  <button
+                    onClick={() => setActiveTab('chat')}
+                    className="w-full flex items-center justify-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Send Message
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('documents')}
+                    className="w-full flex items-center justify-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Request Documents
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('review')}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-[#05294E] text-white rounded-lg text-sm font-medium hover:bg-[#041f38] transition-colors"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Review Application
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-6 flex justify-end">
-            <button
-              disabled={!allApproved || acceptanceLoading}
-              onClick={approveStudent}
-              className="px-5 py-2 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
-            >
-              {acceptanceLoading ? 'Approving...' : 'Approve student'}
-            </button>
+        )}
+        {activeTab === 'chat' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <MessageCircle className="w-6 h-6 mr-3" />
+                Communication Center
+              </h2>
+              <p className="text-slate-200 text-sm mt-1">Chat with {student.full_name}</p>
+            </div>
+            <div className="p-6">
+              <ApplicationChat
+                messages={chat.messages}
+                onSend={chat.sendMessage as any}
+                loading={chat.loading}
+                isSending={chat.isSending}
+                error={chat.error}
+                currentUserId={user?.id || ''}
+                messageContainerClassName="gap-6 py-4"
+              />
+            </div>
           </div>
-        </div>
-      )}
-      {previewUrl && (
-        <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
-      )}
+        )}
+        
+        {activeTab === 'documents' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <FileText className="w-6 h-6 mr-3" />
+                Document Management
+              </h2>
+              <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
+            </div>
+            <div className="p-6">
+              <DocumentRequestsCard
+                applicationId={applicationId!}
+                isSchool={true}
+                currentUserId={user?.id || ''}
+                studentType={(application.student_process_type || 'initial') as any}
+                studentUserId={student.user_id}
+              />
+            </div>
+          </div>
+        )}
+        {activeTab === 'review' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
+                <h2 className="text-xl font-semibold text-white flex items-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Document Review & Approval
+                </h2>
+                <p className="text-slate-200 text-sm mt-1">Review each document and approve or request changes</p>
+              </div>
+              <div className="p-6">
+                <div className="space-y-6">
+                  {DOCUMENTS_INFO.map((doc) => {
+                    const d = latestDocByType(doc.key);
+                    const status = d?.status || 'not_submitted';
+                    
+                    return (
+                      <div key={doc.key} className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h3 className="font-semibold text-slate-900 text-lg">{doc.label}</h3>
+                                <p className="text-sm text-slate-600 mt-1 leading-relaxed">{doc.description}</p>
+                              </div>
+                              <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                status === 'approved' ? 'bg-green-100 text-green-800' :
+                                status === 'changes_requested' ? 'bg-red-100 text-red-800' :
+                                status === 'under_review' ? 'bg-slate-100 text-slate-800' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                <div className={`w-2 h-2 rounded-full mr-2 ${
+                                  status === 'approved' ? 'bg-green-500' :
+                                  status === 'changes_requested' ? 'bg-red-500' :
+                                  status === 'under_review' ? 'bg-slate-400' :
+                                  'bg-slate-400'
+                                }`} />
+                                {status === 'approved' ? 'Approved' :
+                                 status === 'changes_requested' ? 'Changes Requested' :
+                                 status === 'under_review' ? 'Under Review' :
+                                 d?.file_url ? 'Submitted' : 'Not Submitted'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            {d?.file_url && (
+                              <div className="flex gap-2">
+                                <a 
+                                  className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                  href={d.file_url} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Preview
+                                </a>
+                                <a 
+                                  className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                  href={d.file_url} 
+                                  download
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Download
+                                </a>
+                              </div>
+                            )}
+                            
+                            <div className="flex gap-2">
+                              <button
+                                disabled={!d || updating === d.type || status === 'approved'}
+                                onClick={() => d && approveDoc(d.type)}
+                                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                  status === 'approved' 
+                                    ? 'bg-green-600 text-white' 
+                                    : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                                }`}
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                {status === 'approved' ? 'Approved' : 'Approve'}
+                              </button>
+                              <button
+                                disabled={!d || updating === d.type || status === 'approved'}
+                                onClick={() => d && requestChangesDoc(d.type)}
+                                className="flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Request Changes
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Final Approval Section */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                <h3 className="text-lg font-semibold text-white flex items-center">
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Final Application Approval
+                </h3>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-900 font-medium">
+                      {allApproved ? 'All documents have been approved' : 'Approve all documents to proceed'}
+                    </p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      This will approve the student's application and allow them to proceed with the next steps.
+                    </p>
+                  </div>
+                  <button
+                    disabled={!allApproved || acceptanceLoading}
+                    onClick={approveStudent}
+                    className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+                      allApproved && !acceptanceLoading
+                        ? 'bg-[#05294E] text-white hover:bg-[#041f38] shadow-lg hover:shadow-xl'
+                        : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {acceptanceLoading ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Approving...
+                      </div>
+                    ) : (
+                      'Approve Student Application'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {previewUrl && (
+          <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+        )}
+      </div>
     </div>
   );
 };

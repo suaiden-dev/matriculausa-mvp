@@ -57,6 +57,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     if (path.includes('/whatsapp')) return 'whatsapp';
     if (path.includes('/global-document-requests')) return 'global-docs';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
+    if (path.includes('/student')) return 'students';
     return 'overview';
   };
 
