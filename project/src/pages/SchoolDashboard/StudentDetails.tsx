@@ -49,9 +49,17 @@ const StudentDetails: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents' | 'review'>('details');
   const [acceptanceLoading, setAcceptanceLoading] = useState(false);
+  const [rejectingLoading, setRejectingLoading] = useState(false);
   // Removido: student_documents como fonte primária; usaremos application.documents
   const [studentDocs, setStudentDocs] = useState<any[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
+  // Modal para justificar solicitação de mudanças
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [pendingRejectType, setPendingRejectType] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  // Modal para recusar aluno na bolsa
+  const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
+  const [rejectStudentReason, setRejectStudentReason] = useState('');
 
   useEffect(() => {
     if (applicationId) {
@@ -155,11 +163,15 @@ const StudentDetails: React.FC = () => {
     return studentDocs.find((d) => d.type === type);
   };
 
-  const updateApplicationDocStatus = async (type: string, status: 'approved' | 'changes_requested' | 'under_review') => {
+  const updateApplicationDocStatus = async (
+    type: string,
+    status: 'approved' | 'changes_requested' | 'under_review',
+    reviewNotes?: string
+  ) => {
     const docs = Array.isArray((application as any)?.documents) ? ([...(application as any).documents] as any[]) : [];
     const idx = docs.findIndex((d) => d.type === type);
     if (idx >= 0) {
-      docs[idx] = { ...docs[idx], status };
+      docs[idx] = { ...docs[idx], status, review_notes: reviewNotes ?? docs[idx]?.review_notes };
     }
     await supabase.from('scholarship_applications').update({ documents: docs }).eq('id', applicationId);
     setApplication((prev) => prev ? ({ ...prev, documents: docs } as any) : prev);
@@ -174,10 +186,10 @@ const StudentDetails: React.FC = () => {
     }
   };
 
-  const requestChangesDoc = async (type: string) => {
+  const requestChangesDoc = async (type: string, reason: string) => {
     try {
       setUpdating(type);
-      await updateApplicationDocStatus(type, 'changes_requested');
+      await updateApplicationDocStatus(type, 'changes_requested', reason || undefined);
       // Mantém o fluxo do aluno em revisão
       await supabase
         .from('user_profiles')
@@ -210,6 +222,28 @@ const StudentDetails: React.FC = () => {
       setActiveTab('details');
     } finally {
       setAcceptanceLoading(false);
+    }
+  };
+
+  const rejectStudent = async () => {
+    try {
+      setRejectingLoading(true);
+      // Atualiza perfil do aluno para estado rejeitado
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'rejected' })
+        .eq('user_id', student.user_id);
+      // Atualiza aplicação com status e justificativa
+      await supabase
+        .from('scholarship_applications')
+        .update({ status: 'rejected', notes: rejectStudentReason || null })
+        .eq('id', applicationId);
+      await fetchApplicationDetails();
+      setActiveTab('details');
+      setShowRejectStudentModal(false);
+      setRejectStudentReason('');
+    } finally {
+      setRejectingLoading(false);
     }
   };
 
@@ -255,12 +289,19 @@ const StudentDetails: React.FC = () => {
               </div>
               <div className="mt-4 pt-4 border-t">
                 <strong>Status: </strong>
-                {application.status === 'enrolled' || application.acceptance_letter_status === 'approved' ? (
+                {application.status === 'rejected' ? (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">Rejected</span>
+                ) : application.status === 'enrolled' || application.acceptance_letter_status === 'approved' ? (
                   <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">Enrolled</span>
                 ) : (
                   <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">Waiting for acceptance letter</span>
                 )}
               </div>
+              {application.status === 'rejected' && application.notes && (
+                <div className="mt-2 text-sm text-red-700 bg-red-50 p-3 rounded-lg border border-red-100">
+                  <strong>Reason:</strong> {application.notes}
+                </div>
+              )}
             </div>
             {/* Exemplo de exibição condicional do botão do I-20 Control Fee */}
             {application.acceptance_letter_status === 'approved' && (
@@ -385,7 +426,12 @@ const StudentDetails: React.FC = () => {
                       </button>
                       <button
                         disabled={!d || updating === d.type || (d.status || '').toLowerCase() === 'approved'}
-                        onClick={() => d && requestChangesDoc(d.type)}
+                        onClick={() => {
+                          if (!d) return;
+                          setPendingRejectType(d.type);
+                          setRejectReason('');
+                          setShowReasonModal(true);
+                        }}
                         className="px-3 py-1.5 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
                       >
                         <XCircle className="inline w-4 h-4 mr-1" /> Request changes
@@ -404,11 +450,86 @@ const StudentDetails: React.FC = () => {
             >
               {acceptanceLoading ? 'Approving...' : 'Approve student'}
             </button>
+            <button
+              type="button"
+              onClick={() => { setShowRejectStudentModal(true); setRejectStudentReason(''); }}
+              className="ml-3 px-5 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700"
+            >
+              Reject student
+            </button>
           </div>
         </div>
       )}
       {previewUrl && (
         <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
+      {/* Modal de justificativa para Request Changes */}
+      {showReasonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-[#05294E] mb-3">Provide a justification</h3>
+            <p className="text-sm text-slate-600 mb-4">Explain why this document needs changes. The student will see this message.</p>
+            <textarea
+              className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-h-[120px]"
+              placeholder="Example: The passport photo is blurry. Please upload a clearer scan including all four corners."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded-md border border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
+                onClick={() => { setShowReasonModal(false); setPendingRejectType(null); setRejectReason(''); }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                disabled={!pendingRejectType || updating === pendingRejectType}
+                onClick={async () => {
+                  if (!pendingRejectType) return;
+                  await requestChangesDoc(pendingRejectType, rejectReason.trim());
+                  setShowReasonModal(false);
+                  setPendingRejectType(null);
+                  setRejectReason('');
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para recusar aluno na bolsa */}
+      {showRejectStudentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-[#05294E] mb-3">Reject scholarship application</h3>
+            <p className="text-sm text-slate-600 mb-4">Provide a justification (optional). The student will see this message.</p>
+            <textarea
+              className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 min-h-[120px]"
+              placeholder="Optional: Missing required documents or eligibility criteria not met."
+              value={rejectStudentReason}
+              onChange={(e) => setRejectStudentReason(e.target.value)}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded-md border border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
+                onClick={() => { setShowRejectStudentModal(false); setRejectStudentReason(''); }}
+                disabled={rejectingLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                disabled={rejectingLoading}
+                onClick={rejectStudent}
+              >
+                {rejectingLoading ? 'Rejecting...' : 'Confirm rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
