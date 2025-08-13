@@ -68,7 +68,7 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
           .select(`
             *,
             scholarships(*),
-            user_profiles!student_id(id, user_id, full_name, phone, country)
+            user_profiles!student_id(id, user_id, full_name, phone, country, documents_status, documents)
           `)
           .in('scholarship_id', (scholarshipsData || []).map((s: any) => s.id));
 

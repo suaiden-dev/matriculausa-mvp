@@ -71,6 +71,16 @@ const ScholarshipFeeSuccess: React.FC = () => {
         }
         console.log('[ScholarshipFeeSuccess] applicationId definido:', appId);
         setApplicationId(appId);
+        // Força refetch de applications para refletir is_scholarship_fee_paid e status atualizados
+        try {
+          if (userProfile?.id) {
+            await supabase
+              .from('scholarship_applications')
+              .select('id')
+              .eq('student_id', userProfile.id)
+              .order('updated_at', { ascending: false });
+          }
+        } catch {}
         setLoading(false);
       } catch (err: any) {
         console.error('[ScholarshipFeeSuccess] Erro:', err.message);

@@ -7,9 +7,10 @@ interface UploadedDoc { name: string; url: string; type: string; uploaded_at: st
 
 const ManualReview: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [prevDocs, setPrevDocs] = useState<UploadedDoc[]>([]);
+  const [appDocs, setAppDocs] = useState<any[]>([]);
   const [files, setFiles] = useState<Record<string, File | null>>({ passport: null, diploma: null, funds_proof: null });
   const [usePrev, setUsePrev] = useState<Record<string, boolean>>({ passport: true, diploma: true, funds_proof: true });
   const [confirmAllTrue, setConfirmAllTrue] = useState(false);
@@ -23,13 +24,53 @@ const ManualReview: React.FC = () => {
       setFieldErrors(e || {});
       setPrevDocs(Array.isArray(d) ? d : []);
       // If a field had error, default to not using previous file
-      setUsePrev(prev => ({
+      setUsePrev(() => ({
         passport: e?.passport ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'passport')),
         diploma: e?.diploma ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'diploma')),
         funds_proof: e?.funds_proof ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'funds_proof')),
       }));
     } catch {}
   }, []);
+
+  // Busca a aplicação mais recente e usa seus documentos/status para pré-preencher reenvio
+  useEffect(() => {
+    const fetchLatestApp = async () => {
+      if (!userProfile?.id) return;
+      const { data } = await supabase
+        .from('scholarship_applications')
+        .select('id, documents')
+        .eq('student_id', userProfile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const docs = (data as any)?.documents || [];
+      if (Array.isArray(docs) && docs.length) {
+        setAppDocs(docs);
+        // Mescla com prevDocs do localStorage, priorizando application
+        const toUploaded: UploadedDoc[] = ['passport','diploma','funds_proof']
+          .map((t) => {
+            const fromApp = docs.find((d: any) => d.type === t);
+            const url = fromApp?.url || (prevDocs.find(p => p.type === t)?.url);
+            if (!url) return null;
+            return { type: t, url, name: url.split('/').pop() || '', uploaded_at: fromApp?.uploaded_at || new Date().toISOString() };
+          })
+          .filter(Boolean) as UploadedDoc[];
+        if (toUploaded.length) setPrevDocs(toUploaded);
+        // Se algum estiver com changes_requested, forçar reenvio desse tipo
+        setUsePrev(prev => ({
+          passport: docs.find((d: any) => d.type==='passport')?.status === 'changes_requested' ? false : (prev.passport ?? true),
+          diploma: docs.find((d: any) => d.type==='diploma')?.status === 'changes_requested' ? false : (prev.diploma ?? true),
+          funds_proof: docs.find((d: any) => d.type==='funds_proof')?.status === 'changes_requested' ? false : (prev.funds_proof ?? true),
+        }));
+      }
+    };
+    fetchLatestApp();
+  }, [userProfile?.id]);
+
+  const statusOf = (type: string): string | null => {
+    const d = appDocs.find((x: any) => x.type === type);
+    return d?.status || null;
+  };
 
   const attachFile = (key: string, file: File | null) => {
     setFiles(prev => ({ ...prev, [key]: file }));
@@ -42,6 +83,7 @@ const ManualReview: React.FC = () => {
       if (!user) throw new Error('User not authenticated');
 
       // Upload only the files the user chose to replace
+      const newFileUrls: Record<string, string> = {};
       for (const [key, file] of Object.entries(files)) {
         if (usePrev[key]) continue;
         if (!file) continue; // nothing selected
@@ -52,6 +94,7 @@ const ManualReview: React.FC = () => {
         const fileUrl = data?.path ? supabase.storage.from('student-documents').getPublicUrl(data.path).data.publicUrl : null;
         if (!fileUrl) throw new Error('Failed to get file URL');
         await supabase.from('student_documents').insert({ user_id: user.id, type: key, file_url: fileUrl, status: 'under_review' });
+        newFileUrls[key] = fileUrl;
       }
 
       if (confirmAllTrue) {
@@ -60,9 +103,132 @@ const ManualReview: React.FC = () => {
           .from('user_profiles')
           .update({ documents_status: 'under_review' })
           .eq('user_id', user.id);
+
+        // Garantir que apareça na aba da universidade criando/atualizando uma aplicação placeholder
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id, selected_scholarship_id')
+            .eq('user_id', user.id)
+            .single();
+
+          let placeholderScholarship = userProfile?.selected_scholarship_id || profile?.selected_scholarship_id || null;
+
+          // Fallback: usar primeira bolsa do carrinho
+          if (!placeholderScholarship) {
+            const { data: cartRow } = await supabase
+              .from('user_cart')
+              .select('scholarship_id')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            placeholderScholarship = cartRow?.scholarship_id || null;
+          }
+
+          let applicationId: string | null = null;
+          let currentDocs: any[] = [];
+          if (placeholderScholarship && profile?.id) {
+            // Tenta encontrar aplicação existente para essa bolsa
+            const { data: existingApp } = await supabase
+              .from('scholarship_applications')
+              .select('id, documents')
+              .eq('student_id', profile.id)
+              .eq('scholarship_id', placeholderScholarship)
+              .maybeSingle();
+            if (!existingApp) {
+              const { data: newApp } = await supabase.from('scholarship_applications').insert({
+                student_id: profile.id,
+                scholarship_id: placeholderScholarship,
+                status: 'pending',
+              }).select('id, documents').single();
+              applicationId = newApp?.id || null;
+              currentDocs = (newApp as any)?.documents || [];
+            } else {
+              applicationId = existingApp.id;
+              currentDocs = (existingApp as any)?.documents || [];
+            }
+          }
+
+          // Fallback: se não achou pela bolsa selecionada/carrinho, usar a aplicação mais recente do aluno
+          if (!applicationId && profile?.id) {
+            const { data: latestApp } = await supabase
+              .from('scholarship_applications')
+              .select('id, documents')
+              .eq('student_id', profile.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            applicationId = (latestApp as any)?.id || null;
+            currentDocs = (latestApp as any)?.documents || [];
+          }
+
+          // Atualizar documentos na application para a universidade visualizar
+          if (applicationId) {
+            const finalDocs = ['passport','diploma','funds_proof']
+              .map((k) => {
+                const fromPrev = docByType(k)?.url || (appDocs.find((d:any)=>d.type===k)?.url);
+                const fromNew = newFileUrls[k];
+                const url = usePrev[k] ? fromPrev : (fromNew || fromPrev);
+                if (!url) return null;
+                const existing = currentDocs.find((d:any)=>d.type===k) || appDocs.find((d:any)=>d.type===k);
+                const status = usePrev[k] ? (existing?.status || 'under_review') : 'under_review';
+                return { type: k, url, uploaded_at: new Date().toISOString(), status };
+              })
+              .filter(Boolean);
+            if (finalDocs.length > 0) {
+              await supabase
+                .from('scholarship_applications')
+                .update({ documents: finalDocs })
+                .eq('id', applicationId);
+            }
+          }
+
+          // Limpar carrinho do usuário
+          await supabase
+            .from('user_cart')
+            .delete()
+            .eq('user_id', user.id);
+        } catch {}
+
+        // Dispara notificação para universidade (Edge Function)
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+          const tipos = Object.keys(files).filter((k) => !usePrev[k] && files[k]).map((k) => k);
+          const payload = {
+            user_id: user.id,
+            tipos_documentos: tipos.length ? tipos : ['manual_review'],
+            selected_scholarship_id: userProfile?.selected_scholarship_id || null,
+          } as any;
+          const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || ''}`,
+          } as Record<string, string>;
+
+          // Tenta a função dedicada
+          const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+          });
+
+          // Fallback: se não existir no ambiente, usa o encaminhador genérico
+          if (res.status === 404) {
+            await fetch(`${SUPABASE_FUNCTIONS_URL}/forward-notification-to-n8n`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                tipo_notf: 'Revisão manual iniciada',
+                user_id: user.id,
+                tipos_documentos: payload.tipos_documentos,
+              }),
+            });
+          }
+        } catch {}
       }
 
-      navigate('/student/dashboard');
+      navigate('/student/dashboard/applications');
     } catch (e: any) {
       setError(e.message || 'Failed to submit manual review');
     } finally {
@@ -94,6 +260,11 @@ const ManualReview: React.FC = () => {
                 <a className="text-xs text-blue-600 hover:underline" href={docByType(e.key)!.url} target="_blank" rel="noreferrer">View previous file</a>
               )}
             </div>
+            {statusOf(e.key) === 'changes_requested' && (
+              <div className="text-xs text-red-600 mb-1">
+                University requested changes for this document.
+              </div>
+            )}
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {usePrev[e.key] && docByType(e.key) ? (
                 <div className="border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 text-sm truncate max-w-[260px]">

@@ -62,40 +62,123 @@ Deno.serve(async (req) => {
     }
     console.log('[Edge] Dados do aluno:', aluno);
 
-    // 2. Buscar dados do document_request
-    const document_request_id = tipos_documentos[0];
-    const { data: docReq, error: docReqError } = await supabase
-      .from('document_requests')
-      .select('id, title, scholarship_application_id')
-      .eq('id', document_request_id)
-      .single();
-    if (docReqError || !docReq) {
-      console.log('[Edge] Document request não encontrado:', docReqError);
-      return new Response('Document request não encontrado', { status: 404, headers: corsHeaders(origin) });
-    }
-    console.log('[Edge] Dados do document_request:', docReq);
+    // 2. Descobrir contexto (document_request ou revisão manual)
+    const first = String(tipos_documentos[0] || '').trim();
+    let contextTitle = '';
+    let scholarshipId: string | null = null;
 
-    // 3. Buscar dados da aplicação
-    const { data: app, error: appError } = await supabase
-      .from('scholarship_applications')
-      .select('id, scholarship_id')
-      .eq('id', docReq.scholarship_application_id)
-      .single();
-    if (appError || !app) {
-      console.log('[Edge] Application não encontrada:', appError);
-      return new Response('Application não encontrada', { status: 404, headers: corsHeaders(origin) });
+    // Helper para pegar aplicação mais recente do aluno
+    const fetchLatestApplicationForUser = async (): Promise<string | null> => {
+      // user_profiles.id
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user_id)
+        .single();
+      if (!profile) return null;
+
+      const { data: app } = await supabase
+        .from('scholarship_applications')
+        .select('id, scholarship_id')
+        .eq('student_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return app?.scholarship_id ?? null;
+    };
+
+    if (first === 'manual_review') {
+      contextTitle = 'Revisão manual de documentos';
+      scholarshipId = await fetchLatestApplicationForUser();
+      // Fallback: tentar selected_scholarship_id no perfil
+      if (!scholarshipId) {
+        const { data: sel } = await supabase
+          .from('user_profiles')
+          .select('selected_scholarship_id')
+          .eq('user_id', user_id)
+          .single();
+        scholarshipId = sel?.selected_scholarship_id ?? null;
+      }
+    } else {
+      // Fluxo padrão: tipos_documentos[0] é o id do document_request
+      const document_request_id = first;
+      const { data: docReq, error: docReqError } = await supabase
+        .from('document_requests')
+        .select('id, title, scholarship_application_id')
+        .eq('id', document_request_id)
+        .single();
+      if (docReqError || !docReq) {
+        console.log('[Edge] Document request não encontrado:', docReqError);
+        return new Response('Document request não encontrado', { status: 404, headers: corsHeaders(origin) });
+      }
+      console.log('[Edge] Dados do document_request:', docReq);
+
+      contextTitle = docReq.title || 'documento';
+
+      const { data: app, error: appError } = await supabase
+        .from('scholarship_applications')
+        .select('id, scholarship_id')
+        .eq('id', docReq.scholarship_application_id)
+        .single();
+      if (appError || !app) {
+        console.log('[Edge] Application não encontrada:', appError);
+        return new Response('Application não encontrada', { status: 404, headers: corsHeaders(origin) });
+      }
+      console.log('[Edge] Dados da aplicação:', app);
+      scholarshipId = app.scholarship_id;
     }
-    console.log('[Edge] Dados da aplicação:', app);
 
     // 4. Buscar dados da bolsa
+    if (!scholarshipId) {
+      // Último fallback: usar a universidade do próprio aluno (se existir)
+      const { data: prof } = await supabase
+        .from('user_profiles')
+        .select('university_id')
+        .eq('user_id', user_id)
+        .single();
+      if (prof?.university_id) {
+        const { data: universidade, error: univError } = await supabase
+          .from('universities')
+          .select('id, name, contact')
+          .eq('id', prof.university_id)
+          .single();
+        if (!univError && universidade) {
+          const nomeAluno = aluno.full_name;
+          const nomeUniversidade = universidade.name;
+          const emailAluno = aluno.email;
+          const contact = universidade.contact || {};
+          const emailUniversidade = contact.admissionsEmail || contact.email || '';
+          const mensagem = `O aluno ${nomeAluno} iniciou revisão manual de documentos para ${nomeUniversidade}. Acesse o painel da universidade para revisar.`;
+          const payload = {
+            tipo_notf: 'Novo documento enviado pelo aluno',
+            email_aluno: emailAluno,
+            nome_aluno: nomeAluno,
+            email_universidade: emailUniversidade,
+            o_que_enviar: mensagem,
+          };
+          try {
+            const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'PostmanRuntime/7.36.3' }, body: JSON.stringify(payload)
+            });
+            const n8nText = await n8nRes.text();
+            return new Response(JSON.stringify({ status: n8nRes.status, n8nResponse: n8nText, payload }), { status: 200, headers: corsHeaders(origin) });
+          } catch (e) {
+            return new Response(JSON.stringify({ error: true, message: 'Erro ao enviar para o n8n', details: e?.message }), { status: 500, headers: corsHeaders(origin) });
+          }
+        }
+      }
+      console.log('[Edge] Nenhum scholarship_id encontrado para notificação. Encerrando com sucesso (skipped).');
+      return new Response(JSON.stringify({ status: 'skipped', reason: 'no_scholarship_context' }), { status: 200, headers: corsHeaders(origin) });
+    }
+
     const { data: scholarship, error: scholarshipError } = await supabase
       .from('scholarships')
       .select('id, university_id')
-      .eq('id', app.scholarship_id)
+      .eq('id', scholarshipId)
       .single();
     if (scholarshipError || !scholarship) {
       console.log('[Edge] Scholarship não encontrada:', scholarshipError);
-      return new Response('Scholarship não encontrada', { status: 404, headers: corsHeaders(origin) });
+      return new Response(JSON.stringify({ status: 'skipped', reason: 'scholarship_not_found' }), { status: 200, headers: corsHeaders(origin) });
     }
     console.log('[Edge] Dados da scholarship:', scholarship);
 
@@ -117,8 +200,10 @@ Deno.serve(async (req) => {
     const emailAluno = aluno.email;
     const contact = universidade.contact || {};
     const emailUniversidade = contact.admissionsEmail || contact.email || '';
-    const tipos = docReq.title || 'documento';
-    const mensagem = `O aluno ${nomeAluno} enviou ${tipos} solicitado para ${nomeUniversidade}. Acesse o painel da universidade para revisar o(s) arquivo(s).`;
+    const tipos = contextTitle || 'documento';
+    const mensagem = first === 'manual_review'
+      ? `O aluno ${nomeAluno} iniciou revisão manual de documentos para ${nomeUniversidade}. Acesse o painel da universidade para revisar.`
+      : `O aluno ${nomeAluno} enviou ${tipos} solicitado para ${nomeUniversidade}. Acesse o painel da universidade para revisar o(s) arquivo(s).`;
     console.log('[Edge] Mensagem customizada:', mensagem);
 
     // Montar body padrão

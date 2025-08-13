@@ -8,7 +8,6 @@ import {
   Calendar, 
   DollarSign, 
   Building, 
-  Eye, 
   Search,
   Award,
   ArrowRight,
@@ -19,8 +18,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { StripeCheckout } from '../../components/StripeCheckout';
-import StudentDashboardLayout from "./StudentDashboardLayout";
-import CustomLoading from '../../components/CustomLoading';
+// import StudentDashboardLayout from "./StudentDashboardLayout";
+// import CustomLoading from '../../components/CustomLoading';
 
 // Combine os tipos para incluir os detalhes da bolsa na aplicação
 type ApplicationWithScholarship = Application & {
@@ -35,23 +34,21 @@ const MyApplications: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [payingId, setPayingId] = useState<string | null>(null);
+  // const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [payingId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [pendingUploads, setPendingUploads] = useState<Record<string, Record<string, File | null>>>({});
+  const [uploadingAppId, setUploadingAppId] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     setUserProfileId(userProfile?.id || null);
-    // Iniciar polling apenas se a application fee ainda não foi paga
-    if (userProfile && userProfile.is_application_fee_paid) {
-      setIsPolling(false);
-    } else {
-      setIsPolling(true);
-    }
-  }, [userProfile?.id, userProfile?.is_application_fee_paid]);
+    // Mantemos o polling ativo para refletir mudanças de pagamento/edge imediatamente
+    setIsPolling(true);
+  }, [userProfile?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -153,6 +150,72 @@ const MyApplications: React.FC = () => {
     }).format(amount);
   };
 
+  const sanitizeFileName = (fileName: string): string => {
+    return fileName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  };
+
+  const onSelectFile = (appId: string, type: string, file: File | null) => {
+    setPendingUploads(prev => ({ ...prev, [appId]: { ...(prev[appId] || {}), [type]: file } }));
+  };
+
+  const submitUpdatedDocs = async (application: any) => {
+    try {
+      if (!user) return;
+      const appId = application.id as string;
+      const docs: any[] = Array.isArray(application.documents) ? [...application.documents] : [];
+      const selected = pendingUploads[appId] || {};
+      const typesToUpload = Object.entries(selected).filter(([, f]) => !!f) as [string, File][];
+      if (typesToUpload.length === 0) return;
+      setUploadingAppId(appId);
+
+      const newUrls: Record<string, string> = {};
+      for (const [type, file] of typesToUpload) {
+        const sanitized = sanitizeFileName(file.name);
+        const { data, error: upErr } = await supabase.storage
+          .from('student-documents')
+          .upload(`${user.id}/manual-${type}-${Date.now()}-${sanitized}`, file, { upsert: true });
+        if (upErr) throw upErr;
+        const fileUrl = data?.path ? supabase.storage.from('student-documents').getPublicUrl(data.path).data.publicUrl : null;
+        if (!fileUrl) throw new Error('Failed to get file URL');
+        newUrls[type] = fileUrl;
+      }
+
+      const finalDocs = ['passport','diploma','funds_proof']
+        .map((k) => {
+          const existing = docs.find((d: any) => d.type === k);
+          if (newUrls[k]) {
+            return { type: k, url: newUrls[k], status: 'under_review', uploaded_at: new Date().toISOString() };
+          }
+          if (existing) return existing;
+          return null;
+        })
+        .filter(Boolean);
+
+      await supabase
+        .from('scholarship_applications')
+        .update({ documents: finalDocs })
+        .eq('id', appId);
+
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'under_review' })
+        .eq('user_id', user.id);
+
+      setApplications(prev => prev.map(a => a.id === appId ? ({ ...a, documents: finalDocs } as any) : a));
+      setPendingUploads(prev => ({ ...prev, [appId]: {} }));
+      // Success feedback (optional toast)
+    } catch (e: any) {
+      // Error feedback (optional toast)
+    } finally {
+      setUploadingAppId(null);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800 border-green-200';
@@ -173,15 +236,20 @@ const MyApplications: React.FC = () => {
     }
   };
 
-  const getStatusMessage = (status: string) => {
-    switch (status) {
-      case 'approved': return '';
-      case 'rejected': return 'Unfortunately, your application was not selected.';
-      case 'under_review': return 'Your application is currently being reviewed.';
-      case 'pending_scholarship_fee': return 'Pending scholarship fee payment.';
-      default: return 'Your application is pending review.';
-    }
+  const getStatusLabel = (status: string) => {
+    if (status === 'approved') return 'APPROVED BY THE UNIVERSITY';
+    return status.replace('_', ' ').toUpperCase();
   };
+
+  // const getStatusMessage = (status: string) => {
+  //   switch (status) {
+  //     case 'approved': return '';
+  //     case 'rejected': return 'Unfortunately, your application was not selected.';
+  //     case 'under_review': return 'Your application is currently being reviewed.';
+  //     case 'pending_scholarship_fee': return 'Pending scholarship fee payment.';
+  //     default: return 'Your application is pending review.';
+  //   }
+  // };
 
   const stats = {
     total: applications.length,
@@ -192,29 +260,55 @@ const MyApplications: React.FC = () => {
     pending_scholarship_fee: applications.filter(app => app.status === 'pending_scholarship_fee').length,
   };
 
-  const createOrGetApplication = async (scholarshipId: string, studentProfileId: string) => {
-    // Verifica se já existe aplicação
+  // const createOrGetApplication = async (scholarshipId: string, studentProfileId: string) => {
+  //   // Verifica se já existe aplicação
+  //   const { data: existing, error: fetchError } = await supabase
+  //     .from('scholarship_applications')
+  //     .select('id')
+  //     .eq('student_id', studentProfileId)
+  //     .eq('scholarship_id', scholarshipId)
+  //     .maybeSingle();
+  //   if (fetchError) throw fetchError;
+  //   if (existing) return { applicationId: existing.id };
+  //   // Cria nova aplicação
+  //   const { data, error } = await supabase
+  //     .from('scholarship_applications')
+  //     .insert({
+  //       student_id: studentProfileId,
+  //       scholarship_id: scholarshipId,
+  //       status: 'pending_scholarship_fee',
+  //       applied_at: new Date().toISOString(),
+  //       student_process_type: localStorage.getItem('studentProcessType') || null,
+  //     })
+  //     .select('id')
+  //     .single();
+  //   if (error) throw error;
+  //   return { applicationId: data.id };
+  // };
+
+  // Garante/recupera a application para uso no checkout
+  const ensureApplication = async (scholarshipId: string): Promise<{ applicationId: string } | undefined> => {
+    if (!userProfileId) return undefined;
     const { data: existing, error: fetchError } = await supabase
       .from('scholarship_applications')
       .select('id')
-      .eq('student_id', studentProfileId)
+      .eq('student_id', userProfileId)
       .eq('scholarship_id', scholarshipId)
       .maybeSingle();
-    if (fetchError) throw fetchError;
+    if (fetchError) return undefined;
     if (existing) return { applicationId: existing.id };
-    // Cria nova aplicação
     const { data, error } = await supabase
       .from('scholarship_applications')
       .insert({
-        student_id: studentProfileId,
+        student_id: userProfileId,
         scholarship_id: scholarshipId,
-        status: 'pending_scholarship_fee',
+        status: 'pending',
         applied_at: new Date().toISOString(),
         student_process_type: localStorage.getItem('studentProcessType') || null,
       })
       .select('id')
       .single();
-    if (error) throw error;
+    if (error) return undefined;
     return { applicationId: data.id };
   };
 
@@ -377,15 +471,13 @@ const MyApplications: React.FC = () => {
             {filteredApplications.map((application) => {
               const Icon = getStatusIcon(application.status);
               const scholarship = application.scholarships;
+              // Application Fee "Paid" deve ser por aplicação, não global do perfil
               const applicationFeePaid = !!application.is_application_fee_paid;
               const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
 
               if (!scholarship) return null;
 
-              // Box de congratulações e botões de pagamento
-              const showCongratsBox = application.status === 'approved';
-              const showApplicationFeeButton = showCongratsBox && !applicationFeePaid;
-              const showScholarshipFeeButton = showCongratsBox && applicationFeePaid && !scholarshipFeePaid;
+              // Fluxo: aprovado pela universidade libera Application Fee; após pagar, libera Scholarship Fee
 
               return (
                 <div key={application.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-300 mb-8">
@@ -431,11 +523,11 @@ const MyApplications: React.FC = () => {
                       <div className="ml-6 flex flex-col items-end space-y-3">
                         <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium border ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)} shadow-sm bg-gray-50`}>
                           <Icon className="h-4 w-4 mr-2" />
-                          {(application.status === 'enrolled' ? 'APPROVED' : application.status.replace('_', ' ').toUpperCase())}
+                          {getStatusLabel(application.status === 'enrolled' ? 'approved' : application.status)}
                         </span>
                         {/* Indicadores de pagamento */}
                         {/* REMOVIDO: Badges Application Fee Paid e Scholarship Fee Paid */}
-                        {['approved', 'enrolled'].includes(application.status) && (
+                        {applicationFeePaid && scholarshipFeePaid && (
                           <button
                             className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow border border-blue-700"
                             onClick={() => navigate(`/student/dashboard/application/${application.id}/chat`)}
@@ -446,6 +538,45 @@ const MyApplications: React.FC = () => {
                         )}
                       </div>
                     </div>
+                    {/* Aviso de documentos com alterações solicitadas */}
+                    {Array.isArray((application as any).documents) && (application as any).documents.some((d: any) => (d.status || '').toLowerCase() === 'changes_requested') && (() => {
+                      const req = ((application as any).documents as any[]).filter((d: any) => (d.status || '').toLowerCase() === 'changes_requested');
+                      const appId = application.id as string;
+                      const selectedMap = pendingUploads[appId] || {};
+                      const canSubmit = Object.values(selectedMap).some(Boolean);
+                      return (
+                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                          <div className="text-red-800 text-sm font-semibold mb-3">
+                            University requested changes in: {req.map((d: any) => d.type === 'passport' ? 'Passport' : d.type === 'diploma' ? 'High School Diploma' : d.type === 'funds_proof' ? 'Proof of Funds' : d.type).join(', ')}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {req.map((d: any) => (
+                              <div key={d.type} className="flex flex-col gap-1">
+                                <label className="text-xs text-slate-700 font-semibold">{d.type === 'passport' ? 'Passport' : d.type === 'diploma' ? 'High School Diploma' : 'Proof of Funds'}</label>
+                                <input
+                                  type="file"
+                                  accept="application/pdf,image/*"
+                                  onChange={(e) => onSelectFile(appId, d.type, e.target.files?.[0] || null)}
+                                  className="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white"
+                                />
+                                {selectedMap[d.type] && (
+                                  <span className="text-xs text-slate-500 truncate">{selectedMap[d.type]?.name}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              className="px-4 py-2 rounded-xl text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
+                              disabled={!canSubmit || uploadingAppId === appId}
+                              onClick={() => submitUpdatedDocs(application)}
+                            >
+                              {uploadingAppId === appId ? 'Sending...' : 'Submit updated documents'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {/* Status Message */}
                     {application.status === 'pending_scholarship_fee' && (
                       <div className="mt-4 p-4 bg-blue-50 border-t border-blue-200">
@@ -460,8 +591,8 @@ const MyApplications: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Botões de pagamento - AGORA NO FINAL DO CARD */}
-                    {['pending', 'under_review', 'approved'].includes(application.status) && (
+                    {/* Botões de pagamento - ficam disponíveis quando a aplicação está approved */}
+                    {application.status === 'approved' && (
                       <div className="flex flex-row gap-4 mt-8 items-center justify-center">
                         {/* Application Fee */}
                         {applicationFeePaid ? (
@@ -470,13 +601,21 @@ const MyApplications: React.FC = () => {
                             Paid
                           </span>
                         ) : (
-                          <button
-                            className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200"
-                            onClick={() => navigate('/student/dashboard/application-fee')}
-                          >
-                            <DollarSign className="h-4 w-4 mr-2" />
-                            Pay Application Fee ($350)
-                          </button>
+                          <StripeCheckout
+                            productId="applicationFee"
+                            feeType="application_fee"
+                            paymentType="application_fee"
+                            buttonText="Pay Application Fee ($350)"
+                            successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                            cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
+                            disabled={false}
+                            scholarshipsIds={[application.scholarship_id]}
+                            beforeCheckout={() => ensureApplication(application.scholarship_id)}
+                            metadata={{
+                              application_id: application.id,
+                              selected_scholarship_id: application.scholarship_id,
+                            }}
+                          />
                         )}
                         {/* Scholarship Fee */}
                         {scholarshipFeePaid ? (
@@ -500,6 +639,18 @@ const MyApplications: React.FC = () => {
                             }}
                           />
                         )}
+                      </div>
+                    )}
+                    {/* View Details: aparece quando ambas as taxas foram pagas */}
+                    {application.status === 'approved' && applicationFeePaid && scholarshipFeePaid && (
+                      <div className="mt-4 flex justify-center">
+                        <button
+                          className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow border border-blue-700"
+                          onClick={() => navigate(`/student/dashboard/application/${application.id}/chat`)}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          View Details
+                        </button>
                       </div>
                     )}
                   </div>

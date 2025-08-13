@@ -34,11 +34,16 @@ const StudentManagement: React.FC = () => {
   );
 
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'all' | 'manual-review'>('all');
 
   // Filtra aplicações conforme bolsa selecionada
-  const filteredApplications = selectedScholarship
+  const byScholarship = selectedScholarship
     ? applications.filter(app => app.scholarship_id === selectedScholarship)
     : applications;
+
+  const filteredApplications = activeTab === 'manual-review'
+    ? byScholarship.filter(app => (app as any).user_profiles?.documents_status === 'under_review')
+    : byScholarship;
 
   return (
     <ProfileCompletionGuard 
@@ -49,7 +54,23 @@ const StudentManagement: React.FC = () => {
       <div className="p-4 md:p-6">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Student Management</h1>
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <p>{filteredApplications.length} student applications found.</p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <button
+              className={`px-3 py-1.5 rounded-md text-sm font-medium ${activeTab === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+              onClick={() => setActiveTab('all')}
+            >
+              All Students
+            </button>
+            <button
+              className={`px-3 py-1.5 rounded-md text-sm font-medium ${activeTab === 'manual-review' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+              onClick={() => setActiveTab('manual-review')}
+            >
+              Manual Review
+            </button>
+          </div>
+          <p className="text-slate-600">{filteredApplications.length} student applications found.</p>
+        </div>
         {scholarships.length > 0 && (
           <div className="mt-4">
             <label className="block text-sm font-medium text-slate-700 mb-1">Filtrar por bolsa:</label>
@@ -77,7 +98,11 @@ const StudentManagement: React.FC = () => {
           // Novo: lógica para status e badge
           let badgeText = '';
           let badgeClass = '';
-          if (app.status === 'enrolled') {
+          const docsStatus = (app as any).user_profiles?.documents_status;
+          if (docsStatus === 'under_review') {
+            badgeText = 'Manual review pending';
+            badgeClass = 'bg-orange-100 text-orange-700';
+          } else if (app.status === 'enrolled') {
             badgeText = 'Enrolled';
             badgeClass = 'bg-green-100 text-green-700';
           } else {
@@ -102,6 +127,11 @@ const StudentManagement: React.FC = () => {
                 {student?.country && <div className="text-sm text-gray-600">Country: {student.country}</div>}
                 {scholarship && (
                   <div className="text-sm text-blue-700 mt-2 font-medium">Scholarship: {scholarship.title}</div>
+                )}
+                {(app as any).user_profiles?.documents && (
+                  <div className="text-xs text-slate-500 mt-2">
+                    Documents: {(app as any).user_profiles.documents?.length || 0}
+                  </div>
                 )}
               </div>
               <div className="mt-2 md:mt-0 md:ml-6 flex flex-col items-end">

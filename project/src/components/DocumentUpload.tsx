@@ -129,18 +129,101 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
 
         const allValid = passportOk && fundsOk && degreeOk;
         if (allValid) {
+          // Agora mesmo com sucesso automatizado, enviamos para revisão manual da universidade
           await supabase
             .from('user_profiles')
             .update({
               documents: uploadedDocs,
               documents_uploaded: true,
-              documents_status: 'approved',
+              documents_status: 'under_review',
             })
             .eq('user_id', user.id);
+
+          // Garantir application e anexar documentos
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('id, selected_scholarship_id')
+              .eq('user_id', user.id)
+              .single();
+
+            let placeholderScholarship = (userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id || null;
+            if (!placeholderScholarship) {
+              const { data: cartRow } = await supabase
+                .from('user_cart')
+                .select('scholarship_id')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              placeholderScholarship = cartRow?.scholarship_id || null;
+            }
+
+            let applicationId: string | null = null;
+            if (placeholderScholarship && profile?.id) {
+              const { data: existingApp } = await supabase
+                .from('scholarship_applications')
+                .select('id')
+                .eq('student_id', profile.id)
+                .eq('scholarship_id', placeholderScholarship)
+                .maybeSingle();
+              if (!existingApp) {
+                const { data: newApp } = await supabase
+                  .from('scholarship_applications')
+                  .insert({ student_id: profile.id, scholarship_id: placeholderScholarship, status: 'pending' })
+                  .select('id')
+                  .single();
+                applicationId = newApp?.id || null;
+              } else {
+                applicationId = existingApp.id;
+              }
+            }
+
+            // Fallback: se não encontrou pela bolsa selecionada, usa a aplicação mais recente do aluno
+            if (!applicationId && profile?.id) {
+              const { data: latestApp } = await supabase
+                .from('scholarship_applications')
+                .select('id')
+                .eq('student_id', profile.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              applicationId = latestApp?.id || null;
+            }
+
+            if (applicationId) {
+              const finalDocs = [
+                { type: 'passport', url: docUrls['passport'] },
+                { type: 'diploma', url: docUrls['diploma'] },
+                { type: 'funds_proof', url: docUrls['funds_proof'] },
+              ].filter(d => d.url);
+              await supabase
+                .from('scholarship_applications')
+                .update({ documents: finalDocs.map(d => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' })) })
+                .eq('id', applicationId);
+            }
+
+            // Limpar carrinho do usuário
+            await supabase
+              .from('user_cart')
+              .delete()
+              .eq('user_id', user.id);
+
+            // Notificar universidade
+            const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+            const { data: { session } } = await supabase.auth.getSession();
+            const notifyPayload = { user_id: user.id, tipos_documentos: ['manual_review'], selected_scholarship_id: placeholderScholarship };
+            await fetch(`${SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+              body: JSON.stringify(notifyPayload),
+            });
+          } catch {}
+
           setAnalyzing(false);
           setFieldErrors({});
           onUploadSuccess();
-          navigate('/student/dashboard/application-fee');
+          navigate('/student/dashboard/applications');
         } else {
           // Define erros por campo para exibir abaixo de cada input
           const nextFieldErrors: Record<string, string> = { ...fieldErrors };
@@ -161,6 +244,87 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
             window.localStorage.setItem('documentAnalysisErrors', JSON.stringify(nextFieldErrors));
             window.localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
           } catch {}
+          // Atualiza estado do perfil e garante application com anexos para a universidade
+          try {
+            await supabase
+              .from('user_profiles')
+              .update({
+                documents: uploadedDocs,
+                documents_uploaded: true,
+                documents_status: 'under_review',
+              })
+              .eq('user_id', user.id);
+
+            // Garantir application e anexar documentos disponíveis
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('id, selected_scholarship_id')
+              .eq('user_id', user.id)
+              .single();
+
+            let placeholderScholarship = (userProfile as any)?.selected_scholarship_id || profile?.selected_scholarship_id || null;
+            if (!placeholderScholarship) {
+              const { data: cartRow } = await supabase
+                .from('user_cart')
+                .select('scholarship_id')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              placeholderScholarship = cartRow?.scholarship_id || null;
+            }
+
+            let applicationId: string | null = null;
+            if (placeholderScholarship && profile?.id) {
+              const { data: existingApp } = await supabase
+                .from('scholarship_applications')
+                .select('id')
+                .eq('student_id', profile.id)
+                .eq('scholarship_id', placeholderScholarship)
+                .maybeSingle();
+              if (!existingApp) {
+                const { data: newApp } = await supabase
+                  .from('scholarship_applications')
+                  .insert({ student_id: profile.id, scholarship_id: placeholderScholarship, status: 'pending' })
+                  .select('id')
+                  .single();
+                applicationId = newApp?.id || null;
+              } else {
+                applicationId = existingApp.id;
+              }
+            }
+
+            if (applicationId) {
+              const finalDocs = [
+                docUrls['passport'] ? { type: 'passport', url: docUrls['passport'] } : null,
+                docUrls['diploma'] ? { type: 'diploma', url: docUrls['diploma'] } : null,
+                docUrls['funds_proof'] ? { type: 'funds_proof', url: docUrls['funds_proof'] } : null,
+              ].filter(Boolean).map((d: any) => ({ ...d, uploaded_at: new Date().toISOString(), status: 'under_review' }));
+              if (finalDocs.length > 0) {
+                await supabase
+                  .from('scholarship_applications')
+                  .update({ documents: finalDocs })
+                  .eq('id', applicationId);
+              }
+            }
+
+            // Limpar carrinho do usuário
+            await supabase
+              .from('user_cart')
+              .delete()
+              .eq('user_id', user.id);
+
+            // Notificar universidade
+            const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
+            const { data: { session } } = await supabase.auth.getSession();
+            const notifyPayload = { user_id: user.id, tipos_documentos: ['manual_review'], selected_scholarship_id: placeholderScholarship };
+            await fetch(`${SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+              body: JSON.stringify(notifyPayload),
+            });
+          } catch {}
+
           // Limpa apenas os arquivos inválidos para reenvio
           setFiles(prev => {
             const updated = { ...prev };

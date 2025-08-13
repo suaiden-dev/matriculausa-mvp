@@ -19,6 +19,33 @@ const ApplicationFeePage: React.FC = () => {
     }
   }, [cart, selectedScholarshipId]);
 
+  // Auto-seleciona a bolsa a partir do perfil ou da última application caso o carrinho esteja vazio
+  useEffect(() => {
+    const autoSelectFromProfileOrApp = async () => {
+      if (selectedScholarshipId) return;
+      if (!userProfile?.id) return;
+      // 1) Perfil
+      // @ts-expect-error dynamic col may exist
+      const profileSelected = (userProfile as any)?.selected_scholarship_id;
+      if (profileSelected) {
+        setSelectedScholarshipId(profileSelected);
+        return;
+      }
+      // 2) Última application existente
+      const { data: app } = await supabase
+        .from('scholarship_applications')
+        .select('scholarship_id')
+        .eq('student_id', userProfile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if ((app as any)?.scholarship_id) {
+        setSelectedScholarshipId((app as any).scholarship_id);
+      }
+    };
+    autoSelectFromProfileOrApp();
+  }, [selectedScholarshipId, userProfile?.id]);
+
   const createOrGetApplication = async (): Promise<{ applicationId: string } | undefined> => {
     if (!selectedScholarshipId || !userProfile?.id) {
       console.error('Missing selectedScholarshipId or userProfile.id');

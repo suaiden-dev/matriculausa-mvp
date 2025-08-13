@@ -7,8 +7,7 @@ import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { useAuth } from '../../hooks/useAuth';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
-import { MessageCircle, FileText, UserCircle } from 'lucide-react';
-import Modal from 'react-modal';
+import { MessageCircle, FileText, UserCircle, Eye, Download, CheckCircle2, XCircle } from 'lucide-react';
 
 interface ApplicationDetails extends Application {
   user_profiles: UserProfile;
@@ -37,6 +36,7 @@ const TABS = [
   { id: 'details', label: 'Details', icon: UserCircle },
   { id: 'chat', label: 'Chat', icon: MessageCircle },
   { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'review', label: 'Review', icon: FileText },
 ];
 
 const StudentDetails: React.FC = () => {
@@ -47,10 +47,11 @@ const StudentDetails: React.FC = () => {
   const { user } = useAuth();
   const chat = useApplicationChat(applicationId);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents'>('details');
-  const [acceptanceModalOpen, setAcceptanceModalOpen] = useState(false);
-  const [acceptanceAction, setAcceptanceAction] = useState<'approve' | 'reject' | null>(null);
+  const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents' | 'review'>('details');
   const [acceptanceLoading, setAcceptanceLoading] = useState(false);
+  // Removido: student_documents como fonte primária; usaremos application.documents
+  const [studentDocs, setStudentDocs] = useState<any[]>([]);
+  const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     if (applicationId) {
@@ -81,6 +82,33 @@ const StudentDetails: React.FC = () => {
       
       if (data) {
         setApplication(data as ApplicationDetails);
+        // Mantemos uma cópia simplificada para compatibilidade antiga
+        const appDocs = (data as any).documents;
+        if (Array.isArray(appDocs) && appDocs.length > 0) {
+          setStudentDocs(appDocs.map((d: any) => ({ type: d.type, file_url: d.url, status: d.status || 'under_review' })));
+        } else {
+          // Fallback 1: usar documentos salvos no perfil do aluno (user_profiles.documents)
+          const profileDocs = (data as any).user_profiles?.documents;
+          if (Array.isArray(profileDocs) && profileDocs.length > 0) {
+            setStudentDocs(profileDocs.map((d: any) => ({ type: d.type, file_url: d.url, status: d.status || 'under_review' })));
+          } else {
+            // Fallback 2: buscar do storage se a application ainda não tiver documentos associados
+            const studentId = (data as any).user_profiles?.user_id;
+            if (studentId) {
+              const { data: docs } = await supabase
+                .from('student_documents')
+                .select('*')
+                .eq('user_id', studentId);
+              if (docs && docs.length > 0) {
+                setStudentDocs((docs || []).map((d: any) => ({ type: d.type, file_url: d.file_url, status: d.status || 'under_review' })));
+              } else {
+                setStudentDocs([]);
+              }
+            } else {
+              setStudentDocs([]);
+            }
+          }
+        }
       }
     } catch (err: any) {
       console.error("Error fetching application details:", err);
@@ -117,7 +145,73 @@ const StudentDetails: React.FC = () => {
     );
   }
 
-  const { user_profiles: student, scholarships: scholarship, status } = application;
+  const { user_profiles: student, scholarships: scholarship } = application;
+
+  const latestDocByType = (type: string) => {
+    const docs = (application as any)?.documents as any[] | undefined;
+    const appDoc = Array.isArray(docs) ? docs.find((d) => d.type === type) : undefined;
+    if (appDoc) return { id: `${type}`, type, file_url: appDoc.url, status: appDoc.status || 'under_review' };
+    // fallback compatibilidade
+    return studentDocs.find((d) => d.type === type);
+  };
+
+  const updateApplicationDocStatus = async (type: string, status: 'approved' | 'changes_requested' | 'under_review') => {
+    const docs = Array.isArray((application as any)?.documents) ? ([...(application as any).documents] as any[]) : [];
+    const idx = docs.findIndex((d) => d.type === type);
+    if (idx >= 0) {
+      docs[idx] = { ...docs[idx], status };
+    }
+    await supabase.from('scholarship_applications').update({ documents: docs }).eq('id', applicationId);
+    setApplication((prev) => prev ? ({ ...prev, documents: docs } as any) : prev);
+  };
+
+  const approveDoc = async (type: string) => {
+    try {
+      setUpdating(type);
+      await updateApplicationDocStatus(type, 'approved');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const requestChangesDoc = async (type: string) => {
+    try {
+      setUpdating(type);
+      await updateApplicationDocStatus(type, 'changes_requested');
+      // Mantém o fluxo do aluno em revisão
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'under_review' })
+        .eq('user_id', student.user_id);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const allApproved = ['passport', 'diploma', 'funds_proof']
+    .every((k) => {
+      const d = latestDocByType(k);
+      return d && d.file_url && (d.status || '').toLowerCase() === 'approved';
+    });
+
+  const approveStudent = async () => {
+    try {
+      setAcceptanceLoading(true);
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'approved' })
+        .eq('user_id', student.user_id);
+      // Atualiza a aplicação para liberar Application Fee no dashboard do aluno
+      await supabase
+        .from('scholarship_applications')
+        .update({ status: 'approved' })
+        .eq('id', applicationId);
+      await fetchApplicationDetails();
+      setActiveTab('details');
+    } finally {
+      setAcceptanceLoading(false);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
@@ -191,8 +285,8 @@ const StudentDetails: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div><strong>Name:</strong> {scholarship.universities.name || 'N/A'}</div>
                   <div><strong>Location:</strong> {scholarship.universities.location || 'N/A'}</div>
-                  <div><strong>Email:</strong> {scholarship.universities.contact?.email || scholarship.universities.contact?.admissionsEmail || 'N/A'}</div>
-                  <div><strong>Phone:</strong> {scholarship.universities.contact?.phone || 'N/A'}</div>
+                  <div><strong>Email:</strong> {(scholarship.universities as any)?.contact?.email || (scholarship.universities as any)?.contact?.admissionsEmail || 'N/A'}</div>
+                  <div><strong>Phone:</strong> {(scholarship.universities as any)?.contact?.phone || 'N/A'}</div>
                 </div>
               </div>
             )}
@@ -233,12 +327,12 @@ const StudentDetails: React.FC = () => {
           <div className="flex-1 flex flex-col">
           <ApplicationChat
             messages={chat.messages}
-            onSend={chat.sendMessage}
+            onSend={chat.sendMessage as any}
             loading={chat.loading}
             isSending={chat.isSending}
             error={chat.error}
-            currentUserId={user?.id}
-              messageContainerClassName="gap-6 py-4"
+            currentUserId={user?.id || ''}
+            messageContainerClassName="gap-6 py-4"
           />
           </div>
         </div>
@@ -246,13 +340,71 @@ const StudentDetails: React.FC = () => {
       {activeTab === 'documents' && (
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-bold text-[#05294E] mb-4">Document Requests</h2>
-          <DocumentRequestsCard
-            applicationId={applicationId!}
-            isSchool={true}
-            currentUserId={user?.id || ''}
-            studentType={application.student_process_type || 'initial'}
-            studentUserId={student.user_id} // Passa o user_id do aluno
-          />
+            <DocumentRequestsCard
+              applicationId={applicationId!}
+              isSchool={true}
+              currentUserId={user?.id || ''}
+              studentType={(application.student_process_type || 'initial') as any}
+              studentUserId={student.user_id}
+            />
+        </div>
+      )}
+      {activeTab === 'review' && (
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-bold text-[#05294E] mb-4">Manual Review</h2>
+          <div className="space-y-4">
+            {DOCUMENTS_INFO.map((doc) => {
+              const d = latestDocByType(doc.key);
+              return (
+                <div key={doc.key} className="border border-slate-200 rounded-lg p-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-800">{doc.label}</div>
+                      <div className="text-xs text-slate-500">{doc.description}</div>
+                      <div className="mt-1 text-xs">
+                        <span className={`px-2 py-0.5 rounded-full ${d?.status === 'approved' ? 'bg-green-100 text-green-700' : d?.status === 'changes_requested' ? 'bg-red-100 text-red-700' : d?.status === 'under_review' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>{d?.status || 'not submitted'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {d?.file_url && (
+                        <>
+                          <a className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50" href={d.file_url} target="_blank" rel="noreferrer">
+                            <Eye className="inline w-4 h-4 mr-1" /> Preview
+                          </a>
+                          <a className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50" href={d.file_url} download>
+                            <Download className="inline w-4 h-4 mr-1" /> Download
+                          </a>
+                        </>
+                      )}
+                      <button
+                        disabled={!d || updating === d.type || (d.status || '').toLowerCase() === 'approved'}
+                        onClick={() => d && approveDoc(d.type)}
+                        className="px-3 py-1.5 text-sm rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="inline w-4 h-4 mr-1" /> Approve
+                      </button>
+                      <button
+                        disabled={!d || updating === d.type || (d.status || '').toLowerCase() === 'approved'}
+                        onClick={() => d && requestChangesDoc(d.type)}
+                        className="px-3 py-1.5 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        <XCircle className="inline w-4 h-4 mr-1" /> Request changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-6 flex justify-end">
+            <button
+              disabled={!allApproved || acceptanceLoading}
+              onClick={approveStudent}
+              className="px-5 py-2 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
+            >
+              {acceptanceLoading ? 'Approving...' : 'Approve student'}
+            </button>
+          </div>
         </div>
       )}
       {previewUrl && (
