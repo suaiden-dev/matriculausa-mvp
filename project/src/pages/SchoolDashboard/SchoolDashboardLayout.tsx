@@ -20,10 +20,12 @@ import {
   Brain,
   Mail,
   MessageSquare,
-  Gift
+  Gift,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
+import { supabase } from '../../lib/supabase';
 
 interface SchoolDashboardLayoutProps {
   user: any;
@@ -34,6 +36,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { university, loading } = useUniversity();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotif, setShowNotif] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   
@@ -66,6 +70,68 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     logout();
     navigate('/');
     setSidebarOpen(false);
+  };
+
+  // Realtime notifications
+  useEffect(() => {
+    let channel: any;
+    const fetchInitial = async () => {
+      if (!university?.id) return;
+      const { data } = await supabase
+        .from('university_notifications')
+        .select('*')
+        .eq('university_id', university.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      setNotifications(data || []);
+      channel = supabase
+        .channel('univ-notifs')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'university_notifications', filter: `university_id=eq.${university.id}` }, (payload: any) => {
+          setNotifications(prev => [payload.new, ...prev].slice(0, 10));
+        })
+        .subscribe();
+    };
+    fetchInitial();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [university?.id]);
+
+  const openNotification = async (n: any) => {
+    try {
+      if (n && !n.read_at) {
+        await supabase
+          .from('university_notifications')
+          .update({ read_at: new Date().toISOString() })
+          .eq('id', n.id);
+      }
+    } catch {}
+    setShowNotif(false);
+    const target = n?.link || '/school/dashboard/students';
+    navigate(target);
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      if (!university?.id) return;
+      await supabase
+        .from('university_notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('university_id', university.id)
+        .is('read_at', null as any);
+      setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
+    } catch {}
+  };
+
+  const clearAll = async () => {
+    try {
+      if (!university?.id) return;
+      await supabase
+        .from('university_notifications')
+        .delete()
+        .eq('university_id', university.id);
+      setNotifications([]);
+    } catch {}
   };
 
   if (loading) {
@@ -308,6 +374,18 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
                   <ChevronDown className="h-4 w-4 text-slate-400" />
                 </button>
 
+                {/* Bell */}
+                <button
+                  onClick={() => setShowNotif(!showNotif)}
+                  className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Notifications"
+                >
+                  <Bell className="h-5 w-5 text-slate-600" />
+                  {notifications.some(n => !n.read_at) && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full"></span>
+                  )}
+                </button>
+
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">
                     <div className="px-4 py-3 border-b border-slate-200">
@@ -348,6 +426,35 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
                       <LogOut className="h-4 w-4 mr-3" />
                       Sign Out
                     </button>
+                  </div>
+                )}
+
+                {showNotif && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                    <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
+                      <span>Notifications</span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
+                        <span className="text-slate-300">|</span>
+                        <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-sm text-slate-500">No notifications</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${!n.read_at ? 'bg-slate-50' : ''}`} onClick={() => openNotification(n)}>
+                            <div className="text-sm font-medium text-slate-900 flex items-center justify-between">
+                              <span>{n.title}</span>
+                              {!n.read_at && <span className="ml-2 h-2 w-2 rounded-full bg-blue-500 inline-block"></span>}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-0.5">{n.message}</div>
+                            <div className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
