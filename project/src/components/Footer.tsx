@@ -99,7 +99,7 @@ const Footer: React.FC = () => {
         <div className="border-t border-white/10 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-slate-400 text-sm">
-              © 2024 Matrícula USA. All rights reserved. | Empowering international education through technology.
+              © 2025 Matrícula USA. All rights reserved. | Empowering international education through technology.
             </p>
           </div>
         </div>
