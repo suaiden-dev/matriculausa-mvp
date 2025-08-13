@@ -57,11 +57,32 @@ const UniversityRewardsDashboard: React.FC = () => {
 
   // Estados para saque
   const [payouts, setPayouts] = useState<UniversityPayoutRequest[]>([]);
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [showPaymentRequestModal, setShowPaymentRequestModal] = useState(false);
+  const [paymentRequestAmount, setPaymentRequestAmount] = useState<number>(0);
   const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>('zelle');
   const [payoutDetails, setPayoutDetails] = useState<Record<string, any>>({});
   const [submittingPayout, setSubmittingPayout] = useState(false);
+  const [inputError, setInputError] = useState<string | null>(null);
+
+  // Validação em tempo real do valor solicitado
+  const validatePaymentAmount = (amount: number) => {
+    const availableBalance = rewardsAccount?.balance_coins || 0;
+    if (amount > availableBalance) {
+      setInputError(`Insufficient balance. You have ${availableBalance.toLocaleString()} coins available.`);
+      return false;
+    } else if (amount <= 0) {
+      setInputError('Amount must be greater than 0');
+      return false;
+    } else {
+      setInputError(null);
+      return true;
+    }
+  };
+
+  // Verificar se o valor solicitado é válido
+  const isPaymentAmountValid = () => {
+    return paymentRequestAmount > 0 && paymentRequestAmount <= (rewardsAccount?.balance_coins || 0);
+  };
 
   useEffect(() => {
     if (university?.id) {
@@ -104,35 +125,41 @@ const UniversityRewardsDashboard: React.FC = () => {
     }
   };
 
-  const handleSubmitWithdraw = async () => {
+  const handleSubmitPaymentRequest = async () => {
     if (!user?.id || !university?.id) return;
-    if (!withdrawAmount || withdrawAmount <= 0) {
-      setError('Informe um valor válido para sacar');
+    
+    // Validação de valor válido
+    if (!paymentRequestAmount || paymentRequestAmount <= 0) {
+      setError('Please enter a valid amount for payment request');
       setTimeout(() => setError(null), 3000);
       return;
     }
-    if (withdrawAmount > (rewardsAccount?.balance_coins || 0)) {
-      setError('Valor solicitado excede o saldo disponível');
-      setTimeout(() => setError(null), 3000);
+    
+    // Validação de saldo insuficiente
+    const availableBalance = rewardsAccount?.balance_coins || 0;
+    if (paymentRequestAmount > availableBalance) {
+      setError(`Insufficient balance. You have ${availableBalance.toLocaleString()} coins available, but requested ${paymentRequestAmount.toLocaleString()} coins.`);
+      setTimeout(() => setError(null), 5000);
       return;
     }
+    
     try {
       setSubmittingPayout(true);
       await PayoutService.requestPayout({
         universityId: university.id,
         userId: user.id,
-        amountCoins: withdrawAmount,
+        amountCoins: paymentRequestAmount,
         payoutMethod,
         payoutDetails
       });
-      setShowWithdrawModal(false);
-      setWithdrawAmount(0);
+      setShowPaymentRequestModal(false);
+      setPaymentRequestAmount(0);
       setPayoutDetails({});
       await loadMatriculaRewardsData();
       setShowExportSuccess(true);
       setTimeout(() => setShowExportSuccess(false), 3000);
     } catch (e: any) {
-      setError(e.message || 'Falha ao solicitar saque');
+      setError(e.message || 'Failed to submit payment request');
       setTimeout(() => setError(null), 4000);
     } finally {
       setSubmittingPayout(false);
@@ -333,9 +360,9 @@ const UniversityRewardsDashboard: React.FC = () => {
                   <Clock className="h-4 w-4" />
                   <span>History</span>
                 </button>
-                <button onClick={() => setShowWithdrawModal(true)} className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
+                <button onClick={() => setShowPaymentRequestModal(true)} className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
                   <DollarSign className="h-4 w-4" />
-                  <span>Withdraw coins</span>
+                  <span>Request Payment</span>
                 </button>
               </div>
             </div>
@@ -632,38 +659,58 @@ const UniversityRewardsDashboard: React.FC = () => {
           </div>
 
           {/* Modal */}
-          {showWithdrawModal && (
+          {showPaymentRequestModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
               <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-slate-900">Withdraw Matricula Coins</h3>
-                  <button onClick={() => setShowWithdrawModal(false)} title="Close" className="text-slate-500 hover:text-slate-700"><XCircle className="h-5 w-5"/></button>
+                  <h3 className="text-xl font-semibold text-slate-900">Request Payment</h3>
+                                      <button onClick={() => setShowPaymentRequestModal(false)} title="Close" className="text-slate-500 hover:text-slate-700"><XCircle className="h-5 w-5"/></button>
                 </div>
 
                 <div className="space-y-4">
+                  {/* Mensagem de erro de saldo insuficiente */}
+                  {inputError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-2">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                        <span className="text-sm text-red-800 font-medium">{inputError}</span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="withdraw-amount">Amount (coins)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="payment-request-amount">Amount (coins)</label>
                     <input
-                      id="withdraw-amount"
+                      id="payment-request-amount"
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      value={Number.isNaN(withdrawAmount) ? '' : String(withdrawAmount)}
+                      value={Number.isNaN(paymentRequestAmount) ? '' : String(paymentRequestAmount)}
                       onChange={(e) => {
                         const onlyDigits = e.target.value.replace(/[^0-9]/g, '');
                         const next = onlyDigits === '' ? 0 : parseInt(onlyDigits, 10);
-                        setWithdrawAmount(next);
+                        setPaymentRequestAmount(next);
+                        validatePaymentAmount(next);
                       }}
                       onBlur={() => {
                         const max = rewardsAccount?.balance_coins || 0;
-                        if (withdrawAmount > max) {
-                          setWithdrawAmount(max);
+                        if (paymentRequestAmount > max) {
+                          setPaymentRequestAmount(max);
+                          validatePaymentAmount(max);
                         }
                       }}
                       placeholder="Enter amount in coins"
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                      className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 ${
+                        inputError ? 'border-red-300 focus:ring-red-500' : 'border-slate-300'
+                      }`}
                     />
-                    <p className="text-xs text-slate-500 mt-1">Available: {(rewardsAccount?.balance_coins || 0).toLocaleString()} coins • USD {formatCurrency(withdrawAmount)}</p>
+                    {inputError ? (
+                      <p className="text-xs text-red-600 mt-1">{inputError}</p>
+                    ) : (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Available: {(rewardsAccount?.balance_coins || 0).toLocaleString()} coins • USD {formatCurrency(paymentRequestAmount)}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -700,8 +747,17 @@ const UniversityRewardsDashboard: React.FC = () => {
                   )}
 
                   <div className="flex items-center justify-end gap-3 pt-2">
-                    <button onClick={()=> setShowWithdrawModal(false)} className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700">Cancel</button>
-                    <button onClick={handleSubmitWithdraw} disabled={submittingPayout} className="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60">
+                    <button onClick={()=> setShowPaymentRequestModal(false)} className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700">Cancel</button>
+                    <button 
+                      onClick={handleSubmitPaymentRequest} 
+                      disabled={submittingPayout || !isPaymentAmountValid()} 
+                      className={`px-4 py-2 rounded-lg text-white transition-colors ${
+                        isPaymentAmountValid() 
+                          ? 'bg-blue-600 hover:bg-blue-700' 
+                          : 'bg-gray-400 cursor-not-allowed'
+                      } disabled:opacity-60`}
+                      title={!isPaymentAmountValid() ? 'Please enter a valid amount within your available balance' : 'Submit payment request'}
+                    >
                       {submittingPayout ? 'Submitting...' : 'Submit request'}
                     </button>
                   </div>
