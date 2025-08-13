@@ -113,7 +113,7 @@ const Home: React.FC = () => {
                     to={getDashboardPath()}
                     className="group bg-green-600 hover:bg-emerald-600 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0"
                   >
-                    🎯 Go to Dashboard
+                    Go to Dashboard
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 )}

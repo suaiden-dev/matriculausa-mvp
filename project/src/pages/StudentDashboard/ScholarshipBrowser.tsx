@@ -833,8 +833,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="flex items-center text-slate-600 mb-3">
                         <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                         <span className="text-xs font-semibold mr-1">University:</span>
-                        <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
-                          {userProfile?.has_paid_selection_process_fee
+                        <span className={`text-sm select-none ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
+                          {isAuthenticated && userProfile?.has_paid_selection_process_fee
                             ? (scholarship.universities?.name || 'Unknown University')
                             : '********'}
                         </span>
@@ -1090,8 +1090,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <div className="flex items-center text-slate-600 mb-3">
                     <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                     <span className="text-xs font-semibold mr-1">University:</span>
-                    <span className={`text-sm select-none ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
-                      {userProfile?.has_paid_selection_process_fee
+                    <span className={`text-sm select-none ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
+                      {isAuthenticated && userProfile?.has_paid_selection_process_fee
                         ? (scholarship.universities?.name || 'Unknown University')
                         : '********'}
                     </span>
