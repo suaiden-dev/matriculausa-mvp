@@ -137,6 +137,48 @@ const AdminDashboard: React.FC = () => {
     setConfirmationModal(null);
   };
 
+  const toggleScholarshipHighlight = async (scholarshipId: string, newHighlightStatus: boolean) => {
+    try {
+      // Se estiver marcando como destaque, verificar se já temos 6 bolsas em destaque
+      if (newHighlightStatus) {
+        const featuredCount = scholarships.filter(s => s.is_highlighted).length;
+        if (featuredCount >= 6) {
+          alert('Máximo de 6 bolsas em destaque atingido. Desmarque uma antes de adicionar outra.');
+          return;
+        }
+      }
+
+      const updateData: any = { is_highlighted: newHighlightStatus };
+      
+      if (newHighlightStatus) {
+        // Definir ordem para nova bolsa em destaque
+        const featuredCount = scholarships.filter(s => s.is_highlighted).length;
+        updateData.featured_order = featuredCount + 1;
+      } else {
+        // Remover ordem ao desmarcar
+        updateData.featured_order = null;
+      }
+
+      const { error } = await supabase
+        .from('scholarships')
+        .update(updateData)
+        .eq('id', scholarshipId);
+      
+      if (error) throw error;
+      
+      setScholarships(prev => prev.map(s =>
+        s.id === scholarshipId ? { ...s, is_highlighted: newHighlightStatus, featured_order: updateData.featured_order } : s
+      ));
+      
+      // Mostrar feedback visual
+      const action = newHighlightStatus ? 'marcada como destaque' : 'removida dos destaques';
+      alert(`Bolsa ${action} com sucesso!`);
+    } catch (error) {
+      console.error('Error toggling scholarship highlight:', error);
+      alert('Erro ao atualizar status de destaque da bolsa');
+    }
+  };
+
   const loadAdminData = async () => {
     try {
       setLoading(true);
@@ -1086,11 +1128,27 @@ const AdminDashboard: React.FC = () => {
                         {scholarship.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Destaque</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${scholarship.is_highlighted ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {scholarship.is_highlighted ? '★ Sim' : '☆ Não'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex space-x-2">
                     <button className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors text-sm">
                       View Details
+                    </button>
+                    <button 
+                      onClick={() => toggleScholarshipHighlight(scholarship.id, !scholarship.is_highlighted)}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        scholarship.is_highlighted 
+                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {scholarship.is_highlighted ? '★ Destaque' : '☆ Marcar'}
                     </button>
                     <button className="bg-gray-100 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors">
                       <Edit className="h-4 w-4" />

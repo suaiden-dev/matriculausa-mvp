@@ -10,7 +10,8 @@ import {
   Building, 
   Search,
   Award,
-  ArrowRight
+  ArrowRight,
+  GraduationCap
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -40,6 +41,9 @@ const MyApplications: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [universityFilter, setUniversityFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [valueRangeFilter, setValueRangeFilter] = useState('all');
   // const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // const [payingId] = useState<string | null>(null);
@@ -196,13 +200,35 @@ const MyApplications: React.FC = () => {
   const filteredApplications = applicationsToShow.filter(application => {
     const scholarshipTitle = application.scholarships?.title || '';
     const universityName = application.scholarships?.universities?.name || '';
+    const level = application.scholarships?.level || '';
+    const scholarshipValue = application.scholarships?.annual_value_with_scholarship || 0;
     
+    // Search term filter
     const matchesSearch = scholarshipTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          universityName.toLowerCase().includes(searchTerm.toLowerCase());
     
+    // Status filter
     const matchesStatus = statusFilter === 'all' || application.status === statusFilter;
+    
+    // University filter
+    const matchesUniversity = universityFilter === 'all' || universityName === universityFilter;
+    
+    // Level filter
+    const matchesLevel = levelFilter === 'all' || level === levelFilter;
+    
+    // Value range filter
+    const matchesValueRange = valueRangeFilter === 'all' || (() => {
+      switch (valueRangeFilter) {
+        case 'under_5k': return scholarshipValue < 5000;
+        case '5k_to_10k': return scholarshipValue >= 5000 && scholarshipValue < 10000;
+        case '10k_to_15k': return scholarshipValue >= 10000 && scholarshipValue < 15000;
+        case '15k_to_20k': return scholarshipValue >= 15000 && scholarshipValue < 20000;
+        case 'over_20k': return scholarshipValue >= 20000;
+        default: return true;
+      }
+    })();
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesUniversity && matchesLevel && matchesValueRange;
   });
 
   const formatAmount = (amount: number) => {
@@ -399,152 +425,170 @@ const MyApplications: React.FC = () => {
     );
   }
 
+  const hasSelectedScholarship = false;
+
+const getLevelColor = (level: any) => {
+  switch (level.toLowerCase()) {
+    case 'undergraduate':
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'graduate':
+      return 'bg-slate-100 text-slate-700 border-slate-200';
+    case 'doctoral':
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
   if (error) {
     return <div className="text-red-500">Error: {error}</div>;
   }
 
   return (
-    <div className="pt-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="pt-6 sm:pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">My Applications</h2>
-            <p className="mt-1 text-slate-600">Track the status of your scholarship applications and next steps</p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 mb-1 sm:mb-2">My Applications</h2>
+            <p className="text-base sm:text-lg text-slate-600">Track the status of your scholarship applications and next steps</p>
           </div>
         </div>
 
         {/* Aviso removido conforme solicitação */}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 min-h-[120px] flex items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Total Applications</p>
-              <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">Total Applications</p>
+              <p className="text-3xl sm:text-4xl font-bold text-slate-900">{stats.total}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center">
-              <FileText className="h-6 w-6 text-blue-600" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center">
+              <FileText className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
             </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 min-h-[120px] flex items-center">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Approved</p>
-              <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">Approved</p>
+              <p className="text-3xl sm:text-4xl font-bold text-green-600">{stats.approved}</p>
             </div>
-            <div className="w-12 h-12 bg-green-50 border border-green-100 rounded-xl flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 sm:h-7 sm:w-7 text-green-600" />
             </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 min-h-[120px] flex items-center">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Under Review</p>
-              <p className="text-3xl font-bold text-yellow-600">{stats.under_review}</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">Under Review</p>
+              <p className="text-3xl sm:text-4xl font-bold text-yellow-600">{stats.under_review}</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-50 border border-yellow-100 rounded-xl flex items-center justify-center">
-              <AlertCircle className="h-6 w-6 text-yellow-600" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-600" />
             </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 min-h-[120px] flex items-center">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Pending</p>
-              <p className="text-3xl font-bold text-gray-600">{stats.pending}</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">Pending</p>
+              <p className="text-3xl sm:text-4xl font-bold text-gray-600">{stats.pending}</p>
             </div>
-            <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center">
-              <Clock className="h-6 w-6 text-gray-600" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center">
+              <Clock className="h-6 w-6 sm:h-7 sm:w-7 text-gray-600" />
             </div>
             </div>
           </div>
         </div>
 
         {/* Guidance: explain fees and next steps */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-sm font-semibold text-slate-900 mb-1">Step 1 — Submit your documents</div>
-              <div className="text-sm text-slate-600">Upload passport, high school diploma and proof of funds so the university can evaluate your application.</div>
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 sm:p-8 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 1 — Submit your documents</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Upload passport, high school diploma and proof of funds so the university can evaluate your application.</div>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-sm font-semibold text-slate-900 mb-1">Step 2 — University review</div>
-              <div className="text-sm text-slate-600">Your application will show as Pending/Under Review until the university approves your candidacy.</div>
+            <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 2 — University review</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Your application will show as Pending/Under Review until the university approves your candidacy.</div>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-sm font-semibold text-slate-900 mb-1">Step 3 — Payments</div>
-              <div className="text-sm text-slate-600">After approval, pay the Application Fee. Once confirmed, pay the Scholarship Fee to secure your benefits.</div>
+            <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 sm:col-span-2 lg:col-span-1">
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 3 — Payments</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">After approval, pay the Application Fee. Once confirmed, pay the Scholarship Fee to secure your benefits.</div>
             </div>
           </div>
         </div>
 
       {applications.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-16 text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center mx-auto mb-8">
-            <FileText className="h-12 w-12 text-blue-600" />
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 sm:p-16 text-center">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center mx-auto mb-6 sm:mb-8">
+            <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-4">No applications yet</h3>
-          <p className="text-slate-500 mb-8 max-w-lg mx-auto">
+          <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">No applications yet</h3>
+          <p className="text-slate-500 mb-6 sm:mb-8 max-w-lg mx-auto text-base sm:text-lg leading-relaxed px-4">
             Start applying for scholarships to track your progress here. We'll help you find the best opportunities that match your profile.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 max-w-4xl mx-auto">
-            <div className="p-6 bg-slate-50 rounded-2xl">
-              <Award className="h-8 w-8 text-blue-600 mx-auto mb-3" />
-              <h4 className="font-bold text-slate-900 mb-2">Find Scholarships</h4>
-              <p className="text-sm text-slate-600">Browse through hundreds of opportunities</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
+            <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200">
+              <Award className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2 sm:mb-3" />
+              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">Find Scholarships</h4>
+              <p className="text-xs sm:text-sm text-slate-600">Browse through hundreds of opportunities</p>
             </div>
-            <div className="p-6 bg-slate-50 rounded-2xl">
-              <FileText className="h-8 w-8 text-green-600 mx-auto mb-3" />
-              <h4 className="font-bold text-slate-900 mb-2">Apply Easily</h4>
-              <p className="text-sm text-slate-600">Simple application process with guidance</p>
+            <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200">
+              <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-2 sm:mb-3" />
+              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">Apply Easily</h4>
+              <p className="text-xs sm:text-sm text-slate-600">Simple application process with guidance</p>
             </div>
-            <div className="p-6 bg-slate-50 rounded-2xl">
-              <CheckCircle className="h-8 w-8 text-purple-600 mx-auto mb-3" />
-              <h4 className="font-bold text-slate-900 mb-2">Track Progress</h4>
-              <p className="text-sm text-slate-600">Monitor your applications in real-time</p>
+            <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200 sm:col-span-2 lg:col-span-1">
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2 sm:mb-3" />
+              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">Track Progress</h4>
+              <p className="text-xs sm:text-sm text-slate-600">Monitor your applications in real-time</p>
             </div>
           </div>
           
           <Link
             to="/student/dashboard/scholarships"
-            className="bg-blue-600 text-white px-8 py-4 rounded-xl hover:bg-blue-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center text-sm sm:text-base"
           >
             Find Scholarships
-            <ArrowRight className="ml-2 h-5 w-5" />
+            <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
         </div>
       ) : (
         <>
           {/* Filters */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-            <div className="flex flex-col lg:flex-row gap-4">
+          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 mb-6 sm:mb-8">
+            <div className="flex flex-col gap-4 sm:gap-6">
+              {/* Search Bar */}
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+                  <Search className="absolute left-3 sm:left-4 top-3 sm:top-4 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Search applications..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                    className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base"
                   />
                 </div>
               </div>
               
-              <div className="flex gap-4">
+              {/* Filter Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {/* Status Filter */}
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  title="Filter applications by status"
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  title="Filter by status"
+                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
@@ -553,12 +597,71 @@ const MyApplications: React.FC = () => {
                   <option value="rejected">Rejected</option>
                   <option value="pending_scholarship_fee">Pending Scholarship Fee</option>
                 </select>
+
+                {/* University Filter */}
+                <select
+                  value={universityFilter}
+                  onChange={(e) => setUniversityFilter(e.target.value)}
+                  title="Filter by university"
+                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
+                >
+                  <option value="all">All Universities</option>
+                  {Array.from(new Set(applicationsToShow.map(app => app.scholarships?.universities?.name).filter(Boolean))).map(university => (
+                    <option key={university} value={university}>{university}</option>
+                  ))}
+                </select>
+
+                {/* Level Filter */}
+                <select
+                  value={levelFilter}
+                  onChange={(e) => setLevelFilter(e.target.value)}
+                  title="Filter by academic level"
+                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
+                >
+                  <option value="all">All Levels</option>
+                  <option value="undergraduate">Undergraduate</option>
+                  <option value="graduate">Graduate</option>
+                  <option value="doctoral">Doctoral</option>
+                </select>
+
+                {/* Value Range Filter */}
+                <select
+                  value={valueRangeFilter}
+                  onChange={(e) => setValueRangeFilter(e.target.value)}
+                  title="Filter by scholarship value"
+                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
+                >
+                  <option value="all">All Values</option>
+                  <option value="under_5k">Under $5,000</option>
+                  <option value="5k_to_10k">$5,000 - $10,000</option>
+                  <option value="10k_to_15k">$10,000 - $15,000</option>
+                  <option value="15k_to_20k">$15,000 - $20,000</option>
+                  <option value="over_20k">Over $20,000</option>
+                </select>
               </div>
+              
+              {/* Clear Filters Button */}
+              {(statusFilter !== 'all' || universityFilter !== 'all' || levelFilter !== 'all' || valueRangeFilter !== 'all' || searchTerm !== '') && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      setStatusFilter('all');
+                      setUniversityFilter('all');
+                      setLevelFilter('all');
+                      setValueRangeFilter('all');
+                      setSearchTerm('');
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors duration-200"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="mt-4 flex items-center text-sm text-slate-600">
-              <span className="font-medium">{filteredApplications.length}</span>
-              <span className="ml-1">
+            <div className="mt-4 sm:mt-6 flex items-center text-sm sm:text-base text-slate-600">
+              <span className="font-bold">{filteredApplications.length}</span>
+              <span className="ml-2">
                 application{filteredApplications.length !== 1 ? 's' : ''} found
               </span>
             </div>
@@ -574,107 +677,178 @@ const MyApplications: React.FC = () => {
               const hasSelectedScholarship = !!selectedApp;
               return (
                 <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-slate-900">Approved by the University</h3>
-                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 px-3 py-1 rounded-lg">{approvedList.length} approved</span>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-slate-900">Approved by the University</h3>
+                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 px-4 py-2 rounded-full font-medium">{approvedList.length} approved</span>
                   </div>
-                  <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800">
-                    <span className="font-semibold">Important:</span> You can choose only one scholarship. After you pay the Application Fee for a scholarship, other options will be disabled.
+                  <div className="mb-6 rounded-xl bg-blue-50 border border-blue-200 p-5 text-sm text-blue-800">
+                    <div className="flex items-start">
+                      <AlertCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <span className="font-semibold">Important:</span> You can choose only one scholarship. After you pay the Application Fee for a scholarship, other options will be disabled.
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
+                    scrollbarWidth: 'none', 
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch'
+                  }}>
                     {approvedList.map((application) => {
-              const Icon = getStatusIcon(application.status);
-              const scholarship = application.scholarships;
-              const applicationFeePaid = !!application.is_application_fee_paid;
-              const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
-              if (!scholarship) return null;
-              return (
-                        <div key={application.id} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 overflow-hidden">
-                  <div className="p-8">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                                <div className="font-bold text-slate-900 text-xl">{scholarship.title}</div>
-                                <div className="flex items-center text-slate-600 mt-1">
-                                <Building className="h-4 w-4 mr-2" />
-                                {scholarship.universities?.name}
-                              </div>
-                            </div>
-                              <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold border ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)} bg-white`}>
-                                <Icon className="h-4 w-4 mr-2" />
-                                {getStatusLabel(application.status === 'enrolled' ? 'approved' : application.status)}
-                              </span>
+                      const Icon = getStatusIcon(application.status);
+                      const scholarship = application.scholarships;
+                      const applicationFeePaid = !!application.is_application_fee_paid;
+                      const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
+                      if (!scholarship) return null;
+                      return (
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0">
+                <div className="p-4 sm:p-6">
+                  {/* Header Section */}
+                  <div className="mb-4 sm:mb-6">
+                    {/* Status Badge - Primeiro elemento */}
+                    <div className="mb-3">
+                      <span className={`inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold border ${getStatusColor(application.status === 'enrolled' ? 'approved' : application.status)}`}>
+                        <Icon className="h-4 w-4 mr-2" />
+                        {getStatusLabel(application.status === 'enrolled' ? 'approved' : application.status)}
+                      </span>
+                    </div>
+                    
+                    {/* Scholarship Title */}
+                    <h2 className="font-bold text-gray-900 text-lg mb-3 group-hover:text-blue-600 transition-colors leading-tight">
+                      {scholarship.title}
+                    </h2>
+                    
+                    {/* University */}
+                    <div className="flex items-center text-gray-600 mb-3">
+                      <Building className="h-4 w-4 mr-2 text-gray-500 flex-shrink-0" />
+                      <span className="font-medium text-sm">{scholarship.universities?.name}</span>
+                    </div>
+                    
+                    {/* Level Badge */}
+                    <div className="flex items-center">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)}`}>
+                        <GraduationCap className="h-4 w-4 mr-1.5" />
+                        {scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+  
+                  {/* Details Section */}
+                  <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-200">
+                    <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                      <div className="flex items-center">
+                        <div className="bg-green-100 p-2 rounded-lg mr-3 flex-shrink-0">
+                          <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-                                <span className="font-semibold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-2 text-slate-500" />
-                            <span className="text-slate-600">Applied on {new Date(application.applied_at).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex items-center">
-                                <span className="text-slate-600 capitalize">Level: {scholarship.level}</span>
-                              </div>
-                          </div>
-                            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-gray-600 mb-1 font-medium">Annual Scholarship Value</p>
+                          <p className="font-bold text-base sm:text-lg text-green-700 truncate">
+                            {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <div className="bg-blue-100 p-2 rounded-lg mr-3 flex-shrink-0">
+                          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-gray-600 mb-1 font-medium">Application Date</p>
+                          <p className="font-semibold text-gray-900 text-xs sm:text-sm">
+                            {new Date(application.applied_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+  
+                  {/* Payment Status Section */}
+                  <div className="mb-6">
+                    <h3 className="font-bold text-gray-900 mb-4 text-base">Payment Status</h3>
+                    <div className="space-y-3">
+                      <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-semibold text-gray-900 text-sm">Application Fee</span>
+                          <span className="text-base font-bold text-gray-700">$350</span>
+                        </div>
                         {applicationFeePaid ? (
-                          <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                                  Application Fee Paid
-                          </span>
+                          <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Paid
+                          </div>
                         ) : (
                           <StripeCheckout
                             productId="applicationFee"
                             feeType="application_fee"
                             paymentType="application_fee"
-                            buttonText="Pay Application Fee ($350)"
-                            className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                            cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
+                            buttonText="Pay Application Fee"
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
+                            successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                            cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
                             disabled={hasSelectedScholarship && !scholarshipFeePaid}
                             scholarshipsIds={[application.scholarship_id]}
-                            beforeCheckout={() => ensureApplication(application.scholarship_id)}
-                                  metadata={{ application_id: application.id, selected_scholarship_id: application.scholarship_id }}
+                            metadata={{ application_id: application.id, selected_scholarship_id: application.scholarship_id }}
                           />
                         )}
+                      </div>
+  
+                      <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-semibold text-gray-900 text-sm">Scholarship Fee</span>
+                          <span className="text-base font-bold text-gray-700">$550</span>
+                        </div>
                         {scholarshipFeePaid ? (
-                          <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-green-100 text-green-700 border border-green-200">
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                                  Scholarship Fee Paid
-                          </span>
+                          <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Paid
+                          </div>
                         ) : (
                           <StripeCheckout
                             productId="scholarshipFee"
                             feeType="scholarship_fee"
                             paymentType="scholarship_fee"
-                            buttonText="Pay Scholarship Fee ($550)"
-                            className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            successUrl={`${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                            cancelUrl={`${window.location.origin}/student/dashboard/scholarship-fee-error`}
+                            buttonText="Pay Scholarship Fee"
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
+                            successUrl={`${window.location?.origin || ''}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                            cancelUrl={`${window.location?.origin || ''}/student/dashboard/scholarship-fee-error`}
                             disabled={!applicationFeePaid || scholarshipFeePaid || (hasSelectedScholarship && !scholarshipFeePaid)}
                             scholarshipsIds={[application.scholarship_id]}
-                                  metadata={{ application_id: application.id, selected_scholarship_id: application.scholarship_id }}
+                            metadata={{ application_id: application.id, selected_scholarship_id: application.scholarship_id }}
                           />
                         )}
-                        {(hasSelectedScholarship && !scholarshipFeePaid) && (
-                          <div className="sm:col-span-2 text-xs text-slate-500 mt-2">
-                            You have already selected another scholarship. Payments for additional scholarships are disabled.
-                          </div>
-                        )}
-                        {(applicationFeePaid && scholarshipFeePaid) && (
-                          <div className="sm:col-span-2">
-                            <Link
-                              to={`/student/dashboard/application/${application.id}/chat`}
-                              className="inline-flex items-center px-4 py-2 rounded-xl font-semibold bg-blue-600 text-white shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                            >
-                              View Details
-                            </Link>
-                          </div>
-                        )}
                       </div>
+                    </div>
+  
+                    {(hasSelectedScholarship && !scholarshipFeePaid) && (
+                      <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex items-start">
+                          <AlertCircle className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            You have already selected another scholarship. Payments for additional scholarships are currently disabled.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+  
+                  {/* Action Section */}
+                  {(applicationFeePaid && scholarshipFeePaid) && (
+                    <div className="border-t border-slate-200 pt-4">
+                      <Link
+                        to={`/student/dashboard/application/${application.id}/chat`}
+                        className="inline-flex items-center justify-center w-full px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 text-sm"
+                      >
+                        <GraduationCap className="h-4 w-4 mr-2" />
+                        View Application Details
+                      </Link>
+                    </div>
+                  )}
                 </div>
+              </div>
               );
             })}
                   </div>
@@ -688,38 +862,85 @@ const MyApplications: React.FC = () => {
               if (otherList.length === 0) return null;
               return (
                 <section>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-slate-900">Pending and In Progress</h3>
-                    <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg">{otherList.length} applications</span>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-slate-900">Pending and In Progress</h3>
+                    <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} applications</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
+                    scrollbarWidth: 'none', 
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch'
+                  }}>
                     {otherList.map((application) => {
                       const Icon = getStatusIcon(application.status);
                       const scholarship = application.scholarships;
                       if (!scholarship) return null;
                       return (
-                        <div key={application.id} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 overflow-hidden">
-                          <div className="p-6">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-bold text-slate-900 truncate">{scholarship.title}</div>
-                                <div className="flex items-center text-slate-600 text-sm mt-1 truncate"><Building className="h-4 w-4 mr-2 shrink-0" /><span className="truncate">{scholarship.universities?.name}</span></div>
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0">
+                          <div className="p-4 sm:p-6">
+                            {/* Header Section - mesma estrutura da seção aprovada */}
+                            <div className="mb-4 sm:mb-6">
+                              {/* Status Badge - Primeiro elemento */}
+                              <div className="mb-3">
+                                <span className={`inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold border ${getStatusColor(application.status)}`}>
+                                  <Icon className="h-4 w-4 mr-2" />
+                                  {getStatusLabel(application.status)}
+                                </span>
                               </div>
-                              <span className={`shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border ${getStatusColor(application.status)}`}>
-                                <Icon className="h-3.5 w-3.5 mr-2" />
-                                {getStatusLabel(application.status)}
-                              </span>
+                              
+                              {/* Scholarship Title */}
+                              <h3 className="font-bold text-slate-900 text-lg mb-3 group-hover:text-blue-600 transition-colors leading-tight">
+                                {scholarship.title}
+                              </h3>
+                              
+                              {/* University */}
+                              <div className="flex items-center text-slate-600 mb-3">
+                                <Building className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
+                                <span className="font-medium text-sm truncate">{scholarship.universities?.name}</span>
+                              </div>
+                              
+                              {/* Level Badge */}
+                              <div className="flex items-center">
+                                <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border ${getLevelColor(scholarship.level)}`}>
+                                  <GraduationCap className="h-4 w-4 mr-1.5" />
+                                  {scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                              <div className="flex items-center"><DollarSign className="h-4 w-4 mr-2 text-green-600" /><span className="font-semibold text-green-700">{formatAmount(scholarship.annual_value_with_scholarship ?? 0)}</span></div>
-                              <div className="flex items-center"><Calendar className="h-4 w-4 mr-2 text-slate-500" /><span className="text-slate-600">Applied on {new Date(application.applied_at).toLocaleDateString()}</span></div>
-                              <div className="flex items-center col-span-2 md:col-span-1"><span className="text-slate-600 capitalize">Level: {scholarship.level}</span></div>
+                            
+                            <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-4 mb-6 border border-slate-200">
+                              <div className="grid grid-cols-1 gap-4 text-sm">
+                                <div className="flex items-center">
+                                  <DollarSign className="h-5 w-5 mr-3 text-green-600 flex-shrink-0" />
+                                  <div>
+                                    <span className="font-semibold text-green-700 text-base">
+                                      {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
+                                    </span>
+                                    <p className="text-slate-600 text-xs">Annual value</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center">
+                                  <Calendar className="h-5 w-5 mr-3 text-slate-500 flex-shrink-0" />
+                                  <div>
+                                    <span className="font-semibold text-slate-700">
+                                      {new Date(application.applied_at).toLocaleDateString()}
+                                    </span>
+                                    <p className="text-slate-600 text-xs">Applied on</p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
 
                             {/* Not selected reason for rejected applications */}
                             {application.status === 'rejected' && (application as any).notes && (
-                              <div className="mt-4 rounded-lg p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
-                                <strong>Reason:</strong> {(application as any).notes}
+                              <div className="mb-6 rounded-xl p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+                                <div className="flex items-start">
+                                  <XCircle className="h-4 w-4 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <strong className="block mb-1">Reason:</strong> 
+                                    {(application as any).notes}
+                                  </div>
+                                </div>
                               </div>
                             )}
 
@@ -733,22 +954,24 @@ const MyApplications: React.FC = () => {
                               const hasAny = approvedDocs.length > 0 || changesRequestedDocs.length > 0 || underReviewDocs.length > 0 || rejectedDocs.length > 0;
                               if (docs.length === 0 || !hasAny) return null;
                               return (
-                                <details className="mt-4 border-t pt-4 group">
-                                  <summary className="flex items-center justify-between text-sm font-semibold text-slate-700 cursor-pointer select-none">
-                                    <span>Documents status</span>
-                                    <svg className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/></svg>
+                                <details className="border-t border-slate-200 pt-4 group">
+                                  <summary className="flex items-center justify-between text-sm font-bold text-slate-700 cursor-pointer select-none mb-3">
+                                    <span>Documents Status</span>
+                                    <svg className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/>
+                                    </svg>
                                   </summary>
-                                  <div className="mt-3 space-y-3">
+                                  <div className="space-y-3">
                                     {/* Approved docs (chips) */}
                                     {approvedDocs.length > 0 && (
-                                      <div className="rounded-lg p-3 bg-green-50 border border-green-200">
-                                        <div className="flex items-center justify-between gap-3">
-                                          <span className="text-sm font-medium text-green-800">Approved</span>
-                                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getDocBadgeClasses('approved')}`}>Approved</span>
+                                      <div className="rounded-xl p-3 bg-green-50 border border-green-200">
+                                        <div className="flex items-center justify-between gap-3 mb-2">
+                                          <span className="text-xs font-bold text-green-800">Approved</span>
+                                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses('approved')}`}>Approved</span>
                                         </div>
-                                        <div className="mt-2 flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1">
                                           {approvedDocs.map((d) => (
-                                            <span key={`approved-${d.type}`} className="px-2 py-0.5 rounded-full text-xs bg-white text-green-700 border border-green-300">
+                                            <span key={`approved-${d.type}`} className="px-2 py-1 rounded-full text-xs bg-white text-green-700 border border-green-300 font-medium">
                                               {DOCUMENT_LABELS[d.type] || d.type}
                                             </span>
                                           ))}
@@ -761,19 +984,19 @@ const MyApplications: React.FC = () => {
                                       const status = 'changes_requested';
                                       const label = DOCUMENT_LABELS[d.type] || d.type;
                                       return (
-                                        <div key={`cr-${d.type}`} className="rounded-lg p-4 bg-red-50 border border-red-200">
-                                          <div className="flex items-center justify-between gap-3">
-                                            <span className="text-sm font-medium text-red-800">{label}</span>
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getDocBadgeClasses(status)}`}>Changes requested</span>
+                                        <div key={`cr-${d.type}`} className="rounded-xl p-4 bg-red-50 border border-red-200">
+                                          <div className="flex items-center justify-between gap-3 mb-2">
+                                            <span className="text-xs font-bold text-red-800">{label}</span>
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses(status)}`}>Changes requested</span>
                                           </div>
                                           {d.review_notes && (
-                                            <div className="mt-2 text-xs text-red-700">
+                                            <div className="mb-3 text-xs text-red-700 bg-white border border-red-200 rounded-lg p-2">
                                               <strong>Reason:</strong> {d.review_notes}
                                             </div>
                                           )}
                                           {/* Reenvio do documento */}
-                                          <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                                            <label className="cursor-pointer bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg font-medium transition w-full sm:w-auto">
+                                          <div className="space-y-2">
+                                            <label className="cursor-pointer bg-white text-slate-700 border-2 border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg font-semibold transition w-full block text-center text-xs">
                                               <span>Select new {label}</span>
                                               <input
                                                 type="file"
@@ -783,14 +1006,16 @@ const MyApplications: React.FC = () => {
                                               />
                                             </label>
                                             {selectedFiles[docKey(application.id, d.type)] && (
-                                              <span className="text-xs text-slate-700 truncate max-w-xs w-full sm:w-auto">{selectedFiles[docKey(application.id, d.type)]?.name}</span>
+                                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg p-2">
+                                                <span className="font-medium">Selected:</span> {selectedFiles[docKey(application.id, d.type)]?.name}
+                                              </div>
                                             )}
                                             <button
-                                              className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto hover:bg-blue-700"
+                                              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs"
                                               disabled={!selectedFiles[docKey(application.id, d.type)] || uploading[docKey(application.id, d.type)]}
                                               onClick={() => handleUploadDoc(application.id, d.type)}
                                             >
-                                              {uploading[docKey(application.id, d.type)] ? 'Uploading...' : 'Upload replacement'}
+                                              {uploading[docKey(application.id, d.type)] ? 'Uploading...' : 'Upload Replacement'}
                                             </button>
                                           </div>
                                         </div>
@@ -799,14 +1024,14 @@ const MyApplications: React.FC = () => {
 
                                     {/* Under review docs (chips) */}
                                     {underReviewDocs.length > 0 && (
-                                      <div className="rounded-lg p-3 bg-amber-50 border border-amber-200">
-                                        <div className="flex items-center justify-between gap-3">
-                                          <span className="text-sm font-medium text-amber-800">Awaiting review</span>
-                                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getDocBadgeClasses('under_review')}`}>Under review</span>
+                                      <div className="rounded-xl p-3 bg-amber-50 border border-amber-200">
+                                        <div className="flex items-center justify-between gap-3 mb-2">
+                                          <span className="text-xs font-bold text-amber-800">Awaiting Review</span>
+                                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses('under_review')}`}>Under review</span>
                                         </div>
-                                        <div className="mt-2 flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1">
                                           {underReviewDocs.map((d) => (
-                                            <span key={`ur-${d.type}`} className="px-2 py-0.5 rounded-full text-xs bg-white text-amber-700 border border-amber-300">
+                                            <span key={`ur-${d.type}`} className="px-2 py-1 rounded-full text-xs bg-white text-amber-700 border border-amber-300 font-medium">
                                               {DOCUMENT_LABELS[d.type] || d.type}
                                             </span>
                                           ))}
@@ -816,14 +1041,14 @@ const MyApplications: React.FC = () => {
 
                                     {/* Rejected docs (com motivo) */}
                                     {rejectedDocs.length > 0 && (
-                                      <div className="rounded-lg p-3 bg-red-50 border border-red-200">
-                                        <div className="flex items-center justify-between gap-3">
-                                          <span className="text-sm font-medium text-red-800">Rejected</span>
-                                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getDocBadgeClasses('changes_requested')}`}>Rejected</span>
+                                      <div className="rounded-xl p-3 bg-red-50 border border-red-200">
+                                        <div className="flex items-center justify-between gap-3 mb-2">
+                                          <span className="text-xs font-bold text-red-800">Rejected</span>
+                                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses('changes_requested')}`}>Rejected</span>
                                         </div>
-                                        <div className="mt-2 space-y-2">
+                                        <div className="space-y-1">
                                           {rejectedDocs.map((d) => (
-                                            <div key={`rj-${d.type}`} className="text-xs text-red-700 bg-white border border-red-200 rounded px-2 py-1">
+                                            <div key={`rj-${d.type}`} className="text-xs text-red-700 bg-white border border-red-200 rounded-lg px-2 py-1">
                                               <strong>{DOCUMENT_LABELS[d.type] || d.type}:</strong> {d.review_notes || 'Rejected by the university.'}
                                             </div>
                                           ))}
@@ -840,14 +1065,14 @@ const MyApplications: React.FC = () => {
                                       const reqApproved = reqUploads.filter(u => u.status === 'approved');
                                       if (!reqRejected.length && !reqUnder.length && !reqApproved.length) return null;
                                       return (
-                                        <div className="rounded-lg p-3 bg-slate-50 border border-slate-200">
-                                          <div className="text-sm font-semibold text-slate-800 mb-2">University document requests</div>
+                                        <div className="rounded-xl p-3 bg-slate-50 border border-slate-200">
+                                          <div className="text-xs font-bold text-slate-800 mb-2">University Document Requests</div>
                                           {reqRejected.length > 0 && (
                                             <div className="mb-2">
-                                              <div className="text-xs font-semibold text-red-700 mb-1">Rejected</div>
+                                              <div className="text-xs font-bold text-red-700 mb-1">Rejected</div>
                                               <div className="space-y-1">
                                                 {reqRejected.map((u, idx) => (
-                                                  <div key={`req-rj-${idx}`} className="text-xs text-red-700 bg-white border border-red-200 rounded px-2 py-1">
+                                                  <div key={`req-rj-${idx}`} className="text-xs text-red-700 bg-white border border-red-200 rounded-lg px-2 py-1">
                                                     <strong>{u.title}:</strong> {u.review_notes || 'Rejected by the university.'}
                                                   </div>
                                                 ))}
@@ -856,20 +1081,20 @@ const MyApplications: React.FC = () => {
                                           )}
                                           {reqUnder.length > 0 && (
                                             <div className="mb-2">
-                                              <div className="text-xs font-semibold text-amber-700 mb-1">Under review</div>
-                                              <div className="flex flex-wrap gap-2">
+                                              <div className="text-xs font-bold text-amber-700 mb-1">Under Review</div>
+                                              <div className="flex flex-wrap gap-1">
                                                 {reqUnder.map((u, idx) => (
-                                                  <span key={`req-ur-${idx}`} className="px-2 py-0.5 rounded-full text-xs bg-white text-amber-700 border border-amber-300">{u.title}</span>
+                                                  <span key={`req-ur-${idx}`} className="px-2 py-1 rounded-full text-xs bg-white text-amber-700 border border-amber-300 font-medium">{u.title}</span>
                                                 ))}
                                               </div>
                                             </div>
                                           )}
                                           {reqApproved.length > 0 && (
                                             <div>
-                                              <div className="text-xs font-semibold text-green-700 mb-1">Approved</div>
-                                              <div className="flex flex-wrap gap-2">
+                                              <div className="text-xs font-bold text-green-700 mb-1">Approved</div>
+                                              <div className="flex flex-wrap gap-1">
                                                 {reqApproved.map((u, idx) => (
-                                                  <span key={`req-ap-${idx}`} className="px-2 py-0.5 rounded-full text-xs bg-white text-green-700 border border-green-300">{u.title}</span>
+                                                  <span key={`req-ap-${idx}`} className="px-2 py-1 rounded-full text-xs bg-white text-green-700 border border-green-300 font-medium">{u.title}</span>
                                                 ))}
                                               </div>
                                             </div>

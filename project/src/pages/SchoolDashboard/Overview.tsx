@@ -109,7 +109,7 @@ const Overview: React.FC = () => {
       title="Complete your profile to access the dashboard"
       description="Finish setting up your university profile to view analytics, manage scholarships, and connect with students"
     >
-      <div className="space-y-8">
+      <div className="space-y-8 pt-10">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-white p-3 sm:p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">

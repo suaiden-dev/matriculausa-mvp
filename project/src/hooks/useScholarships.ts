@@ -36,6 +36,8 @@ export function useScholarships() {
             benefits,
             is_exclusive,
             is_active,
+            is_highlighted,
+            featured_order,
             university_id,
             created_at,
             updated_at,
@@ -48,7 +50,6 @@ export function useScholarships() {
             annual_value_with_scholarship,
             scholarship_type,
             work_permissions,
-            university_name,
             universities (id, name, logo_url, location, is_approved)
           `)
           .eq('is_active', true);
@@ -81,6 +82,8 @@ export function useScholarships() {
           benefits,
           is_exclusive,
           is_active,
+          is_highlighted,
+          featured_order,
           university_id,
           created_at,
           updated_at,
@@ -108,5 +111,6 @@ export function useScholarships() {
     }
     fetchScholarships();
   }, [hasLoadedData]);
+  
   return { scholarships, loading, error };
 } 

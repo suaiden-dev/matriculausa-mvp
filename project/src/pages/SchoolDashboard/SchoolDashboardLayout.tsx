@@ -29,9 +29,10 @@ import { supabase } from '../../lib/supabase';
 
 interface SchoolDashboardLayoutProps {
   user: any;
+  children: React.ReactNode;
 }
 
-const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) => {
+const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -61,6 +62,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
     if (path.includes('/whatsapp')) return 'whatsapp';
     if (path.includes('/global-document-requests')) return 'global-docs';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
+    if (path.includes('/student')) return 'students';
     return 'overview';
   };
 
@@ -311,7 +313,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 h-screen">
         {/* Top Header */}
         <header className="bg-white border-b border-slate-200 py-3 sticky top-0 z-50 pl-4 pr-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
@@ -534,7 +536,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user }) =
             </div>
           )}
 
-          <Outlet />
+          {children}
         </main>
       </div>
     </div>

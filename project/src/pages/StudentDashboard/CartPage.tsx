@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Trash2, CheckCircle, Loader2 } from 'lucide-react';
+import { GraduationCap, CheckCircle, Loader2 } from 'lucide-react';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
-import DocumentUpload from '../../components/DocumentUpload';
 import DocumentUploadModal from '../../components/DocumentUploadModal';
 import StudentTypeModal from '../../components/StudentTypeModal';
 import { supabase } from '../../lib/supabase';
 
-const SCHOLARSHIP_PRICE = 550;
-
 const CartPage: React.FC = () => {
-  const { cart, removeFromCart, clearCart, fetchCart, isLoading } = useCartStore();
+  const { cart, clearCart, fetchCart, isLoading } = useCartStore();
   const navigate = useNavigate();
   const { user, userProfile, updateUserProfile } = useAuth();
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -41,8 +38,6 @@ const CartPage: React.FC = () => {
       setSelectedScholarship(cart[0].scholarships.id);
     }
   }, [userProfile?.documents_status, cart, selectedScholarship]);
-
-  const total = SCHOLARSHIP_PRICE;
 
   const handleNextStep = () => {
     setShowStudentTypeModal(true);
@@ -97,18 +92,7 @@ const CartPage: React.FC = () => {
     }
   };
 
-  const handleProceedToPayment = () => {
-    if (selectedScholarship) {
-      window.localStorage.setItem('selectedScholarshipId', selectedScholarship);
-      navigate('/student/dashboard/college-enrollment-checkout');
-    }
-  };
 
-  const handleRemoveFromCart = (scholarshipId: string) => {
-    if (user?.id) {
-      removeFromCart(scholarshipId, user.id);
-    }
-  };
 
   const handleClearCart = () => {
     if (user?.id) {
@@ -224,7 +208,17 @@ const CartPage: React.FC = () => {
               </li>
             ))}
           </ul>
-          <div className="mt-6">
+          <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-green-800 mb-1">Ready to Apply!</h3>
+                <p className="text-green-700 text-sm">Complete your application with the one-time fee</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-green-800">$350</div>
+                <div className="text-green-600 text-xs">Application Fee</div>
+              </div>
+            </div>
             <StripeCheckout
               productId="applicationFee"
               paymentType="application_fee"
@@ -236,7 +230,13 @@ const CartPage: React.FC = () => {
               disabled={!selectedScholarship}
               beforeCheckout={createOrGetApplication}
               metadata={{ selected_scholarship_id: selectedScholarship }}
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
             />
+            <div className="mt-3 text-center">
+              <p className="text-green-600 text-xs">
+                ✓ Secure payment • ✓ Instant confirmation • ✓ Full refund policy
+              </p>
+            </div>
           </div>
         </div>
       );

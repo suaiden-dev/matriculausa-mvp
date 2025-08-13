@@ -44,6 +44,8 @@ export interface Scholarship {
   benefits: string[];
   is_exclusive: boolean;
   is_active: boolean;
+  is_highlighted?: boolean;
+  featured_order?: number;
   university_id: string;
   created_at: string;
   updated_at: string;

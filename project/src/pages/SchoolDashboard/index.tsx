@@ -28,11 +28,8 @@ export const SchoolDashboard: React.FC = () => {
   return (
     <div className="bg-slate-50">
       <UniversityProvider>
-        <Routes>
-          <Route 
-            path="/" 
-            element={<SchoolDashboardLayout user={user} />}
-          >
+        <SchoolDashboardLayout user={user}>
+          <Routes>
             <Route index element={<Overview />} />
             <Route path="scholarships" element={<ScholarshipManagement />} />
             <Route path="scholarship/new" element={<NewScholarship />} />
@@ -48,8 +45,8 @@ export const SchoolDashboard: React.FC = () => {
 
             <Route path="matricula-rewards" element={<UniversityRewardsDashboard />} />
             <Route path="whatsapp" element={<WhatsAppConnection />} />
-          </Route>
-        </Routes>
+          </Routes>
+        </SchoolDashboardLayout>
       </UniversityProvider>
     </div>
   );
