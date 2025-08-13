@@ -91,7 +91,7 @@ const ScholarshipManagement: React.FC = () => {
       title="Profile setup required"
       description="Complete your university profile to start creating and managing scholarships"
     >
-      <div className="space-y-8">
+      <div className="space-y-8 pt-10">
       {/* Header with Actions */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
         <div>

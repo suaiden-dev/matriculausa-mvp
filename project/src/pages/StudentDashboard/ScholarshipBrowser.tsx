@@ -4,16 +4,10 @@ import {
   Filter, 
   Award, 
   Building, 
-  Calendar, 
   DollarSign, 
   Clock, 
-  Target, 
   CheckCircle,
   ArrowRight,
-  Star,
-  Zap,
-  Eye,
-  Heart,
   GraduationCap,
   Users,
   List,
@@ -24,33 +18,30 @@ import {
   Globe
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { StripeCheckout } from '../../components/StripeCheckout';
+
 import { useCartStore } from '../../stores/applicationStore';
 import { supabase } from '../../lib/supabase';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { motion, AnimatePresence } from 'framer-motion';
+import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
   applications: any[];
-  onApplyScholarship: (scholarshipId: string) => void;
 }
 
 const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   scholarships,
-  applications,
-  onApplyScholarship
+  applications
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
   const [selectedDeliveryMode, setSelectedDeliveryMode] = useState('all');
   const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
-  const [sortBy, setSortBy] = useState('deadline');
+  const [sortBy] = useState('deadline');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const { isAuthenticated, userProfile, user, refetchUserProfile } = useAuth();
-  const navigate = useNavigate();
+  const { userProfile, user, refetchUserProfile } = useAuth();
   const { cart, addToCart, removeFromCart } = useCartStore();
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
@@ -130,21 +121,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     
   };
 
-  // Função para preservar os valores dos filtros
-  const preserveFilterValues = () => {
-    // Esta função garante que os valores sejam mantidos
-    // Pode ser chamada quando necessário para preservar estado
-    return {
-      searchTerm,
-      selectedLevel,
-      selectedField,
-      selectedDeliveryMode,
-      selectedWorkPermission,
-      minValue,
-      maxValue,
-      deadlineDays
-    };
-  };
+
 
   // Salvar filtros no localStorage quando mudarem
   useEffect(() => {
@@ -202,10 +179,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   }, []);
 
-  const flyIconRef = useRef<HTMLDivElement | null>(null);
+
   // Remova o flyAnimation antigo e use Framer Motion
   const [flyingCard, setFlyingCard] = useState<null | { card: any, from: DOMRect, to: DOMRect }>(null);
   const [animating, setAnimating] = useState(false);
+  
+  // Estados para o modal de detalhes
+  const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Refs para os cards de bolsas (não podem estar dentro do loop)
   const scholarshipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -430,29 +411,18 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   };
 
-  // Função para animar o chapéu
-  const flyToHat = (startRect: DOMRect) => {
-    const hat = document.getElementById('floating-cart-hat');
-    if (!hat) return;
-    const hatRect = hat.getBoundingClientRect();
-    // Posição inicial: centro do botão
-    const startX = startRect.left + startRect.width / 2;
-    const startY = startRect.top + startRect.height / 2;
-    // Posição final: centro do chapéu
-    const endX = hatRect.left + hatRect.width / 2;
-    const endY = hatRect.top + hatRect.height / 2;
-    // Setar estado para mostrar o ícone voando
-    // setFlyAnimation({x: startX, y: startY, show: true}); // Removido
-    // Após um tick, move para o chapéu
-    // setTimeout(() => { // Removido
-    //   if (flyIconRef.current) {
-    //     flyIconRef.current.style.transform = `translate(${endX - startX}px, ${endY - startY}px) scale(0.5)`;
-    //     flyIconRef.current.style.opacity = '0.2';
-    //   }
-    // }, 20); // Removido
-    // Remove após a animação
-    // setTimeout(() => setFlyAnimation({x: 0, y: 0, show: false}), 700); // Removido
+  // Funções para controlar o modal
+  const openScholarshipModal = (scholarship: any) => {
+    setSelectedScholarshipForModal(scholarship);
+    setIsModalOpen(true);
   };
+
+  const closeScholarshipModal = () => {
+    setIsModalOpen(false);
+    setSelectedScholarshipForModal(null);
+  };
+
+
 
   // Exibir apenas bolsas com deadline hoje ou futuro
   const today = new Date();
@@ -692,7 +662,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       {/* Scholarships Grid/List */}
       <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "flex flex-col gap-4"}>
         {visibleScholarships.map((scholarship) => {
-          const deadlineStatus = getDeadlineStatus(scholarship.deadline);
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);
           const layoutId = `scholarship-card-${scholarship.id}`;
@@ -704,11 +673,11 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 if (el) scholarshipRefs.current.set(scholarship.id, el);
               }}
               layoutId={layoutId}
-              className={
-                viewMode === 'grid'
-                  ? "group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full"
-                  : "group relative bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 flex flex-row items-center p-4"
-              }
+                             className={
+                 viewMode === 'grid'
+                   ? "group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full"
+                   : "group relative bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 flex flex-row items-center p-4"
+               }
             >
               {/* Scholarship Image */}
               <div className={viewMode === 'grid' ? "relative h-48 overflow-hidden flex-shrink-0" : "w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden mr-6"}>
@@ -716,7 +685,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
-                    className={viewMode === 'grid' ? "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" : "w-full h-full object-cover"}
+                                         className={viewMode === 'grid' ? "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" : "w-full h-full object-cover"}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
@@ -735,7 +704,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               <div className={viewMode === 'grid' ? "p-6 flex-1 flex flex-col" : "flex-1 flex flex-col justify-between min-h-[120px]"}>
                 {/* Title and University */}
                 <div className={viewMode === 'grid' ? "mb-4" : "mb-2"}>
-                  <h3 className={viewMode === 'grid' ? "text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors" : "text-lg font-bold text-slate-900 mb-1 leading-tight group-hover:text-[#05294E] transition-colors"}>
+                                     <h3 className={viewMode === 'grid' ? "text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors" : "text-lg font-bold text-slate-900 mb-1 leading-tight group-hover:text-[#05294E] transition-colors"}>
                     {scholarship.title}
                   </h3>
                   <div className="flex items-center mb-2">
@@ -791,7 +760,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 </div>
                 {/* Financial Impact Section */}
                 <div className={viewMode === 'grid' ? "mb-6" : "mb-4"}>
-                  <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                                     <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
                     <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-green-600" />
                       Financial Overview
@@ -843,17 +812,33 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     </div>
                   )}
                 </div>
-                {/* Action Button */}
+                {/* Action Buttons */}
                 <div className={viewMode === 'grid' ? "mt-6 pt-4 border-t border-slate-100" : "mt-2"}>
-                  <button
-                    ref={(el) => {
-                      if (el) buttonRefs.current.set(scholarship.id, el);
-                    }}
-                    className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
-                      inCart 
-                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
-                        : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
-                    } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
+                  <div className="flex gap-3">
+                                                                                   {/* View Details Button */}
+                       <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>
+                         <button
+                           onClick={() => openScholarshipModal(scholarship)}
+                           className="w-full py-3 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
+                           title="View scholarship details"
+                           aria-label="View scholarship details"
+                         >
+                           <span className="hidden sm:inline">Show</span>
+                           <span className="sm:hidden">View</span>
+                           <span className="hidden sm:inline ml-1">Details</span>
+                         </button>
+                       </div>
+                    
+                    {/* Select/Deselect Button */}
+                    <button
+                      ref={(el) => {
+                        if (el) buttonRefs.current.set(scholarship.id, el);
+                      }}
+                                             className={`flex-1 py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                         inCart 
+                           ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
+                           : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
+                       } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
                     onClick={async () => {
                       if (!userProfile?.has_paid_selection_process_fee) {
                         // Acionar StripeCheckout para selection_process com o price_id correto
@@ -904,11 +889,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     }}
                     disabled={alreadyApplied}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                    <span className="relative z-10">{alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : 'Select Scholarship'}</span>
-                    {!alreadyApplied && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />}
-                  </button>
+                                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                       <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                       <span className="relative z-10">{alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : 'Select Scholarship'}</span>
+                       {!alreadyApplied && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -966,6 +952,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal de Detalhes da Bolsa */}
+      <ScholarshipDetailModal
+        scholarship={selectedScholarshipForModal}
+        isOpen={isModalOpen}
+        onClose={closeScholarshipModal}
+        userProfile={userProfile}
+      />
     </div>
   );
 };
