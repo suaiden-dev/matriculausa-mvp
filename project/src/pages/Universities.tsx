@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, Filter, MapPin, Sparkles, Building, GraduationCap, ChevronRight, Globe, ArrowRight, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 import SmartChat from '../components/SmartChat';
 import { slugify } from '../utils/slugify';
 
@@ -497,6 +498,7 @@ const Universities: React.FC = () => {
         </div>
       </div>
       <SmartChat />
+      <Footer />
     </div>
     </>
   );
