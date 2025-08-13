@@ -60,6 +60,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   const [universityLogoUrl, setUniversityLogoUrl] = useState<string | null>(null);
   const [universityId, setUniversityId] = useState<string | undefined>(undefined); // novo estado global
   const { user, supabaseUser } = useAuth();
+  // Modal para justificar rejeição de um upload específico
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
+  const [rejectNotes, setRejectNotes] = useState('');
 
   useEffect(() => {
     // Buscar dados da carta de aceite da aplicação
@@ -506,11 +510,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   };
 
   // Handler para rejeitar upload
-  const handleRejectUpload = async (uploadId: string) => {
+  const handleRejectUpload = async (uploadId: string, notes?: string) => {
     try {
       const { error } = await supabase
         .from('document_request_uploads')
-        .update({ status: 'rejected' })
+        .update({ status: 'rejected', review_notes: notes || null })
         .eq('id', uploadId);
       if (error) {
         setError('Failed to reject the document: ' + error.message);
@@ -689,13 +693,19 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                                 </button>
                                 <button
                                   className="px-3 py-1 rounded bg-white text-red-600 border border-red-400 text-xs font-semibold hover:bg-red-50 hover:text-red-800 hover:border-red-600 transition"
-                                  onClick={() => handleRejectUpload(upload.id)}
+                                  onClick={() => { setPendingRejectUploadId(upload.id); setRejectNotes(''); setShowRejectModal(true); }}
                                   disabled={normalizedStatus === 'rejected'}
                                 >
                                   Reject
                                 </button>
                               </div>
                             )}
+                              {/* Exibir nota de revisão quando existir */}
+                              {upload.review_notes && (
+                                <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                                  <strong>Reason:</strong> {upload.review_notes}
+                                </div>
+                              )}
                           </div>
                         );
                       })
@@ -1135,6 +1145,43 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       )}
       {previewUrl && (
         <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
+
+      {/* Modal de justificativa para rejeição */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-slate-200">
+            <h3 className="text-lg font-bold text-[#05294E] mb-3">Provide a justification</h3>
+            <p className="text-sm text-slate-600 mb-4">Explique o motivo da rejeição deste documento. O aluno verá esta mensagem.</p>
+            <textarea
+              className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-h-[120px]"
+              placeholder="Ex.: O documento está cortado. Envie novamente em PDF com todas as páginas."
+              value={rejectNotes}
+              onChange={(e) => setRejectNotes(e.target.value)}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded-md border border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
+                onClick={() => { setShowRejectModal(false); setPendingRejectUploadId(null); setRejectNotes(''); }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                disabled={!pendingRejectUploadId}
+                onClick={async () => {
+                  if (!pendingRejectUploadId) return;
+                  await handleRejectUpload(pendingRejectUploadId, rejectNotes.trim());
+                  setShowRejectModal(false);
+                  setPendingRejectUploadId(null);
+                  setRejectNotes('');
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

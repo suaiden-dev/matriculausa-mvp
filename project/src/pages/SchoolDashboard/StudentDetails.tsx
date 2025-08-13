@@ -49,9 +49,17 @@ const StudentDetails: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents' | 'review'>('details');
   const [acceptanceLoading, setAcceptanceLoading] = useState(false);
+  const [rejectingLoading, setRejectingLoading] = useState(false);
   // Removido: student_documents como fonte primária; usaremos application.documents
   const [studentDocs, setStudentDocs] = useState<any[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
+  // Modal para justificar solicitação de mudanças
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [pendingRejectType, setPendingRejectType] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  // Modal para recusar aluno na bolsa
+  const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
+  const [rejectStudentReason, setRejectStudentReason] = useState('');
 
   useEffect(() => {
     if (applicationId) {
@@ -154,11 +162,15 @@ const StudentDetails: React.FC = () => {
     return studentDocs.find((d) => d.type === type);
   };
 
-  const updateApplicationDocStatus = async (type: string, status: 'approved' | 'changes_requested' | 'under_review') => {
+  const updateApplicationDocStatus = async (
+    type: string,
+    status: 'approved' | 'changes_requested' | 'under_review',
+    reviewNotes?: string
+  ) => {
     const docs = Array.isArray((application as any)?.documents) ? ([...(application as any).documents] as any[]) : [];
     const idx = docs.findIndex((d) => d.type === type);
     if (idx >= 0) {
-      docs[idx] = { ...docs[idx], status };
+      docs[idx] = { ...docs[idx], status, review_notes: reviewNotes ?? docs[idx]?.review_notes };
     }
     await supabase.from('scholarship_applications').update({ documents: docs }).eq('id', applicationId);
     setApplication((prev) => prev ? ({ ...prev, documents: docs } as any) : prev);
@@ -173,10 +185,10 @@ const StudentDetails: React.FC = () => {
     }
   };
 
-  const requestChangesDoc = async (type: string) => {
+  const requestChangesDoc = async (type: string, reason: string) => {
     try {
       setUpdating(type);
-      await updateApplicationDocStatus(type, 'changes_requested');
+      await updateApplicationDocStatus(type, 'changes_requested', reason || undefined);
       // Mantém o fluxo do aluno em revisão
       await supabase
         .from('user_profiles')
@@ -211,6 +223,29 @@ const StudentDetails: React.FC = () => {
       setAcceptanceLoading(false);
     }
   };
+
+  const rejectStudent = async () => {
+    try {
+      setRejectingLoading(true);
+      // Atualiza perfil do aluno para estado rejeitado
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'rejected' })
+        .eq('user_id', student.user_id);
+      // Atualiza aplicação com status e justificativa
+      await supabase
+        .from('scholarship_applications')
+        .update({ status: 'rejected', notes: rejectStudentReason || null })
+        .eq('id', applicationId);
+      await fetchApplicationDetails();
+      setActiveTab('details');
+      setShowRejectStudentModal(false);
+      setRejectStudentReason('');
+    } finally {
+      setRejectingLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
       {/* Header Section */}
@@ -326,145 +361,22 @@ const StudentDetails: React.FC = () => {
                   </div>
                 </div>
               </div>
-              {/* Scholarship Information Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                    </svg>
-                    Scholarship Details
-                  </h2>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-6">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
-                        <dd className="text-lg font-semibold text-slate-900">{scholarship.title}</dd>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Annual Value</dt>
-                        <dd className="text-2xl font-bold text-[#05294E]">
-                          ${Number(scholarship.annual_value_with_scholarship ?? 0).toLocaleString()}
-                        </dd>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Description</dt>
-                        <dd className="text-base text-slate-700 leading-relaxed">{scholarship.description}</dd>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              
+            </div>
+            {/* Exemplo de exibição condicional do botão do I-20 Control Fee */}
+            {application.acceptance_letter_status === 'approved' && (
+              <div className="mt-6">
+                {/* Aqui vai o botão do I-20 Control Fee, se já não estiver em outro lugar */}
+                {/* <ButtonI20ControlFee ... /> */}
               </div>
-
-              {/* University Information Card */}
-              {scholarship.universities && (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-                    <h2 className="text-xl font-semibold text-white flex items-center">
-                      <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      University Information
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <dt className="text-sm font-medium text-slate-600">Institution Name</dt>
-                            <dd className="text-base font-semibold text-slate-900">{scholarship.universities.name || 'Not specified'}</dd>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <dt className="text-sm font-medium text-slate-600">Location</dt>
-                            <dd className="text-base text-slate-900">{scholarship.universities.location || 'Not specified'}</dd>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <dt className="text-sm font-medium text-slate-600">Contact Email</dt>
-                            <dd className="text-sm text-slate-900 break-all">
-                              {(scholarship.universities as any)?.contact?.email || 
-                               (scholarship.universities as any)?.contact?.admissionsEmail || 
-                               'Not provided'}
-                            </dd>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <dt className="text-sm font-medium text-slate-600">Contact Phone</dt>
-                            <dd className="text-base text-slate-900">
-                              {(scholarship.universities as any)?.contact?.phone || 'Not provided'}
-                            </dd>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Student Documents Overview Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center">
-                    <FileText className="w-6 h-6 mr-3" />
-                    Document Status Overview
-                  </h2>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {DOCUMENTS_INFO.map((doc) => {
-                      const docData = latestDocByType(doc.key);
-                      const status = docData?.status || 'not_submitted';
-                      const hasFile = !!docData?.file_url;
-                      
-                      return (
-                        <div key={doc.key} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                          <div className="flex items-start justify-between mb-3">
-                            <h3 className="font-medium text-slate-900 text-sm">{doc.label}</h3>
-                            <div className={`w-3 h-3 rounded-full ${
-                              status === 'approved' ? 'bg-green-500' :
-                              status === 'under_review' ? 'bg-slate-400' :
-                              status === 'changes_requested' ? 'bg-red-500' :
-                              'bg-slate-300'
-                            }`} />
-                          </div>
-                          <p className="text-xs text-slate-600 mb-3 leading-relaxed">{doc.description}</p>
-                          <div className="flex items-center justify-between">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              status === 'approved' ? 'bg-green-100 text-green-800' :
-                              status === 'under_review' ? 'bg-slate-100 text-slate-800' :
-                              status === 'changes_requested' ? 'bg-red-100 text-red-800' :
-                              'bg-slate-100 text-slate-800'
-                            }`}>
-                              {status === 'approved' ? 'Approved' :
-                               status === 'under_review' ? 'Under Review' :
-                               status === 'changes_requested' ? 'Changes Needed' :
-                               hasFile ? 'Submitted' : 'Not Submitted'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+            )}
+            {/* Scholarship Information */}
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <h2 className="text-xl font-bold text-[#05294E] mb-4">Scholarship Details</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><strong>Scholarship:</strong> {scholarship.title}</div>
+                <div><strong>Amount:</strong> ${Number(scholarship.annual_value_with_scholarship ?? 0).toLocaleString()}</div>
+                <div className="md:col-span-2"><strong>Description:</strong> {scholarship.description}</div>
               </div>
             </div>
 
@@ -530,232 +442,103 @@ const StudentDetails: React.FC = () => {
                           <p className="text-xs text-slate-500">{new Date((application as any).updated_at || Date.now()).toLocaleDateString()}</p>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+      {activeTab === 'chat' && (
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-bold text-[#05294E] mb-4">Chat</h2>
+          <div className="flex-1 flex flex-col">
+          <ApplicationChat
+            messages={chat.messages}
+            onSend={chat.sendMessage as any}
+            loading={chat.loading}
+            isSending={chat.isSending}
+            error={chat.error}
+            currentUserId={user?.id || ''}
+            messageContainerClassName="gap-6 py-4"
+          />
+          </div>
+        </div>
+      )}
+      {activeTab === 'documents' && (
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-bold text-[#05294E] mb-4">Document Requests</h2>
+            <DocumentRequestsCard
+              applicationId={applicationId!}
+              isSchool={true}
+              currentUserId={user?.id || ''}
+              studentType={(application.student_process_type || 'initial') as any}
+              studentUserId={student.user_id}
+            />
+        </div>
+      )}
+      {activeTab === 'review' && (
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-bold text-[#05294E] mb-4">Manual Review</h2>
+          <div className="space-y-4">
+            {DOCUMENTS_INFO.map((doc) => {
+              const d = latestDocByType(doc.key);
+              return (
+                <div key={doc.key} className="border border-slate-200 rounded-lg p-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-800">{doc.label}</div>
+                      <div className="text-xs text-slate-500">{doc.description}</div>
+                      <div className="mt-1 text-xs">
+                        <span className={`px-2 py-0.5 rounded-full ${d?.status === 'approved' ? 'bg-green-100 text-green-700' : d?.status === 'changes_requested' ? 'bg-red-100 text-red-700' : d?.status === 'under_review' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>{d?.status || 'not submitted'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {d?.file_url && (
+                        <>
+                          <a className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50" href={d.file_url} target="_blank" rel="noreferrer">
+                            <Eye className="inline w-4 h-4 mr-1" /> Preview
+                          </a>
+                          <a className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50" href={d.file_url} download>
+                            <Download className="inline w-4 h-4 mr-1" /> Download
+                          </a>
+                        </>
+                      )}
+                      <button
+                        disabled={!d || updating === d.type || (d.status || '').toLowerCase() === 'approved'}
+                        onClick={() => d && approveDoc(d.type)}
+                        className="px-3 py-1.5 text-sm rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="inline w-4 h-4 mr-1" /> Approve
+                      </button>
+                      <button
+                        disabled={!d || updating === d.type || (d.status || '').toLowerCase() === 'approved'}
+                        onClick={() => d && requestChangesDoc(d.type)}
+                        className="px-3 py-1.5 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        <XCircle className="inline w-4 h-4 mr-1" /> Request changes
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Quick Actions Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
-                </div>
-                <div className="p-6 space-y-3">
-                  <button
-                    onClick={() => setActiveTab('chat')}
-                    className="w-full flex items-center justify-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Send Message
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('documents')}
-                    className="w-full flex items-center justify-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Request Documents
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('review')}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-[#05294E] text-white rounded-lg text-sm font-medium hover:bg-[#041f38] transition-colors"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Review Application
-                  </button>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
-        )}
-        {activeTab === 'chat' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <MessageCircle className="w-6 h-6 mr-3" />
-                Communication Center
-              </h2>
-              <p className="text-slate-200 text-sm mt-1">Chat with {student.full_name}</p>
-            </div>
-            <div className="p-6">
-              <ApplicationChat
-                messages={chat.messages}
-                onSend={chat.sendMessage as any}
-                loading={chat.loading}
-                isSending={chat.isSending}
-                error={chat.error}
-                currentUserId={user?.id || ''}
-                messageContainerClassName="gap-6 py-4"
-              />
-            </div>
+          <div className="mt-6 flex justify-end">
+            <button
+              disabled={!allApproved || acceptanceLoading}
+              onClick={approveStudent}
+              className="px-5 py-2 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
+            >
+              {acceptanceLoading ? 'Approving...' : 'Approve student'}
+            </button>
           </div>
-        )}
-        
-        {activeTab === 'documents' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <FileText className="w-6 h-6 mr-3" />
-                Document Management
-              </h2>
-              <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
-            </div>
-            <div className="p-6">
-              <DocumentRequestsCard
-                applicationId={applicationId!}
-                isSchool={true}
-                currentUserId={user?.id || ''}
-                studentType={(application.student_process_type || 'initial') as any}
-                studentUserId={student.user_id}
-              />
-            </div>
-          </div>
-        )}
-        {activeTab === 'review' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
-                <h2 className="text-xl font-semibold text-white flex items-center">
-                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Document Review & Approval
-                </h2>
-                <p className="text-slate-200 text-sm mt-1">Review each document and approve or request changes</p>
-              </div>
-              <div className="p-6">
-                <div className="space-y-6">
-                  {DOCUMENTS_INFO.map((doc) => {
-                    const d = latestDocByType(doc.key);
-                    const status = d?.status || 'not_submitted';
-                    
-                    return (
-                      <div key={doc.key} className="bg-slate-50 border border-slate-200 rounded-xl p-6">
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h3 className="font-semibold text-slate-900 text-lg">{doc.label}</h3>
-                                <p className="text-sm text-slate-600 mt-1 leading-relaxed">{doc.description}</p>
-                              </div>
-                              <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                                status === 'approved' ? 'bg-green-100 text-green-800' :
-                                status === 'changes_requested' ? 'bg-red-100 text-red-800' :
-                                status === 'under_review' ? 'bg-slate-100 text-slate-800' :
-                                'bg-slate-100 text-slate-700'
-                              }`}>
-                                <div className={`w-2 h-2 rounded-full mr-2 ${
-                                  status === 'approved' ? 'bg-green-500' :
-                                  status === 'changes_requested' ? 'bg-red-500' :
-                                  status === 'under_review' ? 'bg-slate-400' :
-                                  'bg-slate-400'
-                                }`} />
-                                {status === 'approved' ? 'Approved' :
-                                 status === 'changes_requested' ? 'Changes Requested' :
-                                 status === 'under_review' ? 'Under Review' :
-                                 d?.file_url ? 'Submitted' : 'Not Submitted'}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-col sm:flex-row gap-3">
-                            {d?.file_url && (
-                              <div className="flex gap-2">
-                                <a 
-                                  className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
-                                  href={d.file_url} 
-                                  target="_blank" 
-                                  rel="noreferrer"
-                                >
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Preview
-                                </a>
-                                <a 
-                                  className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
-                                  href={d.file_url} 
-                                  download
-                                >
-                                  <Download className="w-4 h-4 mr-2" />
-                                  Download
-                                </a>
-                              </div>
-                            )}
-                            
-                            <div className="flex gap-2">
-                              <button
-                                disabled={!d || updating === d.type || status === 'approved'}
-                                onClick={() => d && approveDoc(d.type)}
-                                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                  status === 'approved' 
-                                    ? 'bg-green-600 text-white' 
-                                    : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
-                                }`}
-                              >
-                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                {status === 'approved' ? 'Approved' : 'Approve'}
-                              </button>
-                              <button
-                                disabled={!d || updating === d.type || status === 'approved'}
-                                onClick={() => d && requestChangesDoc(d.type)}
-                                className="flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Request Changes
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Final Approval Section */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-                <h3 className="text-lg font-semibold text-white flex items-center">
-                  <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Final Application Approval
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-900 font-medium">
-                      {allApproved ? 'All documents have been approved' : 'Approve all documents to proceed'}
-                    </p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      This will approve the student's application and allow them to proceed with the next steps.
-                    </p>
-                  </div>
-                  <button
-                    disabled={!allApproved || acceptanceLoading}
-                    onClick={approveStudent}
-                    className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
-                      allApproved && !acceptanceLoading
-                        ? 'bg-[#05294E] text-white hover:bg-[#041f38] shadow-lg hover:shadow-xl'
-                        : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {acceptanceLoading ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Approving...
-                      </div>
-                    ) : (
-                      'Approve Student Application'
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {previewUrl && (
-          <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
-        )}
-      </div>
+        </div>
+      )}
+      {previewUrl && (
+        <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
     </div>
   );
 };

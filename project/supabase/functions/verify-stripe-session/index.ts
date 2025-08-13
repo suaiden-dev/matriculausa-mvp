@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
           return corsResponse({ error: 'application_id ausente no metadata.' }, 400);
         }
         console.log('Processing: Application Fee');
-        // Atualiza perfil e aplicação, limpa carrinho
+        // Atualiza perfil (flag global) e SOMENTE a aplicação correta (flag da aplicação)
         const { error: profileError2 } = await supabase
           .from('user_profiles')
           .update({ is_application_fee_paid: true })
@@ -78,13 +78,26 @@ Deno.serve(async (req) => {
         if (profileError2) throw new Error(`Failed to update user_profiles: ${profileError2.message}`);
         const { error: appError } = await supabase
           .from('scholarship_applications')
-          .update({ status: 'under_review' })
+          .update({ is_application_fee_paid: true })
           .eq('id', applicationId)
           .eq('student_id', studentId);
         if (appError) throw new Error(`Failed to update scholarship_application: ${appError.message}`);
         const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
         if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
-        console.log(`[verify-stripe-session] Application status set to 'pending_scholarship_fee' for user ${userId}, application ${applicationId}.`);
+        console.log(`[verify-stripe-session] Application fee marked as paid for user ${userId}, application ${applicationId}.`);
+
+        // Remover todas as outras aplicações do aluno para que não apareçam mais para universidades
+        try {
+          const { error: delErr } = await supabase
+            .from('scholarship_applications')
+            .delete()
+            .neq('id', applicationId)
+            .eq('student_id', studentId);
+          if (delErr) console.error('[CLEANUP] Erro ao remover outras aplicações do aluno:', delErr.message);
+          else console.log('[CLEANUP] Outras aplicações do aluno removidas com sucesso');
+        } catch (cleanupErr) {
+          console.error('[CLEANUP] Exceção ao remover outras aplicações:', cleanupErr);
+        }
         
         // --- Notificação para a universidade via n8n ---
         try {
@@ -167,9 +180,21 @@ Deno.serve(async (req) => {
         const { error: updateError } = await supabase
           .from('scholarship_applications')
           .update({ status: 'approved' })
-          .eq('student_id', userId)
+          .eq('student_id', studentId)
           .eq('id', applicationId);
         if (updateError) throw new Error(`Failed to update application status for scholarship fee: ${updateError.message}`);
+
+        // Remover todas as outras aplicações do aluno
+        try {
+          const { error: delErr } = await supabase
+            .from('scholarship_applications')
+            .delete()
+            .neq('id', applicationId)
+            .eq('student_id', studentId);
+          if (delErr) console.error('[CLEANUP] Erro ao remover outras aplicações do aluno:', delErr.message);
+        } catch (cleanupErr) {
+          console.error('[CLEANUP] Exceção ao remover outras aplicações:', cleanupErr);
+        }
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'selection_process') {
         console.log('Processing: Selection Process Fee');
@@ -184,7 +209,7 @@ Deno.serve(async (req) => {
           const { error: updateError } = await supabase
             .from('scholarship_applications')
             .update({ status: 'selection_process_paid' })
-            .eq('student_id', userId)
+            .eq('student_id', studentId)
             .eq('id', applicationId);
           if (updateError) throw new Error(`Failed to update application status for selection process fee: ${updateError.message}`);
         }
