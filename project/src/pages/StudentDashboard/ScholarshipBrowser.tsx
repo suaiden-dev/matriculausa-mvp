@@ -20,8 +20,6 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 
 import { useCartStore } from '../../stores/applicationStore';
-import { supabase } from '../../lib/supabase';
-import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 
@@ -840,51 +838,24 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
                        } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
                     onClick={async () => {
-                      if (!userProfile?.has_paid_selection_process_fee) {
-                        // Acionar StripeCheckout para selection_process com o price_id correto
-                        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-                        const { data: sessionData } = await supabase.auth.getSession();
-                        const token = sessionData.session?.access_token;
-                        const response = await fetch(apiUrl, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body: JSON.stringify({
-                            price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
-                            success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-                            cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
-                            mode: 'payment',
-                            payment_type: 'selection_process',
-                            fee_type: 'selection_process',
-                          })
-                        });
-                        const data = await response.json();
-                        if (data.session_url) {
-                          window.location.href = data.session_url;
-                          return;
-                        }
-                        return;
+                      if (inCart) {
+                        if (user) removeFromCart(scholarship.id, user.id);
                       } else {
-                        if (inCart) {
-                          if (user) removeFromCart(scholarship.id, user.id);
-                        } else {
-                          // ANIMAÇÃO: voar para o chapéu
-                          const hat = document.getElementById('floating-cart-hat');
-                          const cardElement = scholarshipRefs.current.get(scholarship.id);
-                          if (cardElement && hat) {
-                            const from = cardElement.getBoundingClientRect();
-                            const to = hat.getBoundingClientRect();
-                            setFlyingCard({ card: scholarship, from, to });
-                            setAnimating(true);
-                            setTimeout(() => {
-                              setAnimating(false);
-                              setFlyingCard(null);
-                            }, 1100);
-                          }
-                          handleAddToCart(scholarship);
+                        // ANIMAÇÃO: voar para o chapéu
+                        const hat = document.getElementById('floating-cart-hat');
+                        const cardElement = scholarshipRefs.current.get(scholarship.id);
+                        
+                        if (cardElement && hat) {
+                          const from = cardElement.getBoundingClientRect();
+                          const to = hat.getBoundingClientRect();
+                          setFlyingCard({ card: scholarship, from, to });
+                          setAnimating(true);
+                          setTimeout(() => {
+                            setAnimating(false);
+                            setFlyingCard(null);
+                          }, 1100);
                         }
+                        handleAddToCart(scholarship);
                       }
                     }}
                     disabled={alreadyApplied}
