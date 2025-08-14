@@ -778,7 +778,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
                         placeholder="Enter contact phone number"
                       />
-                      <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                     </div>
                   </div>
 
