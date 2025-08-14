@@ -57,6 +57,17 @@ const MyApplications: React.FC = () => {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
 
+  // Estado para controlar abertura/fechamento individual dos documents checklist
+  const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
+
+  // Função para alternar o estado de um checklist específico
+  const toggleChecklist = (applicationId: string) => {
+    setOpenChecklists(prev => ({
+      ...prev,
+      [applicationId]: !prev[applicationId]
+    }));
+  };
+
 
   useEffect(() => {
     setUserProfileId(userProfile?.id || null);
@@ -676,7 +687,7 @@ const getLevelColor = (level: any) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center md:justify-start gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
+                  <div className="flex justify-center md:justify-start gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -688,7 +699,7 @@ const getLevelColor = (level: any) => {
                       const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
                       if (!scholarship) return null;
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0">
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
                 <div className="p-4 sm:p-6">
                   {/* Header Section */}
                   <div className="mb-4 sm:mb-6">
@@ -848,7 +859,7 @@ const getLevelColor = (level: any) => {
                     <h3 className="text-xl font-bold text-slate-900">Pending and In Progress</h3>
                     <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} applications</span>
                   </div>
-                  <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
+                  <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -858,7 +869,7 @@ const getLevelColor = (level: any) => {
                       const scholarship = application.scholarships;
                       if (!scholarship) return null;
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0">
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
                           <div className="p-4 sm:p-6">
                             {/* Header Section - mesma estrutura da seção aprovada */}
                             <div className="mb-4 sm:mb-6">
@@ -948,173 +959,189 @@ const getLevelColor = (level: any) => {
                               if (docs.length === 0 && reqUploads.length === 0) return null;
 
                               return (
-                                <details className="border-t border-slate-200 pt-6 group">
-                                  <summary className="flex items-center justify-between cursor-pointer select-none mb-4 p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                                <div className="border-t border-slate-200 pt-6">
+                                  <button 
+                                    onClick={() => toggleChecklist(application.id)}
+                                    className="flex items-center justify-between cursor-pointer select-none mb-4 p-2 hover:bg-slate-50 rounded-lg transition-colors w-full text-left"
+                                  >
                                     <h4 className="text-sm font-bold text-slate-900 flex items-center">
                                       <FileText className="h-4 w-4 mr-2 text-blue-600" />
                                       Documents Checklist
                                     </h4>
-                                    <svg className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <svg 
+                                      className={`w-4 h-4 text-slate-500 transition-transform ${openChecklists[application.id] ? 'rotate-180' : ''}`} 
+                                      viewBox="0 0 20 20" 
+                                      fill="currentColor" 
+                                      aria-hidden="true"
+                                    >
                                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/>
                                     </svg>
-                                  </summary>
+                                  </button>
                                   
-                                  <div className="space-y-3">
-                                    {/* Required Documents */}
-                                    {allDocuments.map((doc) => {
-                                      const status = (doc.status || '').toLowerCase();
-                                      const isApproved = status === 'approved';
-                                      const isRejected = status === 'changes_requested' || status === 'rejected';
-                                      const isUnderReview = status === 'under_review';
-                                      const isPending = !isApproved && !isRejected && !isUnderReview;
+                                                                     <div 
+                                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                       openChecklists[application.id] 
+                                         ? 'max-h-[2000px] opacity-100' 
+                                         : 'max-h-0 opacity-0'
+                                     }`}
+                                   >
+                                     <div className="space-y-3 pt-2">
+                                       {/* Required Documents */}
+                                       {allDocuments.map((doc) => {
+                                         const status = (doc.status || '').toLowerCase();
+                                         const isApproved = status === 'approved';
+                                         const isRejected = status === 'changes_requested' || status === 'rejected';
+                                         const isUnderReview = status === 'under_review';
+                                         const isPending = !isApproved && !isRejected && !isUnderReview;
 
-                                      return (
-                                        <div key={doc.type} className="bg-white rounded-xl border-2 border-slate-200 p-4 hover:border-slate-300 transition-all duration-200">
-                                          <div className="flex items-start justify-between">
-                                            <div className="flex items-start flex-1">
-                                              {/* Check Icon */}
-                                              <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
-                                                isApproved 
-                                                  ? 'bg-green-100 border-green-400 text-green-600' 
-                                                  : isRejected 
-                                                    ? 'bg-red-100 border-red-400 text-red-600'
-                                                    : isUnderReview
-                                                      ? 'bg-amber-100 border-amber-400 text-amber-600'
-                                                      : 'bg-slate-100 border-slate-300 text-slate-400'
-                                              }`}>
-                                                {isApproved ? (
-                                                  <CheckCircle className="h-4 w-4" />
-                                                ) : isRejected ? (
-                                                  <XCircle className="h-4 w-4" />
-                                                ) : isUnderReview ? (
-                                                  <Clock className="h-4 w-4" />
-                                                ) : (
-                                                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
-                                                )}
-                                              </div>
-                                              
-                                              {/* Document Info */}
-                                              <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                  <h5 className="font-semibold text-slate-900 text-sm truncate">{doc.label}</h5>
-                                                  <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
-                                                    isApproved 
-                                                      ? 'bg-green-50 text-green-700 border-green-200' 
-                                                      : isRejected 
-                                                        ? 'bg-red-50 text-red-700 border-red-200'
-                                                        : isUnderReview
-                                                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                          : 'bg-slate-50 text-slate-600 border-slate-200'
-                                                  }`}>
-                                                    {isApproved ? 'Approved' : isRejected ? 'Changes Needed' : isUnderReview ? 'Under Review' : 'Pending'}
-                                                  </span>
-                                                </div>
-                                                
-                                                {/* Review Notes */}
-                                                {doc.review_notes && isRejected && (
-                                                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
-                                                    <p className="text-xs text-red-700">
-                                                      <strong>Review:</strong> {doc.review_notes}
-                                                    </p>
-                                                  </div>
-                                                )}
-                                                
-                                                {/* Upload Action for Rejected Docs */}
-                                                {isRejected && (
-                                                  <div className="mt-3 space-y-2">
-                                                    <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 w-full block text-center text-xs hover:shadow-md">
-                                                      <span>Upload New {doc.label}</span>
-                                                      <input
-                                                        type="file"
-                                                        className="sr-only"
-                                                        accept="application/pdf,image/*"
-                                                        onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
-                                                      />
-                                                    </label>
-                                                    {selectedFiles[docKey(application.id, doc.type)] && (
-                                                      <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                                        <span className="font-medium">Selected:</span> {selectedFiles[docKey(application.id, doc.type)]?.name}
-                                                      </div>
-                                                    )}
-                                                    <button
-                                                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs"
-                                                      disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
-                                                      onClick={() => handleUploadDoc(application.id, doc.type)}
-                                                    >
-                                                      {uploading[docKey(application.id, doc.type)] ? (
-                                                        <div className="flex items-center justify-center">
-                                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                                                          Uploading...
-                                                        </div>
-                                                      ) : 'Upload Document'}
-                                                    </button>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
+                                         return (
+                                           <div key={doc.type} className="bg-white rounded-xl border-2 border-slate-200 p-4 hover:border-slate-300 transition-all duration-200">
+                                             <div className="flex items-start justify-between">
+                                               <div className="flex items-start flex-1">
+                                                 {/* Check Icon */}
+                                                 <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
+                                                   isApproved 
+                                                     ? 'bg-green-100 border-green-400 text-green-600' 
+                                                     : isRejected 
+                                                       ? 'bg-red-100 border-red-400 text-red-600'
+                                                       : isUnderReview
+                                                         ? 'bg-amber-100 border-amber-400 text-amber-600'
+                                                         : 'bg-slate-100 border-slate-300 text-slate-400'
+                                                 }`}>
+                                                   {isApproved ? (
+                                                     <CheckCircle className="h-4 w-4" />
+                                                   ) : isRejected ? (
+                                                     <XCircle className="h-4 w-4" />
+                                                   ) : isUnderReview ? (
+                                                     <Clock className="h-4 w-4" />
+                                                   ) : (
+                                                     <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                                                   )}
+                                                 </div>
+                                                 
+                                                 {/* Document Info */}
+                                                 <div className="flex-1 min-w-0">
+                                                   <div className="flex items-center justify-between mb-1">
+                                                     <h5 className="font-semibold text-slate-900 text-sm truncate">{doc.label}</h5>
+                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                                                       isApproved 
+                                                         ? 'bg-green-50 text-green-700 border-green-200' 
+                                                         : isRejected 
+                                                           ? 'bg-red-50 text-red-700 border-red-200'
+                                                         : isUnderReview
+                                                           ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                           : 'bg-slate-50 text-slate-600 border-slate-200'
+                                                     }`}>
+                                                       {isApproved ? 'Approved' : isRejected ? 'Changes Needed' : isUnderReview ? 'Under Review' : 'Pending'}
+                                                     </span>
+                                                   </div>
+                                                   
+                                                   {/* Review Notes */}
+                                                   {doc.review_notes && isRejected && (
+                                                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                                                       <p className="text-xs text-red-700">
+                                                         <strong>Review:</strong> {doc.review_notes}
+                                                       </p>
+                                                     </div>
+                                                   )}
+                                                   
+                                                   {/* Upload Action for Rejected Docs */}
+                                                   {isRejected && (
+                                                     <div className="mt-3 space-y-2">
+                                                       <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 w-full block text-center text-xs hover:shadow-md">
+                                                         <span>Upload New {doc.label}</span>
+                                                         <input
+                                                           type="file"
+                                                           className="sr-only"
+                                                           accept="application/pdf,image/*"
+                                                           onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
+                                                         />
+                                                       </label>
+                                                       {selectedFiles[docKey(application.id, doc.type)] && (
+                                                         <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                                                           <span className="font-medium">Selected:</span> {selectedFiles[docKey(application.id, doc.type)]?.name}
+                                                         </div>
+                                                       )}
+                                                       <button
+                                                         className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs"
+                                                         disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
+                                                         onClick={() => handleUploadDoc(application.id, doc.type)}
+                                                       >
+                                                         {uploading[docKey(application.id, doc.type)] ? (
+                                                           <div className="flex items-center justify-center">
+                                                             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                                                             Uploading...
+                                                           </div>
+                                                         ) : 'Upload Document'}
+                                                       </button>
+                                                     </div>
+                                                   )}
+                                                 </div>
+                                               </div>
+                                             </div>
+                                           </div>
+                                         );
+                                       })}
 
-                                    {/* University Additional Requests */}
-                                    {reqUploads.length > 0 && (
-                                      <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
-                                        <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
-                                          <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                          University Additional Requests
-                                        </h5>
-                                        <div className="space-y-2">
-                                          {reqUploads.map((req, idx) => {
-                                            const status = (req.status || '').toLowerCase();
-                                            const isApproved = status === 'approved';
-                                            const isRejected = status === 'rejected';
-                                            const isUnderReview = status === 'under_review';
-                                            
-                                            return (
-                                              <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
-                                                <div className="flex items-center justify-between">
-                                                  <div className="flex items-center">
-                                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
-                                                      isApproved 
-                                                        ? 'bg-green-100 border-green-400' 
-                                                        : isRejected 
-                                                          ? 'bg-red-100 border-red-400'
-                                                          : 'bg-amber-100 border-amber-400'
-                                                    }`}>
-                                                      {isApproved ? (
-                                                        <CheckCircle className="h-3 w-3 text-green-600" />
-                                                      ) : isRejected ? (
-                                                        <XCircle className="h-3 w-3 text-red-600" />
-                                                      ) : (
-                                                        <Clock className="h-3 w-3 text-amber-600" />
-                                                      )}
-                                                    </div>
-                                                    <span className="font-medium text-slate-900 text-xs">{req.title}</span>
-                                                  </div>
-                                                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                                    isApproved 
-                                                      ? 'bg-green-100 text-green-700' 
-                                                      : isRejected 
-                                                        ? 'bg-red-100 text-red-700'
-                                                        : 'bg-amber-100 text-amber-700'
-                                                  }`}>
-                                                    {isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Under Review'}
-                                                  </span>
-                                                </div>
-                                                {req.review_notes && isRejected && (
-                                                  <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                                                    <strong>Note:</strong> {req.review_notes}
-                                                  </div>
-                                                )}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </details>
+                                       {/* University Additional Requests */}
+                                       {reqUploads.length > 0 && (
+                                         <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
+                                           <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+                                             <Building className="h-4 w-4 mr-2 text-blue-600" />
+                                             University Additional Requests
+                                           </h5>
+                                           <div className="space-y-2">
+                                             {reqUploads.map((req, idx) => {
+                                               const status = (req.status || '').toLowerCase();
+                                               const isApproved = status === 'approved';
+                                               const isRejected = status === 'rejected';
+                                               const isUnderReview = status === 'under_review';
+                                               
+                                               return (
+                                                 <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
+                                                   <div className="flex items-center justify-between">
+                                                     <div className="flex items-center">
+                                                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
+                                                         isApproved 
+                                                           ? 'bg-green-100 border-green-400' 
+                                                           : isRejected 
+                                                             ? 'bg-red-100 border-red-400'
+                                                             : 'bg-amber-100 border-amber-400'
+                                                       }`}>
+                                                         {isApproved ? (
+                                                           <CheckCircle className="h-3 w-3 text-green-600" />
+                                                         ) : isRejected ? (
+                                                           <XCircle className="h-3 w-3 text-red-600" />
+                                                         ) : (
+                                                           <Clock className="h-3 w-3 text-amber-600" />
+                                                         )}
+                                                       </div>
+                                                       <span className="font-medium text-slate-900 text-xs">{req.title}</span>
+                                                     </div>
+                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                       isApproved 
+                                                         ? 'bg-green-100 text-green-700' 
+                                                         : isRejected 
+                                                           ? 'bg-red-100 text-red-700'
+                                                           : 'bg-amber-100 text-amber-700'
+                                                     }`}>
+                                                       {isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Under Review'}
+                                                     </span>
+                                                   </div>
+                                                   {req.review_notes && isRejected && (
+                                                     <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                                                       <strong>Note:</strong> {req.review_notes}
+                                                     </div>
+                                                   )}
+                                                 </div>
+                                               );
+                                             })}
+                                           </div>
+                                         </div>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
                               );
                             })()}
                           </div>
