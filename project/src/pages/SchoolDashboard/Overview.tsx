@@ -19,9 +19,12 @@ import {
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
+import { useState } from 'react';
 
 const Overview: React.FC = () => {
   const { university, scholarships, applications } = useUniversity();
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 5;
 
   // Calculate stats
   const stats = {
@@ -66,42 +69,106 @@ const Overview: React.FC = () => {
     }
   ];
 
-  const renderApplicationsPanel = () => (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mt-10">
-      <div className="p-6 border-b border-slate-200">
-        <h3 className="text-xl font-bold text-slate-900">Applications Received</h3>
-        <p className="text-slate-500 text-sm">Track all student applications for your scholarships</p>
+  const renderApplicationsPanel = () => {
+    // Calculate pagination
+    const totalPages = Math.ceil(applications.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentApplications = applications.slice(startIndex, endIndex);
+
+    return (
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 mt-8 sm:mt-10">
+        <div className="p-4 sm:p-6 border-b border-slate-200">
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900">Applications Received</h3>
+          <p className="text-slate-500 text-xs sm:text-sm">Track all student applications for your scholarships</p>
+        </div>
+        <div className="p-4 sm:p-6">
+          {applications.length === 0 ? (
+            <div className="text-slate-500 text-center py-8">No applications received yet.</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-slate-600">Student</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-slate-600">Scholarship</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-slate-600">Status</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-slate-600">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {currentApplications.map((app) => (
+                        <tr key={app.id} className="hover:bg-slate-50">
+                          <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap">
+                            {app.user_profiles?.full_name || app.user_profiles?.email || 'Unknown'}
+                          </td>
+                          <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap">{app.scholarships?.title || '-'}</td>
+                          <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              app.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {app.status}
+                            </span>
+                          </td>
+                          <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap">
+                            <Link to={`/school/dashboard/applications/${app.id}`} className="text-blue-600 hover:text-blue-700 font-medium">
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 sm:mt-6">
+                  <p className="text-xs sm:text-sm text-slate-500">
+                    Showing {startIndex + 1} to {Math.min(endIndex, applications.length)} of {applications.length} applications
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium rounded-lg ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-      <div className="p-6 overflow-x-auto">
-        {applications.length === 0 ? (
-          <div className="text-slate-500 text-center py-8">No applications received yet.</div>
-        ) : (
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50">
-                <th className="px-4 py-2 text-left">Student</th>
-                <th className="px-4 py-2 text-left">Scholarship</th>
-                <th className="px-4 py-2 text-left">Status</th>
-                <th className="px-4 py-2 text-left">Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.map((app) => (
-                <tr key={app.id} className="border-b">
-                  <td className="px-4 py-2">{app.user_profiles?.full_name || app.user_profiles?.email || 'Unknown'}</td>
-                  <td className="px-4 py-2">{app.scholarships?.title || '-'}</td>
-                  <td className="px-4 py-2">{app.status}</td>
-                  <td className="px-4 py-2">
-                    <a href={`/school/dashboard/applications/${app.id}`} className="text-blue-600 underline">View</a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <ProfileCompletionGuard 
@@ -268,22 +335,22 @@ const Overview: React.FC = () => {
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {scholarships.slice(0, 5).map((scholarship) => (
-                    <div key={scholarship.id} className="group flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all duration-300">
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${
+                    <div key={scholarship.id} className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 bg-slate-50 hover:bg-slate-100 rounded-xl sm:rounded-2xl transition-all duration-300 space-y-3 sm:space-y-0">
+                      <div className="flex items-center space-x-3 sm:space-x-4 flex-1 w-full sm:w-auto">
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-sm ${
                           scholarship.is_active 
                             ? 'bg-gradient-to-br from-green-500 to-green-600' 
                             : 'bg-gradient-to-br from-slate-400 to-slate-500'
                         }`}>
-                          <Award className="h-6 w-6 text-white" />
+                          <Award className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-[#05294E] transition-colors">
+                          <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-[#05294E] transition-colors text-sm sm:text-base">
                             {scholarship.title}
                           </h4>
-                          <div className="flex items-center space-x-4 text-sm text-slate-500">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500">
                             <div className="flex items-center">
                               <DollarSign className="h-4 w-4 mr-1" />
                               {formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}
