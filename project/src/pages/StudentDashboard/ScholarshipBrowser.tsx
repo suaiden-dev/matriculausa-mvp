@@ -17,7 +17,8 @@ import {
   Briefcase,
   Globe,
   Trash2,
-  Star
+  Star,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -44,7 +45,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
   const [sortBy] = useState('deadline');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const { userProfile, user, refetchUserProfile, isAuthenticated } = useAuth();
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const { userProfile, user, refetchUserProfile } = useAuth();
   const { cart, addToCart, removeFromCart } = useCartStore();
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
@@ -511,22 +513,35 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   });
 
   return (
-    <div className="space-y-8 pt-10" data-testid="scholarship-list">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 pt-4 sm:pt-6 md:pt-10 px-4 sm:px-6 lg:px-0 pb-8 sm:pb-12" data-testid="scholarship-list">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Find Scholarships</h2>
-          <p className="text-slate-600">Discover opportunities tailored to your academic profile</p>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">Find Scholarships</h2>
+          <p className="text-sm sm:text-base text-slate-600">Discover opportunities tailored to your academic profile</p>
         </div>
       </div>
 
-
-
       {/* Search and Filters */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-8 gap-4 mb-4 items-center">
-          {/* Search */}
-          <div className="md:col-span-2 relative">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        {/* Mobile Filter Toggle */}
+        <div className="block md:hidden mb-4">
+          <button
+            onClick={() => setFiltersExpanded(!filtersExpanded)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 rounded-xl border border-blue-200 text-blue-700 font-medium"
+          >
+            <span className="flex items-center">
+              <Filter className="h-4 w-4 mr-2" />
+              Filters ({Object.values({ appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays }).filter(Boolean).length} active)
+            </span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {/* Filters Container */}
+        <div className={`${filtersExpanded ? 'block' : 'hidden'} md:block space-y-4`}>
+          {/* Search - Always visible on mobile */}
+          <div className="relative">
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
             <input
               type="text"
@@ -537,147 +552,172 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
             />
           </div>
-          {/* Level Filter */}
-          <label htmlFor="level-filter" className="sr-only">Academic Level</label>
-          <select
-            id="level-filter"
-            value={selectedLevel}
-            onChange={(e) => setSelectedLevel(e.target.value)}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-            title="Filter by academic level"
-            aria-label="Filter by academic level"
-          >
-            <option value="all">All Levels</option>
-            <option value="undergraduate">Undergraduate</option>
-            <option value="graduate">Graduate</option>
-            <option value="postgraduate">Postgraduate</option>
-          </select>
-          {/* Field Filter */}
-          <label htmlFor="field-filter" className="sr-only">Field of Study</label>
-          <select
-            id="field-filter"
-            value={selectedField}
-            onChange={(e) => setSelectedField(e.target.value)}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-            title="Filter by field of study"
-            aria-label="Filter by field of study"
-          >
-            <option value="all">All Fields</option>
-            <option value="stem">STEM</option>
-            <option value="business">Business</option>
-            <option value="engineering">Engineering</option>
-            <option value="any">Any Field</option>
-          </select>
-          {/* Delivery Mode Filter */}
-          <label htmlFor="delivery-mode-filter" className="sr-only">Study Mode</label>
-          <select
-            id="delivery-mode-filter"
-            value={selectedDeliveryMode}
-            onChange={(e) => setSelectedDeliveryMode(e.target.value)}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-            title="Filter by study mode"
-            aria-label="Filter by study mode"
-          >
-            <option value="all">All Modes</option>
-            <option value="online">Online</option>
-            <option value="in_person">On Campus</option>
-            <option value="hybrid">Hybrid</option>
-          </select>
-          {/* Work Permission Filter */}
-          <label htmlFor="work-permission-filter" className="sr-only">Work Authorization</label>
-          <select
-            id="work-permission-filter"
-            value={selectedWorkPermission}
-            onChange={(e) => setSelectedWorkPermission(e.target.value)}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-            title="Filter by work authorization"
-            aria-label="Filter by work authorization"
-          >
-            <option value="all">All Permissions</option>
-            <option value="OPT">OPT</option>
-            <option value="CPT">CPT</option>
-            <option value="F1">F1</option>
-            <option value="H1B">H1B</option>
-            <option value="L1">L1</option>
-          </select>
-          {/* Value Filter */}
-          <label htmlFor="min-value" className="sr-only">Minimum Value</label>
-          <input
-            id="min-value"
-            type="number"
-            placeholder="Min value"
-            value={minValue}
-            onChange={e => {
-              const value = e.target.value;
-              // Permitir apenas números positivos ou vazio
-              if (value === '' || (Number(value) >= 0)) {
-                setMinValue(value);
-              }
-            }}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-            aria-label="Minimum value"
-          />
-          <label htmlFor="max-value" className="sr-only">Maximum Value</label>
-          <input
-            id="max-value"
-            type="number"
-            placeholder="Max value"
-            value={maxValue}
-            onChange={e => {
-              const value = e.target.value;
-              // Permitir apenas números positivos ou vazio
-              if (value === '' || (Number(value) >= 0)) {
-                setMaxValue(value);
-              }
-            }}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-            aria-label="Maximum value"
-          />
-          {/* Deadline Filter */}
-          <label htmlFor="deadline-days" className="sr-only">Deadline in days</label>
-          <input
-            id="deadline-days"
-            type="number"
-            placeholder="Deadline (days)"
-            value={deadlineDays}
-            onChange={e => {
-              const value = e.target.value;
-              // Permitir apenas números positivos ou vazio
-              if (value === '' || (Number(value) >= 0)) {
-                setDeadlineDays(value);
-              }
-            }}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-            aria-label="Deadline in days"
-          />
-          {/* View Mode Toggle */}
-          <div className="flex gap-2 justify-end md:col-span-1">
-            <button
-              className={`p-2 rounded-lg border ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}`}
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-              aria-label="Grid view"
-            >
-              <LayoutGrid className="h-5 w-5" />
-            </button>
-            <button
-              className={`p-2 rounded-lg border ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}`}
-              onClick={() => setViewMode('list')}
-              title="List view"
-              aria-label="List view"
-            >
-              <List className="h-5 w-5" />
-            </button>
+
+          {/* Filter Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
+            {/* Level Filter */}
+            <div>
+              <label htmlFor="level-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Academic Level</label>
+              <select
+                id="level-filter"
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm"
+                title="Filter by academic level"
+                aria-label="Filter by academic level"
+              >
+                <option value="all">All Levels</option>
+                <option value="undergraduate">Undergraduate</option>
+                <option value="graduate">Graduate</option>
+                <option value="postgraduate">Postgraduate</option>
+              </select>
+            </div>
+
+            {/* Field Filter */}
+            <div>
+              <label htmlFor="field-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Field of Study</label>
+              <select
+                id="field-filter"
+                value={selectedField}
+                onChange={(e) => setSelectedField(e.target.value)}
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm"
+                title="Filter by field of study"
+                aria-label="Filter by field of study"
+              >
+                <option value="all">All Fields</option>
+                <option value="stem">STEM</option>
+                <option value="business">Business</option>
+                <option value="engineering">Engineering</option>
+                <option value="any">Any Field</option>
+              </select>
+            </div>
+
+            {/* Delivery Mode Filter */}
+            <div>
+              <label htmlFor="delivery-mode-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Study Mode</label>
+              <select
+                id="delivery-mode-filter"
+                value={selectedDeliveryMode}
+                onChange={(e) => setSelectedDeliveryMode(e.target.value)}
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm"
+                title="Filter by study mode"
+                aria-label="Filter by study mode"
+              >
+                <option value="all">All Modes</option>
+                <option value="online">Online</option>
+                <option value="in_person">On Campus</option>
+                <option value="hybrid">Hybrid</option>
+              </select>
+            </div>
+
+            {/* Work Permission Filter */}
+            <div>
+              <label htmlFor="work-permission-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Work Authorization</label>
+              <select
+                id="work-permission-filter"
+                value={selectedWorkPermission}
+                onChange={(e) => setSelectedWorkPermission(e.target.value)}
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm"
+                title="Filter by work authorization"
+                aria-label="Filter by work authorization"
+              >
+                <option value="all">All Permissions</option>
+                <option value="OPT">OPT</option>
+                <option value="CPT">CPT</option>
+                <option value="F1">F1</option>
+                <option value="H1B">H1B</option>
+                <option value="L1">L1</option>
+              </select>
+            </div>
+
+            {/* Value Filters */}
+            <div className="sm:col-span-2 lg:col-span-1 xl:col-span-2 grid grid-cols-2 gap-2 sm:gap-3">
+              <div>
+                <label htmlFor="min-value" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Min Value</label>
+                <input
+                  id="min-value"
+                  type="number"
+                  placeholder="Min value"
+                  value={minValue}
+                  onChange={e => {
+                    const value = e.target.value;
+                    if (value === '' || (Number(value) >= 0)) {
+                      setMinValue(value);
+                    }
+                  }}
+                  className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm"
+                  aria-label="Minimum value"
+                />
+              </div>
+              <div>
+                <label htmlFor="max-value" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Max Value</label>
+                <input
+                  id="max-value"
+                  type="number"
+                  placeholder="Max value"
+                  value={maxValue}
+                  onChange={e => {
+                    const value = e.target.value;
+                    if (value === '' || (Number(value) >= 0)) {
+                      setMaxValue(value);
+                    }
+                  }}
+                  className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm"
+                  aria-label="Maximum value"
+                />
+              </div>
+            </div>
+
+            {/* Deadline Filter */}
+            <div>
+              <label htmlFor="deadline-days" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Deadline (days)</label>
+              <input
+                id="deadline-days"
+                type="number"
+                placeholder="Deadline (days)"
+                value={deadlineDays}
+                onChange={e => {
+                  const value = e.target.value;
+                  if (value === '' || (Number(value) >= 0)) {
+                    setDeadlineDays(value);
+                  }
+                }}
+                className="w-full px-3 sm:px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm"
+                aria-label="Deadline in days"
+              />
+            </div>
+          </div>
+
+          {/* View Mode Toggle - Hidden on mobile, shown on desktop */}
+          <div className="hidden md:flex justify-end">
+            <div className="flex gap-2">
+              <button
+                className={`p-2 rounded-lg border ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid view"
+                aria-label="Grid view"
+              >
+                <LayoutGrid className="h-5 w-5" />
+              </button>
+              <button
+                className={`p-2 rounded-lg border ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}`}
+                onClick={() => setViewMode('list')}
+                title="List view"
+                aria-label="List view"
+              >
+                <List className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Botões Apply e Clear Filters */}
-        <div className="flex justify-start gap-3 mb-4">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-3 mt-4">
           <button
             type="button"
             onClick={(e) => applyFilters(e)}
             disabled={isApplyingFilters}
-            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 ${
+            className={`w-full sm:w-auto px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 text-sm sm:text-base ${
               (searchTerm.trim() !== appliedSearch || selectedLevel !== appliedLevel || selectedField !== appliedField || selectedDeliveryMode !== appliedDeliveryMode || selectedWorkPermission !== appliedWorkPermission || minValue.trim() !== appliedMinValue || maxValue.trim() !== appliedMaxValue || deadlineDays.trim() !== appliedDeadlineDays)
                 ? filtersApplied 
                   ? 'bg-gradient-to-r from-green-600 to-green-700 text-white'
@@ -690,17 +730,20 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             {isApplyingFilters ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Applying...
+                <span className="hidden sm:inline">Applying...</span>
+                <span className="sm:hidden">Loading...</span>
               </>
             ) : filtersApplied ? (
               <>
                 <CheckCircle className="h-4 w-4" />
-                Filters Applied!
+                <span className="hidden sm:inline">Filters Applied!</span>
+                <span className="sm:hidden">Applied!</span>
               </>
             ) : (
               <>
                 <Search className="h-4 w-4" />
-                Apply Filters ({filteredScholarships.length})
+                <span className="hidden sm:inline">Apply Filters ({filteredScholarships.length})</span>
+                <span className="sm:hidden">Apply ({filteredScholarships.length})</span>
               </>
             )}
           </button>
@@ -709,64 +752,89 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             <button
               type="button"
               onClick={(e) => clearAllFilters(e)}
-              className="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-200 flex items-center gap-2"
+              className="w-full sm:w-auto bg-slate-200 text-slate-700 px-4 sm:px-6 py-3 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               <Filter className="h-4 w-4" />
-              Clear All Filters
+              <span className="hidden sm:inline">Clear All Filters</span>
+              <span className="sm:hidden">Clear</span>
             </button>
           )}
-        </div>
 
+          {/* View Mode Toggle for Mobile */}
+          <div className="flex md:hidden gap-2 mt-2">
+            <button
+              className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300'}`}
+              onClick={() => setViewMode('grid')}
+              title="Grid view"
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4 mx-auto mb-1" />
+              Grid
+            </button>
+            <button
+              className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300'}`}
+              onClick={() => setViewMode('list')}
+              title="List view"
+              aria-label="List view"
+            >
+              <List className="h-4 w-4 mx-auto mb-1" />
+              List
+            </button>
+          </div>
+        </div>
 
         {/* Tags de filtros ativos (apenas os aplicados) */}
-        <div className="flex flex-wrap gap-2 mb-2">
-          {appliedSearch && <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs">Search: {appliedSearch}</span>}
-          {appliedLevel !== 'all' && <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">Level: {appliedLevel}</span>}
-          {appliedField !== 'all' && <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs">Field: {appliedField}</span>}
-          {appliedDeliveryMode !== 'all' && <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs">Mode: {getDeliveryModeLabel(appliedDeliveryMode)}</span>}
-          {appliedWorkPermission !== 'all' && <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs">Work: {appliedWorkPermission}</span>}
-          {appliedMinValue && <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs">Min: {appliedMinValue}</span>}
-          {appliedMaxValue && <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs">Max: {appliedMaxValue}</span>}
-          {appliedDeadlineDays && <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs">Deadline: {appliedDeadlineDays} days</span>}
-        </div>
+        {(appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || appliedMinValue || appliedMaxValue || appliedDeadlineDays) && (
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200">
+            {appliedSearch && <span className="bg-blue-100 text-blue-700 px-2 sm:px-3 py-1 rounded-full text-xs">Search: {appliedSearch}</span>}
+            {appliedLevel !== 'all' && <span className="bg-green-100 text-green-700 px-2 sm:px-3 py-1 rounded-full text-xs">Level: {appliedLevel}</span>}
+            {appliedField !== 'all' && <span className="bg-purple-100 text-purple-700 px-2 sm:px-3 py-1 rounded-full text-xs">Field: {appliedField}</span>}
+            {appliedDeliveryMode !== 'all' && <span className="bg-indigo-100 text-indigo-700 px-2 sm:px-3 py-1 rounded-full text-xs">Mode: {getDeliveryModeLabel(appliedDeliveryMode)}</span>}
+            {appliedWorkPermission !== 'all' && <span className="bg-emerald-100 text-emerald-700 px-2 sm:px-3 py-1 rounded-full text-xs">Work: {appliedWorkPermission}</span>}
+            {appliedMinValue && <span className="bg-yellow-100 text-yellow-700 px-2 sm:px-3 py-1 rounded-full text-xs">Min: {appliedMinValue}</span>}
+            {appliedMaxValue && <span className="bg-yellow-100 text-yellow-700 px-2 sm:px-3 py-1 rounded-full text-xs">Max: {appliedMaxValue}</span>}
+            {appliedDeadlineDays && <span className="bg-red-100 text-red-700 px-2 sm:px-3 py-1 rounded-full text-xs">Deadline: {appliedDeadlineDays} days</span>}
+          </div>
+        )}
 
-
-
-        <div className="flex items-center justify-between text-sm text-slate-600">
+        {/* Results Summary */}
+        <div className="flex items-center justify-between text-sm text-slate-600 mt-4 pt-4 border-t border-slate-200">
           <span>
-            <span className="font-medium text-blue-600">{filteredScholarships.length}</span> scholarships found
+            <span className="font-medium text-blue-600">{filteredScholarships.length}</span> 
+            <span className="hidden sm:inline"> scholarships found</span>
+            <span className="sm:hidden"> results</span>
           </span>
         </div>
       </div>
 
       {/* Featured Scholarships Section */}
       {featuredLoading ? (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-6 mb-8">
-          <div className="flex items-center justify-center py-12">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl border border-blue-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex items-center justify-center py-8 sm:py-12">
             <div className="text-center">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-slate-600">Loading featured scholarships...</p>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+              <p className="text-sm sm:text-base text-slate-600">Loading featured scholarships...</p>
             </div>
           </div>
         </div>
       ) : featuredScholarships.length > 0 ? (
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl border border-blue-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
             <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2">
                 <span className="text-[#05294E]">Featured</span> Scholarships
               </h3>
-              <p className="text-slate-600">
+              <p className="text-sm sm:text-base text-slate-600">
                 These scholarships are prominently displayed and may have special benefits
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-[#05294E]">{featuredScholarships.length}</div>
-              <div className="text-sm text-slate-500">Featured</div>
+            <div className="text-left sm:text-right">
+              <div className="text-xl sm:text-2xl font-bold text-[#05294E]">{featuredScholarships.length}</div>
+              <div className="text-xs sm:text-sm text-slate-500">Featured</div>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {featuredScholarships.map((scholarship) => {
               const deadlineStatus = getDeadlineStatus(scholarship.deadline);
               const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
@@ -780,18 +848,18 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     if (el) scholarshipRefs.current.set(scholarship.id, el);
                   }}
                   layoutId={layoutId}
-                  className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full"
+                  className="group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-1 sm:hover:-translate-y-2 flex flex-col h-full"
                 >
                   {/* Featured Badge */}
-                  <div className="absolute top-4 left-4 z-10">
-                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center shadow-lg">
+                  <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-10">
+                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center shadow-lg">
                       <Star className="h-3 w-3 mr-1 fill-current" />
                       Featured
                     </div>
                   </div>
 
                   {/* Scholarship Image */}
-                  <div className="relative h-48 overflow-hidden flex-shrink-0">
+                  <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
                     {scholarship.image_url ? (
                       <img
                         src={scholarship.image_url}
@@ -800,18 +868,18 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                        <GraduationCap className="h-16 w-16 text-slate-400" />
+                        <GraduationCap className="h-12 w-12 sm:h-16 sm:w-16 text-slate-400" />
                       </div>
                     )}
                     {scholarship.is_exclusive && (
-                      <div className="absolute top-4 right-4">
-                        <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                      <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                        <span className="bg-[#D0151C] text-white px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-xs font-bold shadow-lg">
                           Exclusive
                         </span>
                       </div>
                     )}
                     {/* Featured Order Badge */}
-                    <div className="absolute bottom-4 left-4">
+                    <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4">
                       <span className="bg-white/90 text-blue-600 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
                         #{scholarship.featured_order || 1}
                       </span>
@@ -819,7 +887,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   </div>
 
                   {/* Card Content */}
-                  <div className="p-6 flex-1 flex flex-col">
+                  <div className="p-4 sm:p-6 flex-1 flex flex-col">
                     {/* Title and University */}
                     <div className="mb-4">
                       <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
@@ -1034,9 +1102,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       )}
 
       {/* Scholarships Grid/List */}
-      <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "flex flex-col gap-4"}>
+      <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8" : "flex flex-col gap-3 sm:gap-4"}>
         {regularScholarships.map((scholarship) => {
-          const deadlineStatus = getDeadlineStatus(scholarship.deadline);
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);
           const layoutId = `scholarship-card-${scholarship.id}`;
@@ -1048,38 +1115,39 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 if (el) scholarshipRefs.current.set(scholarship.id, el);
               }}
               layoutId={layoutId}
-                             className={
-                 viewMode === 'grid'
-                   ? "group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full"
-                   : "group relative bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 flex flex-row items-center p-4"
-               }
+              className={
+                viewMode === 'grid'
+                  ? "group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-1 sm:hover:-translate-y-2 flex flex-col h-full"
+                  : "group relative bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center p-3 sm:p-4"
+              }
             >
               {/* Scholarship Image */}
-              <div className={viewMode === 'grid' ? "relative h-48 overflow-hidden flex-shrink-0" : "w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden mr-6"}>
+              <div className={viewMode === 'grid' ? "relative h-40 sm:h-48 overflow-hidden flex-shrink-0" : "w-full sm:w-32 h-32 sm:h-32 flex-shrink-0 rounded-lg sm:rounded-xl overflow-hidden mb-3 sm:mb-0 sm:mr-4 md:mr-6"}>
                 {scholarship.image_url ? (
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
-                                         className={viewMode === 'grid' ? "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" : "w-full h-full object-cover"}
+                    className={viewMode === 'grid' ? "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" : "w-full h-full object-cover"}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                    <GraduationCap className="h-16 w-16 text-slate-400" />
+                    <GraduationCap className={viewMode === 'grid' ? "h-12 w-12 sm:h-16 sm:w-16 text-slate-400" : "h-8 w-8 sm:h-12 sm:w-12 text-slate-400"} />
                   </div>
                 )}
                 {scholarship.is_exclusive && (
-                  <div className={viewMode === 'grid' ? "absolute top-4 right-4" : "absolute top-2 right-2"}>
-                    <span className="bg-[#D0151C] text-white px-3 py-1 rounded-xl text-xs font-bold shadow-lg">
+                  <div className={viewMode === 'grid' ? "absolute top-3 sm:top-4 right-3 sm:right-4" : "absolute top-2 right-2"}>
+                    <span className="bg-[#D0151C] text-white px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-xs font-bold shadow-lg">
                       Exclusive
                     </span>
                   </div>
                 )}
               </div>
+              
               {/* Card Content */}
-              <div className={viewMode === 'grid' ? "p-6 flex-1 flex flex-col" : "flex-1 flex flex-col justify-between min-h-[120px]"}>
+              <div className={viewMode === 'grid' ? "p-4 sm:p-6 flex-1 flex flex-col" : "flex-1 flex flex-col justify-between"}>
                 {/* Title and University */}
-                <div className={viewMode === 'grid' ? "mb-4" : "mb-2"}>
-                                     <h3 className={viewMode === 'grid' ? "text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors" : "text-lg font-bold text-slate-900 mb-1 leading-tight group-hover:text-[#05294E] transition-colors"}>
+                <div className={viewMode === 'grid' ? "mb-3 sm:mb-4" : "mb-2 sm:mb-3"}>
+                  <h3 className={viewMode === 'grid' ? "text-lg sm:text-xl font-bold text-slate-900 mb-2 sm:mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors" : "text-base sm:text-lg font-bold text-slate-900 mb-1 sm:mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors"}>
                     {scholarship.title}
                   </h3>
                   <div className="flex items-center mb-2">
@@ -1087,94 +1155,100 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       {scholarship.field_of_study || 'Any Field'}
                     </span>
                   </div>
-                  <div className="flex items-center text-slate-600 mb-3">
-                    <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                  <div className="flex items-center text-slate-600 mb-2 sm:mb-3">
+                    <Building className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-[#05294E]" />
                     <span className="text-xs font-semibold mr-1">University:</span>
-                    <span className={`text-sm select-none ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
+                    <span className={`text-xs sm:text-sm select-none ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
                       {isAuthenticated && userProfile?.has_paid_selection_process_fee
                         ? (scholarship.universities?.name || 'Unknown University')
                         : '********'}
                     </span>
                   </div>
 
-                  {/* Program Details */}
-                  <div className="grid grid-cols-1 gap-3 mb-4">
-                    {/* Delivery Mode */}
-                    {scholarship.delivery_mode && (
-                      <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-center">
-                          {getDeliveryModeIcon(scholarship.delivery_mode)}
-                          <span className="text-xs font-medium text-slate-600 ml-2">Study Mode</span>
+                  {/* Program Details - Hidden in mobile list view */}
+                  {viewMode === 'grid' && (
+                    <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-4">
+                      {/* Delivery Mode */}
+                      {scholarship.delivery_mode && (
+                        <div className="flex items-center justify-between p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex items-center">
+                            {getDeliveryModeIcon(scholarship.delivery_mode)}
+                            <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Study Mode</span>
+                          </div>
+                          <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                            {getDeliveryModeLabel(scholarship.delivery_mode)}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                          {getDeliveryModeLabel(scholarship.delivery_mode)}
-                        </span>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Work Permissions */}
-                    {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                      <div className="p-3 bg-white rounded-lg border border-slate-200">
-                        <div className="flex items-center mb-2">
-                          <Briefcase className="h-3 w-3 text-emerald-600" />
-                          <span className="text-xs font-medium text-slate-600 ml-2">Work Authorization</span>
+                      {/* Work Permissions */}
+                      {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
+                        <div className="p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex items-center mb-1 sm:mb-2">
+                            <Briefcase className="h-3 w-3 text-emerald-600" />
+                            <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Work Authorization</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
+                              >
+                                {permission}
+                              </span>
+                            ))}
+                            {scholarship.work_permissions.length > 3 && (
+                              <span className="text-xs text-slate-500">+{scholarship.work_permissions.length - 3} more</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                          {scholarship.work_permissions.map((permission: string, index: number) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
-                            >
-                              {permission}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {/* Financial Impact Section */}
-                <div className={viewMode === 'grid' ? "mb-6" : "mb-4"}>
-                                     <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                    <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600" />
+                <div className={viewMode === 'grid' ? "mb-4 sm:mb-6" : "mb-3 sm:mb-4"}>
+                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2">
+                      <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                       Financial Overview
                     </h4>
                     
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
+                    <div className="space-y-1 sm:space-y-2">
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
                         <span className="text-slate-600">Original Price</span>
                         <span className="font-bold text-blue-700">
                           ${formatAmount(scholarship.original_annual_value)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
                         <span className="text-slate-600">With Scholarship</span>
                         <span className="font-bold text-green-700">
                           ${formatAmount(scholarship.annual_value_with_scholarship)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
+                      <div className="flex items-center justify-between text-xs text-slate-500 pt-1 sm:pt-2 border-t border-slate-200">
                         <span>Per Credit</span>
                         <span>${formatAmount(scholarship.original_value_per_credit)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                {/* Details */}
-                <div className={viewMode === 'grid' ? "space-y-3 flex-1" : "flex flex-row gap-6 mb-2"}>
-                  <div className="flex items-center justify-between text-sm">
+
+                {/* Quick Details */}
+                <div className={viewMode === 'grid' ? "space-y-2 sm:space-y-3 flex-1 mb-4" : "flex flex-col sm:flex-row gap-3 sm:gap-6 mb-3"}>
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-500">Level</span>
                     <div className="flex items-center">
                       {getLevelIcon(scholarship.level || 'undergraduate')}
-                      <span className="ml-1 capitalize text-slate-700">{scholarship.level}</span>
+                      <span className="ml-1 capitalize text-slate-700 text-xs sm:text-sm">{scholarship.level}</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-500">Deadline</span>
                     <div className="flex items-center">
                       <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
-                      <span className="text-slate-700">{getDaysUntilDeadline(scholarship.deadline)} days left</span>
+                      <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadline(scholarship.deadline)} days left</span>
                     </div>
                   </div>
                   {scholarship.delivery_mode && (
@@ -1252,16 +1326,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
       {/* No Results */}
       {filteredScholarships.length === 0 && (
-        <div className="text-center py-20">
-          <div className="bg-gradient-to-br from-slate-100 to-slate-200 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
-            <Award className="h-16 w-16 text-slate-400" />
+        <div className="text-center py-12 sm:py-20 px-4">
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 shadow-lg">
+            <Award className="h-12 w-12 sm:h-16 sm:w-16 text-slate-400" />
           </div>
-          <h3 className="text-3xl font-bold text-slate-600 mb-4">No scholarships found</h3>
-          <p className="text-slate-500 text-lg mb-8">Try adjusting your search criteria or clear filters to discover more opportunities.</p>
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-600 mb-3 sm:mb-4">No scholarships found</h3>
+          <p className="text-sm sm:text-base md:text-lg text-slate-500 mb-6 sm:mb-8 max-w-md mx-auto">Try adjusting your search criteria or clear filters to discover more opportunities.</p>
           <button 
             type="button"
             onClick={(e) => clearAllFilters(e)}
-            className="bg-blue-600 text-white px-8 py-3 rounded-2xl hover:bg-blue-700 transition-all duration-300 font-bold"
+            className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-2xl hover:bg-blue-700 transition-all duration-300 font-bold text-sm sm:text-base"
           >
             Clear All Filters
           </button>
