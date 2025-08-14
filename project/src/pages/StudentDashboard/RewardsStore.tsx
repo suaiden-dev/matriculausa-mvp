@@ -21,7 +21,8 @@ import {
   User,
   Shield,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Info
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -54,7 +55,7 @@ interface RewardRedemption {
 }
 
 const RewardsStore: React.FC = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [credits, setCredits] = useState<MatriculacoinCredits | null>(null);
@@ -76,16 +77,106 @@ const RewardsStore: React.FC = () => {
   const [confirmationData, setConfirmationData] = useState<UniversityConfirmationData | null>(null);
   const [redeemingTuition, setRedeemingTuition] = useState<string | null>(null);
 
+  // Estados para universidade automática
+  const [userUniversity, setUserUniversity] = useState<any>(null);
+  const [isEnrolledStudent, setIsEnrolledStudent] = useState(false);
+  const [enrollmentChecked, setEnrollmentChecked] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !dataLoaded) {
       loadStoreData();
-    } else {
+      // Só verificar status de matrícula se ainda não foi verificado
+      if (!enrollmentChecked) {
+        checkUserEnrollmentStatus();
+      }
+    } else if (!user?.id) {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, dataLoaded, enrollmentChecked]);
+
+  // Listener para mudanças de visibilidade da aba (sem causar refresh)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Só recarregar se a aba voltar a ficar visível E se os dados não foram carregados
+      if (!document.hidden && user?.id && !dataLoaded) {
+        loadStoreData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user?.id, dataLoaded]);
+
+  // Verificar se o usuário é um aluno matriculado
+  const checkUserEnrollmentStatus = async () => {
+    if (!user?.id || !userProfile || enrollmentChecked) return;
+
+    try {
+      // Verificar se o usuário tem uma aplicação com status "enrolled"
+      const { data: applications, error } = await supabase
+        .from('scholarship_applications')
+        .select(`
+          *,
+          scholarships (
+            id,
+            title,
+            university_id
+          )
+        `)
+        .eq('student_id', userProfile.id)
+        .eq('status', 'enrolled');
+
+      if (error) {
+        console.error('Erro ao verificar status de matrícula:', error);
+        return;
+      }
+
+      if (applications && applications.length > 0) {
+        const enrolledApplication = applications[0];
+        if (enrolledApplication.scholarships?.university_id) {
+          // Buscar dados da universidade
+          const { data: universityData, error: universityError } = await supabase
+            .from('universities')
+            .select(`
+              id,
+              name,
+              logo_url,
+              location,
+              established_year,
+              student_count,
+              website
+            `)
+            .eq('id', enrolledApplication.scholarships.university_id)
+            .single();
+
+          if (universityError) {
+            console.error('Erro ao buscar dados da universidade:', universityError);
+            return;
+          }
+
+          if (universityData) {
+            setIsEnrolledStudent(true);
+            setUserUniversity(universityData);
+            console.log('🎓 Usuário é aluno matriculado na universidade:', universityData.name);
+          }
+        }
+      }
+      
+      // Marcar como verificado para evitar verificações repetidas
+      setEnrollmentChecked(true);
+    } catch (error) {
+      console.error('Erro ao verificar status de matrícula:', error);
+      setEnrollmentChecked(true); // Marcar como verificado mesmo em caso de erro
+    }
+  };
 
   const loadStoreData = async () => {
+    if (dataLoaded) return; // Evitar carregamento repetido
+    
     try {
       setLoading(true);
       setError(null);
@@ -180,6 +271,9 @@ const RewardsStore: React.FC = () => {
         setTransactions(transactionsData || []);
       }
 
+      // Marcar dados como carregados
+      setDataLoaded(true);
+
     } catch (error) {
       console.error('Erro ao carregar dados da loja:', error);
       setError('Failed to load store data');
@@ -211,9 +305,27 @@ const RewardsStore: React.FC = () => {
   };
 
   // Selecionar desconto de tuition
-  const handleSelectTuitionDiscount = (discount: TuitionDiscount) => {
+  const handleSelectTuitionDiscount = async (discount: TuitionDiscount) => {
     setSelectedDiscount(discount);
-    setShowUniversitySelection(true);
+    
+    // Se o usuário é aluno matriculado, usar sua universidade automaticamente
+    if (isEnrolledStudent && userUniversity) {
+      setSelectedUniversity(userUniversity);
+      setShowUniversitySelection(false);
+      
+      try {
+        // Buscar dados de confirmação da universidade
+        const confirmationData = await TuitionRewardsService.getUniversityConfirmationData(userUniversity.id);
+        setConfirmationData(confirmationData);
+        setShowConfirmation(true);
+      } catch (error: any) {
+        console.error('Erro ao buscar dados da universidade:', error);
+        setError(error.message || 'Failed to fetch university data');
+      }
+    } else {
+      // Se não é aluno matriculado, mostrar seleção de universidade
+      setShowUniversitySelection(true);
+    }
   };
 
   // Selecionar universidade
@@ -257,11 +369,16 @@ const RewardsStore: React.FC = () => {
         total_spent: prev.total_spent + selectedDiscount.cost_coins
       } : null);
 
-      // Recarregar dados
-      await loadStoreData();
+      // Recarregar apenas os dados necessários
+      await refreshAfterRedemption();
 
       // Mostrar mensagem de sucesso
-      setSuccessMessage(`Successfully redeemed ${selectedDiscount.discount_amount} tuition discount for ${selectedUniversity.name}!`);
+      const isEnrolledAtSelectedUniversity = isEnrolledStudent && userUniversity && selectedUniversity.id === userUniversity.id;
+      const successMessageText = isEnrolledAtSelectedUniversity
+        ? `🎓 Successfully redeemed ${selectedDiscount.discount_amount} tuition discount for your enrolled university: ${selectedUniversity.name}!`
+        : `Successfully redeemed ${selectedDiscount.discount_amount} tuition discount for ${selectedUniversity.name}!`;
+      
+      setSuccessMessage(successMessageText);
 
       // Limpar seleções
       setSelectedDiscount(null);
@@ -282,8 +399,30 @@ const RewardsStore: React.FC = () => {
     }
   };
 
+  // Função para recarregar dados após resgate (sem recarregar tudo)
+  const refreshAfterRedemption = async () => {
+    if (!user?.id) return;
 
+    try {
+      // Recarregar apenas histórico de resgates de tuition
+      const redemptions = await TuitionRewardsService.getUserTuitionRedemptions(user.id);
+      setTuitionRedemptions(redemptions);
 
+      // Recarregar apenas histórico de transações
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('matriculacoin_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!transactionsError) {
+        setTransactions(transactionsData || []);
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar dados após resgate:', error);
+    }
+  };
 
 
   const formatCurrency = (amount: number) => {
@@ -392,6 +531,18 @@ const RewardsStore: React.FC = () => {
           <div className="text-center">
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Rewards Store</h1>
             <p className="text-slate-600 text-lg">Redeem your Matricula Coins for exclusive rewards</p>
+            
+            {/* Mensagem para alunos matriculados */}
+            {isEnrolledStudent && userUniversity && (
+              <div className="mt-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-2xl text-sm max-w-md mx-auto">
+                <div className="flex items-center justify-center">
+                  <Info className="h-4 w-4 mr-2" />
+                  <span>
+                    <strong>Enrolled Student:</strong> Your tuition discounts will automatically apply to <strong>{userUniversity.name}</strong>
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -696,6 +847,19 @@ const RewardsStore: React.FC = () => {
               <p className="text-slate-600 mt-2">
                 Choose the university where you want to apply the ${selectedDiscount?.discount_amount} tuition discount
               </p>
+              
+              {/* Mensagem para alunos matriculados */}
+              {isEnrolledStudent && userUniversity && (
+                <div className="mt-3 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded-lg text-sm">
+                  <div className="flex items-center">
+                    <Info className="h-4 w-4 mr-2" />
+                    <span>
+                      <strong>Note:</strong> You're enrolled at <strong>{userUniversity.name}</strong>. 
+                      If you select a different university, the discount will apply there instead.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-6">
@@ -797,8 +961,21 @@ const RewardsStore: React.FC = () => {
                 </button>
               </div>
               <p className="text-slate-600 mt-2">
-                Please verify this is your university before proceeding
+                {isEnrolledStudent && userUniversity && selectedUniversity?.id === userUniversity.id
+                  ? `This is your enrolled university: ${userUniversity.name}`
+                  : 'Please verify this is your university before proceeding'
+                }
               </p>
+              
+              {/* Mensagem especial para alunos matriculados */}
+              {isEnrolledStudent && userUniversity && selectedUniversity?.id === userUniversity.id && (
+                <div className="mt-3 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span>✅ You're enrolled at this university - tuition discount will be automatically applied!</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-6">
