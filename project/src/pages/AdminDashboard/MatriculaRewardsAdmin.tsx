@@ -14,7 +14,11 @@ import {
   Target,
   DollarSign,
   XCircle,
-  CheckCircle
+  CheckCircle,
+  Clock,
+  CheckCircle2,
+  CreditCard,
+  Banknote
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -124,6 +128,103 @@ const MatriculaRewardsAdmin: React.FC = () => {
     }
   };
 
+  const formatPaymentDetails = (details: any, method: string) => {
+    if (!details) return null;
+    
+    const formatKey = (key: string) => {
+      return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    const formatValue = (key: string, value: any) => {
+      // Mask sensitive data
+      if (key.includes('account_number') || key.includes('routing_number') || key.includes('iban') || key.includes('swift')) {
+        return String(value).replace(/./g, '*');
+      }
+      return String(value);
+    };
+
+    return (
+      <div className="text-xs space-y-1 max-w-xs">
+        {Object.entries(details).map(([key, value]) => (
+          <div key={key} className="flex justify-between items-start">
+            <span className="font-medium text-slate-600 flex-shrink-0">{formatKey(key)}:</span>
+            <span className="text-slate-800 text-right break-all">{formatValue(key, value)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const getPayoutStatusConfig = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return {
+          icon: Clock,
+          color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+          bgColor: 'bg-yellow-50'
+        };
+      case 'approved':
+        return {
+          icon: CheckCircle2,
+          color: 'bg-blue-100 text-blue-800 border-blue-200',
+          bgColor: 'bg-blue-50'
+        };
+      case 'paid':
+        return {
+          icon: CheckCircle,
+          color: 'bg-green-100 text-green-800 border-green-200',
+          bgColor: 'bg-green-50'
+        };
+      case 'rejected':
+        return {
+          icon: XCircle,
+          color: 'bg-red-100 text-red-800 border-red-200',
+          bgColor: 'bg-red-50'
+        };
+      case 'cancelled':
+        return {
+          icon: XCircle,
+          color: 'bg-gray-100 text-gray-800 border-gray-200',
+          bgColor: 'bg-gray-50'
+        };
+      default:
+        return {
+          icon: AlertCircle,
+          color: 'bg-gray-100 text-gray-800 border-gray-200',
+          bgColor: 'bg-gray-50'
+        };
+    }
+  };
+
+  const getPayoutMethodConfig = (method: string) => {
+    switch (method) {
+      case 'zelle':
+        return {
+          icon: CreditCard,
+          color: 'text-purple-600',
+          bgColor: 'bg-purple-100'
+        };
+      case 'bank_transfer':
+        return {
+          icon: Banknote,
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-100'
+        };
+      case 'stripe':
+        return {
+          icon: CreditCard,
+          color: 'text-green-600',
+          bgColor: 'bg-green-100'
+        };
+      default:
+        return {
+          icon: CreditCard,
+          color: 'text-gray-600',
+          bgColor: 'bg-gray-100'
+        };
+    }
+  };
+
   const getRangeStart = (range: string) => {
     const now = new Date();
     if (range === '7d') return new Date(now.getTime() - 7*24*60*60*1000);
@@ -151,10 +252,10 @@ const MatriculaRewardsAdmin: React.FC = () => {
     try {
       setLoadingPayouts(true);
       setError(null);
-      // Tenta carregar com embed de invoice
+      // Try to load with invoice embed and payment details
       const { data, error } = await supabase
         .from('university_payout_requests')
-        .select('*, universities(name), payout_invoices(invoice_number)')
+        .select('*, universities(name), payout_invoices(invoice_number), payout_details_preview, payout_method')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setPayouts(data || []);
@@ -184,7 +285,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Período
+      // Period
       const start = getRangeStart(dateRange).toISOString();
 
       // 1) Agregados de universidades
@@ -194,7 +295,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
       if (uniAccErr) console.warn('[Admin] university_rewards_account error:', uniAccErr);
       const aggBalance = (uniAccounts || []).reduce((sum: number, r: any)=> sum + (Number(r.balance_coins||0)), 0);
 
-      // 2) Tuition redemptions no período
+      // 2) Tuition redemptions in the period
       const { data: tuitionRedemptions, error: trErr } = await supabase
         .from('tuition_redemptions')
         .select('user_id, university_id, cost_coins_paid, discount_amount, redeemed_at')
@@ -206,7 +307,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
       const totalCoinsToUniversitiesPeriod = (tuitionRedemptions || []).reduce((s: number, r: any)=> s + Number(r.cost_coins_paid||0), 0);
       const totalUsdTuitionPeriod = (tuitionRedemptions || []).reduce((s: number, r: any)=> s + Number(r.discount_amount||0), 0);
 
-      // 3) Payouts no período
+      // 3) Payouts in the period
       const { data: payoutsData, error: poErr } = await supabase
         .from('university_payout_requests')
         .select('status, created_at')
@@ -265,7 +366,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
         totalUsers: generalStats?.[0]?.total_users || 0,
         totalReferrals: generalStats?.[0]?.total_referrals || 0,
         // Substituir os cards por dados de tuition/admin mantendo layout
-        totalCoinsSpent: totalCoinsToUniversitiesPeriod, // Coins Spent (período)
+        totalCoinsSpent: totalCoinsToUniversitiesPeriod, // Coins Spent (period)
         totalCoinsEarned: aggBalance, // Coins Earned (saldo agregado universidades)
         conversionRate: generalStats?.[0]?.conversion_rate || 0,
         averageCoinsPerUser: generalStats?.[0]?.average_coins_per_user || 0,
@@ -778,57 +879,220 @@ const MatriculaRewardsAdmin: React.FC = () => {
         )}
 
         {activeTab === 'payouts' && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Payout Requests</h3>
-                <p className="text-sm text-slate-600">Approve, mark as paid or reject withdrawals requested by universities</p>
+                <h3 className="text-2xl font-bold text-slate-900">Payout Requests</h3>
+                <p className="text-slate-600 mt-2">
+                                      Approve, mark as paid or reject payment requests from universities
+                </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                  <div className="text-sm text-blue-600 font-medium">
+                    Total: {payouts.length} requests
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-6 overflow-x-auto">
-              {loadingPayouts ? (
-                <div className="text-slate-600">Loading...</div>
-              ) : payouts.length ? (
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-slate-600 text-left">
-                      <th className="py-2 pr-4">Invoice</th>
-                      <th className="py-2 pr-4">University</th>
-                      <th className="py-2 pr-4">Amount</th>
-                      <th className="py-2 pr-4">Method</th>
-                      <th className="py-2 pr-4">Status</th>
-                      <th className="py-2 pr-4">Created</th>
-                      <th className="py-2 pr-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payouts.map((r: any) => (
-                      <tr key={r.id} className="border-t border-slate-100">
-                        <td className="py-2 pr-4">{r.payout_invoices?.[0]?.invoice_number || r.id.slice(0,8)}</td>
-                        <td className="py-2 pr-4">{r.universities?.name || '-'}</td>
-                        <td className="py-2 pr-4">{r.amount_coins} coins (${Number(r.amount_usd).toFixed(2)})</td>
-                        <td className="py-2 pr-4 capitalize">{String(r.payout_method).replace('_',' ')}</td>
-                        <td className="py-2 pr-4 capitalize">{r.status}</td>
-                        <td className="py-2 pr-4">{formatActivityDate(r.created_at)}</td>
-                        <td className="py-2 pl-4 text-right space-x-2">
-                          {r.status === 'pending' && (
-                            <>
-                              <button onClick={()=>approve(r.id)} className="px-3 py-1 rounded-lg bg-blue-600 text-white">Approve</button>
-                              <button onClick={()=>reject(r.id)} className="px-3 py-1 rounded-lg bg-red-600 text-white">Reject</button>
-                            </>
-                          )}
-                          {r.status === 'approved' && (
-                            <button onClick={()=>markPaid(r.id)} className="px-3 py-1 rounded-lg bg-green-600 text-white">Mark Paid</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-slate-500">No payout requests.</div>
-              )}
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {['pending', 'approved', 'paid', 'rejected'].map((status) => {
+                const count = payouts.filter((r: any) => r.status === status).length;
+                const config = getPayoutStatusConfig(status);
+                const Icon = config.icon;
+                
+                return (
+                  <div key={status} className={`${config.bgColor} border border-slate-200 rounded-xl p-4`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                                                 <p className="text-sm font-medium text-slate-600 capitalize">
+                           {status === 'pending' ? 'Pending' :
+                            status === 'approved' ? 'Approved' :
+                            status === 'paid' ? 'Paid' : 'Rejected'}
+                         </p>
+                        <p className="text-2xl font-bold text-slate-900">{count}</p>
+                      </div>
+                      <div className={`p-2 rounded-lg ${config.color}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Requests Grid */}
+            {loadingPayouts ? (
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Loading payout requests...</p>
+                </div>
+              </div>
+            ) : payouts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">
+                  No requests found
+                </h3>
+                <p className="text-slate-600">
+                  University payout requests will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {payouts.map((request: any) => {
+                  const statusConfig = getPayoutStatusConfig(request.status);
+                  const methodConfig = getPayoutMethodConfig(request.payout_method);
+                  const StatusIcon = statusConfig.icon;
+                  const MethodIcon = methodConfig.icon;
+                  
+                  return (
+                    <div 
+                      key={request.id} 
+                      className={`${statusConfig.bgColor} border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200`}
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-lg ${statusConfig.color}`}>
+                            <StatusIcon className="h-5 w-5" />
+                          </div>
+                          <div>
+                                                         <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                               {request.status === 'pending' ? 'Pending' :
+                                request.status === 'approved' ? 'Approved' :
+                                request.status === 'paid' ? 'Paid' :
+                                request.status === 'rejected' ? 'Rejected' : 'Cancelled'}
+                             </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-slate-500">Invoice</div>
+                          <div className="font-mono text-sm text-slate-700">
+                            {request.payout_invoices?.[0]?.invoice_number || request.id.slice(0, 8)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* University Info */}
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="p-2 rounded-lg bg-slate-100">
+                          <svg className="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-900 truncate">
+                            {request.universities?.name || 'University not found'}
+                          </h3>
+                        </div>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="bg-white rounded-lg p-4 mb-4 border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div className="p-1.5 rounded-lg bg-yellow-100">
+                              <svg className="h-4 w-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                              </svg>
+                            </div>
+                                                         <span className="text-sm font-medium text-slate-600">Amount</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-slate-900">
+                              {request.amount_coins} coins
+                            </div>
+                            <div className="text-sm text-slate-600">
+                              ${Number(request.amount_usd).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Payment Method */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2">
+                          <div className={`p-1.5 rounded-lg ${methodConfig.bgColor}`}>
+                            <MethodIcon className={`h-4 w-4 ${methodConfig.color}`} />
+                          </div>
+                          <span className="text-sm font-medium text-slate-600">Method</span>
+                        </div>
+                        <span className="text-sm font-medium text-slate-800 capitalize">
+                          {String(request.payout_method).replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      {/* Payment Details */}
+                      <div className="mb-4">
+                                                 <div className="text-sm font-medium text-slate-600 mb-2">Payment Details</div>
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          {formatPaymentDetails(request.payout_details_preview, request.payout_method) || (
+                            <span className="text-slate-400 text-xs">No payment details</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Date */}
+                      <div className="flex items-center space-x-2 mb-4">
+                        <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-sm text-slate-600">
+                          {formatActivityDate(request.created_at)}
+                        </span>
+                      </div>
+
+                      {/* Actions */}
+                      {request.status === 'pending' && (
+                        <div className="flex space-x-2 pt-4 border-t border-slate-200">
+                          <button
+                            onClick={() => approve(request.id)}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                                                         <span>Approve</span>
+                          </button>
+                          <button
+                            onClick={() => reject(request.id)}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                                                         <span>Reject</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {request.status === 'approved' && (
+                        <div className="pt-4 border-t border-slate-200">
+                          <button
+                            onClick={() => markPaid(request.id)}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                                                         <span>Mark as Paid</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

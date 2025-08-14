@@ -87,7 +87,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
        console.log('User ID:', user.id);
 
        // Upload file to Supabase Storage
-       const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
          .from('user-avatars')
          .upload(fileName, file, { 
            upsert: true,
@@ -144,9 +144,16 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
     setSuccessMessage(null);
 
     try {
+      // Normaliza o GPA: permite vazio (null), e se numérico, limita a 0-4 e 2 casas decimais
+      const parsedGpa = formData.gpa === '' ? null : Number.parseFloat(formData.gpa);
+      const normalizedGpa =
+        parsedGpa === null || Number.isNaN(parsedGpa)
+          ? null
+          : Math.min(4, Math.max(0, Math.round(parsedGpa * 100) / 100));
+
       const updatedData = {
         ...formData,
-        gpa: parseFloat(formData.gpa) || 0
+        gpa: normalizedGpa
       };
       
       await onUpdateProfile(updatedData);

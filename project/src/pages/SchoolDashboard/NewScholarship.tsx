@@ -494,7 +494,7 @@ const NewScholarship: React.FC = () => {
           original_value_per_credit: Number(formData.original_value_per_credit),
           annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
         };
-        if (includeWP) payload.work_permissions = formData.work_permissions;
+        if (includeWP) payload.work_permissions = formData.work_permissions.filter((wp) => wp !== 'F1');
         if (includeDM) payload.delivery_mode = formData.delivery_mode;
         return payload;
       };
@@ -1071,7 +1071,7 @@ const NewScholarship: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <label className="text-sm font-medium text-slate-700">
-                    Work Permission (F-1 / OPT / CPT)
+					Work Permission (OPT / CPT)
                   </label>
                   {/* Single info icon explaining all options */}
                   <div className="relative group">
@@ -1079,7 +1079,6 @@ const NewScholarship: React.FC = () => {
                     <div className="pointer-events-none absolute left-1/2 z-10 hidden -translate-x-1/2 translate-y-2 whitespace-normal rounded-md bg-slate-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block w-80 text-left">
                       <p className="font-semibold mb-1">What each option means</p>
                       <ul className="list-disc pl-4 space-y-1">
-                        <li><span className="font-semibold">F-1</span>: {WORK_PERMISSION_DESCRIPTIONS['F1']}</li>
                         <li><span className="font-semibold">OPT</span>: {WORK_PERMISSION_DESCRIPTIONS['OPT']}</li>
                         <li><span className="font-semibold">CPT</span>: {WORK_PERMISSION_DESCRIPTIONS['CPT']}</li>
                       </ul>
@@ -1088,7 +1087,7 @@ const NewScholarship: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {['F1','OPT','CPT'].map((wp) => {
+				  {['OPT','CPT'].map((wp) => {
                     const checked = formData.work_permissions.includes(wp);
                     return (
                       <label

@@ -110,7 +110,7 @@ const Scholarships: React.FC = () => {
     { value: 'undergraduate', label: 'Undergraduate' },
   ];
 
-  const { isAuthenticated, userProfile } = useAuth();
+  const { isAuthenticated, userProfile, refetchUserProfile } = useAuth();
   const navigate = useNavigate();
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
@@ -128,6 +128,24 @@ const Scholarships: React.FC = () => {
     const matchesWorkPermission = selectedWorkPermission === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkPermission));
     return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
   });
+
+  // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (userProfile && !userProfile.has_paid_selection_process_fee) {
+      interval = setInterval(() => {
+        refetchUserProfile && refetchUserProfile();
+      }, 3000);
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [refetchUserProfile, userProfile]);
+
+  // Refetch imediato após pagamento do selection process fee
+  useEffect(() => {
+    if (userProfile && userProfile.has_paid_selection_process_fee) {
+      refetchUserProfile && refetchUserProfile();
+    }
+  }, [userProfile?.has_paid_selection_process_fee, refetchUserProfile]);
 
   const formatAmount = (amount: any) => {
     if (typeof amount === 'string') return amount;
@@ -427,7 +445,7 @@ const Scholarships: React.FC = () => {
                 const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
                 
                 return (
-                  <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
+                  <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
                     {/* Featured Badge - Top Right */}
                     <div className="absolute top-4 right-4 z-10">
                       <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
@@ -461,38 +479,36 @@ const Scholarships: React.FC = () => {
                       {/* Gradient Overlay for better text contrast */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                       
-                      {/* Top Left Badges */}
-                      <div className="absolute top-4 left-4 flex flex-col gap-2">
-                        {/* Exclusive Badge */}
-                        {scholarship.is_exclusive && (
-                          <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                            <Star className="h-3 w-3" />
-                            Exclusive
-                          </div>
-                        )}
-                        
-                        {/* Savings Badge */}
-                        {savingsPercentage > 0 && (
-                          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            {savingsPercentage}% OFF
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Deadline Badge - Top Left (below other badges) */}
-                      <div className="absolute top-4 left-4" style={{ top: scholarship.is_exclusive || savingsPercentage > 0 ? '4.5rem' : '1rem' }}>
-                        <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                          <Clock className="h-3 w-3" />
-                          {daysLeft <= 0 ? 'Expired' : `${daysLeft} days`}
-                        </div>
-                      </div>
+                                             {/* Top Left Badges */}
+                       <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
+                         {/* Exclusive Badge */}
+                         {scholarship.is_exclusive && (
+                           <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                             <Star className="h-3 w-3" />
+                             Exclusive
+                           </div>
+                         )}
+                         
+                         {/* Savings Badge */}
+                         {savingsPercentage > 0 && (
+                           <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                             <DollarSign className="h-3 w-3" />
+                             {savingsPercentage}% OFF
+                           </div>
+                         )}
+                         
+                         {/* Deadline Badge - Below other badges with proper spacing */}
+                         <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                           <Clock className="h-3 w-3" />
+                           {daysLeft <= 0 ? 'Expired' : `${daysLeft} days`}
+                         </div>
+                       </div>
                     </div>
                     
                     {/* Card Content */}
-                    <div className="p-6">
+                    <div className="p-6 flex-1 flex flex-col">
                       {/* Header Section */}
-                      <div className="mb-4">
+                      <div className="mb-4 flex-1">
                         <h3 id={`featured-scholarship-title-${scholarship.id}`} className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300">
                           {scholarship.title}
                         </h3>
@@ -515,8 +531,10 @@ const Scholarships: React.FC = () => {
                         <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                           <span className="text-xs font-semibold mr-2 text-slate-500">University:</span>
-                          <span className="text-sm font-medium text-slate-700">
-                            {featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University'}
+                          <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                            {isAuthenticated && userProfile?.has_paid_selection_process_fee
+                              ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
+                              : '********'}
                           </span>
                         </div>
                         
@@ -597,37 +615,37 @@ const Scholarships: React.FC = () => {
                       </div>
                     </div>
 
-                                         {/* Action Button */}
-                     <div className="px-6 pb-6">
-                       {(!isAuthenticated) ? (
-                         <button
-                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                           onClick={() => navigate('/login')}
-                           aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
-                         >
-                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                           <span className="relative z-10">Apply Now</span>
-                         </button>
-                       ) : (
-                         <button
-                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                           onClick={async () => {
-                             if (!userProfile?.has_paid_selection_process_fee) {
-                               navigate('/student/dashboard');
-                               return;
-                             }
-                             navigate('/student/dashboard/scholarships');
-                           }}
-                           aria-label={`Apply for ${scholarship.title} scholarship`}
-                         >
-                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                           <span className="relative z-10">Apply Now</span>
-                           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                         </button>
-                       )}
-                     </div>
+                    {/* Action Button - Agora sempre na parte inferior */}
+                    <div className="px-6 pb-6 mt-auto">
+                      {(!isAuthenticated) ? (
+                        <button
+                          className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                          onClick={() => navigate('/login')}
+                          aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                          <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                          <span className="relative z-10">Apply Now</span>
+                        </button>
+                      ) : (
+                        <button
+                          className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                          onClick={async () => {
+                            if (!userProfile?.has_paid_selection_process_fee) {
+                              navigate('/student/dashboard');
+                              return;
+                            }
+                            navigate('/student/dashboard/scholarships');
+                          }}
+                          aria-label={`Apply for ${scholarship.title} scholarship`}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                          <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                          <span className="relative z-10">Apply Now</span>
+                          <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
                   </article>
                 );
               })}
@@ -643,23 +661,7 @@ const Scholarships: React.FC = () => {
              </h2>
              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
                Explore all available scholarship opportunities for international students
-               <br />
-               <span className="text-sm text-slate-500">(Featured scholarships appear only in the top section)</span>
              </p>
-             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-               <p className="text-blue-800 font-medium">
-                 Recommending {filteredScholarships.length} scholarships for you
-               </p>
-             </div>
-             {/* Debug info - only in development */}
-             {process.env.NODE_ENV === 'development' && (
-               <div className="mt-4 p-3 bg-slate-100 rounded-lg text-sm text-slate-600">
-                 <p>Total: {scholarships.length} | Filtered: {filteredScholarships.length} | Featured: {featuredScholarships.length} | Visible: {visibleScholarships.length}</p>
-                 <p>Paginated: {paginatedScholarships.length} | Page: {page + 1}</p>
-                 <p className="text-green-600 font-medium">✓ Featured scholarships don't appear duplicated in the general list</p>
-                 <p className="text-blue-600 font-medium">ℹ Real total: {scholarships.length - featuredScholarships.length} scholarships + {featuredScholarships.length} featured</p>
-               </div>
-             )}
            </div>
            
            {/* Scholarships Grid */}
@@ -716,7 +718,7 @@ const Scholarships: React.FC = () => {
                  const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
                  
                  return (
-                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
+                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
                      {/* Deadline Urgency Indicator */}
                      {daysLeft <= 7 && daysLeft > 0 && (
                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>
@@ -771,9 +773,9 @@ const Scholarships: React.FC = () => {
                      </div>
                      
                      {/* Card Content */}
-                     <div className="p-6">
+                     <div className="p-6 flex-1 flex flex-col">
                        {/* Header Section */}
-                       <div className="mb-4">
+                       <div className="mb-4 flex-1">
                          <h3 id={`scholarship-title-${scholarship.id}`} className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300">
                            {scholarship.title}
                          </h3>
@@ -796,8 +798,8 @@ const Scholarships: React.FC = () => {
                          <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                            <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                            <span className="text-xs font-semibold mr-2 text-slate-500">University:</span>
-                           <span className={`text-sm font-medium ${!userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                             {userProfile?.has_paid_selection_process_fee
+                           <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                             {isAuthenticated && userProfile?.has_paid_selection_process_fee
                                ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
                                : '********'}
                            </span>
@@ -880,19 +882,11 @@ const Scholarships: React.FC = () => {
                          </div>
                        </div>
 
-                       {/* Application Status Indicator */}
-                       {userProfile?.has_paid_selection_process_fee && (
-                         <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
-                           <div className="flex items-center gap-2">
-                             <CheckCircle className="h-4 w-4 text-blue-600" />
-                             <span className="text-sm font-semibold text-blue-800">Eligible to Apply</span>
-                           </div>
-                         </div>
-                       )}
+
                      </div>
 
-                     {/* Action Button */}
-                     <div className="px-6 pb-6">
+                     {/* Action Button - Agora sempre na parte inferior */}
+                     <div className="px-6 pb-6 mt-auto">
                        {(!isAuthenticated) ? (
                          <button
                            className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"

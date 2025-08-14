@@ -224,10 +224,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
               .delete()
               .eq('user_id', user.id);
 
-            // Notificar universidade
+            // Notificar universidade (incluindo TODAS as bolsas selecionadas)
             const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
             const { data: { session } } = await supabase.auth.getSession();
-            const notifyPayload = { user_id: user.id, tipos_documentos: ['manual_review'], selected_scholarship_id: placeholderScholarship };
+            const notifyPayload = { user_id: user.id, tipos_documentos: ['manual_review'], scholarship_ids: scholarshipIds };
             await fetch(`${SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
@@ -358,10 +358,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
               .delete()
               .eq('user_id', user.id);
 
-            // Notificar universidade
+            // Notificar universidade (incluindo TODAS as bolsas selecionadas)
             const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
             const { data: { session } } = await supabase.auth.getSession();
-            const notifyPayload = { user_id: user.id, tipos_documentos: ['manual_review'], selected_scholarship_id: placeholderScholarship };
+            const notifyPayload = { user_id: user.id, tipos_documentos: ['manual_review'], scholarship_ids: scholarshipIds };
             await fetch(`${SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
