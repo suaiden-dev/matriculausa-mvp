@@ -177,11 +177,14 @@ const SmartChat: React.FC = () => {
           ></div>
           
           <div 
-            className={`fixed inset-0 md:bottom-2.5 md:right-5 md:w-[400px] md:max-w-[90vw] md:inset-auto w-full h-full md:h-auto bg-[#161d29] border-[1.5px] border-[#2e3f60] md:rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.4)] z-[10000] font-['Montserrat',Arial,sans-serif] text-[13px] overflow-hidden transition-all duration-300 ease-out transform-gpu ${
+            className={`fixed inset-0 md:bottom-[20px] md:right-[100px] md:w-[400px] md:max-w-[90vw] md:inset-auto w-full h-full md:h-auto bg-[#161d29] border-[1.5px] border-[#2e3f60] md:rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.4)] z-[10000] font-['Montserrat',Arial,sans-serif] text-[13px] overflow-hidden transition-all duration-300 ease-out transform-gpu ${
               isAnimating 
-                ? 'opacity-0 scale-75 md:scale-90 translate-y-4 md:translate-y-2' 
-                : 'opacity-100 scale-100 translate-y-0'
+                ? 'opacity-0 scale-75 md:scale-90 translate-y-4 md:translate-y-2 md:translate-x-4' 
+                : 'opacity-100 scale-100 translate-y-0 md:translate-x-0'
             }`}
+            style={{
+              transformOrigin: 'bottom'
+            }}
           >
             {/* Header */}
             <div 
