@@ -21,8 +21,6 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { StripeCheckout } from '../../components/StripeCheckout';
 import { useCartStore } from '../../stores/applicationStore';
 import { supabase } from '../../lib/supabase';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
@@ -160,22 +158,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     } finally {
       setFeaturedLoading(false);
     }
-  };
-
-  // Função para preservar os valores dos filtros
-  const preserveFilterValues = () => {
-    // Esta função garante que os valores sejam mantidos
-    // Pode ser chamada quando necessário para preservar estado
-    return {
-      searchTerm,
-      selectedLevel,
-      selectedField,
-      selectedDeliveryMode,
-      selectedWorkPermission,
-      minValue,
-      maxValue,
-      deadlineDays
-    };
   };
 
   // Salvar filtros no localStorage quando mudarem
@@ -836,7 +818,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {featuredScholarships.map((scholarship) => {
-              const deadlineStatus = getDeadlineStatus(scholarship.deadline);
               const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
               const inCart = cartScholarshipIds.has(scholarship.id);
               const layoutId = `featured-scholarship-${scholarship.id}`;
@@ -901,8 +882,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="flex items-center text-slate-600 mb-3">
                         <Building className="h-4 w-4 mr-2 text-[#05294E]" />
                         <span className="text-xs font-semibold mr-1">University:</span>
-                        <span className={`text-sm select-none ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
-                          {isAuthenticated && userProfile?.has_paid_selection_process_fee
+                        <span className={`text-sm select-none ${!user || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
+                          {user && userProfile?.has_paid_selection_process_fee
                             ? (scholarship.universities?.name || 'Unknown University')
                             : '********'}
                         </span>
@@ -1022,54 +1003,56 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            </button>
                          ) : (
                            <button
-                             onClick={async () => {
-                               if (!userProfile?.has_paid_selection_process_fee) {
-                                 // Acionar StripeCheckout para selection_process com o price_id correto
-                                 const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-                                 const { data: sessionData } = await supabase.auth.getSession();
-                                 const token = sessionData.session?.access_token;
-                                 const response = await fetch(apiUrl, {
-                                   method: 'POST',
-                                   headers: {
-                                     'Content-Type': 'application/json',
-                                     'Authorization': `Bearer ${token}`
-                                   },
-                                   body: JSON.stringify({
-                                     price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
-                                     success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-                                     cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
-                                     mode: 'payment',
-                                     payment_type: 'selection_process',
-                                     fee_type: 'selection_process',
-                                   })
-                                 });
-                                 const data = await response.json();
-                                 if (data.session_url) {
-                                   window.location.href = data.session_url;
-                                   return;
-                                 }
-                                 return;
-                               } else {
-                                 if (inCart) {
-                                   if (user) removeFromCart(scholarship.id, user.id);
-                                 } else {
-                                   // ANIMAÇÃO: voar para o chapéu (mesma lógica das bolsas regulares)
-                                   const hat = document.getElementById('floating-cart-hat');
-                                   const cardElement = scholarshipRefs.current.get(scholarship.id);
-                                   if (cardElement && hat) {
-                                     const from = cardElement.getBoundingClientRect();
-                                     const to = hat.getBoundingClientRect();
-                                     setFlyingCard({ card: scholarship, from, to });
-                                     setAnimating(true);
-                                     setTimeout(() => {
-                                       setAnimating(false);
-                                       setFlyingCard(null);
-                                     }, 1100);
-                                   }
-                                   handleAddToCart(scholarship);
-                                 }
-                               }
-                             }}
+                    onClick={async () => {
+                      if (alreadyApplied) return;
+                      
+                      if (!userProfile?.has_paid_selection_process_fee) {
+                        // Acionar StripeCheckout para selection_process com o price_id correto
+                        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+                        const { data: sessionData } = await supabase.auth.getSession();
+                        const token = sessionData.session?.access_token;
+                        const response = await fetch(apiUrl, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+                            success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+                            cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
+                            mode: 'payment',
+                            payment_type: 'selection_process',
+                            fee_type: 'selection_process',
+                          })
+                        });
+                        const data = await response.json();
+                        if (data.session_url) {
+                          window.location.href = data.session_url;
+                          return;
+                        }
+                        return;
+                      } else {
+                        if (inCart) {
+                          if (user) removeFromCart(scholarship.id, user.id);
+                        } else {
+                          // ANIMAÇÃO: voar para o chapéu (mesma lógica das bolsas regulares)
+                          const hat = document.getElementById('floating-cart-hat');
+                          const cardElement = scholarshipRefs.current.get(scholarship.id);
+                          if (cardElement && hat) {
+                            const from = cardElement.getBoundingClientRect();
+                            const to = hat.getBoundingClientRect();
+                            setFlyingCard({ card: scholarship, from, to });
+                            setAnimating(true);
+                            setTimeout(() => {
+                              setAnimating(false);
+                              setFlyingCard(null);
+                            }, 1100);
+                          }
+                          handleAddToCart(scholarship);
+                        }
+                      }
+                    }}
                              ref={(el) => {
                                if (el) buttonRefs.current.set(scholarship.id, el);
                              }}
@@ -1158,8 +1141,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <div className="flex items-center text-slate-600 mb-2 sm:mb-3">
                     <Building className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-[#05294E]" />
                     <span className="text-xs font-semibold mr-1">University:</span>
-                    <span className={`text-xs sm:text-sm select-none ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
-                      {isAuthenticated && userProfile?.has_paid_selection_process_fee
+                    <span className={`text-xs sm:text-sm select-none ${!user || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
+                      {user && userProfile?.has_paid_selection_process_fee
                         ? (scholarship.universities?.name || 'Unknown University')
                         : '********'}
                     </span>
@@ -1289,6 +1272,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
                        } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
                     onClick={async () => {
+                      if (alreadyApplied) return;
+                      
                       if (inCart) {
                         if (user) removeFromCart(scholarship.id, user.id);
                       } else {
