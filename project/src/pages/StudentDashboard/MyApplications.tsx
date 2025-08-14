@@ -53,6 +53,10 @@ const MyApplications: React.FC = () => {
   // const navigate = useNavigate();
   const location = useLocation();
 
+  // Modal confirmation states
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
+
 
   useEffect(() => {
     setUserProfileId(userProfile?.id || null);
@@ -407,7 +411,103 @@ const getLevelColor = (level: any) => {
     return <div className="text-red-500">Error: {error}</div>;
   }
 
+  // Function to handle application fee payment confirmation
+  const handleApplicationFeeClick = (application: ApplicationWithScholarship) => {
+    setPendingApplication(application);
+    setShowConfirmationModal(true);
+  };
+
+  const handleCancelPayment = () => {
+    setShowConfirmationModal(false);
+    setPendingApplication(null);
+  };
+
+  // Count other approved applications
+  const otherApprovedApps = applications.filter(app => 
+    app.status === 'approved' && 
+    app.id !== pendingApplication?.id &&
+    !app.is_application_fee_paid
+  );
+
   return (
+    <>
+      {/* Confirmation Modal */}
+      {showConfirmationModal && pendingApplication && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={handleCancelPayment}
+            ></div>
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-3xl px-6 pt-6 pb-8 text-left overflow-hidden shadow-xl transform transition-all sm:mt-60 sm:align-middle sm:max-w-lg sm:w-full sm:p-8">
+              <div className="sm:flex sm:items-start">
+                
+                <div className="mt-3 text-center sm:mt-0 sm:text-left flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">
+                    Confirm Your Scholarship Selection
+                  </h3>
+                  <div className="space-y-4">
+                    
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-4 border border-amber-200">
+                      <div className="flex items-start relative">
+                        <AlertCircle className="h-5 w-5 absolute text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-center font-bold text-amber-900 mb-2">Important Decision</h4>
+                          <p className="text-amber-800 text-sm leading-relaxed mb-3">
+                            By proceeding with this payment, you're making this your <strong>final scholarship choice</strong>. 
+                            This action cannot be undone.
+                          </p>
+                          {otherApprovedApps.length > 0 && (
+                            <div className="bg-white rounded-xl p-3 border border-amber-200">
+                              <p className="text-amber-800 text-sm font-semibold mb-2">
+                                This will remove {otherApprovedApps.length} other approved application{otherApprovedApps.length > 1 ? 's' : ''}:
+                              </p>
+                              <ul className="text-amber-700 text-xs space-y-1">
+                                {otherApprovedApps.map(app => (
+                                  <li key={app.id} className="flex items-center">
+                                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
+                                    {app.scholarships?.title} - {app.scholarships?.universities?.name}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 sm:mt-8 sm:flex sm:flex-row-reverse gap-3">
+                <StripeCheckout
+                  productId="applicationFee"
+                  feeType="application_fee"
+                  paymentType="application_fee"
+                  buttonText="Yes, Secure My Scholarship ($350)"
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-bold hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm text-center mb-3 sm:mb-0"
+                  successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                  cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
+                  disabled={false}
+                  scholarshipsIds={[pendingApplication.scholarship_id]}
+                  metadata={{ application_id: pendingApplication.id, selected_scholarship_id: pendingApplication.scholarship_id }}
+                />
+                <button
+                  type="button"
+                  className="w-full sm:w-auto bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
+                  onClick={handleCancelPayment}
+                >
+                  Let me think about it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     <div className="pt-6 sm:pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         {/* Header */}
@@ -668,18 +768,13 @@ const getLevelColor = (level: any) => {
                             Paid
                           </div>
                         ) : (
-                          <StripeCheckout
-                            productId="applicationFee"
-                            feeType="application_fee"
-                            paymentType="application_fee"
-                            buttonText="Pay Application Fee"
+                          <button
+                            onClick={() => handleApplicationFeeClick(application)}
                             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
-                            successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                            cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
                             disabled={hasSelectedScholarship && !scholarshipFeePaid}
-                            scholarshipsIds={[application.scholarship_id]}
-                            metadata={{ application_id: application.id, selected_scholarship_id: application.scholarship_id }}
-                          />
+                          >
+                            Pay Application Fee
+                          </button>
                         )}
                       </div>
   
@@ -1006,6 +1101,7 @@ const getLevelColor = (level: any) => {
       )}
       </div>
     </div>
+    </>
   );
 };
 
