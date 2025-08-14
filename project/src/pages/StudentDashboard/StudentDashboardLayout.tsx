@@ -76,7 +76,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   ];
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row w-full overflow-x-hidden">
+    <div className="h-screen flex flex-col lg:flex-row w-full overflow-hidden">
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:left-0
@@ -192,7 +192,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       {/* Main Content */}
       <div className="flex-1 ml-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 py-1 sm:py-4 sticky top-0 z-50 pt-3 pl-3 pr-3 sm:px-6 lg:px-10">
+        <header className="bg-white border-b border-slate-200 py-1 sticky top-0 z-50 pt-3 pl-3 pr-3 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 sm:space-x-4">
               <button
@@ -271,7 +271,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="bg-slate-50 px-3 sm:px-6 lg:px-10 pb-6 max-w-full">
+        <main className="flex-1 bg-slate-50 px-3 sm:px-6 lg:px-10 pb-6 max-w-full overflow-y-auto overflow-x-hidden min-h-0">
           {children}
         </main>
       </div>
