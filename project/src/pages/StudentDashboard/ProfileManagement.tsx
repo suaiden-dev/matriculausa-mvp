@@ -205,12 +205,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
   const completeness = getProfileCompleteness();
 
   return (
-    <div className="space-y-8 p-4">
+    <div className="space-y-6 sm:space-y-8 p-3 sm:p-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Student Profile</h2>
-          <p className="text-slate-600">Manage your academic profile and preferences</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Student Profile</h2>
+          <p className="text-sm sm:text-base text-slate-600">Manage your academic profile and preferences</p>
         </div>
         
         {!isEditing && (
@@ -220,7 +220,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               setSaveError(null);
               setSuccessMessage(null);
             }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center sm:justify-start shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Profile
@@ -260,16 +260,16 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       </div>
 
       {/* Profile Form */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {isEditing ? (
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-bold text-slate-900">Edit Profile</h3>
-              <div className="flex space-x-3">
+          <div className="p-4 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0 mb-6 sm:mb-8">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900">Edit Profile</h3>
+              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
@@ -286,7 +286,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                 <button
                   onClick={handleCancel}
                   disabled={saving}
-                  className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-slate-100 text-slate-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -294,7 +294,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Full Name *</label>
                 <input
@@ -399,9 +399,9 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         ) : (
           <div className="p-8">
             {/* Profile Header */}
-            <div className="flex items-center space-x-6 mb-8">
+            <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0 mb-6 sm:mb-8">
               <div className="relative">
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
                   {avatarUrl ? (
                     <img 
                       src={avatarUrl} 
@@ -409,7 +409,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <User className="h-12 w-12 text-white" />
+                    <User className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
                   )}
                 </div>
                 <button 
@@ -585,23 +585,23 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
 
       {/* Profile Tips */}
       {completeness < 100 && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6">
-          <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-yellow-600 mr-3 mt-0.5" />
-            <div>
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0">
+            <AlertCircle className="h-5 w-5 text-yellow-600 mx-auto sm:mx-0 sm:mr-3 sm:mt-0.5" />
+            <div className="text-center sm:text-left">
               <h4 className="font-medium text-yellow-800 mb-2">Complete Your Profile</h4>
               <p className="text-sm text-yellow-700 mb-4">
                 A complete profile helps us match you with the most relevant scholarship opportunities. 
                 Consider adding the missing information to improve your chances of finding the perfect scholarships.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                 {!profile?.phone && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
+                  <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
                     Add phone number
                   </span>
                 )}
                 {!profile?.country && (
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
+                  <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
                     Add country
                   </span>
                 )}
