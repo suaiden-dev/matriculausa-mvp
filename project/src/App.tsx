@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
@@ -40,6 +40,31 @@ import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 const AppContent = () => {
   // Hook global para capturar códigos de referência em qualquer página
   useReferralCodeCapture();
+
+  // Garantir que a página role para o topo em toda mudança de rota
+  const location = useLocation();
+  React.useEffect(() => {
+    // scroll imediato para o topo após navegação
+    try {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      // garantir também nos elementos document e body
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    } catch (e) {
+      // ignore
+    }
+
+    // fallback: executar novamente após um curto delay para sobrepor efeitos filhos
+    const id = window.setTimeout(() => {
+      try {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      } catch (e) {}
+    }, 80);
+
+    return () => window.clearTimeout(id);
+  }, [location.pathname, location.hash]);
 
   return (
     <AuthProvider>
