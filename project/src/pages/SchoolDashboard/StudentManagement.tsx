@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Users, GraduationCap, Clock, CheckCircle, FileText, Globe, Phone } from 'lucide-react';
+import { Search, Users, Clock, CheckCircle, FileText, Globe, Phone } from 'lucide-react';
 import type { Scholarship } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -71,13 +71,11 @@ const StudentManagement: React.FC = () => {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(app => {
         const student = (app as any).user_profiles;
-        const scholarship = app.scholarships;
         return (
           student?.full_name?.toLowerCase().includes(term) ||
           student?.name?.toLowerCase().includes(term) ||
           student?.phone?.includes(term) ||
-          student?.country?.toLowerCase().includes(term) ||
-          scholarship?.title?.toLowerCase().includes(term)
+          student?.country?.toLowerCase().includes(term)
         );
       });
     }
@@ -240,7 +238,6 @@ const StudentManagement: React.FC = () => {
             ) : (
               filteredApplications.map((app) => {
                 const student = (app as any).user_profiles;
-                const scholarship = app.scholarships;
                 const status = getStudentStatus(app);
                 const StatusIcon = status.icon;
 
@@ -251,58 +248,48 @@ const StudentManagement: React.FC = () => {
                       className="block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200"
                     >
                       <div className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-3">
-                              {student?.avatar_url ? (
-                                <img
-                                  src={student.avatar_url}
-                                  alt={student?.full_name || student?.name || 'Student Avatar'}
-                                  className="w-12 h-12 rounded-full object-cover border border-slate-200 bg-slate-100"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center">
-                                  <span className="text-white font-semibold text-lg">
-                                    {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                              <div>
-                                <h3 className="text-lg font-semibold text-slate-900">
-                                  {student?.full_name || student?.name || 'Unknown Student'}
-                                </h3>
-                                <div className="flex items-center space-x-4 text-sm text-slate-600">
-                                  {student?.country && (
-                                    <div className="flex items-center">
-                                      <Globe className="w-4 h-4 mr-1" />
-                                      {student.country}
-                                    </div>
-                                  )}
-                                  {student?.phone && (
-                                    <div className="flex items-center">
-                                      <Phone className="w-4 h-4 mr-1" />
-                                      {student.phone}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          
-                            {scholarship && (
-                              <div className="flex items-center space-x-2 mb-2">
-                                <GraduationCap className="w-4 h-4 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-700">{scholarship.title}</span>
+                        <div className="flex sm:flex-row items-start sm:items-center justify-between">
+                          <div className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-0">
+                            {student?.avatar_url ? (
+                              <img
+                                src={student.avatar_url}
+                                alt={student?.full_name || student?.name || 'Student Avatar'}
+                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 bg-slate-100"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center">
+                                <span className="text-white font-semibold text-sm sm:text-lg">
+                                  {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
+                                </span>
                               </div>
                             )}
+                            <div>
+                              <h3 className="text-sm text-wrap sm:text-lg font-semibold text-slate-900">
+                                {student?.full_name || student?.name || 'Unknown Student'}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
+                                {student?.country && (
+                                  <div className="flex items-center">
+                                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                    {student.country}
+                                  </div>
+                                )}
+                                {student?.phone && (
+                                  <div className="flex items-center">
+                                    <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                    {student.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-
-                          <div className="flex flex-col items-end space-y-3">
-                            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${status.class}`}>
-                              <StatusIcon className="w-3 h-3 mr-1.5" />
+                        
+                          <div className="flex flex-col items-end space-y-2 sm:space-y-3">
+                            <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${status.class}`}>
+                              <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
                               {status.text}
                             </span>
-                          
-                            <div className="text-xs text-slate-500 text-right">
+                            <div className="text-xs sm:text-sm text-slate-500 text-right">
                               Applied: {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
                             </div>
                           </div>
@@ -319,4 +306,4 @@ const StudentManagement: React.FC = () => {
   );
 };
 
-export default StudentManagement; 
+export default StudentManagement;
