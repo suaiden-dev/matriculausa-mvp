@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Zap, Shield, Award } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Zap } from 'lucide-react';
 
 const Footer: React.FC = () => {
+  // Footer links rely on global scroll-to-top in App
+
   return (
     <footer className="bg-[#05294E] text-white relative overflow-hidden">
       <div className="absolute inset-0">
