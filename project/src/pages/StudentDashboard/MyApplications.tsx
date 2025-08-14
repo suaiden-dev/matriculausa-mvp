@@ -17,6 +17,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { StripeCheckout } from '../../components/StripeCheckout';
+import { useCartStore } from '../../stores/applicationStore';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -52,6 +53,7 @@ const MyApplications: React.FC = () => {
   // const [uploadingAppId, setUploadingAppId] = useState<string | null>(null);
   // const navigate = useNavigate();
   const location = useLocation();
+  const syncCartWithDatabase = useCartStore(state => state.syncCartWithDatabase);
 
   // Modal confirmation states
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -198,6 +200,13 @@ const MyApplications: React.FC = () => {
       window.history.replaceState({}, '', `${location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
     }
   }, [location.search, userProfile]);
+
+  // Sincronizar cart com banco de dados quando a página carrega
+  useEffect(() => {
+    if (user?.id) {
+      syncCartWithDatabase(user.id);
+    }
+  }, [user?.id, syncCartWithDatabase]);
 
   // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
   const chosenPaidApp = applications.find(

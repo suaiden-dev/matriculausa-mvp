@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   GraduationCap, 
@@ -12,9 +12,11 @@ import {
   ChevronDown,
   Shield,
   Star,
-  Gift
+  Gift,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 // import { StripeCheckout } from '../../components/StripeCheckout';
 // import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 
@@ -36,7 +38,120 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotif, setShowNotif] = useState(false);
   
+  // Realtime notifications
+  useEffect(() => {
+    let channel: any;
+    const fetchInitial = async () => {
+      if (!user?.id) return;
+      
+      // Primeiro busca o perfil do usuário para obter o student_id
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (profileData) {
+        const { data } = await supabase
+          .from('student_notifications')
+          .select('*')
+          .eq('student_id', profileData.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        setNotifications(data || []);
+        
+        channel = supabase
+          .channel('student-notifs')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'student_notifications', filter: `student_id=eq.${profileData.id}` }, (payload: any) => {
+            setNotifications(prev => [payload.new, ...prev].slice(0, 10));
+          })
+          .subscribe();
+      }
+    };
+    fetchInitial();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  const openNotification = async (n: any) => {
+    try {
+      if (n && !n.read_at) {
+        await supabase
+          .from('student_notifications')
+          .update({ read_at: new Date().toISOString() })
+          .eq('id', n.id);
+      }
+    } catch {}
+    setShowNotif(false);
+    const target = n?.link || '/student/dashboard';
+    navigate(target);
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      if (!user?.id) return;
+      
+      // Busca o perfil do usuário para obter o student_id
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (profileData) {
+        await supabase
+          .from('student_notifications')
+          .update({ read_at: new Date().toISOString() })
+          .eq('student_id', profileData.id)
+          .is('read_at', null as any);
+        setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
+      }
+    } catch {}
+  };
+
+  const clearAll = async () => {
+    try {
+      if (!user?.id) return;
+      
+      // Busca o perfil do usuário para obter o student_id
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (profileData) {
+        await supabase
+          .from('student_notifications')
+          .delete()
+          .eq('student_id', profileData.id);
+        setNotifications([]);
+      }
+    } catch {}
+  };
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.notifications-container')) {
+        setShowNotif(false);
+      }
+    };
+
+    if (showNotif) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotif]);
+
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/scholarships')) return 'scholarships';
@@ -215,6 +330,50 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </div>
 
             <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Notifications Bell */}
+              <div className="relative notifications-container">
+                <button
+                  onClick={() => setShowNotif(!showNotif)}
+                  className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Notifications"
+                >
+                  <Bell className="h-5 w-5 text-slate-600" />
+                  {notifications.some(n => !n.read_at) && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full"></span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {showNotif && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                    <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
+                      <span>Notifications</span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
+                        <span className="text-slate-300">|</span>
+                        <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-sm text-slate-500">No notifications</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${!n.read_at ? 'bg-slate-50' : ''}`} onClick={() => openNotification(n)}>
+                            <div className="text-sm font-medium text-slate-900 flex items-center justify-between">
+                              <span>{n.title}</span>
+                              {!n.read_at && <span className="ml-2 h-2 w-2 rounded-full bg-blue-500 inline-block"></span>}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-0.5">{n.message}</div>
+                            <div className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* User Menu */}
               <div className="relative flex items-center gap-1 sm:gap-2">
                 <button

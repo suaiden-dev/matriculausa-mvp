@@ -26,6 +26,7 @@ interface CartState {
   addToCart: (scholarship: Scholarship, userId: string) => Promise<void>;
   removeFromCart: (scholarshipId: string, userId: string) => Promise<void>;
   clearCart: (userId: string) => Promise<void>;
+  syncCartWithDatabase: (userId: string) => Promise<void>;
 }
 
 const getCartItemsFromDB = async (userId: string): Promise<CartItem[]> => {
@@ -53,6 +54,32 @@ const getCartItemsFromDB = async (userId: string): Promise<CartItem[]> => {
   } catch (error) {
     console.error('Error in getCartItemsFromDB:', error);
     return [];
+  }
+};
+
+// Função para verificar se uma bolsa ainda está disponível no cart
+const validateCartItemAvailability = async (userId: string, scholarshipId: string): Promise<boolean> => {
+  try {
+    console.log('validateCartItemAvailability: Checking availability for user:', userId, 'scholarship:', scholarshipId);
+    
+    const { data, error } = await supabase
+      .from('user_cart')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('scholarship_id', scholarshipId)
+      .single();
+
+    if (error) {
+      console.log('validateCartItemAvailability: Error checking availability:', error.message);
+      return false;
+    }
+    
+    const isAvailable = !!data;
+    console.log('validateCartItemAvailability: Result for scholarship', scholarshipId, ':', isAvailable);
+    return isAvailable;
+  } catch (error) {
+    console.log('validateCartItemAvailability: Exception checking availability:', error);
+    return false;
   }
 };
 
@@ -189,6 +216,40 @@ export const useCartStore = create<CartState>((set, get) => ({
       set({ cart: [], lastFetchUserId: null });
     } catch (error) {
       console.error('Error in clearCart:', error);
+    }
+  },
+
+  syncCartWithDatabase: async (userId: string) => {
+    const { cart, isLoading } = get();
+    
+    if (isLoading || cart.length === 0) {
+      console.log('syncCartWithDatabase: Skipping sync - isLoading:', isLoading, 'cart.length:', cart.length);
+      return;
+    }
+
+    console.log('syncCartWithDatabase: Starting sync for user:', userId, 'cart items:', cart.length);
+    
+    try {
+      // Verifica cada item do cart para garantir que ainda existe no banco
+      const validatedCart = [];
+      
+      for (const item of cart) {
+        const isAvailable = await validateCartItemAvailability(userId, item.scholarships.id);
+        console.log('syncCartWithDatabase: Item validation:', item.scholarships.id, 'isAvailable:', isAvailable);
+        if (isAvailable) {
+          validatedCart.push(item);
+        }
+      }
+
+      // Atualiza o cart apenas se houver diferenças
+      if (validatedCart.length !== cart.length) {
+        console.log('syncCartWithDatabase: Updating cart from', cart.length, 'to', validatedCart.length, 'items');
+        set({ cart: validatedCart });
+      } else {
+        console.log('syncCartWithDatabase: No changes needed, cart is already in sync');
+      }
+    } catch (error) {
+      console.error('Error syncing cart with database:', error);
     }
   },
 }));
