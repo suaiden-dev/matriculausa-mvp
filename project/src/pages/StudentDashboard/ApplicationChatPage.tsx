@@ -7,7 +7,7 @@ import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import ImagePreviewModal from '../../components/ImagePreviewModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { MessageCircle, FileText, UserCircle, GraduationCap, School, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
+import { MessageCircle, FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 // Remover os imports das imagens
 // import WelcomeImg from '../../assets/page 7.png';
 // import SupportImg from '../../assets/page 8.png';
@@ -18,12 +18,11 @@ interface DocumentInfo {
   key: string;
   label: string;
   description: string;
-  emoji: string;
 }
 const DOCUMENTS_INFO: DocumentInfo[] = [
-  { key: 'passport', label: 'Passport', description: "A valid copy of the student's passport. Used for identification and visa purposes.", emoji: '🛂' },
-  { key: 'diploma', label: 'High School Diploma', description: 'Proof of high school graduation. Required for university admission.', emoji: '🎓' },
-  { key: 'funds_proof', label: 'Proof of Funds', description: 'A bank statement or financial document showing sufficient funds for study.', emoji: '💵' },
+  { key: 'passport', label: 'Passport', description: "A valid copy of the student's passport. Used for identification and visa purposes." },
+  { key: 'diploma', label: 'High School Diploma', description: 'Proof of high school graduation. Required for university admission.' },
+  { key: 'funds_proof', label: 'Proof of Funds', description: 'A bank statement or financial document showing sufficient funds for study.' },
 ];
 
 // Componente de card padrão para dashboard
@@ -60,7 +59,6 @@ const ApplicationChatPage: React.FC = () => {
   const [i20Error, setI20Error] = useState<string | null>(null);
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [scholarshipFeePaidAt, setScholarshipFeePaidAt] = useState<Date | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   // Ajustar tipo de activeTab para incluir 'welcome'
@@ -95,7 +93,7 @@ const ApplicationChatPage: React.FC = () => {
   useEffect(() => {
     async function fetchScholarshipFeeDeadline() {
       if (!userProfile?.id) return;
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('scholarship_applications')
         .select('id, updated_at, is_scholarship_fee_paid')
         .eq('student_id', userProfile.id)
@@ -140,7 +138,6 @@ const ApplicationChatPage: React.FC = () => {
   const hasPaid = !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
   const dueDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
   const paymentDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
-  const isExpired = !hasPaid && dueDate ? new Date(dueDate) < new Date() : false;
 
   // Função para iniciar o pagamento do I-20 Control Fee
   const handlePayI20 = async () => {
@@ -193,7 +190,7 @@ const ApplicationChatPage: React.FC = () => {
 
   return (
     <div className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
-      <div className="w-full max-w-3xl mx-auto space-y-8 flex-1 flex flex-col h-full">
+      <div className="w-full max-w-7xl mx-auto space-y-8 flex-1 flex flex-col h-full">
         <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
           Student Application Details
         </h2>
@@ -290,113 +287,399 @@ const ApplicationChatPage: React.FC = () => {
           </div>
         )}
         {activeTab === 'details' && applicationDetails && (
-          <>
-            {/* Student Info */}
-            <DashboardCard>
-              {/* --- Student Information --- */}
-              <h3 className="text-xl font-bold text-[#05294E] mb-4">Student Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>Name:</strong> {applicationDetails.user_profiles?.full_name}</div>
-                <div><strong>Email:</strong> {applicationDetails.user_profiles?.email}</div>
-                <div><strong>Phone:</strong> {applicationDetails.user_profiles?.phone || 'N/A'}</div>
-                <div><strong>Country:</strong> {applicationDetails.user_profiles?.country || 'N/A'}</div>
-                <div><strong>Student Type:</strong> {
-                  applicationDetails.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                  applicationDetails.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                  applicationDetails.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
-                  applicationDetails.student_process_type || 'N/A'
-                }</div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <strong>Status: </strong>
-                {applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved' ? (
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">Enrolled</span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">Waiting for acceptance letter</span>
-                )}
-            </div>
-            </DashboardCard>
-            {/* University Info */}
-            <DashboardCard>
-              {/* --- University Information --- */}
-            {applicationDetails.scholarships?.universities && (
-                <h3 className="text-xl font-bold text-[#05294E] mb-4">University Information</h3>
-              )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><strong>Name:</strong> {applicationDetails.scholarships.universities.name || 'N/A'}</div>
-                  <div><strong>Country:</strong> {applicationDetails.scholarships.universities.address?.country || 'N/A'}</div>
-                  <div><strong>City:</strong> {applicationDetails.scholarships.universities.address?.city || 'N/A'}</div>
-                  <div><strong>Website:</strong> {applicationDetails.scholarships.universities.website ? (
-                    <a href={applicationDetails.scholarships.universities.website || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">{applicationDetails.scholarships.universities.website}</a>
-                  ) : 'N/A'}</div>
-                  <div><strong>Email:</strong> {applicationDetails.scholarships.universities.contact?.email || applicationDetails.scholarships.universities.contact?.admissionsEmail || 'N/A'}</div>
-                  <div><strong>Phone:</strong> {applicationDetails.scholarships.universities.contact?.phone || 'N/A'}</div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="xl:col-span-2 space-y-8">
+              {/* Student Information Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <UserCircle className="w-6 h-6 mr-3" />
+                    Student Information
+                  </h2>
                 </div>
-            </DashboardCard>
-            {/* Scholarship Details */}
-            <DashboardCard>
-              {/* --- Scholarship Details --- */}
-              <h3 className="text-xl font-bold text-[#05294E] mb-4">Scholarship Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>Scholarship:</strong> {applicationDetails.scholarships?.title || applicationDetails.scholarships?.name}</div>
-                {applicationDetails.scholarships?.course && <div><strong>Course:</strong> {applicationDetails.scholarships.course}</div>}
-                {applicationDetails.scholarships?.country && <div><strong>Country:</strong> {applicationDetails.scholarships.country}</div>}
-                <div className="md:col-span-2"><strong>Description:</strong> {applicationDetails.scholarships?.description}</div>
-              </div>
-            </DashboardCard>
-            {/* Student Documents */}
-            <DashboardCard>
-              {/* --- Student Documents --- */}
-              <h3 className="text-xl font-bold text-[#05294E] mb-4">Student Documents</h3>
-              <ul className="space-y-6">
-                {DOCUMENTS_INFO.map((doc) => {
-                  let docData = Array.isArray(applicationDetails.documents)
-                    ? applicationDetails.documents.find((d: any) => d.type === doc.key)
-                    : null;
-                  if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
-                    docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
-                  }
-                  return (
-                    <li key={doc.key} className="border-b last:border-0 pb-4">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <div>
-                          <div className="font-semibold text-slate-800 text-base">{doc.label}</div>
-                          <div className="text-xs text-slate-500 mb-1">{doc.description}</div>
-                          {docData && (
-                            <div className="text-xs text-slate-600 mb-1">Uploaded: {new Date(docData.uploaded_at).toLocaleDateString()}</div>
-                          )}
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Personal Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Personal Details</h3>
+                      <div className="space-y-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Full Name</span>
+                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.full_name || 'N/A'}</span>
                         </div>
-                        <div className="flex gap-2 mt-2 md:mt-0">
-                          {docData ? (
-                            <>
-                              <button
-                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
-                                onClick={() => setPreviewUrl(docData.url)}
-                              >
-                                View
-                              </button>
-                              <a
-                                href="#"
-                                className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 text-xs font-medium"
-                                onClick={async (e) => {
-                                  e.preventDefault();
-                                  await handleForceDownload(docData.url, docData.url.split('/').pop() || 'document.pdf');
-                                }}
-                              >
-                                Download
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Email</span>
+                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.email || 'N/A'}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Phone</span>
+                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.phone || 'N/A'}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Country</span>
+                          <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.country || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Academic Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Academic Profile</h3>
+                      <div className="space-y-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Student Type</span>
+                          <span className="font-medium text-slate-900">
+                            {applicationDetails.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
+                             applicationDetails.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
+                             applicationDetails.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
+                             applicationDetails.student_process_type || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Application Date</span>
+                          <span className="font-medium text-slate-900">
+                            {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Last Updated</span>
+                          <span className="font-medium text-slate-900">
+                            {new Date(applicationDetails.updated_at || Date.now()).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Application & Status */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Application Status</h3>
+                      <div className="space-y-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Current Status</span>
+                          <div className="mt-1">
+                            {applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved' ? (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Enrolled
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">
+                                <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
+                                Waiting for acceptance letter
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-600">Documents Status</span>
+                          <span className="font-medium text-slate-900">
+                            {DOCUMENTS_INFO.filter(doc => {
+                              let docData = Array.isArray(applicationDetails.documents)
+                                ? applicationDetails.documents.find((d: any) => d.type === doc.key)
+                                : null;
+                              if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
+                                docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
+                              }
+                              return docData?.status === 'approved';
+                            }).length} / {DOCUMENTS_INFO.length} approved
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* University Information Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <Building className="w-6 h-6 mr-3" />
+                    University Information
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-6">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="text-sm text-slate-600">University Name</div>
+                        <div className="font-semibold text-slate-900">{applicationDetails.scholarships?.universities?.name || 'N/A'}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="text-sm text-slate-600">Location</div>
+                        <div className="font-semibold text-slate-900">
+                          {applicationDetails.scholarships?.universities?.address?.city || 'N/A'}, {applicationDetails.scholarships?.universities?.address?.country || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="text-sm text-slate-600">Contact Information</div>
+                        <div className="space-y-1">
+                          {applicationDetails.scholarships?.universities?.website && (
+                            <div className="text-sm">
+                              <span className="text-slate-600">Website: </span>
+                              <a href={applicationDetails.scholarships.universities.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                                {applicationDetails.scholarships.universities.website}
                               </a>
-                            </>
-                          ) : (
-                            <span className="text-xs text-red-500">Not uploaded</span>
+                            </div>
+                          )}
+                          {(applicationDetails.scholarships?.universities?.contact?.email || applicationDetails.scholarships?.universities?.contact?.admissionsEmail) && (
+                            <div className="text-sm">
+                              <span className="text-slate-600">Email: </span>
+                              <span className="font-medium text-slate-900">
+                                {applicationDetails.scholarships.universities.contact?.email || applicationDetails.scholarships.universities.contact?.admissionsEmail}
+                              </span>
+                            </div>
+                          )}
+                          {applicationDetails.scholarships?.universities?.contact?.phone && (
+                            <div className="text-sm">
+                              <span className="text-slate-600">Phone: </span>
+                              <span className="font-medium text-slate-900">{applicationDetails.scholarships.universities.contact.phone}</span>
+                            </div>
                           )}
                         </div>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </DashboardCard>
-          </>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scholarship Information Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <Award className="w-6 h-6 mr-3" />
+                    Scholarship Details
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-6">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="text-sm text-slate-600">Scholarship Name</div>
+                        <div className="font-semibold text-slate-900">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</div>
+                      </div>
+                    </div>
+                    {applicationDetails.scholarships?.course && (
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="text-sm text-slate-600">Course</div>
+                          <div className="font-semibold text-slate-900">{applicationDetails.scholarships.course}</div>
+                        </div>
+                      </div>
+                    )}
+                    {applicationDetails.scholarships?.description && (
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="text-sm text-slate-600">Description</div>
+                          <div className="font-medium text-slate-900">{applicationDetails.scholarships.description}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Student Documents Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <FileText className="w-6 h-6 mr-3" />
+                    Student Documents
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-6">
+                    {DOCUMENTS_INFO.map((doc) => {
+                      let docData = Array.isArray(applicationDetails.documents)
+                        ? applicationDetails.documents.find((d: any) => d.type === doc.key)
+                        : null;
+                      if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
+                        docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
+                      }
+                      const status = docData?.status || 'not_submitted';
+                      
+                      return (
+                        <div key={doc.key} className="border-b border-slate-200 last:border-0 pb-6 last:pb-0">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <h4 className="font-semibold text-slate-900">{doc.label}</h4>
+                                <div className="ml-auto">
+                                  {status === 'approved' && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                      Approved
+                                    </span>
+                                  )}
+                                  {status === 'changes_requested' && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                      Changes Requested
+                                    </span>
+                                  )}
+                                  {status === 'under_review' && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                      Under Review
+                                    </span>
+                                  )}
+                                  {status === 'not_submitted' && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                      Not Submitted
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-sm text-slate-600 mb-3">{doc.description}</p>
+                              {docData && (
+                                <div className="text-xs text-slate-500 mb-3">
+                                  Uploaded: {new Date(docData.uploaded_at).toLocaleDateString()}
+                                </div>
+                              )}
+                              <div className="flex gap-2">
+                                {docData ? (
+                                  <>
+                                    <button
+                                      className="px-3 py-1 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] text-sm font-medium transition-colors"
+                                      onClick={() => setPreviewUrl(docData.url)}
+                                    >
+                                      View Document
+                                    </button>
+                                    <button
+                                      className="px-3 py-1 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 text-sm font-medium transition-colors"
+                                      onClick={async (e) => {
+                                        e.preventDefault();
+                                        await handleForceDownload(docData.url, docData.url.split('/').pop() || 'document.pdf');
+                                      }}
+                                    >
+                                      Download
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-sm text-red-500 font-medium">Document not uploaded</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="xl:col-span-1 space-y-6">
+              {/* Quick Stats Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Application Summary</h3>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Submitted</span>
+                    <span className="text-sm text-slate-900">
+                      {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Documents</span>
+                    <span className="text-sm text-slate-900">
+                      {DOCUMENTS_INFO.filter(doc => {
+                        let docData = Array.isArray(applicationDetails.documents)
+                          ? applicationDetails.documents.find((d: any) => d.type === doc.key)
+                          : null;
+                        if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
+                          docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
+                        }
+                        return docData?.status === 'approved';
+                      }).length} / {DOCUMENTS_INFO.length} approved
+                    </span>
+                  </div>
+                  <div className="pt-4 border-t border-slate-200">
+                    <div className="text-sm text-slate-600 mb-2">Progress</div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-[#05294E] to-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(DOCUMENTS_INFO.filter(doc => {
+                            let docData = Array.isArray(applicationDetails.documents)
+                              ? applicationDetails.documents.find((d: any) => d.type === doc.key)
+                              : null;
+                            if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
+                              docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
+                            }
+                            return docData?.status === 'approved';
+                          }).length / DOCUMENTS_INFO.length) * 100}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-slate-900">Application submitted</div>
+                        <div className="text-xs text-slate-600">{new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                    {applicationDetails.updated_at !== applicationDetails.created_at && (
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-900">Application updated</div>
+                          <div className="text-xs text-slate-600">{new Date(applicationDetails.updated_at || Date.now()).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Chat with University', tab: 'chat', icon: MessageCircle },
+                      { label: 'Manage Documents', tab: 'documents', icon: FileText },
+                      ...(applicationDetails.status === 'enrolled' ? [{ label: 'I-20 Control Fee', tab: 'i20', icon: Award }] : [])
+                    ].map((action) => (
+                      <button
+                        key={action.tab}
+                        onClick={() => setActiveTab(action.tab as any)}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-700 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                      >
+                        <action.icon className="w-4 h-4 text-slate-500" />
+                        <span>{action.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
         {activeTab === 'i20' && applicationDetails && applicationDetails.status === 'enrolled' && (
           <DashboardCard>
@@ -492,7 +775,7 @@ const ApplicationChatPage: React.FC = () => {
           <DashboardCard>
             <h3 className="text-xl font-bold text-[#05294E] mb-4">Document Requests</h3>
             <DocumentRequestsCard 
-              applicationId={applicationId} 
+              applicationId={applicationId!} 
               isSchool={false} 
               currentUserId={user.id} 
               studentType={applicationDetails.student_process_type || 'initial'}

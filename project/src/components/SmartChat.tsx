@@ -8,6 +8,7 @@ interface Message {
 
 const SmartChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -37,11 +38,17 @@ const SmartChat: React.FC = () => {
   }, [messages]);
 
   const openChat = () => {
+    setIsAnimating(true);
     setIsOpen(true);
+    setTimeout(() => setIsAnimating(false), 300);
   };
 
   const closeChat = () => {
-    setIsOpen(false);
+    setIsAnimating(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsAnimating(false);
+    }, 200);
   };
 
   const appendMessage = (sender: 'You' | 'AI', content: string) => {
@@ -97,7 +104,9 @@ const SmartChat: React.FC = () => {
       {/* Smart Assistant Chat Bubble */}
       <div
         onClick={openChat}
-        className="fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] hover:scale-105 transition-transform duration-200 group relative"
+        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-200 group relative ${
+          isOpen ? 'scale-90 opacity-70' : 'hover:scale-105'
+        }`}
         style={{
           position: 'fixed',
           bottom: '100px',
@@ -158,44 +167,59 @@ const SmartChat: React.FC = () => {
 
       {/* Chat Container */}
       {isOpen && (
-        <div 
-          className="fixed bottom-2.5 right-5 w-[400px] max-w-[90vw] bg-[#161d29] border-[1.5px] border-[#2e3f60] rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.4)] z-[1000] font-['Montserrat',Arial,sans-serif] text-[13px] overflow-hidden"
-          style={{
-            position: 'fixed',
-            bottom: '100px',
-            right: '20px',
-            zIndex: 10000,
-            opacity: 0.95
-          }}
-        >
-          {/* Header */}
+        <>
+          {/* Mobile Overlay */}
           <div 
-            className="px-4 py-2.5 text-[#f7f7f7] font-semibold text-sm flex items-center justify-between"
+            className={`fixed inset-0 bg-black z-[9999] md:hidden transition-opacity duration-300 ${
+              isAnimating ? 'opacity-0' : 'bg-opacity-50'
+            }`}
+            onClick={closeChat}
+          ></div>
+          
+          <div 
+            className={`fixed inset-0 md:bottom-[20px] md:right-[100px] md:w-[400px] md:max-w-[90vw] md:inset-auto w-full h-full md:h-auto bg-[#161d29] border-[1.5px] border-[#2e3f60] md:rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.4)] z-[10000] font-['Montserrat',Arial,sans-serif] text-[13px] overflow-hidden transition-all duration-300 ease-out transform-gpu ${
+              isAnimating 
+                ? 'opacity-0 scale-75 md:scale-90 translate-y-4 md:translate-y-2 md:translate-x-4' 
+                : 'opacity-100 scale-100 translate-y-0 md:translate-x-0'
+            }`}
             style={{
-              background: 'linear-gradient(90deg, #193156 70%, #a41e22 100%)'
+              transformOrigin: 'bottom'
             }}
           >
-            <span>
-              Smart Assistant
-            </span>
-            <span 
-              className="cursor-pointer text-lg hover:text-gray-300 transition-colors"
-              onClick={closeChat}
+            {/* Header */}
+            <div 
+              className={`px-4 py-2.5 text-[#f7f7f7] font-semibold text-sm flex items-center justify-between transition-all duration-300 ${
+                isAnimating ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
+              }`}
+              style={{
+                background: 'linear-gradient(90deg, #193156 70%, #a41e22 100%)',
+                transitionDelay: isAnimating ? '0ms' : '100ms'
+              }}
             >
-              ×
-            </span>
-          </div>
+              <span>
+                Smart Assistant
+              </span>
+              <span 
+                className="cursor-pointer text-lg hover:text-gray-300 transition-colors"
+                onClick={closeChat}
+              >
+                ×
+              </span>
+            </div>
 
-          {/* Messages */}
-          <div 
-            ref={chatRef}
-            className="p-2.5 h-[500px] overflow-y-auto bg-[#222a3a] flex flex-col gap-2 smart-chat-messages"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#3c4d6d transparent',
-              scrollBehavior: 'smooth'
-            }}
-          >
+            {/* Messages */}
+            <div 
+              ref={chatRef}
+              className={`p-2.5 h-[calc(100vh-120px)] md:h-[500px] overflow-y-auto bg-[#222a3a] flex flex-col gap-2 smart-chat-messages transition-all duration-300 ${
+                isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
+              }`}
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#3c4d6d transparent',
+                scrollBehavior: 'smooth',
+                transitionDelay: isAnimating ? '0ms' : '150ms'
+              }}
+            >
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -214,35 +238,41 @@ const SmartChat: React.FC = () => {
                 <b>AI:</b> <span className="text-gray-400">Typing...</span>
               </div>
             )}
-          </div>
+            </div>
 
-          {/* Input Section */}
-          <div className="flex gap-2 p-2.5 bg-[#192134]">
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask me anything about scholarships, fees, or the application process..."
-              disabled={isLoading}
-              className="flex-1 px-3 py-1.5 border-[1.5px] border-[#2d3c56] rounded-full bg-[#151a23] text-[#f7f7f7] text-[13px] font-['Montserrat',Arial,sans-serif] focus:outline-none focus:border-[#3c4d6d] disabled:opacity-50"
-            />
-            <button
-              onClick={sendMessage}
-              disabled={isLoading || !inputValue.trim()}
-              className="p-1.5 px-3 bg-gradient-to-r from-[#a41e22] via-[#a41e22] to-[#32445e] text-white border-none rounded-full cursor-pointer font-semibold text-[15px] font-['Montserrat',Arial,sans-serif] shadow-[0_1px_5px_rgba(0,0,0,0.2)] w-10 h-10 flex items-center justify-center transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            {/* Input Section */}
+            <div 
+              className={`flex gap-2 p-2.5 bg-[#192134] transition-all duration-300 ${
+                isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
+              }`}
               style={{
-                background: 'linear-gradient(90deg, #a41e22 60%, #32445e 100%)'
+                transitionDelay: isAnimating ? '0ms' : '200ms'
               }}
             >
-              ➤
-            </button>
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask me anything about scholarships, fees, or the application process..."
+                disabled={isLoading}
+                className="flex-1 px-3 py-1.5 border-[1.5px] border-[#2d3c56] rounded-full bg-[#151a23] text-[#f7f7f7] text-[13px] font-['Montserrat',Arial,sans-serif] focus:outline-none focus:border-[#3c4d6d] disabled:opacity-50"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={isLoading || !inputValue.trim()}
+                className="p-1.5 px-3 bg-gradient-to-r from-[#a41e22] via-[#a41e22] to-[#32445e] text-white border-none rounded-full cursor-pointer font-semibold text-[15px] font-['Montserrat',Arial,sans-serif] shadow-[0_1px_5px_rgba(0,0,0,0.2)] w-10 h-10 flex items-center justify-center transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                style={{
+                  background: 'linear-gradient(90deg, #a41e22 60%, #32445e 100%)'
+                }}
+              >
+                ➤
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Custom Scrollbar Styles */}
+        </>
+      )}      {/* Custom Scrollbar Styles */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .smart-chat-messages::-webkit-scrollbar {
