@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useCartStore } from '../stores/applicationStore';
 
 interface DocumentUploadProps {
   onUploadSuccess: () => void;
@@ -19,8 +20,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const { user, updateUserProfile, userProfile } = useAuth();
   const navigate = useNavigate();
+  const clearCart = useCartStore(state => state.clearCart);
 
   // Função para sanitizar nome do arquivo removendo caracteres especiais
   const sanitizeFileName = (fileName: string): string => {
@@ -219,10 +222,22 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
             }
 
             // Limpar carrinho do usuário
-            await supabase
-              .from('user_cart')
-              .delete()
-              .eq('user_id', user.id);
+            try {
+              const { error: cartError } = await supabase
+                .from('user_cart')
+                .delete()
+                .eq('user_id', user.id);
+              
+              if (cartError) {
+                console.error('Erro ao limpar carrinho:', cartError);
+              } else {
+                console.log('Carrinho limpo com sucesso para o usuário:', user.id);
+                // Atualizar o estado local do cart store
+                clearCart(user.id);
+              }
+            } catch (cartClearError) {
+              console.error('Erro ao limpar carrinho:', cartClearError);
+            }
 
             // Notificar universidade (incluindo TODAS as bolsas selecionadas)
             const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
@@ -353,10 +368,22 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
             }
 
             // Limpar carrinho do usuário
-            await supabase
-              .from('user_cart')
-              .delete()
-              .eq('user_id', user.id);
+            try {
+              const { error: cartError } = await supabase
+                .from('user_cart')
+                .delete()
+                .eq('user_id', user.id);
+              
+              if (cartError) {
+                console.error('Erro ao limpar carrinho:', cartError);
+              } else {
+                console.log('Carrinho limpo com sucesso para o usuário:', user.id);
+                // Atualizar o estado local do cart store
+                clearCart(user.id);
+              }
+            } catch (cartClearError) {
+              console.error('Erro ao limpar carrinho:', cartClearError);
+            }
 
             // Notificar universidade (incluindo TODAS as bolsas selecionadas)
             const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';

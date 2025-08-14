@@ -357,7 +357,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
             <div className="flex items-center space-x-4">
               {/* User Menu */}
               <div className="relative">
-                <button
+                <div className='flex'>
+                                  <button
                   onClick={() => {
                     setUserMenuOpen(!userMenuOpen);
                     if (!userMenuOpen) setSidebarOpen(false);
@@ -393,6 +394,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                     <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full"></span>
                   )}
                 </button>
+                </div>
 
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-x-auto">

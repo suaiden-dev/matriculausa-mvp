@@ -4,8 +4,6 @@ import {
   Search, 
   Filter, 
   ChevronDown, 
-  Grid3X3, 
-  List, 
   Star, 
   Award, 
   Building, 
@@ -19,7 +17,6 @@ import {
   Users,
   Monitor,
   Globe,
-  LayoutGrid,
   Briefcase,
   Trash2
 } from 'lucide-react';
@@ -46,7 +43,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [selectedDeliveryMode, setSelectedDeliveryMode] = useState('all');
   const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
   const [sortBy] = useState('deadline');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const { userProfile, user, refetchUserProfile } = useAuth();
   const navigate = useNavigate();
@@ -564,8 +560,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       return;
     }
 
-    // SE JÁ PAGOU A TAXA: Apenas adicionar ao carrinho (fluxo normal)
-    console.log('✅ Usuário já pagou selection process fee, adicionando ao carrinho');
     proceedToCheckout(scholarship);
   };
 
@@ -607,17 +601,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     // Também não incluir bolsas que estão no array featuredScholarships
     const isInFeatured = featuredScholarships.some(fs => fs.id === s.id);
     return !isInFeatured;
-  });
-
-  // Log para debug da duplicação
-  console.log('ScholarshipBrowser Debug:', {
-    totalScholarships: scholarships.length,
-    filteredScholarships: filteredScholarships.length,
-    visibleScholarships: visibleScholarships.length,
-    featuredScholarships: featuredScholarships.length,
-    regularScholarships: regularScholarships.length,
-    featuredIds: featuredScholarships.map(fs => fs.id),
-    highlightedInVisible: visibleScholarships.filter(s => s.is_highlighted === true).map(s => s.id)
   });
 
   return (
@@ -796,27 +779,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             </div>
           </div>
 
-          {/* View Mode Toggle - Hidden on mobile, shown on desktop */}
-          <div className="hidden md:flex justify-end">
-            <div className="flex gap-2">
-              <button
-                className={`p-2 rounded-lg border ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}`}
-                onClick={() => setViewMode('grid')}
-                title="Grid view"
-                aria-label="Grid view"
-              >
-                <LayoutGrid className="h-5 w-5" />
-              </button>
-              <button
-                className={`p-2 rounded-lg border ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}`}
-                onClick={() => setViewMode('list')}
-                title="List view"
-                aria-label="List view"
-              >
-                <List className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+
         </div>
 
         {/* Action Buttons */}
@@ -868,27 +831,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             </button>
           )}
 
-          {/* View Mode Toggle for Mobile */}
-          <div className="flex md:hidden gap-2 mt-2">
-            <button
-              className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300'}`}
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-              aria-label="Grid view"
-            >
-              <LayoutGrid className="h-4 w-4 mx-auto mb-1" />
-              Grid
-            </button>
-            <button
-              className={`flex-1 p-3 rounded-xl border text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300'}`}
-              onClick={() => setViewMode('list')}
-              title="List view"
-              aria-label="List view"
-            >
-              <List className="h-4 w-4 mx-auto mb-1" />
-              List
-            </button>
-          </div>
+
         </div>
 
         {/* Tags de filtros ativos (apenas os aplicados) */}
@@ -1157,7 +1100,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              ref={(el) => {
                                if (el) buttonRefs.current.set(scholarship.id, el);
                              }}
-                             className={`py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                             className={`py-3 sm:py-4 px-4 sm:px-6 w-5/6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
                                 inCart 
                                   ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
                                   : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
@@ -1199,8 +1142,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         </div>
       )}
 
-      {/* Scholarships Grid/List */}
-      <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8" : "flex flex-col gap-3 sm:gap-4"}>
+      {/* Scholarships Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {regularScholarships.map((scholarship) => {
           const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
           const inCart = cartScholarshipIds.has(scholarship.id);
@@ -1213,27 +1156,23 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 if (el) scholarshipRefs.current.set(scholarship.id, el);
               }}
               layoutId={layoutId}
-              className={
-                viewMode === 'grid'
-                  ? "group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-1 sm:hover:-translate-y-2 flex flex-col h-full"
-                  : "group relative bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center p-3 sm:p-4"
-              }
+              className="group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-1 sm:hover:-translate-y-2 flex flex-col h-full"
             >
               {/* Scholarship Image */}
-              <div className={viewMode === 'grid' ? "relative h-40 sm:h-48 overflow-hidden flex-shrink-0" : "w-full sm:w-32 h-32 sm:h-32 flex-shrink-0 rounded-lg sm:rounded-xl overflow-hidden mb-3 sm:mb-0 sm:mr-4 md:mr-6"}>
+              <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
                 {scholarship.image_url ? (
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
-                    className={viewMode === 'grid' ? "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" : "w-full h-full object-cover"}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                    <GraduationCap className={viewMode === 'grid' ? "h-12 w-12 sm:h-16 sm:w-16 text-slate-400" : "h-8 w-8 sm:h-12 sm:w-12 text-slate-400"} />
+                    <GraduationCap className="h-12 w-12 sm:h-16 sm:w-16 text-slate-400" />
                   </div>
                 )}
                 {scholarship.is_exclusive && (
-                  <div className={viewMode === 'grid' ? "absolute top-3 sm:top-4 right-3 sm:right-4" : "absolute top-2 right-2"}>
+                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
                     <span className="bg-[#D0151C] text-white px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-xs font-bold shadow-lg">
                       Exclusive
                     </span>
@@ -1242,10 +1181,10 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               </div>
               
               {/* Card Content */}
-              <div className={viewMode === 'grid' ? "p-4 sm:p-6 flex-1 flex flex-col" : "flex-1 flex flex-col justify-between"}>
+              <div className="p-4 sm:p-6 flex-1 flex flex-col">
                 {/* Title and University */}
-                <div className={viewMode === 'grid' ? "mb-3 sm:mb-4" : "mb-2 sm:mb-3"}>
-                  <h3 className={viewMode === 'grid' ? "text-lg sm:text-xl font-bold text-slate-900 mb-2 sm:mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors" : "text-base sm:text-lg font-bold text-slate-900 mb-1 sm:mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors"}>
+                <div className="mb-3 sm:mb-4">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 sm:mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
                     {scholarship.title}
                   </h3>
                   <div className="flex items-center mb-2">
@@ -1263,49 +1202,47 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     </span>
                   </div>
 
-                  {/* Program Details - Hidden in mobile list view */}
-                  {viewMode === 'grid' && (
-                    <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-4">
-                      {/* Delivery Mode */}
-                      {scholarship.delivery_mode && (
-                        <div className="flex items-center justify-between p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
-                          <div className="flex items-center">
-                            {getDeliveryModeIcon(scholarship.delivery_mode)}
-                            <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Study Mode</span>
-                          </div>
-                          <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                            {getDeliveryModeLabel(scholarship.delivery_mode)}
-                          </span>
+                  {/* Program Details */}
+                  <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    {/* Delivery Mode */}
+                    {scholarship.delivery_mode && (
+                      <div className="flex items-center justify-between p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex items-center">
+                          {getDeliveryModeIcon(scholarship.delivery_mode)}
+                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Study Mode</span>
                         </div>
-                      )}
+                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                          {getDeliveryModeLabel(scholarship.delivery_mode)}
+                        </span>
+                      </div>
+                    )}
 
-                      {/* Work Permissions */}
-                      {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                        <div className="p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
-                          <div className="flex items-center mb-1 sm:mb-2">
-                            <Briefcase className="h-3 w-3 text-emerald-600" />
-                            <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Work Authorization</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
-                              >
-                                {permission}
-                              </span>
-                            ))}
-                            {scholarship.work_permissions.length > 3 && (
-                              <span className="text-xs text-slate-500">+{scholarship.work_permissions.length - 3} more</span>
-                            )}
-                          </div>
+                    {/* Work Permissions */}
+                    {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
+                      <div className="p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex items-center mb-1 sm:mb-2">
+                          <Briefcase className="h-3 w-3 text-emerald-600" />
+                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Work Authorization</span>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <div className="flex flex-wrap gap-1">
+                          {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
+                            >
+                              {permission}
+                            </span>
+                          ))}
+                          {scholarship.work_permissions.length > 3 && (
+                            <span className="text-xs text-slate-500">+{scholarship.work_permissions.length - 3} more</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {/* Financial Impact Section */}
-                <div className={viewMode === 'grid' ? "mb-4 sm:mb-6" : "mb-3 sm:mb-4"}>
+                <div className="mb-4 sm:mb-6">
                   <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
                     <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2">
                       <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
@@ -1334,7 +1271,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 </div>
 
                 {/* Quick Details */}
-                <div className={viewMode === 'grid' ? "space-y-2 sm:space-y-3 flex-1 mb-4" : "flex flex-col sm:flex-row gap-3 sm:gap-6 mb-3"}>
+                <div className="space-y-2 sm:space-y-3 flex-1 mb-4">
                   <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-slate-500">Level</span>
                     <div className="flex items-center">
@@ -1360,7 +1297,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   )}
                 </div>
                 {/* Action Buttons */}
-                <div className={viewMode === 'grid' ? "mt-6 pt-4 border-t border-slate-100" : "mt-2"}>
+                <div className="mt-6 pt-4 border-t border-slate-100">
                   <div className="flex gap-3">
                                                                                    {/* View Details Button */}
                        <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { useCartStore } from '../../stores/applicationStore';
 
 interface UploadedDoc { name: string; url: string; type: string; uploaded_at: string }
 
@@ -16,6 +17,7 @@ const ManualReview: React.FC = () => {
   const [confirmAllTrue, setConfirmAllTrue] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const clearCart = useCartStore(state => state.clearCart);
 
   useEffect(() => {
     try {
@@ -209,10 +211,22 @@ const ManualReview: React.FC = () => {
           }
 
           // Limpar carrinho do usuário
-          await supabase
-            .from('user_cart')
-            .delete()
-            .eq('user_id', user.id);
+          try {
+            const { error: cartError } = await supabase
+              .from('user_cart')
+              .delete()
+              .eq('user_id', user.id);
+            
+            if (cartError) {
+              console.error('Erro ao limpar carrinho:', cartError);
+            } else {
+              console.log('Carrinho limpo com sucesso para o usuário:', user.id);
+              // Atualizar o estado local do cart store
+              clearCart(user.id);
+            }
+          } catch (cartClearError) {
+            console.error('Erro ao limpar carrinho:', cartClearError);
+          }
         } catch {}
 
         // Dispara notificação para universidade (Edge Function)

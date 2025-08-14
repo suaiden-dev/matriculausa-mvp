@@ -34,7 +34,7 @@ const DOCUMENTS_INFO = [
 
 const TABS = [
   { id: 'details', label: 'Details', icon: UserCircle },
-  { id: 'chat', label: 'Chat', icon: MessageCircle },
+  // { id: 'chat', label: 'Chat', icon: MessageCircle },
   { id: 'documents', label: 'Documents', icon: FileText },
   { id: 'review', label: 'Review', icon: FileText },
 ];
@@ -126,6 +126,38 @@ const StudentDetails: React.FC = () => {
     }
   };
 
+  // Função para verificar e sincronizar o documents_status
+  const syncDocumentsStatus = async () => {
+    if (!application?.documents || !application?.user_profiles?.user_id) return;
+    
+    const allDocsApproved = ['passport', 'diploma', 'funds_proof']
+      .every((docType) => {
+        const doc = application.documents.find((d: any) => d.type === docType);
+        return doc && (doc as any).status === 'approved';
+      });
+    
+    // Se todos os documentos estão aprovados mas o status geral não está, atualizar
+    if (allDocsApproved && application.user_profiles.documents_status !== 'approved') {
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'approved' })
+        .eq('user_id', application.user_profiles.user_id);
+      
+      // Atualizar o estado local
+      setApplication((prev) => prev ? ({
+        ...prev,
+        user_profiles: { ...prev.user_profiles, documents_status: 'approved' }
+      } as any) : prev);
+    }
+  };
+
+  // Sincronizar documents_status sempre que a aplicação for carregada
+  useEffect(() => {
+    if (application && application.user_profiles) {
+      syncDocumentsStatus();
+    }
+  }, [application]);
+
   if (loading) {
     return (
       <div className="p-4 md:p-6">
@@ -180,6 +212,33 @@ const StudentDetails: React.FC = () => {
     try {
       setUpdating(type);
       await updateApplicationDocStatus(type, 'approved');
+      
+      // Buscar a aplicação atualizada para verificar o status real
+      const { data: updatedApp } = await supabase
+        .from('scholarship_applications')
+        .select('documents')
+        .eq('id', applicationId)
+        .single();
+      
+      if (updatedApp?.documents) {
+        // Verificar se todos os documentos foram aprovados usando os dados atualizados
+        const allDocsApproved = ['passport', 'diploma', 'funds_proof']
+          .every((docType) => {
+            const doc = updatedApp.documents.find((d: any) => d.type === docType);
+            return doc && doc.status === 'approved';
+          });
+        
+        // Se todos os documentos foram aprovados, atualizar status geral
+        if (allDocsApproved) {
+          await supabase
+            .from('user_profiles')
+            .update({ documents_status: 'approved' })
+            .eq('user_id', student.user_id);
+          
+          // Atualizar o estado local também
+          setApplication((prev) => prev ? ({ ...prev, documents: updatedApp.documents } as any) : prev);
+        }
+      }
     } finally {
       setUpdating(null);
     }
@@ -217,6 +276,124 @@ const StudentDetails: React.FC = () => {
         .from('scholarship_applications')
         .update({ status: 'approved' })
         .eq('id', applicationId);
+      
+      // Busca o email do usuário através de uma consulta separada
+      let studentEmail = '';
+      try {
+        console.log('Buscando email para user_id:', student.user_id);
+        
+        // Tenta buscar o email através de uma consulta direta
+        const { data: userData, error: userError } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', student.user_id)
+          .single();
+        
+        console.log('Resultado da busca de email:', userData, userError);
+        
+        if (userData?.email) {
+          studentEmail = userData.email;
+          console.log('Email encontrado:', studentEmail);
+        } else {
+          console.log('Email não encontrado na tabela user_profiles, tentando fallback...');
+          // Fallback: tenta buscar através da sessão atual se for o próprio usuário
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (currentUser && currentUser.id === student.user_id) {
+            studentEmail = currentUser.email || '';
+            console.log('Email encontrado via sessão:', studentEmail);
+          }
+        }
+      } catch (emailError) {
+        console.error('Erro ao buscar email do usuário:', emailError);
+        // Último fallback: tenta buscar através da sessão atual
+        try {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (currentUser && currentUser.id === student.user_id) {
+            studentEmail = currentUser.email || '';
+            console.log('Email encontrado via fallback:', studentEmail);
+          }
+        } catch (fallbackError) {
+          console.error('Erro no fallback de busca de email:', fallbackError);
+        }
+      }
+      
+      console.log('Email final para webhook:', studentEmail);
+      
+      // Chama o webhook para notificar sobre o aluno aprovado
+      try {
+        const webhookPayload = {
+          tipo_notf: "Aluno aprovado na bolsa",
+          email_aluno: studentEmail,
+          nome_aluno: student.full_name,
+          email_universidade: user?.email,
+          o_que_enviar: `Congratulations, you have been selected for the <strong>${scholarship?.title || 'Bolsa'}</strong> scholarship.`
+        };
+
+        await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookPayload),
+        });
+
+        // Cria notificação para o estudante
+        try {
+          console.log('=== DEBUG NOTIFICAÇÃO ===');
+          console.log('student object completo:', student);
+          console.log('student.user_id:', student.user_id);
+          console.log('Tipo de student.user_id:', typeof student.user_id);
+          console.log('student.id (se existir):', (student as any).id);
+          
+          // Busca o perfil do usuário para obter o ID correto
+          const { data: profileData, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('id, user_id')
+            .eq('user_id', student.user_id)
+            .single();
+          
+          console.log('Perfil encontrado:', { profileData, profileError });
+          
+          if (profileData) {
+            // Usa o ID da tabela user_profiles (não o user_id do auth)
+            const studentIdToUse = profileData.id;
+            console.log('ID correto para notificação (user_profiles.id):', studentIdToUse);
+            
+            // Tenta inserir com o ID correto
+            const { error: notificationError } = await supabase
+              .from('student_notifications')
+              .insert({
+                student_id: studentIdToUse,
+                title: "Scholarship Approved! 🎉",
+                message: `Congratulations! You have been selected for the "${scholarship?.title || 'Scholarship'}" program. Check your dashboard for next steps.`,
+                link: `/student/dashboard/applications`,
+                created_at: new Date().toISOString()
+              });
+
+            if (notificationError) {
+              console.error('Erro ao criar notificação para o estudante:', notificationError);
+              console.log('Detalhes do erro:', {
+                code: notificationError.code,
+                message: notificationError.message,
+                details: notificationError.details
+              });
+            } else {
+              console.log('Notificação criada com sucesso para o estudante');
+            }
+          } else {
+            console.error('Perfil do usuário não encontrado na tabela user_profiles');
+            console.log('Não foi possível criar notificação - perfil não existe');
+          }
+        } catch (notificationError) {
+          console.error('Erro ao criar notificação para o estudante:', notificationError);
+          // Não falha a aprovação se a notificação falhar
+        }
+        
+      } catch (webhookError) {
+        console.error('Erro ao chamar webhook:', webhookError);
+        // Não falha a aprovação se o webhook falhar
+      }
+
       await fetchApplicationDetails();
       setActiveTab('details');
     } finally {
@@ -584,7 +761,7 @@ const StudentDetails: React.FC = () => {
             </div>
           </div>
       )}
-      {activeTab === 'chat' && (
+      {/* {activeTab === 'chat' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
             <h2 className="text-xl font-semibold text-white flex items-center">
@@ -607,7 +784,7 @@ const StudentDetails: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
       {activeTab === 'documents' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">

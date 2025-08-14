@@ -8,7 +8,6 @@ import {
   Calendar, 
   DollarSign, 
   Building, 
-  Search,
   Award,
   ArrowRight,
   GraduationCap
@@ -18,6 +17,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { StripeCheckout } from '../../components/StripeCheckout';
+import { useCartStore } from '../../stores/applicationStore';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -39,11 +39,7 @@ const MyApplications: React.FC = () => {
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [universityFilter, setUniversityFilter] = useState('all');
-  const [levelFilter, setLevelFilter] = useState('all');
-  const [valueRangeFilter, setValueRangeFilter] = useState('all');
+
   // const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // const [payingId] = useState<string | null>(null);
@@ -57,6 +53,22 @@ const MyApplications: React.FC = () => {
   // const [uploadingAppId, setUploadingAppId] = useState<string | null>(null);
   // const navigate = useNavigate();
   const location = useLocation();
+  const syncCartWithDatabase = useCartStore(state => state.syncCartWithDatabase);
+
+  // Modal confirmation states
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
+
+  // Estado para controlar abertura/fechamento individual dos documents checklist
+  const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
+
+  // Função para alternar o estado de um checklist específico
+  const toggleChecklist = (applicationId: string) => {
+    setOpenChecklists(prev => ({
+      ...prev,
+      [applicationId]: !prev[applicationId]
+    }));
+  };
 
 
   useEffect(() => {
@@ -189,6 +201,13 @@ const MyApplications: React.FC = () => {
     }
   }, [location.search, userProfile]);
 
+  // Sincronizar cart com banco de dados quando a página carrega
+  useEffect(() => {
+    if (user?.id) {
+      syncCartWithDatabase(user.id);
+    }
+  }, [user?.id, syncCartWithDatabase]);
+
   // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
   const chosenPaidApp = applications.find(
     (a) => !!(a as any).is_application_fee_paid || !!(a as any).is_scholarship_fee_paid
@@ -197,39 +216,7 @@ const MyApplications: React.FC = () => {
     ? applications.filter((a) => a.id === chosenPaidApp.id)
     : applications;
 
-  const filteredApplications = applicationsToShow.filter(application => {
-    const scholarshipTitle = application.scholarships?.title || '';
-    const universityName = application.scholarships?.universities?.name || '';
-    const level = application.scholarships?.level || '';
-    const scholarshipValue = application.scholarships?.annual_value_with_scholarship || 0;
-    
-    // Search term filter
-    const matchesSearch = scholarshipTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         universityName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Status filter
-    const matchesStatus = statusFilter === 'all' || application.status === statusFilter;
-    
-    // University filter
-    const matchesUniversity = universityFilter === 'all' || universityName === universityFilter;
-    
-    // Level filter
-    const matchesLevel = levelFilter === 'all' || level === levelFilter;
-    
-    // Value range filter
-    const matchesValueRange = valueRangeFilter === 'all' || (() => {
-      switch (valueRangeFilter) {
-        case 'under_5k': return scholarshipValue < 5000;
-        case '5k_to_10k': return scholarshipValue >= 5000 && scholarshipValue < 10000;
-        case '10k_to_15k': return scholarshipValue >= 10000 && scholarshipValue < 15000;
-        case '15k_to_20k': return scholarshipValue >= 15000 && scholarshipValue < 20000;
-        case 'over_20k': return scholarshipValue >= 20000;
-        default: return true;
-      }
-    })();
 
-    return matchesSearch && matchesStatus && matchesUniversity && matchesLevel && matchesValueRange;
-  });
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -444,7 +431,103 @@ const getLevelColor = (level: any) => {
     return <div className="text-red-500">Error: {error}</div>;
   }
 
+  // Function to handle application fee payment confirmation
+  const handleApplicationFeeClick = (application: ApplicationWithScholarship) => {
+    setPendingApplication(application);
+    setShowConfirmationModal(true);
+  };
+
+  const handleCancelPayment = () => {
+    setShowConfirmationModal(false);
+    setPendingApplication(null);
+  };
+
+  // Count other approved applications
+  const otherApprovedApps = applications.filter(app => 
+    app.status === 'approved' && 
+    app.id !== pendingApplication?.id &&
+    !app.is_application_fee_paid
+  );
+
   return (
+    <>
+      {/* Confirmation Modal */}
+      {showConfirmationModal && pendingApplication && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={handleCancelPayment}
+            ></div>
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-3xl px-6 pt-6 pb-8 text-left overflow-hidden shadow-xl transform transition-all sm:mt-60 sm:align-middle sm:max-w-lg sm:w-full sm:p-8">
+              <div className="sm:flex sm:items-start">
+                
+                <div className="mt-3 text-center sm:mt-0 sm:text-left flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">
+                    Confirm Your Scholarship Selection
+                  </h3>
+                  <div className="space-y-4">
+                    
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-4 border border-amber-200">
+                      <div className="flex items-start relative">
+                        <AlertCircle className="h-5 w-5 absolute text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-center font-bold text-amber-900 mb-2">Important Decision</h4>
+                          <p className="text-amber-800 text-sm leading-relaxed mb-3">
+                            By proceeding with this payment, you're making this your <strong>final scholarship choice</strong>. 
+                            This action cannot be undone.
+                          </p>
+                          {otherApprovedApps.length > 0 && (
+                            <div className="bg-white rounded-xl p-3 border border-amber-200">
+                              <p className="text-amber-800 text-sm font-semibold mb-2">
+                                This will remove {otherApprovedApps.length} other approved application{otherApprovedApps.length > 1 ? 's' : ''}:
+                              </p>
+                              <ul className="text-amber-700 text-xs space-y-1">
+                                {otherApprovedApps.map(app => (
+                                  <li key={app.id} className="flex items-center">
+                                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
+                                    {app.scholarships?.title} - {app.scholarships?.universities?.name}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 sm:mt-8 sm:flex sm:flex-row-reverse gap-3">
+                <StripeCheckout
+                  productId="applicationFee"
+                  feeType="application_fee"
+                  paymentType="application_fee"
+                  buttonText="Yes, Secure My Scholarship ($350)"
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-bold hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm text-center mb-3 sm:mb-0"
+                  successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+                  cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
+                  disabled={false}
+                  scholarshipsIds={[pendingApplication.scholarship_id]}
+                  metadata={{ application_id: pendingApplication.id, selected_scholarship_id: pendingApplication.scholarship_id }}
+                />
+                <button
+                  type="button"
+                  className="w-full sm:w-auto bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
+                  onClick={handleCancelPayment}
+                >
+                  Let me think about it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     <div className="pt-6 sm:pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         {/* Header */}
@@ -458,7 +541,7 @@ const getLevelColor = (level: any) => {
         {/* Aviso removido conforme solicitação */}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
@@ -486,18 +569,6 @@ const getLevelColor = (level: any) => {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">Under Review</p>
-              <p className="text-3xl sm:text-4xl font-bold text-yellow-600">{stats.under_review}</p>
-            </div>
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center">
-              <AlertCircle className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-600" />
-            </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between w-full">
-            <div>
               <p className="text-sm font-semibold text-slate-500 mb-2">Pending</p>
               <p className="text-3xl sm:text-4xl font-bold text-gray-600">{stats.pending}</p>
             </div>
@@ -509,8 +580,47 @@ const getLevelColor = (level: any) => {
         </div>
 
         {/* Guidance: explain fees and next steps */}
-        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 sm:p-8 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 lg:p-8 mb-8">
+          {/* Mobile: Collapsible steps */}
+          <div className="block sm:hidden">
+            <details className="group">
+              <summary className="flex items-center justify-between cursor-pointer p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">3</div>
+                  <span className="font-bold text-slate-900">Application Process Steps</span>
+                </div>
+                <svg className="w-5 h-5 text-blue-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="mt-3 space-y-3">
+                <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">Submit Documents</div>
+                    <div className="text-xs text-slate-600">Upload passport, diploma and proof of funds</div>
+                  </div>
+                </div>
+                <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">University Review</div>
+                    <div className="text-xs text-slate-600">Application shows as Pending until approved</div>
+                  </div>
+                </div>
+                <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">Pay Fees</div>
+                    <div className="text-xs text-slate-600">Application Fee → Scholarship Fee</div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          {/* Desktop: Original layout */}
+          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
               <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 1 — Submit your documents</div>
               <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Upload passport, high school diploma and proof of funds so the university can evaluate your application.</div>
@@ -562,116 +672,13 @@ const getLevelColor = (level: any) => {
             <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
         </div>
-      ) : (
-        <>
-          {/* Filters */}
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 mb-6 sm:mb-8">
-            <div className="flex flex-col gap-4 sm:gap-6">
-              {/* Search Bar */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 sm:left-4 top-3 sm:top-4 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search applications..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base"
-                  />
-                </div>
-              </div>
-              
-              {/* Filter Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {/* Status Filter */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  title="Filter by status"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="pending_scholarship_fee">Pending Scholarship Fee</option>
-                </select>
-
-                {/* University Filter */}
-                <select
-                  value={universityFilter}
-                  onChange={(e) => setUniversityFilter(e.target.value)}
-                  title="Filter by university"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Universities</option>
-                  {Array.from(new Set(applicationsToShow.map(app => app.scholarships?.universities?.name).filter(Boolean))).map(university => (
-                    <option key={university} value={university}>{university}</option>
-                  ))}
-                </select>
-
-                {/* Level Filter */}
-                <select
-                  value={levelFilter}
-                  onChange={(e) => setLevelFilter(e.target.value)}
-                  title="Filter by academic level"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Levels</option>
-                  <option value="undergraduate">Undergraduate</option>
-                  <option value="graduate">Graduate</option>
-                  <option value="doctoral">Doctoral</option>
-                </select>
-
-                {/* Value Range Filter */}
-                <select
-                  value={valueRangeFilter}
-                  onChange={(e) => setValueRangeFilter(e.target.value)}
-                  title="Filter by scholarship value"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Values</option>
-                  <option value="under_5k">Under $5,000</option>
-                  <option value="5k_to_10k">$5,000 - $10,000</option>
-                  <option value="10k_to_15k">$10,000 - $15,000</option>
-                  <option value="15k_to_20k">$15,000 - $20,000</option>
-                  <option value="over_20k">Over $20,000</option>
-                </select>
-              </div>
-              
-              {/* Clear Filters Button */}
-              {(statusFilter !== 'all' || universityFilter !== 'all' || levelFilter !== 'all' || valueRangeFilter !== 'all' || searchTerm !== '') && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setStatusFilter('all');
-                      setUniversityFilter('all');
-                      setLevelFilter('all');
-                      setValueRangeFilter('all');
-                      setSearchTerm('');
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors duration-200"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 sm:mt-6 flex items-center text-sm sm:text-base text-slate-600">
-              <span className="font-bold">{filteredApplications.length}</span>
-              <span className="ml-2">
-                application{filteredApplications.length !== 1 ? 's' : ''} found
-              </span>
-            </div>
-          </div>
-
-          {/* Applications List - two sections */}
+              ) : (
+          <>
+            {/* Applications List - two sections */}
           <div className="space-y-10">
             {/* Approved */}
             {(() => {
-              const approvedList = filteredApplications.filter(a => a.status === 'approved' || a.status === 'enrolled');
+              const approvedList = applicationsToShow.filter(a => a.status === 'approved' || a.status === 'enrolled');
               if (approvedList.length === 0) return null;
               const selectedApp = approvedList.find(a => (a as any).is_scholarship_fee_paid);
               const hasSelectedScholarship = !!selectedApp;
@@ -679,7 +686,7 @@ const getLevelColor = (level: any) => {
                 <section>
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-slate-900">Approved by the University</h3>
-                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 px-4 py-2 rounded-full font-medium">{approvedList.length} approved</span>
+                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} approved</span>
                   </div>
                   <div className="mb-6 rounded-xl bg-blue-50 border border-blue-200 p-5 text-sm text-blue-800">
                     <div className="flex items-start">
@@ -689,7 +696,7 @@ const getLevelColor = (level: any) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
+                  <div className="flex justify-center md:justify-start gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -701,7 +708,7 @@ const getLevelColor = (level: any) => {
                       const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
                       if (!scholarship) return null;
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0">
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
                 <div className="p-4 sm:p-6">
                   {/* Header Section */}
                   <div className="mb-4 sm:mb-6">
@@ -781,18 +788,13 @@ const getLevelColor = (level: any) => {
                             Paid
                           </div>
                         ) : (
-                          <StripeCheckout
-                            productId="applicationFee"
-                            feeType="application_fee"
-                            paymentType="application_fee"
-                            buttonText="Pay Application Fee"
+                          <button
+                            onClick={() => handleApplicationFeeClick(application)}
                             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
-                            successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                            cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
                             disabled={hasSelectedScholarship && !scholarshipFeePaid}
-                            scholarshipsIds={[application.scholarship_id]}
-                            metadata={{ application_id: application.id, selected_scholarship_id: application.scholarship_id }}
-                          />
+                          >
+                            Pay Application Fee
+                          </button>
                         )}
                       </div>
   
@@ -858,7 +860,7 @@ const getLevelColor = (level: any) => {
 
             {/* Others */}
             {(() => {
-              const otherList = filteredApplications.filter(a => a.status !== 'approved' && a.status !== 'enrolled');
+              const otherList = applicationsToShow.filter(a => a.status !== 'approved' && a.status !== 'enrolled');
               if (otherList.length === 0) return null;
               return (
                 <section>
@@ -866,7 +868,7 @@ const getLevelColor = (level: any) => {
                     <h3 className="text-xl font-bold text-slate-900">Pending and In Progress</h3>
                     <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} applications</span>
                   </div>
-                  <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -876,7 +878,7 @@ const getLevelColor = (level: any) => {
                       const scholarship = application.scholarships;
                       if (!scholarship) return null;
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0">
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
                           <div className="p-4 sm:p-6">
                             {/* Header Section - mesma estrutura da seção aprovada */}
                             <div className="mb-4 sm:mb-6">
@@ -944,166 +946,211 @@ const getLevelColor = (level: any) => {
                               </div>
                             )}
 
-                            {/* Lista dos documentos com status/justificativa quando houver */}
+                            {/* Documents Status - Individual Check List */}
                             {(() => {
                               const docs = parseApplicationDocuments((application as any).documents);
-                              const approvedDocs = docs.filter(d => (d.status || '').toLowerCase() === 'approved');
-                              const changesRequestedDocs = docs.filter(d => (d.status || '').toLowerCase() === 'changes_requested');
-                              const underReviewDocs = docs.filter(d => (d.status || '').toLowerCase() === 'under_review');
-                              const rejectedDocs = docs.filter(d => (d.status || '').toLowerCase() === 'rejected');
-                              const hasAny = approvedDocs.length > 0 || changesRequestedDocs.length > 0 || underReviewDocs.length > 0 || rejectedDocs.length > 0;
-                              if (docs.length === 0 || !hasAny) return null;
+                              const reqUploads = requestUploadsByApp[application.id] || [];
+                              
+                              // Create a complete document list with status
+                              const allDocuments = [
+                                { type: 'passport', label: 'Passport' },
+                                { type: 'diploma', label: 'High School Diploma' },
+                                { type: 'funds_proof', label: 'Proof of Funds' }
+                              ].map(docTemplate => {
+                                const docData = docs.find(d => d.type === docTemplate.type);
+                                return {
+                                  ...docTemplate,
+                                  status: docData?.status || 'pending',
+                                  review_notes: docData?.review_notes
+                                };
+                              });
+
+                              if (docs.length === 0 && reqUploads.length === 0) return null;
+
                               return (
-                                <details className="border-t border-slate-200 pt-4 group">
-                                  <summary className="flex items-center justify-between text-sm font-bold text-slate-700 cursor-pointer select-none mb-3">
-                                    <span>Documents Status</span>
-                                    <svg className="w-4 h-4 text-slate-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <div className="border-t border-slate-200 pt-6">
+                                  <button 
+                                    onClick={() => toggleChecklist(application.id)}
+                                    className="flex items-center justify-between cursor-pointer select-none mb-4 p-2 hover:bg-slate-50 rounded-lg transition-colors w-full text-left"
+                                  >
+                                    <h4 className="text-sm font-bold text-slate-900 flex items-center">
+                                      <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                                      Documents Checklist
+                                    </h4>
+                                    <svg 
+                                      className={`w-4 h-4 text-slate-500 transition-transform ${openChecklists[application.id] ? 'rotate-180' : ''}`} 
+                                      viewBox="0 0 20 20" 
+                                      fill="currentColor" 
+                                      aria-hidden="true"
+                                    >
                                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/>
                                     </svg>
-                                  </summary>
-                                  <div className="space-y-3">
-                                    {/* Approved docs (chips) */}
-                                    {approvedDocs.length > 0 && (
-                                      <div className="rounded-xl p-3 bg-green-50 border border-green-200">
-                                        <div className="flex items-center justify-between gap-3 mb-2">
-                                          <span className="text-xs font-bold text-green-800">Approved</span>
-                                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses('approved')}`}>Approved</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-1">
-                                          {approvedDocs.map((d) => (
-                                            <span key={`approved-${d.type}`} className="px-2 py-1 rounded-full text-xs bg-white text-green-700 border border-green-300 font-medium">
-                                              {DOCUMENT_LABELS[d.type] || d.type}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
+                                  </button>
+                                  
+                                                                     <div 
+                                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                       openChecklists[application.id] 
+                                         ? 'max-h-[2000px] opacity-100' 
+                                         : 'max-h-0 opacity-0'
+                                     }`}
+                                   >
+                                     <div className="space-y-3 pt-2">
+                                       {/* Required Documents */}
+                                       {allDocuments.map((doc) => {
+                                         const status = (doc.status || '').toLowerCase();
+                                         const isApproved = status === 'approved';
+                                         const isRejected = status === 'changes_requested' || status === 'rejected';
+                                         const isUnderReview = status === 'under_review';
+                                         const isPending = !isApproved && !isRejected && !isUnderReview;
 
-                                    {/* Changes requested (with reason + upload) */}
-                                    {changesRequestedDocs.map(d => {
-                                      const status = 'changes_requested';
-                                      const label = DOCUMENT_LABELS[d.type] || d.type;
-                                      return (
-                                        <div key={`cr-${d.type}`} className="rounded-xl p-4 bg-red-50 border border-red-200">
-                                          <div className="flex items-center justify-between gap-3 mb-2">
-                                            <span className="text-xs font-bold text-red-800">{label}</span>
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses(status)}`}>Changes requested</span>
-                                          </div>
-                                          {d.review_notes && (
-                                            <div className="mb-3 text-xs text-red-700 bg-white border border-red-200 rounded-lg p-2">
-                                              <strong>Reason:</strong> {d.review_notes}
-                                            </div>
-                                          )}
-                                          {/* Reenvio do documento */}
-                                          <div className="space-y-2">
-                                            <label className="cursor-pointer bg-white text-slate-700 border-2 border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg font-semibold transition w-full block text-center text-xs">
-                                              <span>Select new {label}</span>
-                                              <input
-                                                type="file"
-                                                className="sr-only"
-                                                accept="application/pdf,image/*"
-                                                onChange={(e) => handleSelectDocFile(application.id, d.type, e.target.files ? e.target.files[0] : null)}
-                                              />
-                                            </label>
-                                            {selectedFiles[docKey(application.id, d.type)] && (
-                                              <div className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg p-2">
-                                                <span className="font-medium">Selected:</span> {selectedFiles[docKey(application.id, d.type)]?.name}
-                                              </div>
-                                            )}
-                                            <button
-                                              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs"
-                                              disabled={!selectedFiles[docKey(application.id, d.type)] || uploading[docKey(application.id, d.type)]}
-                                              onClick={() => handleUploadDoc(application.id, d.type)}
-                                            >
-                                              {uploading[docKey(application.id, d.type)] ? 'Uploading...' : 'Upload Replacement'}
-                                            </button>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
+                                         return (
+                                           <div key={doc.type} className="bg-white rounded-xl border-2 border-slate-200 p-4 hover:border-slate-300 transition-all duration-200">
+                                             <div className="flex items-start justify-between">
+                                               <div className="flex items-start flex-1">
+                                                 {/* Check Icon */}
+                                                 <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
+                                                   isApproved 
+                                                     ? 'bg-green-100 border-green-400 text-green-600' 
+                                                     : isRejected 
+                                                       ? 'bg-red-100 border-red-400 text-red-600'
+                                                       : isUnderReview
+                                                         ? 'bg-amber-100 border-amber-400 text-amber-600'
+                                                         : 'bg-slate-100 border-slate-300 text-slate-400'
+                                                 }`}>
+                                                   {isApproved ? (
+                                                     <CheckCircle className="h-4 w-4" />
+                                                   ) : isRejected ? (
+                                                     <XCircle className="h-4 w-4" />
+                                                   ) : isUnderReview ? (
+                                                     <Clock className="h-4 w-4" />
+                                                   ) : (
+                                                     <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                                                   )}
+                                                 </div>
+                                                 
+                                                 {/* Document Info */}
+                                                 <div className="flex-1 min-w-0">
+                                                   <div className="flex items-center justify-between mb-1">
+                                                     <h5 className="font-semibold text-slate-900 text-sm truncate">{doc.label}</h5>
+                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                                                       isApproved 
+                                                         ? 'bg-green-50 text-green-700 border-green-200' 
+                                                         : isRejected 
+                                                           ? 'bg-red-50 text-red-700 border-red-200'
+                                                         : isUnderReview
+                                                           ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                           : 'bg-slate-50 text-slate-600 border-slate-200'
+                                                     }`}>
+                                                       {isApproved ? 'Approved' : isRejected ? 'Changes Needed' : isUnderReview ? 'Under Review' : 'Pending'}
+                                                     </span>
+                                                   </div>
+                                                   
+                                                   {/* Review Notes */}
+                                                   {doc.review_notes && isRejected && (
+                                                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                                                       <p className="text-xs text-red-700">
+                                                         <strong>Review:</strong> {doc.review_notes}
+                                                       </p>
+                                                     </div>
+                                                   )}
+                                                   
+                                                   {/* Upload Action for Rejected Docs */}
+                                                   {isRejected && (
+                                                     <div className="mt-3 space-y-2">
+                                                       <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 w-full block text-center text-xs hover:shadow-md">
+                                                         <span>Upload New {doc.label}</span>
+                                                         <input
+                                                           type="file"
+                                                           className="sr-only"
+                                                           accept="application/pdf,image/*"
+                                                           onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
+                                                         />
+                                                       </label>
+                                                       {selectedFiles[docKey(application.id, doc.type)] && (
+                                                         <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                                                           <span className="font-medium">Selected:</span> {selectedFiles[docKey(application.id, doc.type)]?.name}
+                                                         </div>
+                                                       )}
+                                                       <button
+                                                         className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transform hover:scale-105 text-xs"
+                                                         disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
+                                                         onClick={() => handleUploadDoc(application.id, doc.type)}
+                                                       >
+                                                         {uploading[docKey(application.id, doc.type)] ? (
+                                                           <div className="flex items-center justify-center">
+                                                             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                                                             Uploading...
+                                                           </div>
+                                                         ) : 'Upload Document'}
+                                                       </button>
+                                                     </div>
+                                                   )}
+                                                 </div>
+                                               </div>
+                                             </div>
+                                           </div>
+                                         );
+                                       })}
 
-                                    {/* Under review docs (chips) */}
-                                    {underReviewDocs.length > 0 && (
-                                      <div className="rounded-xl p-3 bg-amber-50 border border-amber-200">
-                                        <div className="flex items-center justify-between gap-3 mb-2">
-                                          <span className="text-xs font-bold text-amber-800">Awaiting Review</span>
-                                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses('under_review')}`}>Under review</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-1">
-                                          {underReviewDocs.map((d) => (
-                                            <span key={`ur-${d.type}`} className="px-2 py-1 rounded-full text-xs bg-white text-amber-700 border border-amber-300 font-medium">
-                                              {DOCUMENT_LABELS[d.type] || d.type}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Rejected docs (com motivo) */}
-                                    {rejectedDocs.length > 0 && (
-                                      <div className="rounded-xl p-3 bg-red-50 border border-red-200">
-                                        <div className="flex items-center justify-between gap-3 mb-2">
-                                          <span className="text-xs font-bold text-red-800">Rejected</span>
-                                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getDocBadgeClasses('changes_requested')}`}>Rejected</span>
-                                        </div>
-                                        <div className="space-y-1">
-                                          {rejectedDocs.map((d) => (
-                                            <div key={`rj-${d.type}`} className="text-xs text-red-700 bg-white border border-red-200 rounded-lg px-2 py-1">
-                                              <strong>{DOCUMENT_LABELS[d.type] || d.type}:</strong> {d.review_notes || 'Rejected by the university.'}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* University Document Requests statuses (uploads do aluno) */}
-                                    {(() => {
-                                      const reqUploads = requestUploadsByApp[application.id] || [];
-                                      if (!reqUploads.length) return null;
-                                      const reqRejected = reqUploads.filter(u => u.status === 'rejected');
-                                      const reqUnder = reqUploads.filter(u => u.status === 'under_review');
-                                      const reqApproved = reqUploads.filter(u => u.status === 'approved');
-                                      if (!reqRejected.length && !reqUnder.length && !reqApproved.length) return null;
-                                      return (
-                                        <div className="rounded-xl p-3 bg-slate-50 border border-slate-200">
-                                          <div className="text-xs font-bold text-slate-800 mb-2">University Document Requests</div>
-                                          {reqRejected.length > 0 && (
-                                            <div className="mb-2">
-                                              <div className="text-xs font-bold text-red-700 mb-1">Rejected</div>
-                                              <div className="space-y-1">
-                                                {reqRejected.map((u, idx) => (
-                                                  <div key={`req-rj-${idx}`} className="text-xs text-red-700 bg-white border border-red-200 rounded-lg px-2 py-1">
-                                                    <strong>{u.title}:</strong> {u.review_notes || 'Rejected by the university.'}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          )}
-                                          {reqUnder.length > 0 && (
-                                            <div className="mb-2">
-                                              <div className="text-xs font-bold text-amber-700 mb-1">Under Review</div>
-                                              <div className="flex flex-wrap gap-1">
-                                                {reqUnder.map((u, idx) => (
-                                                  <span key={`req-ur-${idx}`} className="px-2 py-1 rounded-full text-xs bg-white text-amber-700 border border-amber-300 font-medium">{u.title}</span>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          )}
-                                          {reqApproved.length > 0 && (
-                                            <div>
-                                              <div className="text-xs font-bold text-green-700 mb-1">Approved</div>
-                                              <div className="flex flex-wrap gap-1">
-                                                {reqApproved.map((u, idx) => (
-                                                  <span key={`req-ap-${idx}`} className="px-2 py-1 rounded-full text-xs bg-white text-green-700 border border-green-300 font-medium">{u.title}</span>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-                                </details>
+                                       {/* University Additional Requests */}
+                                       {reqUploads.length > 0 && (
+                                         <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
+                                           <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+                                             <Building className="h-4 w-4 mr-2 text-blue-600" />
+                                             University Additional Requests
+                                           </h5>
+                                           <div className="space-y-2">
+                                             {reqUploads.map((req, idx) => {
+                                               const status = (req.status || '').toLowerCase();
+                                               const isApproved = status === 'approved';
+                                               const isRejected = status === 'rejected';
+                                               const isUnderReview = status === 'under_review';
+                                               
+                                               return (
+                                                 <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
+                                                   <div className="flex items-center justify-between">
+                                                     <div className="flex items-center">
+                                                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
+                                                         isApproved 
+                                                           ? 'bg-green-100 border-green-400' 
+                                                           : isRejected 
+                                                             ? 'bg-red-100 border-red-400'
+                                                             : 'bg-amber-100 border-amber-400'
+                                                       }`}>
+                                                         {isApproved ? (
+                                                           <CheckCircle className="h-3 w-3 text-green-600" />
+                                                         ) : isRejected ? (
+                                                           <XCircle className="h-3 w-3 text-red-600" />
+                                                         ) : (
+                                                           <Clock className="h-3 w-3 text-amber-600" />
+                                                         )}
+                                                       </div>
+                                                       <span className="font-medium text-slate-900 text-xs">{req.title}</span>
+                                                     </div>
+                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                       isApproved 
+                                                         ? 'bg-green-100 text-green-700' 
+                                                         : isRejected 
+                                                           ? 'bg-red-100 text-red-700'
+                                                           : 'bg-amber-100 text-amber-700'
+                                                     }`}>
+                                                       {isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Under Review'}
+                                                     </span>
+                                                   </div>
+                                                   {req.review_notes && isRejected && (
+                                                     <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                                                       <strong>Note:</strong> {req.review_notes}
+                                                     </div>
+                                                   )}
+                                                 </div>
+                                               );
+                                             })}
+                                           </div>
+                                         </div>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
                               );
                             })()}
                           </div>
@@ -1119,6 +1166,7 @@ const getLevelColor = (level: any) => {
       )}
       </div>
     </div>
+    </>
   );
 };
 
