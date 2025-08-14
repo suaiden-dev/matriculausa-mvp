@@ -477,21 +477,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error logging out:', error);
-      // Opcional: notificar o usuário sobre o erro
-    }
-    // Limpar o estado local independentemente do erro do Supabase
-    setUser(null);
-    setUserProfile(null); 
-    setLoading(false);
-    
-    // Se estiver na página de inbox, fazer refresh para limpar os emails
-    if (window.location.pathname.includes('/inbox')) {
-      console.log('🔄 Logout from inbox page - refreshing to clear emails...');
-      window.location.reload();
+    try {
+      setLoading(true);
+      
+      // Forçar limpeza de todos os dados de autenticação
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      // Limpar estado local imediatamente
+      setUser(null);
+      setUserProfile(null);
+      
+      // Limpar dados do localStorage
+      localStorage.removeItem('pending_full_name');
+      localStorage.removeItem('pending_phone');
+      localStorage.removeItem('pending_affiliate_code');
+      
+      // Limpar dados do Supabase local
+      localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
+      sessionStorage.clear();
+      
+      // Forçar refresh da página para limpar completamente o estado
+      if (window.location.pathname.includes('/inbox')) {
+        console.log('🔄 Logout from inbox page - refreshing to clear emails...');
+        window.location.href = '/';
+      } else {
+        // Redirecionar para home sem usar navigate para evitar problemas de estado
+        window.location.href = '/';
+      }
+      
+    } catch (error) {
+      console.error('Error during logout process:', error);
+      
+      // Mesmo com erro, limpar tudo e forçar redirecionamento
+      setUser(null);
+      setUserProfile(null);
+      
+      // Limpar localStorage
+      localStorage.removeItem('pending_full_name');
+      localStorage.removeItem('pending_phone');
+      localStorage.removeItem('pending_affiliate_code');
+      localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
+      sessionStorage.clear();
+      
+      // Forçar redirecionamento
+      window.location.href = '/';
+    } finally {
+      setLoading(false);
     }
   };
 

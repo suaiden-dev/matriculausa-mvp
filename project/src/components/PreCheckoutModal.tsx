@@ -11,6 +11,7 @@ interface PreCheckoutModalProps {
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
   productName: string;
   productPrice: number;
+  isLoading?: boolean; // Prop opcional para mostrar loading
 }
 
 export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
@@ -19,7 +20,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   onProceedToCheckout,
   feeType,
   productName,
-  productPrice
+  productPrice,
+  isLoading = false // Valor padrão false
 }) => {
   const { user } = useAuth();
   const [discountCode, setDiscountCode] = useState('');
@@ -304,13 +306,23 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
             </button>
             <button
               onClick={handleProceed}
+              disabled={isLoading}
               className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 ${
                 validationResult?.isValid && codeApplied
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
                   : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-              }`}
+              } ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
-              {validationResult?.isValid && codeApplied ? 'Apply code and continue' : 'Go to payment'}
+              {isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Opening Stripe...</span>
+                </div>
+              ) : validationResult?.isValid && codeApplied ? (
+                'Apply code and continue'
+              ) : (
+                'Go to payment'
+              )}
             </button>
           </div>
         </Dialog.Panel>

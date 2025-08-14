@@ -34,45 +34,11 @@ interface OverviewProps {
     pendingApplications: number;
     availableScholarships: number;
   };
-  onApplyScholarship: (scholarshipId: string) => void;
+  onApplyScholarship: (scholarshipId: string) => Promise<void>;
   recentApplications?: any[];
 }
 
-// Componente de mensagem de boas‑vindas (compacto, em inglês e estilizado para o hero)
-const WelcomeMessage: React.FC = () => {
-  const [showWelcome, setShowWelcome] = useState(false);
-  const { user } = useAuth();
-
-  if (!showWelcome || !user) return null;
-
-  return (
-    <div className="mb-4 rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm p-4 text-white shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
-            <Gift className="h-5 w-5 text-white" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-semibold">Welcome gift: $50 discount</h3>
-            <p className="text-sm text-white/90">
-              A $50 discount has been automatically applied and will be used on your next application fee checkout.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setShowWelcome(false)}
-          className="text-white/70 hover:text-white transition-colors"
-          title="Dismiss welcome message"
-          aria-label="Dismiss welcome message"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const Overview: React.FC<OverviewProps> = ({ 
+const Overview: React.FC<OverviewProps> = ({
   stats, 
   recentApplications = []
 }) => {
@@ -273,9 +239,6 @@ const Overview: React.FC<OverviewProps> = ({
               </h2>
             </div>
           </div>
-
-          {/* Welcome banner inside hero */}
-          <WelcomeMessage />
 
           {/* Progress Bar dentro do bloco azul */}
           {!allCompleted && (

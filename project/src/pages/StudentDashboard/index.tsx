@@ -28,7 +28,6 @@ import MatriculaRewards from './MatriculaRewards';
 import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
 import { useReferralCode } from '../../hooks/useReferralCode';
-import WelcomeDiscountModal from '../../components/WelcomeDiscountModal';
 import ManualReview from './manual-review';
 
 interface StudentProfile {
@@ -76,7 +75,6 @@ const StudentDashboard: React.FC = () => {
   } = useReferralCode();
   const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
   const [referralResult, setReferralResult] = useState<any>(null);
-  const [showWelcomeDiscount, setShowWelcomeDiscount] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     if (!user || !userProfile) return;
@@ -200,22 +198,6 @@ const StudentDashboard: React.FC = () => {
 
     applyReferralCode();
   }, [user, hasUsedReferralCode, referralLoading, applyReferralCodeFromURL]);
-
-  // Welcome discount modal: show once per account when discount is active
-  useEffect(() => {
-    if (!user?.id) return;
-    if (!activeDiscount?.has_discount) return;
-    // Avoid conflict with referral modal
-    if (showCongratulationsModal) return;
-    // Don't show if user just applied a referral code
-    if (activeDiscount.applied_at && new Date(activeDiscount.applied_at).getTime() > Date.now() - 60000) return; // 1 minute ago
-    const storageKey = `welcome_discount_seen_${user.id}`;
-    const alreadySeen = localStorage.getItem(storageKey) === 'true';
-    if (!alreadySeen) {
-      setShowWelcomeDiscount(true);
-      localStorage.setItem(storageKey, 'true');
-    }
-  }, [user?.id, activeDiscount?.has_discount, activeDiscount?.applied_at, showCongratulationsModal]);
 
   const handleApplyScholarship = async (scholarshipId: string) => {
     if (!user) return;
@@ -437,13 +419,6 @@ const StudentDashboard: React.FC = () => {
             affiliateCode={referralResult.affiliate_code || 'N/A'}
           />
         )}
-
-        {/* Welcome discount modal (first visit only) */}
-        <WelcomeDiscountModal
-          isOpen={showWelcomeDiscount}
-          onClose={() => setShowWelcomeDiscount(false)}
-          amount={activeDiscount?.discount_amount || 50}
-        />
       </StudentDashboardLayout>
   );
 };
