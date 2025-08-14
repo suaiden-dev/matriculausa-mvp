@@ -33,37 +33,28 @@ FOQUE EM:
 NÃO SABE O CONTEÚDO ESPECÍFICO - FOQUE APENAS NO DESIGN VISUAL
 */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Globe, 
-  Users, 
-  FileText, 
-  TrendingUp, 
-  Target, 
-  CheckCircle, 
-  Building2, 
-  GraduationCap,
-  ArrowRight,
-  Star,
-  Shield,
-  Zap,
-  Heart,
-  Phone,
-  Mail,
-  MessageCircle,
-  Smartphone,
-  Bot,
-  BarChart3
-} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useUniversityLogos } from '../hooks/useUniversityLogos';
 import SmartChat from '../components/SmartChat';
+import {
+  ForUniversitiesHero,
+  ForUniversitiesProcess,
+  ForUniversitiesAISolutions,
+  ForUniversitiesLaunchOffer,
+  ForUniversitiesGuarantee,
+  ForUniversitiesResults,
+  ForUniversitiesFAQ,
+  ForUniversitiesFinalCTA,
+  ForUniversitiesScheduleModal
+} from '../components/ForUniversities';
 
 const ForUniversities: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
-  const { universities, loading: logosLoading } = useUniversityLogos();
   const navigate = useNavigate();
+  const { universities, loading } = useUniversityLogos();
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   // Função para determinar o destino do botão
   const getButtonDestination = () => {
@@ -82,439 +73,20 @@ const ForUniversities: React.FC = () => {
     navigate(getButtonDestination());
   };
 
+  const handleScheduleClick = () => {
+    setIsScheduleModalOpen(true);
+  };
+
   return (
     <div className="bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-slate-50 via-blue-50 to-red-50 overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-96 h-96 bg-[#05294E]/5 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#D0151C]/5 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
-          <div className="text-center">
-            <div className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-6 py-2 mb-8 border border-[#05294E]/20 shadow-lg">
-              <Building2 className="h-4 w-4 mr-2 text-[#05294E]" />
-              <span className="text-sm font-bold text-slate-700">University Partnership</span>
-            </div>
-            
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-8 leading-tight text-slate-900">
-              Recruit Quality
-              <br />
-              <span className="text-[#05294E]">International Students</span>
-            </h1>
-            
-            <p className="text-xl md:text-2xl mb-10 text-slate-600 leading-relaxed max-w-4xl mx-auto">
-              Partner with MatriculaUSA to diversify your campus with high-caliber international students. 
-              Our platform streamlines the recruitment process and connects you with qualified candidates worldwide.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <button
-                onClick={handleButtonClick}
-                className="group bg-[#D0151C] text-white px-10 py-5 rounded-2xl text-xl font-black hover:bg-[#B01218] transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center justify-center"
-              >
-                Become Our Partner
-                <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ForUniversitiesHero onButtonClick={handleButtonClick} onScheduleClick={handleScheduleClick} />
 
-      {/* Unique Platform Features Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-              Our <span className="text-[#05294E]">Unique Platform</span> Features
-            </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Discover what makes MatriculaUSA different from traditional recruitment agencies
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-3xl border border-blue-200 hover:shadow-xl transition-all duration-300">
-              <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <FileText className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Smart Document Processing</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Our AI-powered system automatically reviews and organizes student documents, ensuring completeness before submission to your university.
-              </p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-3xl border border-green-200 hover:shadow-xl transition-all duration-300">
-              <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <Zap className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Real-Time Chat Support</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Students get instant support through our intelligent chat system, reducing your administrative burden and improving application quality.
-              </p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-8 rounded-3xl border border-purple-200 hover:shadow-xl transition-all duration-300">
-              <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Secure Payment System</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Integrated Stripe payment processing for application fees, scholarship fees, and other charges - all handled securely on our platform.
-              </p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-8 rounded-3xl border border-orange-200 hover:shadow-xl transition-all duration-300">
-              <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <Target className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Pre-Matched Applications</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Our algorithm matches students with programs based on their academic background, ensuring higher acceptance rates and better fit.
-              </p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 p-8 rounded-3xl border border-teal-200 hover:shadow-xl transition-all duration-300">
-              <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <TrendingUp className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Performance Analytics</h3>
-              <p className="text-slate-600 leading-relaxed">
-                Get detailed insights into application performance, student engagement, and recruitment success rates through our dashboard.
-              </p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-rose-50 to-pink-50 p-8 rounded-3xl border border-rose-200 hover:shadow-xl transition-all duration-300">
-              <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <Heart className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Student Success Focus</h3>
-              <p className="text-slate-600 leading-relaxed">
-                We prioritize student success with comprehensive support throughout the entire application and enrollment process.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Student Recruitment & Marketing Section */}
-      <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-              Comprehensive <span className="text-[#05294E]">Student Recruitment</span> & Marketing
-            </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Our proven marketing strategies and recruitment campaigns help universities reach qualified international students worldwide
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-16">
-            {/* Left Side - Marketing Strategies */}
-            <div className="space-y-8">
-              <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-200">
-                <div className="flex items-center mb-6">
-                  <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] w-12 h-12 rounded-2xl flex items-center justify-center mr-4">
-                    <Target className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900">Targeted Marketing Campaigns</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-900">Digital Marketing</h4>
-                      <p className="text-slate-600 text-sm">Social media campaigns, Google Ads, and SEO optimization targeting international students</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-900">Content Marketing</h4>
-                      <p className="text-slate-600 text-sm">Educational content, student testimonials, and university spotlights</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-900">Email Marketing</h4>
-                      <p className="text-slate-600 text-sm">Personalized email campaigns and newsletter distribution</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-200">
-                <div className="flex items-center mb-6">
-                  <div className="bg-gradient-to-br from-[#D0151C] to-[#B01218] w-12 h-12 rounded-2xl flex items-center justify-center mr-4">
-                    <Globe className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900">Global Student Network</h3>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-900">50+ Countries</h4>
-                      <p className="text-slate-600 text-sm">Active student network across major international markets</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-900">10,000+ Students</h4>
-                      <p className="text-slate-600 text-sm">Qualified international students actively seeking opportunities</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-slate-900">Multi-Language Support</h4>
-                      <p className="text-slate-600 text-sm">Content and support available in 15+ languages</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Right Side - Recruitment Process */}
-            <div className="space-y-8">
-              <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-200">
-                <div className="flex items-center mb-6">
-                  <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] w-12 h-12 rounded-2xl flex items-center justify-center mr-4">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900">Student Recruitment Process</h3>
-                </div>
-                <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-[#05294E] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900">Student Discovery</h4>
-                      <p className="text-slate-600 text-sm">AI-powered matching and targeted marketing campaigns</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-[#D0151C] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900">Application Support</h4>
-                      <p className="text-slate-600 text-sm">Guided application process with document verification</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-[#05294E] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900">University Matching</h4>
-                      <p className="text-slate-600 text-sm">Intelligent matching based on academic profile and preferences</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-[#D0151C] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900">Enrollment Support</h4>
-                      <p className="text-slate-600 text-sm">Ongoing support through visa process and arrival</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] rounded-3xl p-8 text-white">
-                <div className="flex items-center mb-6">
-                  <TrendingUp className="h-8 w-8 mr-4" />
-                  <h3 className="text-2xl font-bold">Proven Results</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2">85%</div>
-                    <div className="text-sm opacity-90">Acceptance Rate</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2">3x</div>
-                    <div className="text-sm opacity-90">Faster Processing</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2">95%</div>
-                    <div className="text-sm opacity-90">Student Satisfaction</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold mb-2">50%</div>
-                    <div className="text-sm opacity-90">Cost Reduction</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-
-        </div>
-      </section>
+      {/* How It Works - 5 Simple Steps */}
+      <ForUniversitiesProcess />
 
       {/* AI Solutions Section */}
-      <section className="py-24 bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-              AI-Powered <span className="text-[#05294E]">Solutions</span> for Universities
-            </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Transform your university operations with cutting-edge AI solutions designed specifically for educational institutions
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="bg-gradient-to-br from-green-500 to-emerald-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <MessageCircle className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">WhatsApp AI Assistant</h3>
-              <p className="text-slate-600 mb-4 leading-relaxed">
-                Automate WhatsApp customer service with intelligent AI responses, 24/7 support, and seamless integration with your university database.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Multi-language support</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Sentiment analysis</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">48-72h implementation</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <Mail className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Email AI Management</h3>
-              <p className="text-slate-600 mb-4 leading-relaxed">
-                Intelligent email management with automatic categorization, context-based responses, and integration with your university CRM.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Priority analysis</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Performance reports</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">48-72h implementation</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="bg-gradient-to-br from-purple-500 to-violet-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <Smartphone className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">SMS AI Campaigns</h3>
-              <p className="text-slate-600 mb-4 leading-relaxed">
-                Intelligent and personalized SMS campaigns with automatic student segmentation and real-time engagement analysis.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Student segmentation</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Academic calendar integration</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">48-72h implementation</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="bg-gradient-to-br from-orange-500 to-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <Bot className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">Advanced AI Chatbot</h3>
-              <p className="text-slate-600 mb-4 leading-relaxed">
-                Intelligent chatbot for websites and applications with natural conversations and integration with academic systems.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Natural conversations</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Multi-language support</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">72-96h implementation</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="bg-gradient-to-br from-teal-500 to-cyan-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <BarChart3 className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">AI Analytics & Insights</h3>
-              <p className="text-slate-600 mb-4 leading-relaxed">
-                Predictive analysis and insights for strategic decisions with automated personalized reports and intelligent alerts.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Predictive enrollment analysis</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Real-time dashboard</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">96-120h implementation</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-200">
-              <div className="bg-gradient-to-br from-pink-500 to-rose-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                <FileText className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4">AI Document Processing</h3>
-              <p className="text-slate-600 mb-4 leading-relaxed">
-                Intelligent processing of academic documents with automatic data extraction, validation, and advanced OCR capabilities.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Automatic data extraction</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">Document validation</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-slate-600">72-96h implementation</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="text-center mt-12">
-            <button className="bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white px-8 py-4 rounded-2xl font-semibold hover:scale-105 transition-all duration-300 shadow-lg">
-              View All AI Solutions
-            </button>
-          </div>
-        </div>
-      </section>
+      <ForUniversitiesAISolutions />
 
       {/* Trusted Universities Section */}
       <section className="py-24 bg-white relative overflow-hidden">
@@ -527,7 +99,6 @@ const ForUniversities: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-16">
             <div className="inline-flex items-center bg-gradient-to-r from-[#05294E]/10 to-[#D0151C]/10 backdrop-blur-sm rounded-full px-6 py-3 mb-8 border border-[#05294E]/20">
-              <Star className="h-5 w-5 mr-2 text-[#05294E]" />
               <span className="text-sm font-bold text-slate-700">Trusted Partner Network</span>
             </div>
             
@@ -542,26 +113,10 @@ const ForUniversities: React.FC = () => {
             </p>
           </div>
 
-          {/* Statistics */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-200 text-center">
-              <div className="text-4xl font-black text-[#05294E] mb-2">75+</div>
-              <div className="text-slate-600 font-semibold">Partner Universities</div>
-            </div>
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-8 border border-green-200 text-center">
-              <div className="text-4xl font-black text-[#05294E] mb-2">15K+</div>
-              <div className="text-slate-600 font-semibold">Students Placed</div>
-            </div>
-            <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-3xl p-8 border border-purple-200 text-center">
-              <div className="text-4xl font-black text-[#05294E] mb-2">98%</div>
-              <div className="text-slate-600 font-semibold">Success Rate</div>
-            </div>
-          </div> */}
-          
           {/* University Logos Grid */}
           <div className="relative">
             {/* Loading State */}
-            {logosLoading && (
+            {loading && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
                 {Array.from({ length: 15 }).map((_, index) => (
                   <div key={index} className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
@@ -575,14 +130,14 @@ const ForUniversities: React.FC = () => {
             )}
 
             {/* University Cards */}
-            {!logosLoading && (
+            {!loading && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
                 {universities.map((university, index) => (
                   <div 
                     key={index} 
                     className="group bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:border-[#05294E]/20 transition-all duration-500 transform hover:scale-105 hover:-translate-y-2"
                   >
-                    <div className="relative h-16  flex items-center justify-center overflow-hidden rounded-xl transition-colors duration-300">
+                    <div className="relative h-16 flex items-center justify-center overflow-hidden rounded-xl transition-colors duration-300">
                       {university.isLoading ? (
                         <div className="animate-pulse bg-slate-200 h-full w-full rounded-xl"></div>
                       ) : university.logoUrl ? (
@@ -604,7 +159,7 @@ const ForUniversities: React.FC = () => {
                         className={`${university.logoUrl ? 'hidden' : 'flex'} items-center justify-center w-full h-full bg-gradient-to-br from-[#05294E] to-slate-700 rounded-xl`}
                         style={{ display: university.logoUrl ? 'none' : 'flex' }}
                       >
-                        <GraduationCap className="h-10 w-10 text-white" />
+                        <span className="text-white font-bold text-lg">U</span>
                       </div>
                     </div>
 
@@ -625,10 +180,11 @@ const ForUniversities: React.FC = () => {
                   Be part of a select group of universities that are transforming international education. 
                   Start recruiting qualified students from around the world with our proven platform.
                 </p>
-                <button className="bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all duration-300 shadow-lg flex items-center mx-auto">
-                  <Building2 className="mr-3 h-5 w-5" />
+                <button 
+                  onClick={handleScheduleClick}
+                  className="bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all duration-300 shadow-lg flex items-center mx-auto"
+                >
                   Become a Partner University
-                  <ArrowRight className="ml-3 h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -636,107 +192,29 @@ const ForUniversities: React.FC = () => {
         </div>
       </section>
 
-      {/* Get Started Section */}
-      <section className="py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-red-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-              Ready to <span className="text-[#05294E]">Transform</span> Your Recruitment?
-            </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Join leading universities worldwide and start receiving high-quality international student applications today.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            {/* Right Side - CTA & Contact Info */}
-            <div className="space-y-8 lg:col-span-2">
-              <div className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-200 max-w-2xl mx-auto">
-                <h3 className="text-2xl font-bold text-slate-900 mb-6 text-center">
-                  Start Your Partnership Today
-                </h3>
-                
-                <div className="space-y-6">
-                  <button
-                    onClick={handleButtonClick}
-                    className="w-full bg-gradient-to-r from-[#D0151C] to-[#B01218] text-white py-6 px-8 rounded-2xl font-bold text-xl hover:scale-105 transition-all duration-300 flex items-center justify-center shadow-lg group"
-                  >
-                    <Building2 className="mr-3 h-7 w-7 group-hover:rotate-12 transition-transform" />
-                    Get Started Now
-                    <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                  
-                  <div className="text-center space-y-3">
-                    <p className="text-slate-600 text-sm">Join 75+ universities already partnered with us</p>
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="flex -space-x-2">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <div key={i} className="w-8 h-8 bg-gradient-to-br from-[#05294E] to-[#D0151C] rounded-full border-2 border-white flex items-center justify-center">
-                            <Building2 className="h-4 w-4 text-white" />
-                          </div>
-                        ))}
-                      </div>
-                      <span className="text-xs text-slate-500">Trusted by leading institutions</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Contact Methods */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
-                <div className="bg-green-50 rounded-2xl p-4 border border-green-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-green-500 w-10 h-10 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold">W</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">WhatsApp</p>
-                      <p className="text-sm text-slate-600">+1 (213) 676-2544</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold">M</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">Messenger</p>
-                      <p className="text-sm text-slate-600">matriculausa</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-slate-500 w-10 h-10 rounded-full flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">Phone</p>
-                      <p className="text-sm text-slate-600">+1 (213) 676-2544</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-red-500 w-10 h-10 rounded-full flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">Email</p>
-                      <p className="text-sm text-slate-600">info@matriculausa.com</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Launch Offer Section */}
+      <ForUniversitiesLaunchOffer onButtonClick={handleButtonClick} onScheduleClick={handleScheduleClick} />
+
+      {/* Guarantee Section */}
+      <ForUniversitiesGuarantee />
+
+      {/* Results & Before/After Section */}
+      <ForUniversitiesResults />
+
+      {/* FAQ Section */}
+      <ForUniversitiesFAQ onScheduleClick={handleScheduleClick} />
+
+      {/* Final CTA Section */}
+      <ForUniversitiesFinalCTA onScheduleClick={handleScheduleClick} onButtonClick={handleButtonClick} />
+
+      {/* SmartChat Component */}
       <SmartChat />
+
+      {/* Schedule Modal */}
+      <ForUniversitiesScheduleModal 
+        isOpen={isScheduleModalOpen} 
+        onClose={() => setIsScheduleModalOpen(false)} 
+      />
     </div>
   );
 };
