@@ -8,7 +8,6 @@ import {
   Calendar, 
   DollarSign, 
   Building, 
-  Search,
   Award,
   ArrowRight,
   GraduationCap
@@ -39,11 +38,7 @@ const MyApplications: React.FC = () => {
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [universityFilter, setUniversityFilter] = useState('all');
-  const [levelFilter, setLevelFilter] = useState('all');
-  const [valueRangeFilter, setValueRangeFilter] = useState('all');
+
   // const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // const [payingId] = useState<string | null>(null);
@@ -197,39 +192,7 @@ const MyApplications: React.FC = () => {
     ? applications.filter((a) => a.id === chosenPaidApp.id)
     : applications;
 
-  const filteredApplications = applicationsToShow.filter(application => {
-    const scholarshipTitle = application.scholarships?.title || '';
-    const universityName = application.scholarships?.universities?.name || '';
-    const level = application.scholarships?.level || '';
-    const scholarshipValue = application.scholarships?.annual_value_with_scholarship || 0;
-    
-    // Search term filter
-    const matchesSearch = scholarshipTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         universityName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Status filter
-    const matchesStatus = statusFilter === 'all' || application.status === statusFilter;
-    
-    // University filter
-    const matchesUniversity = universityFilter === 'all' || universityName === universityFilter;
-    
-    // Level filter
-    const matchesLevel = levelFilter === 'all' || level === levelFilter;
-    
-    // Value range filter
-    const matchesValueRange = valueRangeFilter === 'all' || (() => {
-      switch (valueRangeFilter) {
-        case 'under_5k': return scholarshipValue < 5000;
-        case '5k_to_10k': return scholarshipValue >= 5000 && scholarshipValue < 10000;
-        case '10k_to_15k': return scholarshipValue >= 10000 && scholarshipValue < 15000;
-        case '15k_to_20k': return scholarshipValue >= 15000 && scholarshipValue < 20000;
-        case 'over_20k': return scholarshipValue >= 20000;
-        default: return true;
-      }
-    })();
 
-    return matchesSearch && matchesStatus && matchesUniversity && matchesLevel && matchesValueRange;
-  });
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -458,7 +421,7 @@ const getLevelColor = (level: any) => {
         {/* Aviso removido conforme solicitação */}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
@@ -486,18 +449,6 @@ const getLevelColor = (level: any) => {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">Under Review</p>
-              <p className="text-3xl sm:text-4xl font-bold text-yellow-600">{stats.under_review}</p>
-            </div>
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center">
-              <AlertCircle className="h-6 w-6 sm:h-7 sm:w-7 text-yellow-600" />
-            </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center justify-between w-full">
-            <div>
               <p className="text-sm font-semibold text-slate-500 mb-2">Pending</p>
               <p className="text-3xl sm:text-4xl font-bold text-gray-600">{stats.pending}</p>
             </div>
@@ -509,8 +460,47 @@ const getLevelColor = (level: any) => {
         </div>
 
         {/* Guidance: explain fees and next steps */}
-        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 sm:p-8 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 lg:p-8 mb-8">
+          {/* Mobile: Collapsible steps */}
+          <div className="block sm:hidden">
+            <details className="group">
+              <summary className="flex items-center justify-between cursor-pointer p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">3</div>
+                  <span className="font-bold text-slate-900">Application Process Steps</span>
+                </div>
+                <svg className="w-5 h-5 text-blue-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="mt-3 space-y-3">
+                <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">Submit Documents</div>
+                    <div className="text-xs text-slate-600">Upload passport, diploma and proof of funds</div>
+                  </div>
+                </div>
+                <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">University Review</div>
+                    <div className="text-xs text-slate-600">Application shows as Pending until approved</div>
+                  </div>
+                </div>
+                <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">Pay Fees</div>
+                    <div className="text-xs text-slate-600">Application Fee → Scholarship Fee</div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          {/* Desktop: Original layout */}
+          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
               <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 1 — Submit your documents</div>
               <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Upload passport, high school diploma and proof of funds so the university can evaluate your application.</div>
@@ -562,116 +552,13 @@ const getLevelColor = (level: any) => {
             <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
         </div>
-      ) : (
-        <>
-          {/* Filters */}
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 mb-6 sm:mb-8">
-            <div className="flex flex-col gap-4 sm:gap-6">
-              {/* Search Bar */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 sm:left-4 top-3 sm:top-4 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search applications..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base"
-                  />
-                </div>
-              </div>
-              
-              {/* Filter Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                {/* Status Filter */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  title="Filter by status"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="pending_scholarship_fee">Pending Scholarship Fee</option>
-                </select>
-
-                {/* University Filter */}
-                <select
-                  value={universityFilter}
-                  onChange={(e) => setUniversityFilter(e.target.value)}
-                  title="Filter by university"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Universities</option>
-                  {Array.from(new Set(applicationsToShow.map(app => app.scholarships?.universities?.name).filter(Boolean))).map(university => (
-                    <option key={university} value={university}>{university}</option>
-                  ))}
-                </select>
-
-                {/* Level Filter */}
-                <select
-                  value={levelFilter}
-                  onChange={(e) => setLevelFilter(e.target.value)}
-                  title="Filter by academic level"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Levels</option>
-                  <option value="undergraduate">Undergraduate</option>
-                  <option value="graduate">Graduate</option>
-                  <option value="doctoral">Doctoral</option>
-                </select>
-
-                {/* Value Range Filter */}
-                <select
-                  value={valueRangeFilter}
-                  onChange={(e) => setValueRangeFilter(e.target.value)}
-                  title="Filter by scholarship value"
-                  className="px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200 text-sm sm:text-base font-medium"
-                >
-                  <option value="all">All Values</option>
-                  <option value="under_5k">Under $5,000</option>
-                  <option value="5k_to_10k">$5,000 - $10,000</option>
-                  <option value="10k_to_15k">$10,000 - $15,000</option>
-                  <option value="15k_to_20k">$15,000 - $20,000</option>
-                  <option value="over_20k">Over $20,000</option>
-                </select>
-              </div>
-              
-              {/* Clear Filters Button */}
-              {(statusFilter !== 'all' || universityFilter !== 'all' || levelFilter !== 'all' || valueRangeFilter !== 'all' || searchTerm !== '') && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setStatusFilter('all');
-                      setUniversityFilter('all');
-                      setLevelFilter('all');
-                      setValueRangeFilter('all');
-                      setSearchTerm('');
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors duration-200"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 sm:mt-6 flex items-center text-sm sm:text-base text-slate-600">
-              <span className="font-bold">{filteredApplications.length}</span>
-              <span className="ml-2">
-                application{filteredApplications.length !== 1 ? 's' : ''} found
-              </span>
-            </div>
-          </div>
-
-          {/* Applications List - two sections */}
+              ) : (
+          <>
+            {/* Applications List - two sections */}
           <div className="space-y-10">
             {/* Approved */}
             {(() => {
-              const approvedList = filteredApplications.filter(a => a.status === 'approved' || a.status === 'enrolled');
+              const approvedList = applicationsToShow.filter(a => a.status === 'approved' || a.status === 'enrolled');
               if (approvedList.length === 0) return null;
               const selectedApp = approvedList.find(a => (a as any).is_scholarship_fee_paid);
               const hasSelectedScholarship = !!selectedApp;
@@ -679,7 +566,7 @@ const getLevelColor = (level: any) => {
                 <section>
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-slate-900">Approved by the University</h3>
-                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 px-4 py-2 rounded-full font-medium">{approvedList.length} approved</span>
+                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} approved</span>
                   </div>
                   <div className="mb-6 rounded-xl bg-blue-50 border border-blue-200 p-5 text-sm text-blue-800">
                     <div className="flex items-start">
@@ -689,7 +576,7 @@ const getLevelColor = (level: any) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
+                  <div className="flex justify-center md:justify-start gap-4 sm:gap-6 overflow-x-auto pb-4" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -858,7 +745,7 @@ const getLevelColor = (level: any) => {
 
             {/* Others */}
             {(() => {
-              const otherList = filteredApplications.filter(a => a.status !== 'approved' && a.status !== 'enrolled');
+              const otherList = applicationsToShow.filter(a => a.status !== 'approved' && a.status !== 'enrolled');
               if (otherList.length === 0) return null;
               return (
                 <section>

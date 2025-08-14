@@ -34,7 +34,7 @@ const DOCUMENTS_INFO = [
 
 const TABS = [
   { id: 'details', label: 'Details', icon: UserCircle },
-  { id: 'chat', label: 'Chat', icon: MessageCircle },
+  // { id: 'chat', label: 'Chat', icon: MessageCircle },
   { id: 'documents', label: 'Documents', icon: FileText },
   { id: 'review', label: 'Review', icon: FileText },
 ];
@@ -584,7 +584,7 @@ const StudentDetails: React.FC = () => {
             </div>
           </div>
       )}
-      {activeTab === 'chat' && (
+      {/* {activeTab === 'chat' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
             <h2 className="text-xl font-semibold text-white flex items-center">
@@ -607,7 +607,7 @@ const StudentDetails: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
       {activeTab === 'documents' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
