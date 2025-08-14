@@ -10,10 +10,18 @@ const Header: React.FC = () => {
   const { user, userProfile, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    setIsMenuOpen(false);
-    setIsUserMenuOpen(false);
+  const handleLogout = async () => {
+    try {
+      setIsMenuOpen(false);
+      setIsUserMenuOpen(false);
+      await logout();
+      // O logout já faz o redirecionamento, não precisamos fazer nada aqui
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Mesmo com erro, fechar menus
+      setIsMenuOpen(false);
+      setIsUserMenuOpen(false);
+    }
   };
 
   const getDashboardPath = () => {

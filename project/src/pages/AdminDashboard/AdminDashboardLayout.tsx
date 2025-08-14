@@ -54,10 +54,16 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
 
   const activeTab = getActiveTab();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setSidebarOpen(false);
+  const handleLogout = async () => {
+    try {
+      setSidebarOpen(false);
+      await logout();
+      // O logout já faz o redirecionamento, não precisamos fazer nada aqui
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Mesmo com erro, fechar sidebar
+      setSidebarOpen(false);
+    }
   };
 
   if (loading) {

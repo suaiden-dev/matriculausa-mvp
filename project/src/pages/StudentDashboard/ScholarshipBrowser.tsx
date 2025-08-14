@@ -1,31 +1,35 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
   Filter, 
+  ChevronDown, 
+  Grid3X3, 
+  List, 
+  Star, 
   Award, 
   Building, 
-  DollarSign, 
+  MapPin, 
   Clock, 
-  CheckCircle,
+  DollarSign, 
+  GraduationCap, 
   ArrowRight,
-  GraduationCap,
+  X,
+  CheckCircle,
   Users,
-  List,
-  LayoutGrid,
   Monitor,
-  MapPin,
-  Briefcase,
   Globe,
-  Trash2,
-  Star,
-  ChevronDown
+  LayoutGrid,
+  Briefcase,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../stores/applicationStore';
 import { supabase } from '../../lib/supabase';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { motion, AnimatePresence } from 'framer-motion';
 import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
+import { PreCheckoutModal } from '../../components/PreCheckoutModal';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -45,6 +49,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const { userProfile, user, refetchUserProfile } = useAuth();
+  const navigate = useNavigate();
   const { cart, addToCart, removeFromCart } = useCartStore();
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
@@ -53,6 +58,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [featuredScholarships, setFeaturedScholarships] = useState<any[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(false);
+
+  // Estados para o PreCheckoutModal (Matricula Rewards)
+  const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
+  const [selectedScholarshipForCheckout, setSelectedScholarshipForCheckout] = useState<any>(null);
+  const [isCheckingDiscount, setIsCheckingDiscount] = useState(false);
+  const [isOpeningStripe, setIsOpeningStripe] = useState(false);
 
   // Estados para filtros aplicados (separados dos valores dos campos)
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -450,6 +461,121 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     } else {
       console.error("User not authenticated to add items to cart");
     }
+  };
+
+  // Função para ir direto para Stripe (quando já tem desconto ativo)
+  const proceedToStripeDirectly = async (scholarship: any) => {
+    console.log('🎯 [ScholarshipBrowser] Indo direto para Stripe (desconto já aplicado)');
+    
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
+          mode: 'payment',
+          payment_type: 'selection_process',
+          fee_type: 'selection_process'
+          // Não precisa passar discount_code pois já foi aplicado
+        })
+      });
+      
+      const data = await response.json();
+      if (data.session_url) {
+        // Abrir Stripe em nova aba
+        window.open(data.session_url, '_blank');
+      } else {
+        console.error('Error creating Stripe session:', data);
+        navigate('/student/dashboard/selection-process-fee-error');
+      }
+    } catch (error) {
+      console.error('Error proceeding to Stripe:', error);
+      navigate('/student/dashboard/selection-process-fee-error');
+    }
+  };
+
+  // Função para verificar desconto ativo e decidir fluxo
+  const checkDiscountAndProceed = async (scholarship: any) => {
+    if (!user) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    // PRIMEIRO: Verificar se já pagou a selection process fee
+    if (!userProfile?.has_paid_selection_process_fee) {
+      console.log('❌ User has not paid selection process fee, checking for active discount...');
+      
+      // SEGUNDO: Verificar se já tem desconto ativo
+      setIsCheckingDiscount(true);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        
+        if (!token) {
+          console.log('❌ No token, showing referral code modal');
+          setSelectedScholarshipForCheckout(scholarship);
+          setShowPreCheckoutModal(true);
+          return;
+        }
+
+        // Verificar se já há desconto ativo usando função RPC
+        console.log('🔍 [ScholarshipBrowser] Verificando desconto ativo...');
+        const { data: result, error } = await supabase.rpc('get_user_active_discount', {
+          user_id_param: user.id
+        });
+
+        if (error) {
+          console.error('❌ Erro ao verificar desconto:', error);
+          // Em caso de erro, mostrar modal por segurança
+          setSelectedScholarshipForCheckout(scholarship);
+          setShowPreCheckoutModal(true);
+          return;
+        }
+
+        console.log('🔍 [ScholarshipBrowser] Resultado da verificação:', result);
+        
+        if (result && result.has_discount) {
+          console.log('✅ Usuário já tem desconto ativo, indo direto para Stripe');
+          // Se já tem desconto, ir direto para Stripe
+          proceedToStripeDirectly(scholarship);
+        } else {
+          console.log('❌ Sem desconto ativo, mostrando modal para código de referência');
+          // Se não tem desconto, mostrar modal
+          setSelectedScholarshipForCheckout(scholarship);
+          setShowPreCheckoutModal(true);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao verificar desconto:', error);
+        // Em caso de erro, mostrar modal por segurança
+        setSelectedScholarshipForCheckout(scholarship);
+        setShowPreCheckoutModal(true);
+      } finally {
+        setIsCheckingDiscount(false);
+      }
+      return;
+    }
+
+    // SE JÁ PAGOU A TAXA: Apenas adicionar ao carrinho (fluxo normal)
+    console.log('✅ Usuário já pagou selection process fee, adicionando ao carrinho');
+    proceedToCheckout(scholarship);
+  };
+
+  // Função para ir direto para checkout (quando já tem desconto)
+  const proceedToCheckout = (scholarship: any) => {
+    if (!user) return;
+    // Adicionar ao carrinho SEM redirecionar - usuário pode continuar selecionando
+    addToCart(scholarship, user.id);
+    // NÃO redirecionar para o carrinho - deixar usuário continuar selecionando
+    // navigate('/student/dashboard/cart'); // REMOVIDO - quebrava o fluxo
   };
 
   // Funções para controlar o modal
@@ -999,44 +1125,18 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              className="flex-1 bg-red-100 text-red-700 py-3 px-4 rounded-2xl font-semibold hover:bg-red-200 transition-colors flex items-center justify-center"
                            >
                              <Trash2 className="h-4 w-4 mr-2" />
-                             REMOVE FROM CART
+                             Deselect
                            </button>
                          ) : (
                            <button
                     onClick={async () => {
                       if (alreadyApplied) return;
                       
-                      if (!userProfile?.has_paid_selection_process_fee) {
-                        // Acionar StripeCheckout para selection_process com o price_id correto
-                        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-                        const { data: sessionData } = await supabase.auth.getSession();
-                        const token = sessionData.session?.access_token;
-                        const response = await fetch(apiUrl, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body: JSON.stringify({
-                            price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
-                            success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-                            cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
-                            mode: 'payment',
-                            payment_type: 'selection_process',
-                            fee_type: 'selection_process',
-                          })
-                        });
-                        const data = await response.json();
-                        if (data.session_url) {
-                          window.location.href = data.session_url;
-                          return;
-                        }
-                        return;
+                      if (inCart) {
+                        if (user) removeFromCart(scholarship.id, user.id);
                       } else {
-                        if (inCart) {
-                          if (user) removeFromCart(scholarship.id, user.id);
-                        } else {
-                          // ANIMAÇÃO: voar para o chapéu (mesma lógica das bolsas regulares)
+                        // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
+                        if (userProfile?.has_paid_selection_process_fee) {
                           const hat = document.getElementById('floating-cart-hat');
                           const cardElement = scholarshipRefs.current.get(scholarship.id);
                           if (cardElement && hat) {
@@ -1049,17 +1149,32 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                               setFlyingCard(null);
                             }, 1100);
                           }
-                          handleAddToCart(scholarship);
                         }
+                        // Usar a nova função que verifica desconto antes de adicionar ao carrinho
+                        checkDiscountAndProceed(scholarship);
                       }
                     }}
                              ref={(el) => {
                                if (el) buttonRefs.current.set(scholarship.id, el);
                              }}
-                             className="flex-1 bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
+                             className={`py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                                inCart 
+                                  ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700' 
+                                  : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
+                              } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
+                             disabled={alreadyApplied || isCheckingDiscount}
                            >
-                             SELECT SCHOLARSHIP
-                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                             <span className="relative z-10">
+                               {alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : (
+                                 isCheckingDiscount ? 'Checking...' : 'Select Scholarship'
+                               )}
+                             </span>
+                             {!alreadyApplied && !isCheckingDiscount && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />}
+                             {!alreadyApplied && isCheckingDiscount && (
+                               <div className="w-3 h-3 sm:w-4 sm:h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
+                             )}
                            </button>
                          )}
                        </div>
@@ -1277,29 +1392,38 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       if (inCart) {
                         if (user) removeFromCart(scholarship.id, user.id);
                       } else {
-                        // ANIMAÇÃO: voar para o chapéu
-                        const hat = document.getElementById('floating-cart-hat');
-                        const cardElement = scholarshipRefs.current.get(scholarship.id);
-                        
-                        if (cardElement && hat) {
-                          const from = cardElement.getBoundingClientRect();
-                          const to = hat.getBoundingClientRect();
-                          setFlyingCard({ card: scholarship, from, to });
-                          setAnimating(true);
-                          setTimeout(() => {
-                            setAnimating(false);
-                            setFlyingCard(null);
-                          }, 1100);
+                        // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
+                        if (userProfile?.has_paid_selection_process_fee) {
+                          const hat = document.getElementById('floating-cart-hat');
+                          const cardElement = scholarshipRefs.current.get(scholarship.id);
+                          if (cardElement && hat) {
+                            const from = cardElement.getBoundingClientRect();
+                            const to = hat.getBoundingClientRect();
+                            setFlyingCard({ card: scholarship, from, to });
+                            setAnimating(true);
+                            setTimeout(() => {
+                              setAnimating(false);
+                              setFlyingCard(null);
+                            }, 1100);
+                          }
                         }
-                        handleAddToCart(scholarship);
+                        // Usar a nova função que verifica desconto antes de adicionar ao carrinho
+                        checkDiscountAndProceed(scholarship);
                       }
                     }}
-                    disabled={alreadyApplied}
+                    disabled={alreadyApplied || isCheckingDiscount}
                   >
                                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                        <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                       <span className="relative z-10">{alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : 'Select Scholarship'}</span>
-                       {!alreadyApplied && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />}
+                       <span className="relative z-10">
+                         {alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : (
+                           isCheckingDiscount ? 'Checking...' : 'Select Scholarship'
+                         )}
+                       </span>
+                       {!alreadyApplied && !isCheckingDiscount && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />}
+                       {!alreadyApplied && isCheckingDiscount && (
+                         <div className="w-3 h-3 sm:w-4 sm:h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
+                       )}
                     </button>
                   </div>
                 </div>
@@ -1367,8 +1491,107 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         onClose={closeScholarshipModal}
         userProfile={userProfile}
       />
+
+      {/* PreCheckoutModal para Matricula Rewards */}
+      {showPreCheckoutModal && selectedScholarshipForCheckout && (
+        <PreCheckoutModal
+          isOpen={showPreCheckoutModal}
+          onClose={() => {
+            setShowPreCheckoutModal(false);
+            setSelectedScholarshipForCheckout(null);
+          }}
+          onProceedToCheckout={async (discountCode) => {
+            console.log('🎯 [ScholarshipBrowser] Código de desconto aplicado:', discountCode);
+            
+            // Ativar loading imediatamente
+            setIsOpeningStripe(true);
+            
+            try {
+              // PRIMEIRO: Se há código de desconto, aplicar via edge function (igual ao StripeCheckout)
+              if (discountCode) {
+                console.log('🎯 [ScholarshipBrowser] Aplicando código de desconto via edge function...');
+                const { data: sessionData } = await supabase.auth.getSession();
+                const token = sessionData.session?.access_token;
+                
+                if (!token) {
+                  throw new Error('Usuário não autenticado');
+                }
+
+                // Aplicar código de desconto
+                const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ affiliate_code: discountCode }),
+                });
+
+                const result = await response.json();
+                console.log('🎯 [ScholarshipBrowser] Resultado da aplicação do código:', result);
+                
+                if (!result.success) {
+                  console.error('🎯 [ScholarshipBrowser] ❌ Erro ao aplicar código:', result.error);
+                  throw new Error(result.error || 'Erro ao aplicar código de desconto');
+                }
+                
+                console.log('🎯 [ScholarshipBrowser] ✅ Código aplicado com sucesso');
+              }
+
+              // SEGUNDO: Agora ir para o checkout (o desconto já foi aplicado)
+              console.log('🎯 [ScholarshipBrowser] Continuando para checkout...');
+              const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+              const { data: sessionData } = await supabase.auth.getSession();
+              const token = sessionData.session?.access_token;
+              
+              const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+                  success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+                  cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
+                  mode: 'payment',
+                  payment_type: 'selection_process',
+                  fee_type: 'selection_process'
+                  // NÃO precisamos mais passar discount_code aqui, pois já foi aplicado
+                })
+              });
+              
+              const data = await response.json();
+              if (data.session_url) {
+                // Abrir Stripe em nova aba SEM fechar o modal
+                window.open(data.session_url, '_blank');
+                // O modal permanece aberto para o usuário
+              } else {
+                console.error('Error creating Stripe session:', data);
+                // Em caso de erro, fechar modal e redirecionar para página de erro
+                setShowPreCheckoutModal(false);
+                setSelectedScholarshipForCheckout(null);
+                navigate('/student/dashboard/selection-process-fee-error');
+              }
+            } catch (error) {
+              console.error('Error proceeding to checkout:', error);
+              // Em caso de erro, fechar modal e redirecionar para página de erro
+              setShowPreCheckoutModal(false);
+              setSelectedScholarshipForCheckout(null);
+              navigate('/student/dashboard/selection-process-fee-error');
+            } finally {
+              // Sempre desativar loading
+              setIsOpeningStripe(false);
+            }
+          }}
+          feeType="selection_process"
+          productName="Selection Process Fee"
+          productPrice={50} // Preço da taxa de seleção
+          isLoading={isOpeningStripe} // Passar o estado de loading
+        />
+      )}
     </div>
   );
-  };
-  
-  export default ScholarshipBrowser;
+};
+
+export default ScholarshipBrowser;
