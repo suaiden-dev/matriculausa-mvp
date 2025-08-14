@@ -542,27 +542,27 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
                       Phone Number *
                     </label>
-                    <PhoneInput
-                      international
-                      defaultCountry="US"
-                      addInternationalOption={false}
-                      value={formData.phone}
-                      onChange={(value) => {
-                        console.log('📞 [PHONEINPUT] Valor capturado:', value);
-                        setFormData(prev => {
-                          const newData = { ...prev, phone: value || '' };
-                          console.log('📞 [PHONEINPUT] Novo formData:', newData);
-                          return newData;
-                        });
-                      }}
-                      style={{
-                        '--PhoneInputCountryFlag-height': '1.2em',
-                        '--PhoneInputCountrySelectArrow-opacity': '0.8',
-                        '--PhoneInput-color--focus': '#05294E'
-                      }}
-                      className="phone-input-custom"
-                      placeholder="Enter your phone number"
-                    />
+                    <div className="relative">
+                      <PhoneInput
+                        international
+                        defaultCountry="US"
+                        addInternationalOption={false}
+                        value={formData.phone}
+                        onChange={(value) => {
+                          setFormData(prev => {
+                            const newData = { ...prev, phone: value || '' };
+                            return newData;
+                          });
+                        }}
+                        style={{
+                          '--PhoneInputCountryFlag-height': '1.2em',
+                          '--PhoneInputCountrySelectArrow-opacity': '0.8',
+                          '--PhoneInput-color--focus': '#05294E'
+                        }}
+                        className="phone-input-custom w-full pl-4 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -756,27 +756,30 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
                       Phone Number *
                     </label>
-                    <PhoneInput
-                      international
-                      defaultCountry="US"
-                      addInternationalOption={false}
-                      value={formData.phone}
-                      onChange={(value) => {
-                        console.log('📞 [PHONEINPUT-UNI] Valor capturado:', value);
-                        setFormData(prev => {
-                          const newData = { ...prev, phone: value || '' };
-                          console.log('📞 [PHONEINPUT-UNI] Novo formData:', newData);
-                          return newData;
-                        });
-                      }}
-                      style={{
-                        '--PhoneInputCountryFlag-height': '1.2em',
-                        '--PhoneInputCountrySelectArrow-opacity': '0.8',
-                        '--PhoneInput-color--focus': '#D0151C'
-                      }}
-                      className="phone-input-university"
-                      placeholder="Enter contact phone number"
-                    />
+                    <div className="relative">
+                      <PhoneInput
+                        international
+                        defaultCountry="US"
+                        addInternationalOption={false}
+                        value={formData.phone}
+                        onChange={(value) => {
+                          console.log('📞 [PHONEINPUT-UNI] Valor capturado:', value);
+                          setFormData(prev => {
+                            const newData = { ...prev, phone: value || '' };
+                            console.log('📞 [PHONEINPUT-UNI] Novo formData:', newData);
+                            return newData;
+                          });
+                        }}
+                        style={{
+                          '--PhoneInputCountryFlag-height': '1.2em',
+                          '--PhoneInputCountrySelectArrow-opacity': '0.8',
+                          '--PhoneInput-color--focus': '#D0151C'
+                        }}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
+                        placeholder="Enter contact phone number"
+                      />
+                      <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    </div>
                   </div>
 
                   <div>
