@@ -27,6 +27,10 @@ export interface University {
   is_approved: boolean;
   terms_accepted: boolean;
   profile_completed: boolean;
+  // Matricula Rewards opt-in fields
+  participates_in_matricula_rewards?: boolean;
+  matricula_rewards_opted_in_at?: string;
+  matricula_rewards_opt_in_notes?: string;
   created_at: string;
 }
 
