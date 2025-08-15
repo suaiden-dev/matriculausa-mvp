@@ -24,7 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col w-full overflow-x-hidden">
       {!hideHeader && <Header />}
-      <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-hidden'}`}>
+      <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
         {children}
       </main>
       {!hideFooter && <Footer />}

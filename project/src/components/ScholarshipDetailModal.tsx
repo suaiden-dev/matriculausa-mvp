@@ -37,18 +37,20 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   // Controlar o scroll do body quando o modal estiver aberto
   React.useEffect(() => {
     if (isOpen) {
+      // Salvar o estado atual
+      const originalOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      
+      // Desabilitar scroll apenas no modal aberto
       document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = '0px'; // Compensar a scrollbar
-    } else {
-      document.body.style.overflow = 'unset';
-      document.body.style.paddingRight = '0px';
+      document.documentElement.style.overflow = 'hidden';
+      
+      // Cleanup - restaurar estados originais
+      return () => {
+        document.body.style.overflow = originalOverflow || '';
+        document.documentElement.style.overflow = originalHtmlOverflow || '';
+      };
     }
-
-    // Cleanup
-    return () => {
-      document.body.style.overflow = 'unset';
-      document.body.style.paddingRight = '0px';
-    };
   }, [isOpen]);
 
   if (!scholarship) return null;

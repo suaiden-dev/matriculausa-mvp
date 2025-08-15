@@ -55,20 +55,19 @@ const StoriesCarousel: React.FC<StoriesCarouselProps> = ({
   return (
     <div className={`relative group ${className}`}>
       {/* Main Image Container */}
-      <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-slate-100 h-80 md:h-96">
+      <div className="relative overflow-hidden rounded-3xl shadow-2xl bg-slate-100 h-80 md:h-96 flex items-center justify-center">
         <img
           src={stories[currentIndex].image}
           alt={stories[currentIndex].title}
-          className="w-full h-full object-cover transition-all duration-500"
+          className="max-h-full max-w-full object-contain bg-white p-4 rounded-2xl transition-transform duration-700 group-hover:scale-105 shadow-lg"
+          style={{margin: 'auto'}}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = "https://via.placeholder.com/600x400/05294E/ffffff?text=Image+Loading";
           }}
         />
-        
         {/* Overlay with gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20"></div>
-        
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 rounded-3xl via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
         {/* Progress Bars */}
         <div className="absolute top-4 left-4 right-4 flex space-x-1">
           {stories.map((_, index) => (

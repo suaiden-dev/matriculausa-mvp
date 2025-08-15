@@ -8,12 +8,12 @@
   /* Controle de scroll global */
   html {
     height: 100%;
-    overflow-y: hidden; /* Previne scroll na tag HTML */
+    overflow-y: auto; /* Permite scroll na tag HTML */
   }
   
   body {
     height: 100%;
-    overflow-y: auto; /* Permite scroll apenas no body */
+    overflow-y: auto; /* Permite scroll no body */
     overflow-x: hidden; /* Previne scroll horizontal */
   }
 
