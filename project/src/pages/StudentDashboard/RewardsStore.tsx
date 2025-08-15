@@ -76,6 +76,8 @@ const RewardsStore: React.FC = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationData, setConfirmationData] = useState<UniversityConfirmationData | null>(null);
   const [redeemingTuition, setRedeemingTuition] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [universitiesPerPage] = useState(6); // 2x3 grid for modal
 
   // Estados para universidade automática
   const [userUniversity, setUserUniversity] = useState<any>(null);
@@ -287,20 +289,18 @@ const RewardsStore: React.FC = () => {
 
 
   // Buscar universidades
-  const handleSearchUniversities = async (searchTerm: string) => {
+  const handleSearchUniversities = (searchTerm: string) => {
     setSearchUniversities(searchTerm);
+    setCurrentPage(1); // Reset to first page when searching
     
-    if (searchTerm.length < 2) {
+    if (!searchTerm.trim()) {
       setFilteredUniversities(universities);
-      return;
-    }
-
-    try {
-      const results = await TuitionRewardsService.searchUniversities(searchTerm);
-      setFilteredUniversities(results);
-    } catch (error: any) {
-      console.error('Erro ao buscar universidades:', error);
-      setError(error.message || 'Failed to search universities');
+    } else {
+      const filtered = universities.filter(university =>
+        university.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        university.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredUniversities(filtered);
     }
   };
 
@@ -896,7 +896,9 @@ const RewardsStore: React.FC = () => {
 
               {/* Universities List */}
               <div className="max-h-96 overflow-y-auto space-y-3">
-                {filteredUniversities.map((university) => (
+                {filteredUniversities
+                  .slice((currentPage - 1) * universitiesPerPage, currentPage * universitiesPerPage)
+                  .map((university) => (
                   <button
                     key={university.id}
                     onClick={() => handleSelectUniversity(university)}
@@ -942,6 +944,43 @@ const RewardsStore: React.FC = () => {
                   </button>
                 ))}
               </div>
+
+              {/* Pagination Controls for Modal */}
+              {filteredUniversities.length > universitiesPerPage && (
+                <div className="mt-6 flex items-center justify-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.ceil(filteredUniversities.length / universitiesPerPage) }, (_, i) => (
+                      <button
+                        key={i + 1}
+                        onClick={() => setCurrentPage(i + 1)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          currentPage === i + 1
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-500 bg-white border border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredUniversities.length / universitiesPerPage)))}
+                    disabled={currentPage === Math.ceil(filteredUniversities.length / universitiesPerPage)}
+                    className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
 
               {filteredUniversities.length === 0 && (
                 <div className="text-center py-8">
