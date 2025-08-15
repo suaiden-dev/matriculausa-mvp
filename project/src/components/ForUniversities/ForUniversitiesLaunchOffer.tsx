@@ -8,7 +8,7 @@ interface ForUniversitiesLaunchOfferProps {
 
 const ForUniversitiesLaunchOffer: React.FC<ForUniversitiesLaunchOfferProps> = ({ onButtonClick, onScheduleClick }) => {
   return (
-    <section className="py-24 bg-gradient-to-br from-[#05294E] to-[#D0151C] text-white relative overflow-hidden">
+    <section className="py-24 bg-[#05294E] text-white relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-64 h-64 bg-yellow-300/10 rounded-full blur-3xl"></div>

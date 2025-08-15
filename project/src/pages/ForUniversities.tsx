@@ -180,12 +180,6 @@ const ForUniversities: React.FC = () => {
                   Be part of a select group of universities that are transforming international education. 
                   Start recruiting qualified students from around the world with our proven platform.
                 </p>
-                <button 
-                  onClick={handleScheduleClick}
-                  className="bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all duration-300 shadow-lg flex items-center mx-auto"
-                >
-                  Become a Partner University
-                </button>
               </div>
             </div>
           </div>

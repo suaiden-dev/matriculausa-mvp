@@ -56,13 +56,20 @@ const ForUniversitiesFAQ: React.FC<ForUniversitiesFAQProps> = ({ onScheduleClick
   };
 
   return (
-    <section className="py-24 bg-slate-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-24 bg-[#05294E] text-white relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 right-20 w-64 h-64 bg-yellow-300/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-20 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 right-1/3 w-32 h-32 bg-[#D0151C]/10 rounded-full blur-2xl"></div>
+      </div>
+      
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-            Frequently Asked <span className="text-[#05294E]">Questions</span>
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+            Frequently Asked <span className="text-yellow-300">Questions</span>
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+          <p className="text-xl text-white/80 max-w-3xl mx-auto">
             Everything you need to know about partnering with MatriculaUSA
           </p>
         </div>
@@ -71,26 +78,26 @@ const ForUniversitiesFAQ: React.FC<ForUniversitiesFAQProps> = ({ onScheduleClick
           {faqs.map((faq, index) => (
             <div 
               key={index}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300"
+              className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden hover:bg-white/20 transition-all duration-300"
             >
               <button
-                className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-slate-50 transition-colors duration-200"
+                className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-white/5 transition-colors duration-200"
                 onClick={() => toggleFAQ(index)}
               >
-                <h3 className="text-lg font-bold text-slate-900 pr-4">
+                <h3 className="text-lg font-bold text-white pr-4">
                   {faq.question}
                 </h3>
                 {openIndex === index ? (
-                  <ChevronUp className="h-6 w-6 text-[#05294E] flex-shrink-0" />
+                  <ChevronUp className="h-6 w-6 text-yellow-300 flex-shrink-0" />
                 ) : (
-                  <ChevronDown className="h-6 w-6 text-[#05294E] flex-shrink-0" />
+                  <ChevronDown className="h-6 w-6 text-yellow-300 flex-shrink-0" />
                 )}
               </button>
               
               {openIndex === index && (
                 <div className="px-8 pb-6">
-                  <div className="border-t border-slate-200 pt-4">
-                    <p className="text-slate-600 leading-relaxed">
+                  <div className="border-t border-white/20 pt-4">
+                    <p className="text-white/90 leading-relaxed">
                       {faq.answer}
                     </p>
                   </div>
@@ -102,16 +109,16 @@ const ForUniversitiesFAQ: React.FC<ForUniversitiesFAQProps> = ({ onScheduleClick
 
         {/* CTA */}
         <div className="text-center mt-16">
-          <div className="bg-gradient-to-r from-[#05294E] to-[#D0151C] rounded-3xl p-8 text-white">
-            <h3 className="text-2xl font-bold mb-4">
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20">
+            <h3 className="text-2xl font-bold mb-4 text-white">
               Still have questions?
             </h3>
-            <p className="text-white/90 mb-6">
+            <p className="text-white/80 mb-6">
               Our team is here to help you understand how MatriculaUSA can transform your international student recruitment.
             </p>
             <button 
               onClick={onScheduleClick}
-              className="bg-yellow-300 text-slate-900 px-8 py-4 rounded-2xl font-bold hover:bg-yellow-200 transition-all duration-300 flex items-center mx-auto"
+              className="bg-yellow-300 text-slate-900 px-8 py-4 rounded-2xl font-bold hover:bg-yellow-200 transition-all duration-300 flex items-center mx-auto shadow-lg"
             >
               <MessageCircle className="mr-3 h-5 w-5" />
               Talk to an Expert
