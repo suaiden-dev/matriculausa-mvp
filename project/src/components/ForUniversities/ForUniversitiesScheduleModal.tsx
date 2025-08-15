@@ -22,14 +22,19 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [submitMessage, setSubmitMessage] = useState('');
 
-  // Debug: Monitor state changes
-  useEffect(() => {
-    console.log('State updated - submitStatus:', submitStatus, 'submitMessage:', submitMessage);
-  }, [submitStatus, submitMessage]);
+
+
+     // Initialize default time when modal opens
+   useEffect(() => {
+    if (isOpen && !formData.preferred_datetime) {
+      const defaultTime = getNextBusinessHour(new Date());
+      handleInputChange('preferred_datetime', defaultTime);
+    }
+  }, [isOpen]);
 
   // Meeting types
   const meetingTypes = [
-    { value: 'demo', label: 'Platform Demonstration' },
+    { value: 'demo', label: 'Platform Meeting' },
     { value: 'consultation', label: 'Recruitment Consultation' },
     { value: 'partnership', label: 'Strategic Partnership' },
     { value: 'custom', label: 'Custom Meeting' }
@@ -51,12 +56,38 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
     return nextDate;
   };
 
-  // Function to check if time is within business hours (9 AM - 5 PM Arizona time)
+  // Function to check if a date is within business hours
   const isBusinessHours = (date: Date) => {
-    // Convert to Arizona time (MST - UTC-7)
-    const arizonaTime = new Date(date.getTime() - (7 * 60 * 60 * 1000));
-    const hour = arizonaTime.getUTCHours();
-    return hour >= 9 && hour <= 17; // 9 AM to 5 PM
+    if (!isWeekday(date)) {
+      return false;
+    }
+    
+    const localHour = date.getHours();
+    const localMinutes = date.getMinutes();
+    const localSeconds = date.getSeconds();
+    
+    // Check if minutes and seconds are 0 (exact hour intervals only)
+    const isExactHour = localMinutes === 0 && localSeconds === 0;
+    
+    // Define allowed business hours: 9 AM - 5 PM (9, 10, 11, 12, 13, 14, 15, 16, 17)
+    const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+    const isBusinessHour = allowedHours.includes(localHour) && isExactHour;
+    
+    return isBusinessHour;
+  };
+
+  // Function to validate business hours for the selected date
+  const validateBusinessHours = (date: Date) => {
+    if (!isWeekday(date)) {
+      return false;
+    }
+    
+    const localHour = date.getHours();
+    const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+    
+    // Only check if the hour is within allowed range
+    // Minutes and seconds validation is handled separately
+    return allowedHours.includes(localHour);
   };
 
   // Function to get next available business hour
@@ -68,20 +99,39 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
       nextDate = getNextWeekday(nextDate);
     }
     
-    // Set to 9 AM Arizona time (4 PM UTC)
-    nextDate.setUTCHours(16, 0, 0, 0);
+    // Set to 9 AM local time
+    nextDate.setHours(9, 0, 0, 0);
+    
+    // Ensure we're not setting a time in the past
+    const now = new Date();
+    if (nextDate <= now) {
+      // If the calculated time is in the past, move to next day
+      nextDate.setDate(nextDate.getDate() + 1);
+      nextDate.setHours(9, 0, 0, 0);
+    }
     
     return nextDate;
   };
 
-  // Function to validate business hours for the selected date
-  const validateBusinessHours = (date: Date) => {
-    if (!isWeekday(date)) {
-      return false;
+  // Function to get next valid business hour from a given time
+  const getNextValidBusinessHour = (date: Date) => {
+    const currentHour = date.getHours();
+    const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+    
+    // Find the next allowed hour
+    let nextHour = allowedHours.find(hour => hour > currentHour);
+    
+    if (!nextHour) {
+      // If no hour found today, move to next business day at 9 AM
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      return getNextBusinessHour(nextDay);
     }
     
-    // Check if time is within business hours
-    return isBusinessHours(date);
+    // Set to the next valid hour
+    const nextTime = new Date(date);
+    nextTime.setHours(nextHour, 0, 0, 0);
+    return nextTime;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,24 +150,71 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
       return;
     }
 
-    // Additional validation for business hours
-    if (formData.preferred_datetime && !isBusinessHours(formData.preferred_datetime)) {
-      setSubmitStatus('error');
-      setSubmitMessage('Please select a time between 9:00 AM and 5:00 PM (Arizona time).');
-      return;
-    }
+         // Additional validation for business hours
+     if (formData.preferred_datetime && !isBusinessHours(formData.preferred_datetime)) {
+       setSubmitStatus('error');
+       setSubmitMessage('Please select a time between 9:00 AM and 5:00 PM (local time) in 1-hour intervals only.');
+       return;
+     }
 
     setIsSubmitting(true);
     setSubmitStatus('idle');
 
     try {
+      // O usuário seleciona o horário como se fosse Eastern Time (EUA)
+      // Não precisamos fazer conversão, apenas enviar o horário selecionado
+      const selectedTime = formData.preferred_datetime;
+      
+      // Criar string no formato ISO (Eastern Time)
+      const year = selectedTime.getFullYear();
+      const month = String(selectedTime.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedTime.getDate()).padStart(2, '0');
+      const hours = String(selectedTime.getHours()).padStart(2, '0');
+      const minutes = String(selectedTime.getMinutes()).padStart(2, '0');
+      const seconds = String(selectedTime.getSeconds()).padStart(2, '0');
+      
+      // Formato: YYYY-MM-DDTHH:MM:SS (assumindo Eastern Time)
+      const easternDateTimeString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+
+      // Debug: Verificar se a hora está sendo extraída corretamente
+      console.log('🔍 Debug - Extração da hora:', {
+        selectedTime: selectedTime,
+        getHours: selectedTime.getHours(),
+        hours: hours,
+        minutes: minutes,
+        fullDateTime: easternDateTimeString
+      });
+
       const payload = {
         university_name: formData.university_name,
         contact_email: formData.contact_email,
-        preferred_date: formData.preferred_datetime.toISOString().split('T')[0],
-        preferred_time: formData.preferred_datetime.toTimeString().split(' ')[0].substring(0, 5),
+        preferred_datetime: easternDateTimeString, // Horário selecionado como Eastern Time
+        preferred_date: `${year}-${month}-${day}`, // Data no formato YYYY-MM-DD
+        preferred_time: `${hours}:${minutes}`, // Hora no formato HH:MM
+        timezone: 'America/New_York', // Fuso horário dos Estados Unidos
+        // Informações para debug e validação
+        local_datetime: formData.preferred_datetime.toLocaleString(),
+        selected_hours: hours,
+        selected_minutes: minutes,
+        user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        utc_offset_minutes: formData.preferred_datetime.getTimezoneOffset(),
         meeting_type: meetingTypes.find(t => t.value === formData.meeting_type)?.label || formData.meeting_type
       };
+
+      // Debug: Log do horário sendo enviado
+      console.log('🕐 Debug - Horário selecionado:', {
+        original: formData.preferred_datetime,
+        localString: formData.preferred_datetime.toLocaleString(),
+        isoString: formData.preferred_datetime.toISOString(),
+        easternDateTimeString: easternDateTimeString,
+        selectedTime: selectedTime,
+        selectedHours: hours,
+        selectedMinutes: minutes,
+        timezone: 'America/New_York',
+        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        utcOffsetMinutes: formData.preferred_datetime.getTimezoneOffset(),
+        payload: payload
+      });
 
       const response = await fetch('https://nwh.suaiden.com/webhook/university-schedule', {
         method: 'POST',
@@ -127,8 +224,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
-      console.log('Webhook response:', result); // Debug log
+             const result = await response.json();
 
       // Simplified logic to handle the response
       const responseText = result.response || '';
@@ -136,7 +232,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
       const isSuccess = responseText.toLowerCase().includes('success') || result.success === true;
       const hasResponse = result.response && result.response.trim() !== '';
       
-      console.log('Response analysis:', { responseText, isBusy, isSuccess, hasResponse }); // Debug log
+      
 
       if (isBusy) {
         // Time slot busy - show exact webhook message
@@ -163,9 +259,8 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
         setSubmitStatus('error');
         setSubmitMessage(result.response || result.message || 'Error scheduling meeting. Please try again.');
       }
-    } catch (error) {
-      console.error('Error details:', error); // Debug log
-      setSubmitStatus('error');
+         } catch (error) {
+       setSubmitStatus('error');
       setSubmitMessage('Connection error. Please check your internet and try again.');
     } finally {
       setIsSubmitting(false);
@@ -264,60 +359,173 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
 
           {/* Date and Time Picker */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              <CalendarIcon className="inline h-4 w-4 mr-2" />
-              Preferred Date & Time * (Monday - Friday, 9:00 AM - 5:00 PM Arizona time)
-            </label>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DateTimePicker
-                value={formData.preferred_datetime}
-                onChange={(newValue) => {
-                  if (newValue && validateBusinessHours(newValue)) {
-                    handleInputChange('preferred_datetime', newValue);
-                  } else if (newValue) {
-                    // If invalid time is selected, automatically adjust to next valid business hour
-                    const nextValidTime = getNextBusinessHour(newValue);
-                    handleInputChange('preferred_datetime', nextValidTime);
-                  }
-                }}
-                minDateTime={getNextBusinessHour(new Date())}
-                shouldDisableDate={(date) => !isWeekday(date)}
-                shouldDisableTime={(value, view) => {
-                  if (view === 'hours') {
-                    // Disable hours outside business hours (9 AM - 5 PM Arizona time)
-                    const arizonaTime = new Date(value.getTime() - (7 * 60 * 60 * 1000));
-                    const hour = arizonaTime.getUTCHours();
-                    return hour < 9 || hour > 17;
-                  }
-                  return false;
-                }}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    variant: 'outlined',
-                    className: 'w-full',
-                    helperText: 'Only weekdays (Monday - Friday) between 9:00 AM - 5:00 PM (Arizona time)',
-                    sx: {
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '12px',
-                        height: '48px',
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#05294E',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#05294E',
-                          borderWidth: '2px',
-                        },
-                      },
-                    },
-                  },
-                }}
-              />
-            </LocalizationProvider>
-            <p className="text-sm text-slate-500 mt-2">
-              <strong>Note:</strong> Meetings are only available Monday through Friday between 9:00 AM - 5:00 PM (Arizona time). 
-              This ensures suitable meeting times for both Arizona and other US universities.
-            </p>
+             <label className="block text-sm font-semibold text-slate-700 mb-2">
+               <CalendarIcon className="inline h-4 w-4 mr-2" />
+               Preferred Date & Time * (Monday - Friday, 9:00 AM - 5:00 PM local time)
+             </label>
+             <LocalizationProvider dateAdapter={AdapterDateFns}>
+               <DateTimePicker
+                 value={formData.preferred_datetime}
+                 onChange={(newValue) => {
+                   if (newValue) {
+                     // Create a new date object and round to the nearest hour
+                     const roundedTime = new Date(newValue);
+                     roundedTime.setMinutes(0, 0, 0);
+                     roundedTime.setSeconds(0, 0);
+                     roundedTime.setMilliseconds(0);
+                     
+                     // Always use the rounded time - the shouldDisableTime will prevent invalid selections
+                     handleInputChange('preferred_datetime', roundedTime);
+                   }
+                 }}
+                 minDateTime={getNextBusinessHour(new Date())}
+                 shouldDisableDate={(date) => !isWeekday(date)}
+                 shouldDisableTime={(value, view) => {
+                   if (view === 'hours') {
+                     // Only allow business hours: 9 AM - 5 PM (9, 10, 11, 12, 13, 14, 15, 16, 17)
+                     const localHour = value.getHours();
+                     const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+                     return !allowedHours.includes(localHour);
+                   }
+                   
+                   // Disable minutes view - meetings are only available in 1-hour intervals
+                   if (view === 'minutes') {
+                     return true;
+                   }
+                   
+                   return false;
+                 }}
+                 views={['year', 'month', 'day', 'hours']}
+                 ampm={true}
+                 openTo="hours"
+                 slotProps={{
+                   textField: {
+                     fullWidth: true,
+                     variant: 'outlined',
+                     className: 'w-full',
+                     helperText: 'Only weekdays (Monday - Friday) between 9:00 AM - 5:00 PM (local time) - 1-hour intervals only',
+                     sx: {
+                       '& .MuiOutlinedInput-root': {
+                         borderRadius: '12px',
+                         height: '56px',
+                         fontSize: '16px',
+                         '&:hover .MuiOutlinedInput-notchedOutline': {
+                           borderColor: '#05294E',
+                           borderWidth: '2px',
+                         },
+                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                           borderColor: '#05294E',
+                           borderWidth: '2px',
+                         },
+                       },
+                       '& .MuiInputBase-input': {
+                         padding: '16px 20px',
+                         fontSize: '16px',
+                         fontWeight: '500',
+                       },
+                       '& .MuiFormHelperText-root': {
+                         fontSize: '14px',
+                         marginTop: '8px',
+                       },
+                     },
+                   },
+                   popper: {
+                     sx: {
+                       '& .MuiPaper-root': {
+                         borderRadius: '16px',
+                         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                         border: '1px solid #e2e8f0',
+                       },
+                       '& .MuiPickersLayout-root': {
+                         minWidth: '400px',
+                         minHeight: '500px',
+                       },
+                       '& .MuiPickersLayout-contentWrapper': {
+                         padding: '24px',
+                       },
+                       '& .MuiPickersLayout-toolbar': {
+                         padding: '16px 24px',
+                         borderBottom: '1px solid #e2e8f0',
+                         '& .MuiTypography-root': {
+                           fontSize: '20px',
+                           fontWeight: '600',
+                           color: '#05294E',
+                         },
+                       },
+                       '& .MuiPickersLayout-actionBar': {
+                         padding: '16px 24px',
+                         borderTop: '1px solid #e2e8f0',
+                         '& .MuiButton-root': {
+                           borderRadius: '8px',
+                           padding: '10px 24px',
+                           fontSize: '14px',
+                           fontWeight: '600',
+                           textTransform: 'none',
+                           '&.MuiButton-textPrimary': {
+                             color: '#6b7280',
+                             '&:hover': {
+                               backgroundColor: '#f3f4f6',
+                             },
+                           },
+                           '&.MuiButton-containedPrimary': {
+                             backgroundColor: '#05294E',
+                             color: 'white',
+                             '&:hover': {
+                               backgroundColor: '#041f3d',
+                             },
+                           },
+                         },
+                       },
+                       '& .MuiPickersDay-root': {
+                         width: '40px',
+                         height: '40px',
+                         fontSize: '16px',
+                         fontWeight: '500',
+                         borderRadius: '8px',
+                         margin: '2px',
+                         '&.Mui-selected': {
+                           backgroundColor: '#05294E',
+                           color: 'white',
+                           '&:hover': {
+                             backgroundColor: '#041f3d',
+                           },
+                         },
+                         '&:hover': {
+                           backgroundColor: '#f1f5f9',
+                         },
+                       },
+                       '& .MuiClock-root': {
+                         '& .MuiClockNumber-root': {
+                           fontSize: '18px',
+                           fontWeight: '500',
+                           '&.Mui-selected': {
+                             backgroundColor: '#05294E',
+                             color: 'white',
+                           },
+                         },
+                         '& .MuiClock-pin': {
+                           backgroundColor: '#05294E',
+                         },
+                         '& .MuiClockPointer-thumb': {
+                           backgroundColor: '#05294E',
+                           border: '2px solid white',
+                         },
+                         '& .MuiClockPointer-line': {
+                           backgroundColor: '#05294E',
+                         },
+                       },
+                     },
+                   },
+                 }}
+                 />
+               </LocalizationProvider>
+               <p className="text-sm text-slate-500 mt-2">
+                 <strong>Note:</strong> Meetings are only available Monday through Friday between 9:00 AM - 5:00 PM (local time) 
+                 in 1-hour intervals: <strong>9:00 AM, 10:00 AM, 11:00 AM, 12:00 PM, 1:00 PM, 2:00 PM, 3:00 PM, 4:00 PM, 5:00 PM</strong>. 
+                 This ensures suitable meeting times for your local timezone.
+                 <br />
+                 <strong>Your timezone:</strong> {Intl.DateTimeFormat().resolvedOptions().timeZone}
+               </p>
           </div>
 
           {/* Submit Status Messages */}
