@@ -40,6 +40,7 @@ export class TuitionRewardsService {
       .from('universities')
       .select('id, name, location, website, established_year, student_count, type, campus_size')
       .eq('is_approved', true)
+      .eq('participates_in_matricula_rewards', true)
       .order('name', { ascending: true });
 
     if (error) {
@@ -56,6 +57,7 @@ export class TuitionRewardsService {
       .from('universities')
       .select('id, name, location, website, established_year, student_count, type, campus_size')
       .eq('is_approved', true)
+      .eq('participates_in_matricula_rewards', true)
       .or(`name.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`)
       .order('name', { ascending: true })
       .limit(20);

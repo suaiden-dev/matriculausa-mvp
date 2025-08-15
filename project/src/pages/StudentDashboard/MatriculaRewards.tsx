@@ -8,7 +8,8 @@ import {
   Users,
   Clock,
   ArrowUpRight,
-  Mail
+  Mail,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -52,16 +53,41 @@ const MatriculaRewards: React.FC = () => {
   const [transactions, setTransactions] = useState<MatriculacoinTransaction[]>([]);
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [copied, setCopied] = useState(false);
+  const [participatingUniversities, setParticipatingUniversities] = useState<any[]>([]);
+  const [universitiesLoading, setUniversitiesLoading] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
       loadAffiliateData();
+      loadParticipatingUniversities();
     } else {
       setLoading(false);
     }
     // Dispara apenas quando o identificador do usuário mudar,
     // evitando re-fetch em eventos de refresh de token/visibility
   }, [user?.id]);
+
+  const loadParticipatingUniversities = async () => {
+    try {
+      setUniversitiesLoading(true);
+      const { data, error } = await supabase
+        .from('universities')
+        .select('id, name, location, logo_url, type')
+        .eq('is_approved', true)
+        .eq('participates_in_matricula_rewards', true)
+        .order('name', { ascending: true });
+      
+      if (error) {
+        console.error('Error loading participating universities:', error);
+      } else {
+        setParticipatingUniversities(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading participating universities:', error);
+    } finally {
+      setUniversitiesLoading(false);
+    }
+  };
 
   const loadAffiliateData = async () => {
     try {
@@ -538,6 +564,79 @@ const MatriculaRewards: React.FC = () => {
               <p className="text-sm text-slate-600 mt-1">You earn 200 MatriculaCoins for each successful referral.</p>
             </div>
           </div>
+        </Card>
+
+        {/* Participating Universities */}
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Participating Universities</h2>
+          <p className="text-slate-600 mb-6">
+            These universities accept MatriculaCoins for tuition discounts. If your university is not listed, 
+            they may not have opted to participate in the program yet.
+          </p>
+          
+          {universitiesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-slate-600">Loading universities...</span>
+            </div>
+          ) : participatingUniversities.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {participatingUniversities.map((university) => (
+                <div key={university.id} className="rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden">
+                      {university.logo_url ? (
+                        <img 
+                          src={university.logo_url} 
+                          alt={`${university.name} logo`}
+                          className="h-8 w-8 object-contain"
+                        />
+                      ) : (
+                        <GraduationCap className="h-6 w-6 text-slate-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-slate-900 truncate">{university.name}</h3>
+                      <p className="text-sm text-slate-600 truncate">{university.location}</p>
+                      {university.type && (
+                        <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                          {university.type}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 mb-4">
+                <GraduationCap className="h-8 w-8 text-slate-500" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No participating universities yet</h3>
+              <p className="text-slate-600">
+                Universities need to opt-in to the Matricula Rewards program to accept coins for tuition discounts.
+              </p>
+            </div>
+          )}
+          
+          {participatingUniversities.length > 0 && (
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 flex-shrink-0 mt-0.5">
+                  <CheckCircle className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Important Information</h4>
+                  <p className="text-sm text-blue-800">
+                    If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. 
+                    You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university 
+                    until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
