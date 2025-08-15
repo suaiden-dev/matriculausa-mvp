@@ -875,6 +875,23 @@ const RewardsStore: React.FC = () => {
                     className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+                
+                {/* Informação sobre universidades não participantes */}
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">Important Information:</p>
+                      <p>
+                        Only universities that have opted to participate in the Matricula Rewards program are shown here. 
+                        If your university is not listed, it means they haven't joined the program yet. 
+                        You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts 
+                        at your university until they participate. Consider reaching out to your university's admissions office 
+                        to encourage them to join!
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Universities List */}
