@@ -564,281 +564,161 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
               else if (mainUpload.status === 'rejected') borderColor = '#EF4444';
             }
             return (
-              <div key={req.id} className="bg-white p-6 rounded-xl shadow-xl border border-blue-100 mb-4">
-                <div className="p-6 flex flex-col gap-4">
-                  {/* 3. Exibir logo no card de cada requisição */}
-                  <div className="flex items-center gap-3 mb-2">
-                    {universityLogoUrl ? (
-                      <img src={universityLogoUrl} alt="University Logo" className="w-10 h-10 rounded-full bg-white border border-blue-100 object-contain" />
-                    ) : (
-                      <span className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-50 border border-blue-100">
-                        <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0 0H6m6 0h6" /></svg>
-                      </span>
-                    )}
+              <div key={req.id} className="bg-white p-4 rounded-lg border border-slate-200 mb-3">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
                     <div>
-                      <h3 className="font-bold text-xl text-[#05294E]">{req.title}</h3>
-                      <p className="text-sm text-slate-500 mt-1">{req.description}</p>
+                      <h3 className="font-semibold text-slate-900">{req.title}</h3>
+                      <p className="text-sm text-slate-500">{req.description}</p>
                     </div>
                   </div>
+                  <button className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">
+                    Open
+                  </button>
+                </div>
 
-                  {/* University template/attachment */}
-                  {req.attachment_url && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-[#F1F5F9] border border-[#3B82F6] rounded-lg px-4 py-2 w-full">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-[#3B82F6]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h6a2 2 0 002-2V7" /></svg>
-                        <span className="text-[#05294E] text-sm font-medium">Template provided by the university</span>
-                      </div>
-                      <button className="sm:ml-2 bg-[#3B82F6] text-white px-3 py-1 rounded hover:bg-[#05294E] transition text-xs font-semibold w-full sm:w-auto" title="Download template"
-                        onClick={async () => {
-                          const url = await getAttachmentSignedUrl(req.attachment_url!, req.id);
-                          if (url) handleForceDownload(url, req.attachment_url!.split('/').pop() || 'document.pdf');
-                        }}>
-                        Download
-                      </button>
-                      {/* Botão View para abrir no modal padrão ou nova aba se PDF */}
-                      <button className="sm:ml-2 bg-white text-[#3B82F6] border border-[#3B82F6] px-3 py-1 rounded hover:bg-[#3B82F6] hover:text-white transition text-xs font-semibold w-full sm:w-auto" title="View template"
-                        onClick={async () => {
-                          const url = await getAttachmentSignedUrl(req.attachment_url!, req.id);
-                          if (url) {
-                            const isPdf = req.attachment_url!.toLowerCase().endsWith('.pdf');
-                            const isImage = req.attachment_url!.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                            if (isPdf) {
-                              window.open(url, '_blank');
-                            } else if (isImage) {
-                              setPreviewUrl(url);
-                            } else {
-                              // fallback: abrir no modal se não for PDF
-                              setPreviewUrl(url);
-                            }
-                          }
-                        }}>
-                        View
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Student uploads for this request */}
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm font-semibold text-[#05294E] mb-1">
-                      {isSchool ? 'Student uploads:' : 'Your uploads:'}
-                    </span>
-                    {uploads[req.id]?.length > 0 ? (
-                      uploads[req.id].map(upload => {
-                        const normalizedStatus = normalizeStatus(upload.status);
-                        // LOG: status e contexto de cada upload
-                        const showApproveReject = isSchool && ['pending', 'under_review'].includes(normalizedStatus);
-                        // LOG: Renderizando botões Approve/Reject
-                        if (showApproveReject) {
-                          // console.log('[DocumentRequestsCard] Renderizando botões Approve/Reject para upload', upload.id);
-                        }
-                        // Badge de status dos uploads
-                        let badgeColor = 'bg-white text-[#22C55E] border border-[#22C55E]';
-                        let containerColor = 'bg-[#F1F5F9] border border-[#22C55E]/30';
-                        if (normalizedStatus === 'pending') { badgeColor = 'bg-white text-[#FACC15] border border-[#FACC15]'; containerColor = 'bg-[#F1F5F9] border border-[#FACC15]/30'; }
-                        if (normalizedStatus === 'rejected') { badgeColor = 'bg-white text-red-600 border border-red-400'; containerColor = 'bg-red-50 border border-red-200'; }
-                        if (normalizedStatus === 'under_review') {
-                          badgeColor = 'bg-white text-yellow-700 border border-yellow-400';
-                          containerColor = isSchool ? 'bg-[#F1F5F9] border border-[#22C55E]/30' : 'bg-yellow-50 border border-yellow-300';
-                        }
-                        return (
-                          <div key={upload.id} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 rounded-lg px-4 py-2 ${containerColor}`}>
-                            <div className="flex items-center gap-2">
-                              <svg className={`w-5 h-5 ${normalizedStatus === 'under_review' ? 'text-yellow-500' : 'text-[#22C55E]'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7v10a2 2 0 002 2h6a2 2 0 002-2V7" /></svg>
-                              <span className="text-[#05294E] text-sm font-medium truncate max-w-[120px]">{upload.file_url?.split('/').pop()}</span>
-                            </div>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${badgeColor}`}>{normalizedStatus.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-                            {/* Botão Download */}
+                {/* Student uploads for this request */}
+                <div className="ml-13">
+                  <span className="text-sm font-semibold text-slate-700 mb-2 block">
+                    {isSchool ? 'Student uploads:' : 'Your uploads:'}
+                  </span>
+                  {uploads[req.id]?.length > 0 ? (
+                    uploads[req.id].map(upload => {
+                      const normalizedStatus = normalizeStatus(upload.status);
+                      let statusColor = 'bg-green-100 text-green-800 border-green-200';
+                      let containerColor = 'bg-green-50 border border-green-200';
+                      
+                      if (normalizedStatus === 'pending') { 
+                        statusColor = 'bg-yellow-100 text-yellow-800 border-yellow-200'; 
+                        containerColor = 'bg-yellow-50 border border-yellow-200'; 
+                      }
+                      if (normalizedStatus === 'rejected') { 
+                        statusColor = 'bg-red-100 text-red-800 border-red-200'; 
+                        containerColor = 'bg-red-50 border border-red-200'; 
+                      }
+                      if (normalizedStatus === 'under_review') {
+                        statusColor = 'bg-blue-100 text-blue-800 border-blue-200';
+                        containerColor = 'bg-blue-50 border border-blue-200';
+                      }
+                      
+                      return (
+                        <div key={upload.id} className={`flex items-center justify-between p-3 rounded-lg ${containerColor} mb-2`}>
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M7 7v10a2 2 0 002 2h6a2 2 0 002-2V7" />
+                            </svg>
+                            <span className="text-slate-700 text-sm font-medium truncate max-w-[200px]">
+                              {upload.file_url?.split('/').pop()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColor}`}>
+                              {normalizedStatus.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </span>
                             <button
-                              className="flex items-center gap-1 px-3 py-1 rounded font-semibold transition text-xs border bg-white text-[#3B82F6] border-[#3B82F6] hover:bg-[#3B82F6]/10 hover:text-[#05294E] hover:border-[#05294E]"
-                              title="Download file"
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
+                              onClick={() => {
+                                const signedUrl = signedUrls[upload.id];
+                                const fileUrl = signedUrl || upload.file_url;
+                                if (fileUrl) {
+                                  const isImage = upload.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                                  if (isImage) {
+                                    setPreviewUrl(fileUrl);
+                                  } else {
+                                    window.open(fileUrl, '_blank');
+                                  }
+                                }
+                              }}
+                            >
+                              View
+                            </button>
+                            <button
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
                               onClick={async () => {
                                 const signedUrl = signedUrls[upload.id] || upload.file_url;
                                 if (signedUrl) {
                                   await handleForceDownload(signedUrl, upload.file_url?.split('/').pop() || 'document.pdf');
                                 }
                               }}
-                              disabled={!signedUrls[upload.id] && upload.file_url.includes('document-attachments')}
                             >
                               Download
                             </button>
-                            {/* Botão View */}
-                            <button
-                              className={`flex items-center justify-center gap-1 px-3 py-1 rounded font-semibold transition text-xs border w-full sm:w-auto
-                                bg-white text-[#3B82F6] border-[#3B82F6] hover:bg-[#3B82F6]/10 hover:text-[#05294E] hover:border-[#05294E]
-                              `}
-                              title="View file"
-                              onClick={() => {
-                                const signedUrl = signedUrls[upload.id];
-                                const fileUrl = signedUrl || upload.file_url;
-                                const isImage = upload.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                                if (fileUrl && isImage) {
-                                  setPreviewUrl(fileUrl);
-                                } else if (fileUrl) {
-                                  window.open(fileUrl, '_blank');
-                                }
-                              }}
-                              disabled={!signedUrls[upload.id] && upload.file_url.includes('document-attachments')}
-                            >
-                              View
-                            </button>
-                            {/* Botões de aprovação/rejeição para escola */}
-                            {showApproveReject && (
-                              <div className="flex gap-2 mt-2 sm:mt-0">
-                                <button
-                                  className="px-3 py-1 rounded bg-white text-[#22C55E] border border-[#22C55E] text-xs font-semibold hover:bg-[#22C55E]/10 hover:text-[#05294E] hover:border-[#05294E] transition"
-                                  onClick={() => handleApproveUpload(upload.id)}
-                                  disabled={normalizedStatus === 'approved'}
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  className="px-3 py-1 rounded bg-white text-red-600 border border-red-400 text-xs font-semibold hover:bg-red-50 hover:text-red-800 hover:border-red-600 transition"
-                                  onClick={() => { setPendingRejectUploadId(upload.id); setRejectNotes(''); setShowRejectModal(true); }}
-                                  disabled={normalizedStatus === 'rejected'}
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            )}
-                              {/* Exibir nota de revisão quando existir */}
-                              {upload.review_notes && (
-                                <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                                  <strong>Reason:</strong> {upload.review_notes}
-                                </div>
-                              )}
                           </div>
-                        );
-                      })
-                    ) : (
-                      <span className="text-slate-400 text-xs">No files uploaded yet.</span>
-                    )}
-                  </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-slate-500 text-sm italic">No files uploaded yet.</div>
+                  )}
+                </div>
 
-                  {/* Upload area for this request */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 w-full">
-                    <label className="btn-ghost cursor-pointer bg-[#F1F5F9] hover:bg-[#3B82F6]/10 text-[#3B82F6] px-3 py-2 rounded-lg font-medium transition w-full sm:w-auto" title="Upload new file">
+                {/* Upload area for this request */}
+                {!isSchool && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                    <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">
                       <span>Upload new file</span>
                       <input
                         id={`file-upload-${req.id}`}
                         type="file"
-                        title="Select a file to upload"
-                        placeholder="Choose a file"
-                        onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
                         className="sr-only"
+                        onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
                       />
                     </label>
                     {selectedFiles[req.id] && (
-                      <span className="text-sm text-gray-700 truncate max-w-xs w-full sm:w-auto">{selectedFiles[req.id]?.name}</span>
+                      <span className="text-sm text-slate-600">{selectedFiles[req.id]?.name}</span>
                     )}
                     <button
-                      className={`bg-[#22C55E] text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto`}
+                      className={`bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition`}
                       disabled={!selectedFiles[req.id] || uploading[req.id]}
                       onClick={() => handleSendUpload(req.id)}
-                      title="Send file"
                     >
                       {uploading[req.id] ? 'Uploading...' : 'Upload'}
                     </button>
                   </div>
-                </div>
+                )}
               </div>
             );
           })
         )}
       </div>
 
-      {/* Acceptance Letter block - MOVIDO PARA O FINAL */}
-      <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-2xl p-8 mt-8 shadow-xl hover:shadow-2xl transition-shadow duration-300 ring-1 ring-yellow-100">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <svg className="w-9 h-9 text-yellow-500 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" /></svg>
+      {/* Acceptance Letter block - Design baseado no print */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-8">
+        {/* Header escuro azul */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+              <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
+              </svg>
+            </div>
             <div>
-              <h3 className="text-2xl font-extrabold text-yellow-900 mb-1 drop-shadow">Acceptance Letter</h3>
-              {/* Mensagem dinâmica conforme status */}
-              {(!acceptanceLetter?.acceptance_letter_url || acceptanceLetter?.acceptance_letter_status === 'pending') && (
-                <p className="text-yellow-800 text-base">
-                  {isSchool
-                    ? 'Please upload the student\'s acceptance letter and any other required documents, such as the I-20 Control Fee receipt.'
-                    : "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."}
-                </p>
-              )}
-              {acceptanceLetter?.acceptance_letter_status === 'approved' && (
-                <p className="text-yellow-800 text-base">
-                  {isSchool
-                    ? 'The acceptance letter has been successfully uploaded. The student is now officially enrolled.'
-                    : 'Your acceptance letter has been uploaded. You are now officially enrolled!'}
-                </p>
-              )}
+              <h3 className="text-2xl font-bold text-white mb-1">Acceptance Letter</h3>
             </div>
           </div>
-          {/* Badge/status só para aluno */}
-          {!isSchool && (
-            <span className={`px-4 py-1 rounded-full text-sm font-bold ml-2 shadow-sm ${acceptanceLetter?.acceptance_letter_status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-200 text-yellow-800'}`}
-              style={{ minWidth: 110, textAlign: 'center', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)' }}>
-              {acceptanceLetter?.acceptance_letter_status === 'approved' ? 'Enrolled' : 'Waiting for university'}
-            </span>
-          )}
         </div>
         
-        {/* Upload da acceptance letter pela escola */}
-        {isSchool && !acceptanceLetter?.acceptance_letter_url && (
-          <div className="mt-4 pt-4 border-t border-yellow-300">
-            <label className="font-semibold text-yellow-900 mb-3 block">Upload Acceptance Letter</label>
-            <p className="text-yellow-800 text-sm mb-4">Upload the acceptance letter to automatically enroll the student.</p>
-            <label className="flex items-center gap-3 cursor-pointer bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-4 py-2 rounded-lg font-medium shadow transition w-fit">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5" /></svg>
-              <span>{acceptanceLoading ? 'Uploading...' : 'Select Acceptance Letter'}</span>
-              <input 
-                type="file" 
-                accept="application/pdf" 
-                className="sr-only" 
-                onChange={async e => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    await handleAcceptanceLetterUpload(file);
-                  }
-                }}
-                disabled={acceptanceLoading}
-              />
-            </label>
-          </div>
-        )}
-        
-        {/* Download da acceptance letter */}
-        {acceptanceLetter?.acceptance_letter_url && (
-          <div className="flex flex-col md:flex-row gap-6 mt-2 w-full">
-            <div className="flex-1 flex flex-col gap-2">
-              <label className="font-semibold text-yellow-900 mb-1">Acceptance letter file</label>
-              <div className="flex gap-3 flex-wrap">
-                {/* Download: força download do arquivo */}
-                <button
-                  className="flex items-center gap-2 bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-4 py-2 rounded-lg font-medium shadow transition w-fit"
-                  onClick={() => {
-                    if (acceptanceLetterSignedUrls.acceptance_letter_url) {
-                      const filename = (acceptanceLetter?.acceptance_letter_url?.split('/')?.pop() || 'acceptance_letter.pdf').replace(/\?.*$/, '');
-                      handleForceDownload(acceptanceLetterSignedUrls.acceptance_letter_url, filename);
-                    }
-                  }}
-                  disabled={!acceptanceLetterSignedUrls.acceptance_letter_url}
-                  type="button"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5" /></svg>
-                  Download
-                </button>
-                {/* View: abre em nova aba para visualização */}
-                <a
-                  className="flex items-center gap-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 px-4 py-2 rounded-lg font-medium shadow transition w-fit"
-                  href={acceptanceLetterSignedUrls.acceptance_letter_url || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-disabled={!acceptanceLetterSignedUrls.acceptance_letter_url}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553 2.276A2 2 0 0121 14.03V17a2 2 0 01-2 2H5a2 2 0 01-2-2v-2.97a2 2 0 01.447-1.254L8 10" /></svg>
-                  View
-                </a>
-              </div>
+        {/* Conteúdo principal */}
+        <div className="p-8">
+          {/* Instruções */}
+          <p className="text-slate-700 text-lg mb-8 leading-relaxed max-w-4xl">
+            The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled.
+          </p>
+          
+          {/* Status para o aluno */}
+          {!isSchool && (
+            <div className="flex justify-center">
+              <span className="px-6 py-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-xl text-base font-semibold">
+                Waiting for university
+              </span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Transfer Form block: só para transfer, no final da página */}

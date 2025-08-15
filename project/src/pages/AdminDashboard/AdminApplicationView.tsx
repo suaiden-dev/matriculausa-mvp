@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import ApplicationChat from '../../components/ApplicationChat';
-import ImagePreviewModal from '../../components/ImagePreviewModal';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 
 const DOCUMENTS_INFO = [
   { key: 'passport', label: 'Passport', description: "A valid copy of the student's passport. Used for identification and visa purposes." },
@@ -174,7 +174,7 @@ const AdminApplicationView: React.FC = () => {
           />
         </div>
         {previewUrl && (
-          <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+          <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
         )}
       </div>
     </div>

@@ -1,0 +1,2425 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Clock, FileText, Globe, Phone, AlertCircle, Eye, Download, CheckCircle2, XCircle, UserCircle, ArrowLeft } from 'lucide-react';
+import type { Scholarship, Application, UserProfile } from '../../types';
+import { useUniversity } from '../../context/UniversityContext';
+import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
+import { supabase } from '../../lib/supabase';
+// import { useApplicationChat } from '../../hooks/useApplicationChat'; // Removido pois não está sendo usado
+import { useAuth } from '../../hooks/useAuth';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
+
+interface ApplicationDetails extends Application {
+  user_profiles: UserProfile;
+  scholarships: Scholarship;
+}
+
+const DOCUMENTS_INFO = [
+  {
+    key: 'passport',
+    label: 'Passport',
+    description: 'A valid copy of the student\'s passport. Used for identification and visa purposes.'
+  },
+  {
+    key: 'diploma',
+    label: 'High School Diploma',
+    description: 'Proof of high school graduation. Required for university admission.'
+  },
+  {
+    key: 'funds_proof',
+    label: 'Proof of Funds',
+    description: 'A bank statement or financial document showing sufficient funds for study.'
+  }
+];
+
+const TABS = [
+  { id: 'details', label: 'Details', icon: UserCircle },
+  { id: 'documents', label: 'Documents', icon: FileText }
+];
+
+const SelectionProcess: React.FC = () => {
+  const { applications, university } = useUniversity();
+  const { user } = useAuth();
+  
+  // States para filtros e pesquisa
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedScholarship, setSelectedScholarship] = useState<string>('');
+  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  
+  // States para o modal de detalhes do estudante
+  const [selectedStudent, setSelectedStudent] = useState<ApplicationDetails | null>(null);
+  const [studentLoading, setStudentLoading] = useState(false);
+  const [studentDocs, setStudentDocs] = useState<any[]>([]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
+  const [updating, setUpdating] = useState<string | null>(null);
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [pendingRejectType, setPendingRejectType] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
+  const [rejectStudentReason, setRejectStudentReason] = useState('');
+  const [acceptanceLoading, setAcceptanceLoading] = useState(false);
+  const [rejectingLoading, setRejectingLoading] = useState(false);
+  
+  // const chat = useApplicationChat(selectedStudent?.id); // Removido pois não está sendo usado
+
+  // Filtrar apenas estudantes em processo de seleção (documents_status === 'under_review' E ainda não pagaram ambas as taxas)
+  const selectionProcessApplications = useMemo(() => {
+    return applications.filter(app => {
+      const userProfile = (app as any).user_profiles;
+      const hasPaidApplicationFee = userProfile?.is_application_fee_paid;
+      const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
+      
+      // Debug: log dos valores para verificar
+      if (userProfile?.full_name) {
+        console.log(`Student: ${userProfile.full_name}`);
+        console.log(`Application Fee: ${hasPaidApplicationFee}`);
+        console.log(`Scholarship Fee: ${hasPaidScholarshipFee}`);
+        console.log(`Documents Status: ${userProfile.documents_status}`);
+      }
+      
+      // Estudante deve estar em processo de seleção E ainda não ter pago ambas as taxas
+      return userProfile?.documents_status === 'under_review' && 
+             (!hasPaidApplicationFee || !hasPaidScholarshipFee);
+    });
+  }, [applications]);
+
+  // Função para buscar detalhes completos do estudante
+  const fetchStudentDetails = async (applicationId: string) => {
+    setStudentLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('scholarship_applications')
+        .select(`
+          *,
+          user_profiles!student_id(*),
+          scholarships(*, universities(*))
+        `)
+        .eq('id', applicationId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setSelectedStudent(data as ApplicationDetails);
+        setActiveTab('details');
+        
+        // Buscar documentos
+        const appDocs = (data as any).documents;
+        if (Array.isArray(appDocs) && appDocs.length > 0) {
+          setStudentDocs(appDocs.map((d: any) => ({ type: d.type, file_url: d.url, status: d.status || 'under_review' })));
+        } else {
+          const profileDocs = (data as any).user_profiles?.documents;
+          if (Array.isArray(profileDocs) && profileDocs.length > 0) {
+            setStudentDocs(profileDocs.map((d: any) => ({ type: d.type, file_url: d.url, status: d.status || 'under_review' })));
+          } else {
+            const studentId = (data as any).user_profiles?.user_id;
+            if (studentId) {
+              const { data: docs } = await supabase
+                .from('student_documents')
+                .select('*')
+                .eq('user_id', studentId);
+              if (docs && docs.length > 0) {
+                setStudentDocs((docs || []).map((d: any) => ({ type: d.type, file_url: d.file_url, status: d.status || 'under_review' })));
+              } else {
+                setStudentDocs([]);
+              }
+            } else {
+              setStudentDocs([]);
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("Error fetching student details:", err);
+    } finally {
+      setStudentLoading(false);
+    }
+  };
+
+  // Funções para gerenciar documentos (copiadas de StudentDetails)
+  const latestDocByType = (type: string) => {
+    const docs = (selectedStudent as any)?.documents as any[] | undefined;
+    const appDoc = Array.isArray(docs) ? docs.find((d) => d.type === type) : undefined;
+    if (appDoc) return { id: `${type}`, type, file_url: appDoc.url, status: appDoc.status || 'under_review' };
+    return studentDocs.find((d) => d.type === type);
+  };
+
+  const updateApplicationDocStatus = async (
+    type: string,
+    status: 'approved' | 'changes_requested' | 'under_review',
+    reviewNotes?: string
+  ) => {
+    if (!selectedStudent) return;
+    const docs = Array.isArray((selectedStudent as any)?.documents) ? ([...(selectedStudent as any).documents] as any[]) : [];
+    const idx = docs.findIndex((d) => d.type === type);
+    if (idx >= 0) {
+      docs[idx] = { ...docs[idx], status, review_notes: reviewNotes ?? docs[idx]?.review_notes };
+    }
+    await supabase.from('scholarship_applications').update({ documents: docs }).eq('id', selectedStudent.id);
+    setSelectedStudent((prev) => prev ? ({ ...prev, documents: docs } as any) : prev);
+  };
+
+  const approveDoc = async (type: string) => {
+    if (!selectedStudent) return;
+    try {
+      setUpdating(type);
+      await updateApplicationDocStatus(type, 'approved');
+      
+      const { data: updatedApp } = await supabase
+        .from('scholarship_applications')
+        .select('documents')
+        .eq('id', selectedStudent.id)
+        .single();
+      
+      if (updatedApp?.documents) {
+        const allDocsApproved = ['passport', 'diploma', 'funds_proof']
+          .every((docType) => {
+            const doc = updatedApp.documents.find((d: any) => d.type === docType);
+            return doc && doc.status === 'approved';
+          });
+        
+        if (allDocsApproved) {
+          await supabase
+            .from('user_profiles')
+            .update({ documents_status: 'approved' })
+            .eq('user_id', selectedStudent.user_profiles.user_id);
+          
+          setSelectedStudent((prev) => prev ? ({ ...prev, documents: updatedApp.documents } as any) : prev);
+        }
+      }
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const requestChangesDoc = async (type: string, reason: string) => {
+    if (!selectedStudent) return;
+    try {
+      setUpdating(type);
+      await updateApplicationDocStatus(type, 'changes_requested', reason || undefined);
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'under_review' })
+        .eq('user_id', selectedStudent.user_profiles.user_id);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const approveStudent = async () => {
+    if (!selectedStudent) return;
+    try {
+      setAcceptanceLoading(true);
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'approved' })
+        .eq('user_id', selectedStudent.user_profiles.user_id);
+      
+      await supabase
+        .from('scholarship_applications')
+        .update({ status: 'approved' })
+        .eq('id', selectedStudent.id);
+
+      // Webhook e notificação (simplificado)
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', selectedStudent.user_profiles.user_id)
+          .single();
+
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: "Aluno aprovado na bolsa",
+            email_aluno: userData.email,
+            nome_aluno: selectedStudent.user_profiles.full_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Congratulations, you have been selected for the <strong>${selectedStudent.scholarships?.title || 'Bolsa'}</strong> scholarship.`
+          };
+
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+      }
+
+      setSelectedStudent(null);
+      setActiveTab('details');
+    } finally {
+      setAcceptanceLoading(false);
+    }
+  };
+
+  const rejectStudent = async () => {
+    if (!selectedStudent) return;
+    try {
+      setRejectingLoading(true);
+      await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'rejected' })
+        .eq('user_id', selectedStudent.user_profiles.user_id);
+      
+      await supabase
+        .from('scholarship_applications')
+        .update({ status: 'rejected', notes: rejectStudentReason || null })
+        .eq('id', selectedStudent.id);
+      
+      setSelectedStudent(null);
+      setActiveTab('details');
+      setShowRejectStudentModal(false);
+      setRejectStudentReason('');
+    } finally {
+      setRejectingLoading(false);
+    }
+  };
+
+  const allApproved = selectedStudent && ['passport', 'diploma', 'funds_proof']
+    .every((k) => {
+      const d = latestDocByType(k);
+      return d && d.file_url && (d.status || '').toLowerCase() === 'approved';
+    });
+
+  // Extrai bolsas únicas das aplicações em processo de seleção
+  const scholarships: Scholarship[] = Array.from(
+    selectionProcessApplications
+      .map(app => app.scholarships)
+      .filter((s): s is Scholarship => !!s)
+      .reduce((map, scholarship) => {
+        if (!map.has(scholarship.id)) map.set(scholarship.id, scholarship);
+        return map;
+      }, new Map<string, Scholarship>()).values()
+  );
+
+  // Extrai países únicos
+  const countries = useMemo(() => {
+    const countrySet = new Set<string>();
+    selectionProcessApplications.forEach(app => {
+      const country = (app as any).user_profiles?.country;
+      if (country) countrySet.add(country);
+    });
+    return Array.from(countrySet).sort();
+  }, [selectionProcessApplications]);
+
+  // Filtra aplicações
+  const filteredApplications = useMemo(() => {
+    let filtered = selectionProcessApplications;
+
+    // Filtro por bolsa
+    if (selectedScholarship) {
+      filtered = filtered.filter(app => app.scholarship_id === selectedScholarship);
+    }
+
+    // Filtro por país
+    if (selectedCountry) {
+      filtered = filtered.filter(app => (app as any).user_profiles?.country === selectedCountry);
+    }
+
+    // Filtro por termo de pesquisa
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(app => {
+        const student = (app as any).user_profiles;
+        return (
+          student?.full_name?.toLowerCase().includes(term) ||
+          student?.name?.toLowerCase().includes(term) ||
+          student?.phone?.includes(term) ||
+          student?.country?.toLowerCase().includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  }, [selectionProcessApplications, selectedScholarship, selectedCountry, searchTerm]);
+
+  // Função para obter contagem de documentos analisados
+  const getDocumentProgress = (app: any) => {
+    const documents = app.documents || [];
+    const totalDocs = 3; // passport, diploma, funds_proof
+    const reviewedDocs = documents.filter((doc: any) => 
+      doc.status === 'approved' || doc.status === 'changes_requested'
+    ).length;
+    
+    return { reviewed: reviewedDocs, total: totalDocs };
+  };
+
+  // New Request Modal State
+  const [showNewRequestModal, setShowNewRequestModal] = useState(false);
+  const [newDocumentRequest, setNewDocumentRequest] = useState({
+    title: '',
+    description: '',
+    due_date: '',
+    attachment: null as File | null,
+  });
+  const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
+
+  // Document Rejection Modal State
+  const [showRejectDocumentModal, setShowRejectDocumentModal] = useState(false);
+  const [pendingRejectDocumentId, setPendingRejectDocumentId] = useState<string | null>(null);
+  const [rejectDocumentReason, setRejectDocumentReason] = useState('');
+
+  // Acceptance Letter Upload State
+  const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
+  const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
+  const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState(false);
+
+  // State para documentos enviados pelo aluno
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+  // State para requests criados pela universidade
+  const [documentRequests, setDocumentRequests] = useState<any[]>([]);
+
+  // Função para buscar documentos enviados pelo aluno
+  const fetchStudentDocuments = async () => {
+    if (!selectedStudent) return;
+    
+    try {
+      console.log('=== Buscando todos os uploads do aluno ===');
+      console.log('Student user_id:', selectedStudent.user_profiles.user_id);
+      
+      // Primeiro, vamos verificar a estrutura da tabela document_request_uploads
+      const { data: sampleUploads, error: sampleError } = await supabase
+        .from('document_request_uploads')
+        .select('*')
+        .limit(5);
+      
+      if (sampleError) {
+        console.error("Error fetching sample uploads:", sampleError);
+      } else {
+        console.log('Estrutura da tabela document_request_uploads:', sampleUploads);
+      }
+      
+      // Buscar TODOS os uploads do aluno na tabela document_request_uploads
+      // Vamos tentar diferentes campos que podem identificar o usuário
+      let uploads: any[] = [];
+      let uploadsError: any = null;
+      
+      // Tentativa 1: usando uploaded_by
+      let { data: uploadsByUser, error: error1 } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          *,
+          document_requests!inner(
+            id,
+            title,
+            description,
+            created_at,
+            is_global,
+            university_id,
+            scholarship_application_id
+          )
+        `)
+        .eq('uploaded_by', selectedStudent.user_profiles.user_id);
+      
+      if (error1) {
+        console.log('Erro ao buscar por uploaded_by:', error1);
+      } else if (uploadsByUser && uploadsByUser.length > 0) {
+        console.log('Uploads encontrados por uploaded_by:', uploadsByUser);
+        uploads = uploadsByUser;
+      }
+      
+      // Tentativa 2: usando user_id
+      if (uploads.length === 0) {
+        let { data: uploadsByUserId, error: error2 } = await supabase
+          .from('document_request_uploads')
+          .select(`
+            *,
+            document_requests!inner(
+              id,
+              title,
+              description,
+              created_at,
+              is_global,
+              university_id,
+              scholarship_application_id
+            )
+          `)
+          .eq('user_id', selectedStudent.user_profiles.user_id);
+        
+        if (error2) {
+          console.log('Erro ao buscar por user_id:', error2);
+        } else if (uploadsByUserId && uploadsByUserId.length > 0) {
+          console.log('Uploads encontrados por user_id:', uploadsByUserId);
+          uploads = uploadsByUserId;
+        }
+      }
+      
+      // Tentativa 3: buscar todos e filtrar por scholarship_application_id
+      if (uploads.length === 0) {
+        let { data: allUploads, error: error3 } = await supabase
+          .from('document_request_uploads')
+          .select(`
+            *,
+            document_requests!inner(
+              id,
+              title,
+              description,
+              created_at,
+              is_global,
+              university_id,
+              scholarship_application_id
+            )
+          `);
+        
+        if (error3) {
+          console.log('Erro ao buscar todos os uploads:', error3);
+        } else if (allUploads) {
+          // Filtrar por scholarship_application_id
+          uploads = allUploads.filter(upload => 
+            upload.document_requests?.scholarship_application_id === selectedStudent.id
+          );
+          console.log('Uploads filtrados por scholarship_application_id:', uploads);
+        }
+      }
+
+      console.log('Uploads finais encontrados:', uploads);
+
+      if (!uploads || uploads.length === 0) {
+        console.log('Nenhum upload encontrado para este aluno');
+        setStudentDocuments([]);
+        return;
+      }
+
+      // Formatar os documentos para exibição
+      const studentDocuments = uploads.map(upload => ({
+        id: upload.id,
+        filename: upload.file_url?.split('/').pop() || 'Document',
+        file_url: upload.file_url,
+        status: upload.status || 'under_review',
+        uploaded_at: upload.uploaded_at || upload.created_at,
+        request_title: upload.document_requests?.title,
+        request_description: upload.document_requests?.description,
+        request_created_at: upload.document_requests?.created_at,
+        is_global: upload.document_requests?.is_global || false,
+        request_type: upload.document_requests?.is_global ? 'Global Request' : 'Individual Request'
+      }));
+
+      console.log('Documentos formatados para exibição:', studentDocuments);
+      setStudentDocuments(studentDocuments);
+    } catch (error) {
+      console.error("Error in fetchStudentDocuments:", error);
+      setStudentDocuments([]);
+    }
+  };
+
+  // Função para buscar requests criados pela universidade
+  const fetchDocumentRequests = async () => {
+    if (!selectedStudent) return;
+    
+    try {
+      console.log('=== Buscando document requests ===');
+      
+      // Buscar requests específicos para esta aplicação
+      const { data: requests, error: requestsError } = await supabase
+        .from('document_requests')
+        .select('*')
+        .eq('scholarship_application_id', selectedStudent.id)
+        .order('created_at', { ascending: false });
+      
+      if (requestsError) {
+        console.error("Error fetching document requests:", requestsError);
+        setDocumentRequests([]);
+        return;
+      }
+
+      console.log('Document requests encontrados:', requests);
+
+      // Buscar uploads para cada request
+      if (requests && requests.length > 0) {
+        const requestIds = requests.map(req => req.id);
+        console.log('IDs dos requests para buscar uploads:', requestIds);
+        
+        const { data: uploads, error: uploadsError } = await supabase
+          .from('document_request_uploads')
+          .select('*')
+          .in('document_request_id', requestIds);
+
+        if (uploadsError) {
+          console.error("Error fetching uploads:", uploadsError);
+        } else {
+          console.log('Uploads encontrados para os requests:', uploads);
+          // Associar uploads aos requests
+          const requestsWithUploads = requests.map(request => ({
+            ...request,
+            uploads: uploads?.filter(upload => upload.document_request_id === request.id) || []
+          }));
+          console.log('Requests com uploads:', requestsWithUploads);
+          setDocumentRequests(requestsWithUploads);
+        }
+      } else {
+        console.log('Nenhum document request encontrado para esta aplicação');
+        setDocumentRequests([]);
+      }
+    } catch (error) {
+      console.error("Error in fetchDocumentRequests:", error);
+      setDocumentRequests([]);
+    }
+  };
+
+  // Função para baixar arquivo
+  const handleDownloadDocument = async (doc: any) => {
+    if (!doc.file_url) return;
+    try {
+      const { data, error } = await supabase.storage
+        .from('document-attachments')
+        .download(doc.file_url);
+      
+      if (error) {
+        throw new Error('Failed to download document: ' + error.message);
+      }
+
+      const arrayBuffer = await data.arrayBuffer();
+      const blob = new Blob([arrayBuffer]);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.filename || 'document.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(`Failed to download document: ${err.message}`);
+    }
+  };
+
+  // Função para visualizar arquivo
+  const handleViewDocument = (doc: any) => {
+    if (!doc.file_url) return;
+    setPreviewUrl(doc.file_url);
+  };
+
+  // Função para baixar template
+  const handleDownloadTemplate = async (templateUrl: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('document-attachments')
+        .download(templateUrl);
+      
+      if (error) {
+        throw new Error('Failed to download template: ' + error.message);
+      }
+
+      const arrayBuffer = await data.arrayBuffer();
+      const blob = new Blob([arrayBuffer]);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = templateUrl.split('/').pop() || 'template.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(`Failed to download template: ${err.message}`);
+    }
+  };
+
+  // Função para visualizar upload de um request
+  const handleViewUpload = (upload: any) => {
+    if (!upload.file_url) return;
+    setPreviewUrl(upload.file_url);
+  };
+
+  // Função para aprovar documento enviado pelo aluno
+  const handleApproveDocument = async (uploadId: string) => {
+    try {
+      // Primeiro, buscar informações do upload para notificação
+      const { data: uploadData, error: fetchError } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          *,
+          document_requests!inner(
+            id,
+            title,
+            description
+          )
+        `)
+        .eq('id', uploadId)
+        .single();
+
+      if (fetchError) {
+        throw new Error('Failed to fetch upload data: ' + fetchError.message);
+      }
+
+      // Atualizar o status para aprovado
+      const { error } = await supabase
+        .from('document_request_uploads')
+        .update({ status: 'approved' })
+        .eq('id', uploadId);
+      
+      if (error) {
+        throw new Error('Failed to approve document: ' + error.message);
+      }
+
+      // Enviar notificação ao aluno
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', selectedStudent?.user_profiles.user_id)
+          .single();
+
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: "Documento aprovado",
+            email_aluno: userData.email,
+            nome_aluno: selectedStudent?.user_profiles.full_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
+          };
+
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending approval notification:', notificationError);
+      }
+
+      // Recarregar os dados para mostrar o novo status
+      if (selectedStudent) {
+        fetchStudentDocuments();
+      }
+
+      alert('Document approved successfully! The student will be notified.');
+    } catch (err: any) {
+      console.error("Error approving document:", err);
+      alert(`Failed to approve document: ${err.message}`);
+    }
+  };
+
+  // Função para rejeitar documento enviado pelo aluno
+  const handleRejectDocument = async (uploadId: string, reason: string) => {
+    try {
+      // Primeiro, buscar informações do upload para notificação
+      const { data: uploadData, error: fetchError } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          *,
+          document_requests!inner(
+            id,
+            title,
+            description
+          )
+        `)
+        .eq('id', uploadId)
+        .single();
+
+      if (fetchError) {
+        throw new Error('Failed to fetch upload data: ' + fetchError.message);
+      }
+
+      // Atualizar o status para rejeitado
+      const { error } = await supabase
+        .from('document_request_uploads')
+        .update({ 
+          status: 'rejected',
+          review_notes: reason || null
+        })
+        .eq('id', uploadId);
+      
+      if (error) {
+        throw new Error('Failed to reject document: ' + error.message);
+      }
+
+      // Enviar notificação ao aluno
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', selectedStudent?.user_profiles.user_id)
+          .single();
+
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: "Documento rejeitado",
+            email_aluno: userData.email,
+            nome_aluno: selectedStudent?.user_profiles.full_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+          };
+
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending rejection notification:', notificationError);
+      }
+
+      // Recarregar os dados para mostrar o novo status
+      if (selectedStudent) {
+        fetchStudentDocuments();
+      }
+
+      alert('Document rejected successfully! The student will be notified.');
+    } catch (err: any) {
+      console.error("Error rejecting document:", err);
+      alert(`Failed to reject document: ${err.message}`);
+    }
+  };
+
+  // Função para selecionar arquivo da carta de aceite
+  const handleAcceptanceLetterFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAcceptanceLetterFile(file);
+      setAcceptanceLetterUploaded(false);
+    }
+  };
+
+  // Função para processar a carta de aceite
+  const handleProcessAcceptanceLetter = async () => {
+    if (!selectedStudent || !acceptanceLetterFile) {
+      alert('Please select a file first.');
+      return;
+    }
+
+    setUploadingAcceptanceLetter(true);
+    try {
+      // Upload do arquivo para o storage
+      const fileName = `acceptance_letters/${Date.now()}_${acceptanceLetterFile.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('document-attachments')
+        .upload(fileName, acceptanceLetterFile);
+
+      if (uploadError) {
+        throw new Error('Failed to upload file: ' + uploadError.message);
+      }
+
+      // Atualizar a aplicação com a URL da carta de aceite
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({
+          acceptance_letter_url: uploadData.path,
+          acceptance_letter_status: 'approved',
+          acceptance_letter_sent_at: new Date().toISOString(),
+          status: 'enrolled'
+        })
+        .eq('id', selectedStudent.id);
+
+      if (updateError) {
+        throw new Error('Failed to update application: ' + updateError.message);
+      }
+
+      // Atualizar o perfil do usuário
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          documents_status: 'approved',
+          enrollment_status: 'enrolled'
+        })
+        .eq('user_id', selectedStudent.user_profiles.user_id);
+
+      if (profileError) {
+        console.error('Error updating user profile:', profileError);
+      }
+
+      // Enviar notificação ao aluno
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', selectedStudent.user_profiles.user_id)
+          .single();
+
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: "Carta de aceite enviada",
+            email_aluno: userData.email,
+            nome_aluno: selectedStudent.user_profiles.full_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Congratulations! Your acceptance letter has been processed and you are now enrolled. Please check your dashboard for next steps.`
+          };
+
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending acceptance notification:', notificationError);
+      }
+
+      setAcceptanceLetterUploaded(true);
+      alert('Acceptance letter processed successfully! The student is now enrolled and will be notified.');
+      
+      // Recarregar dados do estudante
+      if (selectedStudent) {
+        fetchStudentDetails(selectedStudent.id);
+      }
+    } catch (err: any) {
+      console.error("Error processing acceptance letter:", err);
+      alert(`Failed to process acceptance letter: ${err.message}`);
+    } finally {
+      setUploadingAcceptanceLetter(false);
+    }
+  };
+
+  // Effect para buscar documentos e requests quando o estudante for selecionado
+  useEffect(() => {
+    if (selectedStudent) {
+      console.log('Selected student:', selectedStudent);
+      console.log('Student user_id:', selectedStudent.user_profiles?.user_id);
+      console.log('Application id:', selectedStudent.id);
+      
+      // Debug: verificar todas as tabelas relacionadas
+      debugAllTables();
+      
+      fetchStudentDocuments();
+      fetchDocumentRequests();
+      
+      // Verificar se já existe carta de aceite
+      if (selectedStudent.acceptance_letter_url) {
+        setAcceptanceLetterUploaded(true);
+      } else {
+        setAcceptanceLetterUploaded(false);
+      }
+      
+      // Verificar se o estudante deve ser movido para a página Students
+      checkIfStudentShouldBeMoved(selectedStudent);
+    }
+  }, [selectedStudent]);
+  
+  // Função para verificar se o estudante deve ser movido para a página Students
+  const checkIfStudentShouldBeMoved = (student: ApplicationDetails) => {
+    const hasPaidApplicationFee = student.user_profiles?.is_application_fee_paid;
+    const hasPaidScholarshipFee = student.is_scholarship_fee_paid;
+    
+    if (hasPaidApplicationFee && hasPaidScholarshipFee) {
+      // Atualizar o status para 'approved' para mover para a página Students
+      updateStudentStatusToApproved(student.id);
+    }
+  };
+  
+  // Função para atualizar o status do estudante para 'approved'
+  const updateStudentStatusToApproved = async (applicationId: string) => {
+    try {
+      // Apenas atualizar o status da aplicação para 'approved'
+      // NÃO alterar o documents_status - isso deve ser controlado separadamente
+      // pela aprovação de documentos pela universidade
+      const { error: appError } = await supabase
+        .from('scholarship_applications')
+        .update({ status: 'approved' })
+        .eq('id', applicationId);
+      
+      if (appError) {
+        console.error('Error updating application status:', appError);
+        return;
+      }
+      
+      console.log('Student moved to approved status (fees paid) - will appear in Students page');
+      console.log('Note: documents_status remains unchanged - controlled by document approval process');
+      
+      // Fechar o modal de detalhes do estudante
+      setSelectedStudent(null);
+      
+      // Recarregar os dados para refletir as mudanças
+      if (university) {
+        // Forçar recarregamento dos dados
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Error in updateStudentStatusToApproved:', err);
+    }
+  };
+
+  // Função de debug para verificar todas as tabelas relacionadas
+  const debugAllTables = async () => {
+    if (!selectedStudent) return;
+    
+    try {
+      console.log('=== DEBUG: Verificando todas as tabelas ===');
+      
+      // 1. Verificar student_documents
+      const { data: studentDocs, error: studentDocsError } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('user_id', selectedStudent.user_profiles.user_id);
+      console.log('student_documents:', { data: studentDocs, error: studentDocsError });
+      
+      // 2. Verificar document_requests
+      const { data: docRequests, error: docRequestsError } = await supabase
+        .from('document_requests')
+        .select('*')
+        .eq('scholarship_application_id', selectedStudent.id);
+      console.log('document_requests:', { data: docRequests, error: docRequestsError });
+      
+      // 3. Verificar document_request_uploads (TODOS)
+      const { data: docUploads, error: docUploadsError } = await supabase
+        .from('document_request_uploads')
+        .select('*');
+      console.log('document_request_uploads (all):', { data: docUploads, error: docUploadsError });
+      
+      // 4. Verificar document_request_uploads com relacionamento
+      const { data: docUploadsWithRel, error: docUploadsRelError } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          *,
+          document_requests!inner(
+            id,
+            title,
+            description,
+            is_global,
+            university_id,
+            scholarship_application_id
+          )
+        `);
+      console.log('document_request_uploads com relacionamento:', { data: docUploadsWithRel, error: docUploadsRelError });
+      
+      // 5. Verificar document_request_uploads filtrados por uploaded_by
+      const { data: docUploadsByUser, error: docUploadsByUserError } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          *,
+          document_requests!inner(
+            id,
+            title,
+            description,
+            is_global,
+            university_id,
+            scholarship_application_id
+          )
+        `)
+        .eq('uploaded_by', selectedStudent.user_profiles.user_id);
+      console.log('document_request_uploads por usuário:', { data: docUploadsByUser, error: docUploadsByUserError });
+      
+      // 6. Verificar scholarship_applications documents
+      const { data: appDocs, error: appDocsError } = await supabase
+        .from('scholarship_applications')
+        .select('documents')
+        .eq('id', selectedStudent.id);
+      console.log('scholarship_applications documents:', { data: appDocs, error: appDocsError });
+      
+      // 7. Verificar user_profiles documents
+      const { data: profileDocs, error: profileDocsError } = await supabase
+        .from('user_profiles')
+        .select('documents')
+        .eq('user_id', selectedStudent.user_profiles.user_id);
+      console.log('user_profiles documents:', { data: profileDocs, error: profileDocsError });
+      
+      console.log('=== FIM DEBUG ===');
+    } catch (error) {
+      console.error('Error in debugAllTables:', error);
+    }
+  };
+
+  const handleCreateDocumentRequest = async () => {
+    if (!selectedStudent) return;
+    setCreatingDocumentRequest(true);
+    try {
+      let attachment_url = '';
+      
+      // Upload do arquivo se houver
+      if (newDocumentRequest.attachment) {
+        const { data, error } = await supabase.storage
+          .from('document-attachments')
+          .upload(`individual/${Date.now()}_${newDocumentRequest.attachment.name}`, newDocumentRequest.attachment);
+        
+        if (error) {
+          throw new Error('Failed to upload attachment: ' + error.message);
+        }
+        attachment_url = data?.path;
+      }
+
+      // Buscar university_id da aplicação
+      const { data: appData } = await supabase
+        .from('scholarship_applications')
+        .select('scholarship_id, scholarships(university_id)')
+        .eq('id', selectedStudent.id)
+        .single();
+
+      let university_id: string | undefined = undefined;
+      if (appData?.scholarships) {
+        if (Array.isArray(appData.scholarships)) {
+          university_id = (appData.scholarships[0] as any)?.university_id;
+        } else {
+          university_id = (appData.scholarships as any).university_id;
+        }
+      }
+
+      // Criar o request usando a Edge Function
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      
+      if (!accessToken) {
+        throw new Error('Usuário não autenticado. Faça login novamente.');
+      }
+
+      const payload = {
+        title: newDocumentRequest.title,
+        description: newDocumentRequest.description,
+        due_date: newDocumentRequest.due_date || null,
+        attachment_url,
+        university_id,
+        is_global: false,
+        status: 'open',
+        created_by: user?.id || '',
+        scholarship_application_id: selectedStudent.id
+      };
+
+      const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-document-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      let result: any = {};
+      try {
+        result = await response.json();
+      } catch (e) {
+        console.log('Erro ao fazer parse do JSON de resposta:', e);
+      }
+
+      if (!response.ok || !result.success) {
+        throw new Error('Failed to create request: ' + (result.error || 'Unknown error'));
+      }
+
+      // Enviar notificação para o aluno
+      try {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', selectedStudent.user_profiles.user_id)
+          .single();
+
+        if (userData?.email) {
+          const webhookPayload = {
+            tipo_notf: "Nova solicitação de documento",
+            email_aluno: userData.email,
+            nome_aluno: selectedStudent.user_profiles.full_name,
+            email_universidade: user?.email,
+            o_que_enviar: `A new document request has been submitted for your review: <strong>${newDocumentRequest.title}</strong>. Please log in to your dashboard to view the details and upload the requested document.`
+          };
+
+          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+        }
+      } catch (error) {
+        console.error('Error sending webhook:', error);
+      }
+
+      // Fechar modal e limpar formulário
+      setShowNewRequestModal(false);
+      setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
+      
+      // Recarregar dados para mostrar o novo request
+      if (selectedStudent) {
+        fetchDocumentRequests();
+        fetchStudentDocuments();
+      }
+      
+      // Mostrar mensagem de sucesso
+      alert('Document request created successfully! The student will be notified.');
+    } catch (err: any) {
+      console.error("Error creating document request:", err);
+      alert(`Failed to create document request: ${err.message}`);
+    } finally {
+      setCreatingDocumentRequest(false);
+    }
+  };
+
+  return (
+    <ProfileCompletionGuard 
+      isProfileCompleted={university?.profile_completed}
+      title="Complete your profile to manage selection process"
+      description="Finish setting up your university profile to view and manage student selection process"
+    >
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+        {/* Header Section */}
+        <div className="bg-white shadow-sm border-b border-slate-200">
+          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                  Selection Process
+                </h1>
+                <p className="mt-1 text-sm text-slate-600">
+                  Review and approve student applications pending fee payments
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  Students automatically move to the Students page once both Application Fee and Scholarship Fee are paid
+                </p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-700 border border-blue-300">
+                  <Clock className="w-4 h-4 mr-1.5" />
+                  {filteredApplications.length} Pending Fees
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters and Search Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            {/* Search and Filters */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Search Bar */}
+                <div className="lg:col-span-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Search students in selection process..."
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Scholarship Filter */}
+                <div>
+                  <select
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    value={selectedScholarship}
+                    onChange={(e) => setSelectedScholarship(e.target.value)}
+                  >
+                    <option value="">All Scholarships</option>
+                    {scholarships.map(s => (
+                      <option key={s.id} value={s.id}>{s.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Country Filter */}
+                <div>
+                  <select
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    value={selectedCountry}
+                    onChange={(e) => setSelectedCountry(e.target.value)}
+                  >
+                    <option value="">All Countries</option>
+                    {countries.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Selection Process Summary */}
+          {selectionProcessApplications.length > 0 && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">Selection Process Active</h3>
+                    <p className="text-sm text-slate-600">
+                      {selectionProcessApplications.length} students are pending fee payments to complete enrollment
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-blue-600">{selectionProcessApplications.length}</div>
+                  <div className="text-sm text-slate-600">Pending Fees</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Students Grid */}
+          <div className="space-y-4">
+            {filteredApplications.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+                {selectionProcessApplications.length === 0 ? (
+                  <>
+                    <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-900 mb-2">No students pending fees</h3>
+                    <p className="text-slate-600">All students have completed their fee payments and moved to the Students page.</p>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-900 mb-2">No students found</h3>
+                    <p className="text-slate-600">Try adjusting your filters or search terms.</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              filteredApplications.map((app) => {
+                const student = (app as any).user_profiles;
+                const progress = getDocumentProgress(app);
+                const hasUrgentAction = progress.reviewed < progress.total;
+
+                return (
+                  <div
+                    key={app.id} 
+                    onClick={() => fetchStudentDetails(app.id)}
+                    className="block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
+                  >
+                    <div className="p-6">
+                      <div className="flex sm:flex-row items-start sm:items-center justify-between">
+                        <div className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-0 flex-1">
+                          {student?.avatar_url ? (
+                            <img
+                              src={student.avatar_url}
+                              alt={student?.full_name || student?.name || 'Student Avatar'}
+                              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 bg-slate-100"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-white font-semibold text-sm sm:text-lg">
+                                {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm text-wrap sm:text-lg font-semibold text-slate-900">
+                              {student?.full_name || student?.name || 'Unknown Student'}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
+                              {student?.country && (
+                                <div className="flex items-center">
+                                  <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                  {student.country}
+                                </div>
+                              )}
+                              {student?.phone && (
+                                <div className="flex items-center">
+                                  <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                  {student.phone}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Document Progress */}
+                            <div className="mt-2 flex items-center space-x-2">
+                              <div className="flex items-center space-x-1">
+                                <FileText className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-600">
+                                  Documents: {progress.reviewed}/{progress.total} reviewed
+                                </span>
+                              </div>
+                              {hasUrgentAction && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                                  <AlertCircle className="w-3 h-3 mr-1" />
+                                  Needs Review
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      
+                        <div className="flex flex-col items-end space-y-2 sm:space-y-3">
+                          <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                            In Review
+                          </span>
+                          <div className="text-xs sm:text-sm text-slate-500 text-right">
+                            Applied: {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Student Details View */}
+        {selectedStudent && (
+          <div className="fixed top-16 bottom-0 left-0 right-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto">
+            <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+              {/* Header Section - Simplified */}
+              <div className="bg-white shadow-sm border-b border-slate-200">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setSelectedStudent(null)}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Selection Process
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Page Title and Navigation Section */}
+              <div className="bg-white border-b border-slate-200">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                        Student Application
+                      </h1>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Review and manage {selectedStudent.user_profiles.full_name}'s application details
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      {selectedStudent.status === 'enrolled' || selectedStudent.acceptance_letter_status === 'approved' ? (
+                        <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                          Enrolled
+                        </div>
+                      ) : (
+                        <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-700 border border-blue-300">
+                          <Clock className="w-4 h-4 mr-1.5" />
+                          In Review
+                        </div>
+                        )}
+                    </div>
+                  </div>
+                  
+                  {/* Navigation Tabs */}
+                  <nav className="flex space-x-8 overflow-x-auto border-b border-slate-200" role="tablist">
+                    {TABS.map(tab => (
+                      <button
+                        key={tab.id}
+                        className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                          activeTab === tab.id 
+                            ? 'border-[#05294E] text-[#05294E]' 
+                            : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                        }`}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        type="button"
+                        aria-selected={activeTab === tab.id}
+                        role="tab"
+                      >
+                        <tab.icon className={`w-5 h-5 mr-2 transition-colors ${
+                          activeTab === tab.id ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                        }`} />
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </div>
+
+              {/* Student Details Content */}
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {studentLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
+                  </div>
+                ) : (
+                  <>
+                    {activeTab === 'details' && (
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <div className="lg:col-span-8 space-y-6">
+                          {/* Student Information Card */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-5 py-3">
+                              <h2 className="text-lg font-semibold text-white flex items-center">
+                                <UserCircle className="w-5 h-5 mr-2" />
+                                Student Information
+                              </h2>
+                            </div>
+                            <div className="p-5">
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Personal Information */}
+                                <div className="space-y-4">
+                                  <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Personal Details</h3>
+                                  <div className="space-y-3">
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Full Name</dt>
+                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.full_name}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Phone</dt>
+                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.phone || 'Not provided'}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Country</dt>
+                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.country || 'Not specified'}</dd>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Academic Information */}
+                                <div className="space-y-4">
+                                  <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Academic Profile</h3>
+                                  <div className="space-y-3">
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Field of Interest</dt>
+                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.field_of_interest || 'Not specified'}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Academic Level</dt>
+                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.academic_level || 'Not specified'}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">GPA</dt>
+                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.gpa || 'Not provided'}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">English Proficiency</dt>
+                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.english_proficiency || 'Not specified'}</dd>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Application & Status */}
+                                <div className="space-y-4">
+                                  <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Application Status</h3>
+                                  <div className="space-y-3">
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Student Type</dt>
+                                      <dd className="text-base text-slate-900 mt-1">
+                                        {selectedStudent.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
+                                         selectedStudent.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
+                                         selectedStudent.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
+                                         selectedStudent.student_process_type || 'Not specified'}
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
+                                      <dd className="mt-1">
+                                        <div className="flex items-center space-x-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            selectedStudent.user_profiles.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
+                                          }`}></div>
+                                          <span className={`text-sm font-medium ${
+                                            selectedStudent.user_profiles.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
+                                          }`}>
+                                            {selectedStudent.user_profiles.is_application_fee_paid ? 'Paid' : 'Pending'}
+                                          </span>
+                                        </div>
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Documents Status</dt>
+                                      <dd className="mt-1">
+                                        <div className="flex items-center space-x-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            selectedStudent.user_profiles.documents_status === 'approved' ? 'bg-green-500' :
+                                            selectedStudent.user_profiles.documents_status === 'rejected' ? 'bg-red-500' :
+                                            selectedStudent.user_profiles.documents_status === 'pending' ? 'bg-yellow-500' :
+                                            selectedStudent.user_profiles.documents_status === 'analyzing' ? 'bg-blue-500' :
+                                            'bg-slate-400'
+                                          }`}></div>
+                                          <span className={`text-sm font-medium ${
+                                            selectedStudent.user_profiles.documents_status === 'approved' ? 'text-green-700' :
+                                            selectedStudent.user_profiles.documents_status === 'rejected' ? 'text-red-700' :
+                                            selectedStudent.user_profiles.documents_status === 'pending' ? 'text-yellow-700' :
+                                            selectedStudent.user_profiles.documents_status === 'analyzing' ? 'text-blue-700' :
+                                            'text-slate-600'
+                                          }`}>
+                                            {selectedStudent.user_profiles.documents_status === 'approved' ? 'Approved' :
+                                             selectedStudent.user_profiles.documents_status === 'rejected' ? 'Rejected' :
+                                             selectedStudent.user_profiles.documents_status === 'pending' ? 'Pending' :
+                                             selectedStudent.user_profiles.documents_status === 'analyzing' ? 'Analyzing' :
+                                             selectedStudent.user_profiles.documents_status || 'Not Started'}
+                                          </span>
+                                        </div>
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Enrollment Status</dt>
+                                      <dd className="mt-1">
+                                        <div className="flex items-center space-x-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            selectedStudent.acceptance_letter_status === 'approved' ? 'bg-green-500' :
+                                            selectedStudent.acceptance_letter_status === 'sent' ? 'bg-blue-500' :
+                                            selectedStudent.acceptance_letter_status === 'signed' ? 'bg-purple-500' :
+                                            selectedStudent.acceptance_letter_status === 'pending' ? 'bg-yellow-500' :
+                                            'bg-slate-400'
+                                          }`}></div>
+                                          <span className={`text-sm font-medium ${
+                                            selectedStudent.acceptance_letter_status === 'approved' ? 'text-green-700' :
+                                            selectedStudent.acceptance_letter_status === 'sent' ? 'text-blue-700' :
+                                            selectedStudent.acceptance_letter_status === 'signed' ? 'text-purple-700' :
+                                            selectedStudent.acceptance_letter_status === 'pending' ? 'text-yellow-700' :
+                                            'text-slate-600'
+                                          }`}>
+                                            {selectedStudent.acceptance_letter_status === 'approved' ? 'Enrolled' :
+                                             selectedStudent.acceptance_letter_status === 'sent' ? 'Letter Sent' :
+                                             selectedStudent.acceptance_letter_status === 'signed' ? 'Letter Signed' :
+                                             selectedStudent.acceptance_letter_status === 'pending' ? 'Pending' :
+                                             selectedStudent.acceptance_letter_status || 'Not Started'}
+                                          </span>
+                                        </div>
+                                      </dd>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Scholarship Information Card */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-3">
+                              <h2 className="text-lg font-semibold text-white flex items-center">
+                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                </svg>
+                                Scholarship Details
+                              </h2>
+                            </div>
+                            <div className="p-5">
+                              <div className="space-y-6">
+                                <div className="flex items-start space-x-3">
+                                  <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                                  <div className="flex-1">
+                                    <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
+                                    <dd className="text-lg font-semibold text-slate-900">{selectedStudent.scholarships.title}</dd>
+                                  </div>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                  <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                                  <div className="flex-1">
+                                    <dt className="text-sm font-medium text-slate-600">Annual Value</dt>
+                                    <dd className="text-2xl font-bold text-[#05294E]">
+                                      ${Number(selectedStudent.scholarships.annual_value_with_scholarship ?? 0).toLocaleString()}
+                                    </dd>
+                                  </div>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                  <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                                  <div className="flex-1">
+                                    <dt className="text-sm font-medium text-slate-600">Description</dt>
+                                    <dd className="text-base text-slate-700 leading-relaxed">{selectedStudent.scholarships.description}</dd>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Document Review & Approval Section */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-5 py-3">
+                              <h2 className="text-lg font-semibold text-white flex items-center">
+                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Document Review & Approval
+                              </h2>
+                              <p className="text-slate-200 text-sm mt-1">Review each document and approve or request changes</p>
+                            </div>
+                            <div className="p-5">
+                              <div className="space-y-6">
+                                {DOCUMENTS_INFO.map((doc) => {
+                                  const d = latestDocByType(doc.key);
+                                  const status = d?.status || 'not_submitted';
+                                  
+                                  return (
+                                    <div key={doc.key} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                        <div className="flex-1">
+                                          <div className="flex items-start justify-between mb-3">
+                                            <div>
+                                              <h3 className="font-semibold text-slate-900 text-lg">{doc.label}</h3>
+                                              <p className="text-sm text-slate-600 mt-1 leading-relaxed">{doc.description}</p>
+                                            </div>
+                                            <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                              status === 'approved' ? 'bg-green-100 text-green-800' :
+                                              status === 'changes_requested' ? 'bg-red-100 text-red-800' :
+                                              status === 'under_review' ? 'bg-slate-100 text-slate-800' :
+                                              'bg-slate-100 text-slate-700'
+                                            }`}>
+                                              <div className={`w-2 h-2 rounded-full mr-2 ${
+                                                status === 'approved' ? 'bg-green-500' :
+                                                status === 'changes_requested' ? 'bg-red-500' :
+                                                status === 'under_review' ? 'bg-slate-400' :
+                                                'bg-slate-400'
+                                              }`} />
+                                              {status === 'approved' ? 'Approved' :
+                                               status === 'changes_requested' ? 'Changes Requested' :
+                                               status === 'under_review' ? 'Under Review' :
+                                               d?.file_url ? 'Submitted' : 'Not Submitted'}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                          {d?.file_url && (
+                                            <div className="flex gap-2">
+                                              <a 
+                                                className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                                href={d.file_url} 
+                                                target="_blank" 
+                                                rel="noreferrer"
+                                              >
+                                                <Eye className="w-4 h-4 mr-2" />
+                                                Preview
+                                              </a>
+                                              <a 
+                                                className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                                href={d.file_url} 
+                                                download
+                                              >
+                                                <Download className="w-4 h-4 mr-2" />
+                                                Download
+                                              </a>
+                                            </div>
+                                          )}
+                                          
+                                          <div className="flex gap-2">
+                                            <button
+                                              disabled={!d || updating === d.type || status === 'approved'}
+                                              onClick={() => d && approveDoc(d.type)}
+                                              className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                                status === 'approved' 
+                                                  ? 'bg-green-600 text-white' 
+                                                  : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                                              }`}
+                                            >
+                                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                                              {status === 'approved' ? 'Approved' : 'Approve'}
+                                            </button>
+                                            <button
+                                              disabled={!d || updating === d.type || status === 'approved'}
+                                              onClick={() => {
+                                                if (d) {
+                                                  setPendingRejectType(d.type);
+                                                  setShowReasonModal(true);
+                                                }
+                                              }}
+                                              className="flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                              <XCircle className="w-4 h-4 mr-2" />
+                                              Request Changes
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Final Application Approval Section */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-5 py-3">
+                              <h3 className="text-lg font-semibold text-white flex items-center">
+                                <CheckCircle2 className="w-5 h-5 mr-2" />
+                                Final Application Approval
+                              </h3>
+                            </div>
+                            <div className="p-5">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-slate-900 font-medium">
+                                    {allApproved ? 'All documents have been approved' : 'Approve all documents to proceed'}
+                                  </p>
+                                  <p className="text-sm text-slate-600 mt-1">
+                                    This will approve the student's application and allow them to proceed with the next steps.
+                                  </p>
+                                </div>
+                                <div className="flex gap-3">
+                                  <button
+                                    onClick={() => setShowRejectStudentModal(true)}
+                                    disabled={acceptanceLoading || rejectingLoading}
+                                    className="px-5 py-2 rounded-lg font-semibold text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                  >
+                                    Reject Application
+                                  </button>
+                                  <button
+                                    disabled={!allApproved || acceptanceLoading || rejectingLoading}
+                                    onClick={approveStudent}
+                                    className="px-5 py-2 rounded-lg font-semibold bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 transition-colors"
+                                  >
+                                    {acceptanceLoading ? 'Approving...' : 'Approve Student'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Sidebar */}
+                        <div className="lg:col-span-4 space-y-6">
+                          {/* Quick Stats Card */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-5 py-3">
+                              <h3 className="text-lg font-semibold text-white">Application Summary</h3>
+                            </div>
+                            <div className="p-5 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Submitted</span>
+                                <span className="text-sm text-slate-900">
+                                  {new Date((selectedStudent as any).created_at || Date.now()).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Documents</span>
+                                <span className="text-sm text-slate-900">
+                                  {DOCUMENTS_INFO.filter(doc => {
+                                    const d = latestDocByType(doc.key);
+                                    return d?.status === 'approved';
+                                  }).length} / {DOCUMENTS_INFO.length} approved
+                                </span>
+                              </div>
+                              <div className="pt-4 border-t border-slate-200">
+                                <div className="text-sm text-slate-600 mb-2">Progress</div>
+                                <div className="w-full bg-slate-200 rounded-full h-2">
+                                  <div 
+                                    className="bg-gradient-to-r from-[#05294E] to-blue-600 h-2 rounded-full transition-all duration-300"
+                                    style={{
+                                      width: `${(DOCUMENTS_INFO.filter(doc => {
+                                        const d = latestDocByType(doc.key);
+                                        return d?.status === 'approved';
+                                      }).length / DOCUMENTS_INFO.length) * 100}%`
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Recent Activity Card */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-5 py-3">
+                              <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+                            </div>
+                            <div className="p-5">
+                              <div className="space-y-3">
+                                <div className="flex items-start space-x-3">
+                                  <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                                  <div className="flex-1">
+                                    <p className="text-sm text-slate-900">Application submitted</p>
+                                    <p className="text-xs text-slate-500">{new Date((selectedStudent as any).created_at || Date.now()).toLocaleDateString()}</p>
+                                  </div>
+                                </div>
+                                {(selectedStudent as any).updated_at !== (selectedStudent as any).created_at && (
+                                  <div className="flex items-start space-x-3">
+                                    <div className="w-2 h-2 bg-slate-400 rounded-full mt-2 flex-shrink-0"></div>
+                                    <div className="flex-1">
+                                      <p className="text-sm text-slate-900">Last updated</p>
+                                      <p className="text-xs text-slate-500">{new Date((selectedStudent as any).updated_at || Date.now()).toLocaleDateString()}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Quick Actions Card */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-5 py-3">
+                              <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+                            </div>
+                            <div className="p-5">
+                              <div className="space-y-3">
+                                <button
+                                  onClick={() => setActiveTab('documents')}
+                                  className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    <FileText className="w-5 h-5 text-slate-600" />
+                                    <span className="text-sm font-medium text-slate-900">Documents</span>
+                                  </div>
+                                  <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'documents' && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                          <h2 className="text-xl font-semibold text-white flex items-center">
+                            <FileText className="w-6 h-6 mr-3" />
+                            Document Management
+                          </h2>
+                          <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
+                        </div>
+                                                 <div className="p-6">
+                          {/* New Request Button */}
+                          <div className="flex justify-end mb-6">
+                            <button 
+                              onClick={() => setShowNewRequestModal(true)}
+                              className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-semibold shadow-sm transition-all duration-200 flex items-center space-x-3"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                              </svg>
+                              <span>New Request</span>
+                            </button>
+                          </div>
+
+                          {/* Student Uploads Section */}
+                          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+                            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
+                              <h4 className="font-semibold text-slate-900 flex items-center">
+                                <svg className="w-5 h-5 mr-3 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Document Requests
+                              </h4>
+                            </div>
+                            
+                            <div className="p-6">
+                              {/* University Document Requests */}
+                              <div className="mb-6">
+                                
+                                
+                                {documentRequests.length === 0 ? (
+                                  <div className="text-center py-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                                    <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <p className="text-slate-600 font-medium">No document requests yet</p>
+                                    <p className="text-sm text-slate-500 mt-1">Create your first request using the button above</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    {documentRequests.map((request) => (
+                                      <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex-1">
+                                            <div className="flex items-center space-x-3 mb-2">
+                                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                              </div>
+                                              <div>
+                                                <h6 className="font-semibold text-slate-900">{request.title}</h6>
+                                                <p className="text-sm text-slate-600">{request.description}</p>
+                                                {request.due_date && (
+                                                  <p className="text-xs text-slate-500 mt-1">
+                                                    Due: {new Date(request.due_date).toLocaleDateString()}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Student Upload Status */}
+                                            {request.uploads && request.uploads.length > 0 ? (
+                                              <div className="ml-13 mt-3">
+                                                <div className="flex items-center space-x-3">
+                                                  <span className="text-sm text-slate-600">Student response:</span>
+                                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                    request.uploads[0].status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                    request.uploads[0].status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                                    'bg-yellow-100 text-yellow-800'
+                                                  }`}>
+                                                    {request.uploads[0].status === 'approved' ? 'Approved' :
+                                                     request.uploads[0].status === 'rejected' ? 'Rejected' :
+                                                     'Under Review'}
+                                                  </span>
+                                                  <button 
+                                                    onClick={() => handleViewUpload(request.uploads[0])}
+                                                    className="text-[#05294E] hover:text-[#041f38] text-sm font-medium hover:underline"
+                                                  >
+                                                    View
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <div className="ml-13 mt-3">
+                                                <span className="text-sm text-slate-500 italic">No response from student yet</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                          
+                                          <div className="flex items-center space-x-2 ml-4">
+                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                              request.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                              request.status === 'closed' ? 'bg-slate-100 text-slate-800' :
+                                              'bg-green-100 text-green-800'
+                                            }`}>
+                                              {request.status === 'open' ? 'Open' :
+                                               request.status === 'closed' ? 'Closed' :
+                                               request.status}
+                                            </span>
+                                            
+                                            {request.attachment_url && (
+                                              <button 
+                                                onClick={() => handleDownloadTemplate(request.attachment_url)}
+                                                className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+                                              >
+                                                Template
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Student Uploads */}
+                              <div className="border-t border-slate-200 pt-6">
+                                <h5 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                                  <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  </svg>
+                                  Student Responses to Document Requests
+                                </h5>
+                                
+                                {studentDocuments.length === 0 ? (
+                                  <div className="text-center py-6 bg-slate-50 rounded-xl">
+                                    <p className="text-slate-500">No responses from student yet</p>
+                                    <p className="text-sm text-slate-400 mt-1">Documents will appear here once the student responds to your document requests</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    {studentDocuments.map((doc) => (
+                                      <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex items-start space-x-4 flex-1">
+                                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                              </svg>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="font-medium text-slate-900">{doc.filename}</p>
+                                              <div className="flex items-center space-x-2 mt-1">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                  doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                                }`}>
+                                                  {doc.request_type}
+                                                </span>
+                                                <span className="text-sm text-slate-500">
+                                                  Response to: <span className="font-medium text-slate-700">{doc.request_title}</span>
+                                                </span>
+                                              </div>
+                                              {doc.request_description && (
+                                                <p className="text-xs text-slate-400 mt-1">{doc.request_description}</p>
+                                              )}
+                                              <p className="text-xs text-slate-400 mt-1">
+                                                Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="flex items-center space-x-3 ml-4">
+                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                              doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                              doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                              'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                              {doc.status === 'approved' ? 'Approved' :
+                                               doc.status === 'rejected' ? 'Rejected' :
+                                               'Under Review'}
+                                            </span>
+                                            
+                                            {/* Botões de ação para documentos Under Review */}
+                                            {doc.status === 'under_review' && (
+                                              <div className="flex items-center space-x-2">
+                                                <button
+                                                  onClick={() => handleApproveDocument(doc.id)}
+                                                  className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                                >
+                                                  Approve
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    setPendingRejectDocumentId(doc.id);
+                                                    setShowRejectDocumentModal(true);
+                                                  }}
+                                                  className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                                >
+                                                  Reject
+                                                </button>
+                                              </div>
+                                            )}
+                                            
+                                            <button 
+                                              onClick={() => handleDownloadDocument(doc)}
+                                              className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                            >
+                                              Download
+                                            </button>
+                                            <button 
+                                              onClick={() => handleViewDocument(doc)}
+                                              className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                            >
+                                              View
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Acceptance Letter Section */}
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl overflow-hidden shadow-sm">
+                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5">
+                              <div className="flex items-center space-x-4">
+                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+                                  <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h4 className="text-xl font-bold text-white">Acceptance Letter</h4>
+                                  <p className="text-blue-100 text-sm">Upload to automatically enroll the student</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="p-6">
+                              <div className="bg-white rounded-xl p-6 mb-6">
+                                <p className="text-slate-700 mb-6 leading-relaxed">
+                                  Please upload the student's acceptance letter and any other required documents, such as the I-20 Control Fee receipt.
+                                </p>
+                                
+                                {acceptanceLetterUploaded ? (
+                                  <div className="text-center py-8 bg-green-50 border-2 border-green-200 rounded-xl">
+                                    <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <h5 className="font-semibold text-green-900 mb-2">Acceptance Letter Uploaded Successfully!</h5>
+                                    <p className="text-green-700 text-sm">The student has been enrolled and notified.</p>
+                                  </div>
+                                ) : (
+                                  <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 bg-blue-50">
+                                    <div className="text-center">
+                                      <svg className="w-16 h-16 text-blue-500 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                      </svg>
+                                      <h5 className="font-semibold text-blue-900 mb-2">Select Acceptance Letter</h5>
+                                      <p className="text-blue-700 text-sm mb-4">Drag and drop or click to browse files</p>
+                                      
+                                      {acceptanceLetterFile ? (
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-center space-x-2 bg-blue-100 rounded-lg px-4 py-2">
+                                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            <span className="text-blue-800 font-medium">{acceptanceLetterFile.name}</span>
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                      
+                                      <label className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm cursor-pointer inline-block">
+                                        <span>{acceptanceLetterFile ? 'Change File' : 'Choose File'}</span>
+                                        <input
+                                          type="file"
+                                          className="sr-only"
+                                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                          onChange={handleAcceptanceLetterFileSelect}
+                                          disabled={uploadingAcceptanceLetter}
+                                        />
+                                      </label>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {!acceptanceLetterUploaded && (
+                                <div className="flex justify-end">
+                                  <button
+                                    onClick={handleProcessAcceptanceLetter}
+                                    disabled={!acceptanceLetterFile || uploadingAcceptanceLetter}
+                                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-semibold transition-colors shadow-sm flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {uploadingAcceptanceLetter ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        <span>Processing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Process Acceptance</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New Request Modal */}
+        {showNewRequestModal && selectedStudent && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 border border-slate-200">
+              <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">New Document Request</h3>
+              <p className="text-sm text-slate-600 mb-6 text-center">
+                Request a new document from {selectedStudent.user_profiles.full_name}
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Document Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                    placeholder="e.g., Additional Reference Letter"
+                    value={newDocumentRequest.title}
+                    onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base min-h-[80px] resize-vertical"
+                    placeholder="Describe what document you need and any specific requirements..."
+                    value={newDocumentRequest.description}
+                    onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Due Date
+                  </label>
+                  <input
+                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                    type="date"
+                    value={newDocumentRequest.due_date}
+                    onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, due_date: e.target.value }))}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Template/Attachment (Optional)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" />
+                      </svg>
+                      <span>{newDocumentRequest.attachment ? 'Change file' : 'Select file'}</span>
+                      <input
+                        type="file"
+                        className="sr-only"
+                        onChange={(e) => setNewDocumentRequest(prev => ({ 
+                          ...prev, 
+                          attachment: e.target.files ? e.target.files[0] : null 
+                        }))}
+                        disabled={creatingDocumentRequest}
+                      />
+                    </label>
+                    {newDocumentRequest.attachment && (
+                      <span className="text-xs text-slate-700 truncate max-w-[180px]">
+                        {newDocumentRequest.attachment.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-8">
+                <button
+                  className="flex-1 bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-medium hover:bg-slate-300 transition disabled:opacity-50"
+                  onClick={() => {
+                    setShowNewRequestModal(false);
+                    setNewDocumentRequest({ title: '', description: '', due_date: '', attachment: null });
+                  }}
+                  disabled={creatingDocumentRequest}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 bg-[#05294E] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#041f38] transition disabled:opacity-50 flex items-center justify-center"
+                  onClick={handleCreateDocumentRequest}
+                  disabled={creatingDocumentRequest || !newDocumentRequest.title.trim()}
+                >
+                  {creatingDocumentRequest ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Request'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Document Preview Modal */}
+        {previewUrl && (
+          <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+        )}
+
+        {/* Modal para justificar solicitação de mudanças */}
+        {showReasonModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
+              <h3 className="text-xl font-semibold text-slate-900 mb-4">Request Changes</h3>
+              <p className="text-sm text-slate-600 mb-4">
+                Please provide a reason for requesting changes to this document. This will help the student understand what needs to be fixed.
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                placeholder="Enter your reason here..."
+              />
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setShowReasonModal(false);
+                    setRejectReason('');
+                    setPendingRejectType(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (pendingRejectType) {
+                      requestChangesDoc(pendingRejectType, rejectReason);
+                      setShowReasonModal(false);
+                      setRejectReason('');
+                      setPendingRejectType(null);
+                    }
+                  }}
+                  disabled={!rejectReason.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para recusar aluno na bolsa */}
+        {showRejectStudentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
+              <h3 className="text-xl font-semibold text-slate-900 mb-4">Reject Student Application</h3>
+              <p className="text-sm text-slate-600 mb-4">
+                Please provide a reason for rejecting this student's application. This information will be shared with the student.
+              </p>
+              <textarea
+                value={rejectStudentReason}
+                onChange={(e) => setRejectStudentReason(e.target.value)}
+                className="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                placeholder="Enter your reason here..."
+              />
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setShowRejectStudentModal(false);
+                    setRejectStudentReason('');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={rejectStudent}
+                  disabled={!rejectStudentReason.trim() || rejectingLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center"
+                >
+                  {rejectingLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Rejecting...
+                    </>
+                  ) : (
+                    'Reject Application'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Document Rejection Modal */}
+        {showRejectDocumentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 border border-slate-200">
+              <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">Reject Document</h3>
+              <p className="text-sm text-slate-600 mb-6 text-center">
+                Please provide a reason for rejecting this document. This will help the student understand what needs to be corrected.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                    Rejection Reason <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base min-h-[100px] resize-vertical"
+                    placeholder="Explain why this document was rejected and what needs to be corrected..."
+                    value={rejectDocumentReason}
+                    onChange={(e) => setRejectDocumentReason(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-8">
+                <button
+                  className="flex-1 bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-medium hover:bg-slate-300 transition"
+                  onClick={() => {
+                    setShowRejectDocumentModal(false);
+                    setPendingRejectDocumentId(null);
+                    setRejectDocumentReason('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50"
+                  onClick={() => {
+                    if (pendingRejectDocumentId && rejectDocumentReason.trim()) {
+                      handleRejectDocument(pendingRejectDocumentId, rejectDocumentReason);
+                      setShowRejectDocumentModal(false);
+                      setPendingRejectDocumentId(null);
+                      setRejectDocumentReason('');
+                    }
+                  }}
+                  disabled={!rejectDocumentReason.trim()}
+                >
+                  Reject Document
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </ProfileCompletionGuard>
+  );
+};
+
+export default SelectionProcess;

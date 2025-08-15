@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar as CalendarIcon, Building2, Mail, MessageCircle } from 'lucide-react';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { TextField } from '@mui/material';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -14,7 +10,8 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
   const [formData, setFormData] = useState({
     university_name: '',
     contact_email: '',
-    preferred_datetime: null as Date | null,
+    preferred_date: '',
+    preferred_time: '',
     meeting_type: ''
   });
   
@@ -40,6 +37,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
     { value: 'custom', label: 'Custom Meeting' }
   ];
 
+<<<<<<< Updated upstream
   // Function to check if date is between Monday and Friday
   const isWeekday = (date: Date) => {
     const day = date.getDay();
@@ -93,12 +91,20 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
   // Function to get next available business hour
   const getNextBusinessHour = (date: Date) => {
     let nextDate = new Date(date);
+=======
+  // Function to get minimum date (next business day)
+  const getMinDate = () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+>>>>>>> Stashed changes
     
-    // If it's weekend, move to next Monday
-    if (!isWeekday(nextDate)) {
-      nextDate = getNextWeekday(nextDate);
+    // Skip weekends
+    while (tomorrow.getDay() === 0 || tomorrow.getDay() === 6) {
+      tomorrow.setDate(tomorrow.getDate() + 1);
     }
     
+<<<<<<< Updated upstream
     // Set to 9 AM local time
     nextDate.setHours(9, 0, 0, 0);
     
@@ -132,30 +138,49 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
     const nextTime = new Date(date);
     nextTime.setHours(nextHour, 0, 0, 0);
     return nextTime;
+=======
+    return tomorrow.toISOString().split('T')[0];
+  };
+
+  // Function to check if date is weekend
+  const isWeekend = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.getDay() === 0 || date.getDay() === 6;
+>>>>>>> Stashed changes
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.university_name || !formData.contact_email || !formData.preferred_datetime || !formData.meeting_type) {
+    if (!formData.university_name || !formData.contact_email || !formData.preferred_date || !formData.preferred_time || !formData.meeting_type) {
       setSubmitStatus('error');
       setSubmitMessage('Please fill in all required fields.');
       return;
     }
 
     // Additional validation for weekdays
-    if (formData.preferred_datetime && !isWeekday(formData.preferred_datetime)) {
+    if (isWeekend(formData.preferred_date)) {
       setSubmitStatus('error');
       setSubmitMessage('Please select a weekday (Monday - Friday) for your meeting.');
       return;
     }
 
+<<<<<<< Updated upstream
          // Additional validation for business hours
      if (formData.preferred_datetime && !isBusinessHours(formData.preferred_datetime)) {
        setSubmitStatus('error');
        setSubmitMessage('Please select a time between 9:00 AM and 5:00 PM (local time) in 1-hour intervals only.');
        return;
      }
+=======
+    // Additional validation for business hours
+    const selectedHour = parseInt(formData.preferred_time.split(':')[0]);
+    if (selectedHour < 9 || selectedHour > 17) {
+      setSubmitStatus('error');
+      setSubmitMessage('Please select a time between 9:00 AM and 5:00 PM (Arizona time).');
+      return;
+    }
+>>>>>>> Stashed changes
 
     setIsSubmitting(true);
     setSubmitStatus('idle');
@@ -188,6 +213,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
       const payload = {
         university_name: formData.university_name,
         contact_email: formData.contact_email,
+<<<<<<< Updated upstream
         preferred_datetime: easternDateTimeString, // Horário selecionado como Eastern Time
         preferred_date: `${year}-${month}-${day}`, // Data no formato YYYY-MM-DD
         preferred_time: `${hours}:${minutes}`, // Hora no formato HH:MM
@@ -198,6 +224,10 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
         selected_minutes: minutes,
         user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         utc_offset_minutes: formData.preferred_datetime.getTimezoneOffset(),
+=======
+        preferred_date: formData.preferred_date,
+        preferred_time: formData.preferred_time,
+>>>>>>> Stashed changes
         meeting_type: meetingTypes.find(t => t.value === formData.meeting_type)?.label || formData.meeting_type
       };
 
@@ -248,7 +278,8 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
           setFormData({
             university_name: '',
             contact_email: '',
-            preferred_datetime: null,
+            preferred_date: '',
+            preferred_time: '',
             meeting_type: ''
           });
           setSubmitStatus('idle');
@@ -358,6 +389,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
           </div>
 
           {/* Date and Time Picker */}
+<<<<<<< Updated upstream
           <div>
              <label className="block text-sm font-semibold text-slate-700 mb-2">
                <CalendarIcon className="inline h-4 w-4 mr-2" />
@@ -526,7 +558,63 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
                  <br />
                  <strong>Your timezone:</strong> {Intl.DateTimeFormat().resolvedOptions().timeZone}
                </p>
+=======
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Date Picker */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <CalendarIcon className="inline h-4 w-4 mr-2" />
+                Preferred Date *
+              </label>
+              <input
+                type="date"
+                value={formData.preferred_date}
+                onChange={(e) => handleInputChange('preferred_date', e.target.value)}
+                min={getMinDate()}
+                className="w-full h-12 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent px-3 py-2"
+                required
+                onBlur={(e) => {
+                  if (e.target.value && isWeekend(e.target.value)) {
+                    setSubmitStatus('error');
+                    setSubmitMessage('Please select a weekday (Monday - Friday).');
+                  } else {
+                    setSubmitStatus('idle');
+                    setSubmitMessage('');
+                  }
+                }}
+              />
+            </div>
+
+            {/* Time Picker */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Preferred Time *
+              </label>
+              <select
+                value={formData.preferred_time}
+                onChange={(e) => handleInputChange('preferred_time', e.target.value)}
+                className="w-full h-12 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent px-3 py-2"
+                required
+              >
+                <option value="">Select time</option>
+                {Array.from({ length: 9 }, (_, i) => {
+                  const hour = i + 9; // 9 AM to 5 PM
+                  const timeString = `${hour.toString().padStart(2, '0')}:00`;
+                  return (
+                    <option key={timeString} value={timeString}>
+                      {hour === 12 ? '12:00 PM' : hour > 12 ? `${hour - 12}:00 PM` : `${hour}:00 AM`}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+>>>>>>> Stashed changes
           </div>
+
+          <p className="text-sm text-slate-500">
+            <strong>Note:</strong> Meetings are only available Monday through Friday between 9:00 AM - 5:00 PM (Arizona time). 
+            This ensures suitable meeting times for both Arizona and other US universities.
+          </p>
 
           {/* Submit Status Messages */}
           {submitStatus === 'success' && (

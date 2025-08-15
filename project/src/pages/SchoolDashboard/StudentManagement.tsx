@@ -13,7 +13,7 @@ const StudentManagement: React.FC = () => {
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'all' | 'selection-process'>('all');
+  // Removido o activeTab pois agora só mostra "All Students" (exceto os em processo de seleção)
 
   // Extrai bolsas únicas das aplicações
   const scholarships: Scholarship[] = Array.from(
@@ -36,27 +36,59 @@ const StudentManagement: React.FC = () => {
     return Array.from(countrySet).sort();
   }, [applications]);
 
-  // Filtra aplicações
+  // Filtra aplicações baseado no status de pagamento das taxas
   const filteredApplications = useMemo(() => {
-    let filtered = applications;
-
-    // Filtro por aba
-    if (activeTab === 'selection-process') {
-      filtered = filtered.filter(app => (app as any).user_profiles?.documents_status === 'under_review');
-    }
+    // Debug: log de todas as aplicações
+    console.log('=== DEBUG: Todas as aplicações ===');
+    applications.forEach(app => {
+      const student = (app as any).user_profiles;
+      if (student?.full_name) {
+        console.log(`Student: ${student.full_name}`);
+        console.log(`  - Application Status: ${app.status}`);
+        console.log(`  - Documents Status: ${student.documents_status}`);
+        console.log(`  - Application Fee: ${student.is_application_fee_paid}`);
+        console.log(`  - Scholarship Fee: ${(app as any).is_scholarship_fee_paid}`);
+        console.log(`  - Both Fees Paid: ${student.is_application_fee_paid && (app as any).is_scholarship_fee_paid}`);
+      }
+    });
+    
+    // Filtra baseado no status de pagamento das taxas
+    // Inclui alunos que já pagaram AMBAS as taxas (Application Fee + Scholarship Fee)
+    let filtered = applications.filter(app => {
+      const student = (app as any).user_profiles;
+      const hasPaidApplicationFee = student?.is_application_fee_paid;
+      const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
+      const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
+      
+      // Debug: log do filtro
+      if (student?.full_name) {
+        console.log(`Filtering ${student.full_name}: ${bothFeesPaid ? 'INCLUDED (both fees paid)' : 'EXCLUDED (fees pending)'}`);
+      }
+      
+      return bothFeesPaid;
+    });
+    
+    console.log(`Total applications: ${applications.length}`);
+    console.log(`Filtered applications (both fees paid): ${filtered.length}`);
+    
+    return filtered;
 
     // Filtro por bolsa
     if (selectedScholarship) {
       filtered = filtered.filter(app => app.scholarship_id === selectedScholarship);
     }
 
-    // Filtro por status
+    // Filtro por status de taxas
     if (selectedStatus) {
       filtered = filtered.filter(app => {
-        const docsStatus = (app as any).user_profiles?.documents_status;
-        if (selectedStatus === 'enrolled') return app.status === 'enrolled';
-        if (selectedStatus === 'under_review') return docsStatus === 'under_review';
-        if (selectedStatus === 'pending') return app.status !== 'enrolled' && docsStatus !== 'under_review';
+        const student = app.user_profiles;
+        const hasPaidApplicationFee = student?.is_application_fee_paid;
+        const hasPaidScholarshipFee = app.is_scholarship_fee_paid;
+        
+        if (selectedStatus === 'both_paid') return hasPaidApplicationFee && hasPaidScholarshipFee;
+        if (selectedStatus === 'application_paid') return hasPaidApplicationFee && !hasPaidScholarshipFee;
+        if (selectedStatus === 'scholarship_paid') return !hasPaidApplicationFee && hasPaidScholarshipFee;
+        if (selectedStatus === 'pending') return !hasPaidApplicationFee && !hasPaidScholarshipFee;
         return true;
       });
     }
@@ -81,17 +113,23 @@ const StudentManagement: React.FC = () => {
     }
 
     return filtered;
-  }, [applications, activeTab, selectedScholarship, selectedStatus, selectedCountry, searchTerm]);
+  }, [applications, selectedScholarship, selectedStatus, selectedCountry, searchTerm]);
 
-  // Função para obter status e badge
+  // Função para obter status e badge baseado no pagamento das taxas
   const getStudentStatus = (app: any) => {
-    const docsStatus = app.user_profiles?.documents_status;
-    if (docsStatus === 'under_review') {
-      return { text: 'Selection Process', class: 'bg-blue-50 text-blue-700 border border-blue-200', icon: Clock };
-    } else if (app.status === 'enrolled') {
-      return { text: 'Enrolled', class: 'bg-green-50 text-green-700 border border-green-200', icon: CheckCircle };
+    const student = app.user_profiles;
+    const hasPaidApplicationFee = student?.is_application_fee_paid;
+    const hasPaidScholarshipFee = app.is_scholarship_fee_paid;
+    const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
+    
+    if (bothFeesPaid) {
+      return { text: 'Fees Paid', class: 'bg-green-50 text-green-700 border border-green-200', icon: CheckCircle };
+    } else if (hasPaidApplicationFee && !hasPaidScholarshipFee) {
+      return { text: 'Application Fee Paid', class: 'bg-blue-50 text-blue-700 border border-blue-200', icon: Clock };
+    } else if (!hasPaidApplicationFee && hasPaidScholarshipFee) {
+      return { text: 'Scholarship Fee Paid', class: 'bg-orange-50 text-orange-700 border border-orange-200', icon: Clock };
     } else {
-      return { text: 'Pending', class: 'bg-yellow-50 text-yellow-700 border border-yellow-200', icon: FileText };
+      return { text: 'Fees Pending', class: 'bg-yellow-50 text-yellow-700 border border-yellow-200', icon: FileText };
     }
   };
 
@@ -127,41 +165,16 @@ const StudentManagement: React.FC = () => {
         {/* Filters and Search Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            {/* Navigation Tabs */}
+            {/* Page Header */}
             <div className="bg-slate-50 border-b border-slate-200">
               <div className="px-6 py-4">
-                <nav className="flex space-x-8" role="tablist">
-                  <button
-                    className={`group flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                      activeTab === 'all' 
-                        ? 'border-[#05294E] text-[#05294E]' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                    onClick={() => setActiveTab('all')}
-                    type="button"
-                    role="tab"
-                  >
-                    <Users className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'all' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
-                    All Students
-                  </button>
-                  <button
-                    className={`group flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
-                      activeTab === 'selection-process' 
-                        ? 'border-[#05294E] text-[#05294E]' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                    onClick={() => setActiveTab('selection-process')}
-                    type="button"
-                    role="tab"
-                  >
-                    <Clock className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'selection-process' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
-                    Selection Process
-                  </button>
-                </nav>
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-[#05294E]" />
+                  <h2 className="text-lg font-semibold text-slate-900">All Students</h2>
+                  <span className="text-sm text-slate-600">
+                    (students who have paid both Application Fee and Scholarship Fee)
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -196,19 +209,20 @@ const StudentManagement: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Status Filter */}
-                <div>
-                  <select
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                  >
-                    <option value="">All Status</option>
-                    <option value="enrolled">Enrolled</option>
-                    <option value="under_review">Selection Process</option>
-                    <option value="pending">Pending</option>
-                  </select>
-                </div>
+                                 {/* Status Filter */}
+                 <div>
+                   <select
+                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                     value={selectedStatus}
+                     onChange={(e) => setSelectedStatus(e.target.value)}
+                   >
+                     <option value="">All Fee Status</option>
+                     <option value="both_paid">Both Fees Paid</option>
+                     <option value="application_paid">Application Fee Paid</option>
+                     <option value="scholarship_paid">Scholarship Fee Paid</option>
+                     <option value="pending">Fees Pending</option>
+                   </select>
+                 </div>
 
                 {/* Country Filter */}
                 <div>
@@ -229,13 +243,13 @@ const StudentManagement: React.FC = () => {
 
           {/* Students Grid */}
           <div className="space-y-4">
-            {filteredApplications.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-                <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-900 mb-2">No students found</h3>
-                <p className="text-slate-600">Try adjusting your filters or search terms.</p>
-              </div>
-            ) : (
+                         {filteredApplications.length === 0 ? (
+               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+                 <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                 <h3 className="text-lg font-medium text-slate-900 mb-2">No students with both fees paid</h3>
+                 <p className="text-slate-600">Students will appear here once they have paid both Application Fee and Scholarship Fee.</p>
+               </div>
+             ) : (
               filteredApplications.map((app) => {
                 const student = (app as any).user_profiles;
                 const status = getStudentStatus(app);

@@ -8,6 +8,7 @@ import ScholarshipManagement from './ScholarshipManagement';
 import NewScholarship from './NewScholarship';
 import ProfileManagement from './ProfileManagement';
 import StudentManagement from './StudentManagement';
+import SelectionProcess from './SelectionProcess';
 import StudentDetails from './StudentDetails';
 import PaymentManagement from './PaymentManagement';
 import UniversityGlobalDocumentRequests from './UniversityGlobalDocumentRequests';
@@ -36,6 +37,7 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="scholarship/new" element={<NewScholarship />} />
             <Route path="profile" element={<ProfileManagement />} />
             <Route path="students" element={<StudentManagement />} />
+            <Route path="selection-process" element={<SelectionProcess />} />
             <Route path="student/:applicationId" element={<StudentDetails />} />
             <Route path="analytics" element={<PaymentManagement />} />
             <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />

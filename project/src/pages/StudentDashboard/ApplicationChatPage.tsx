@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import ApplicationChat from '../../components/ApplicationChat';
-import { useApplicationChat } from '../../hooks/useApplicationChat';
+
 import { useAuth } from '../../hooks/useAuth';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
-import ImagePreviewModal from '../../components/ImagePreviewModal';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { MessageCircle, FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
+import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
 // Remover os imports das imagens
 // import WelcomeImg from '../../assets/page 7.png';
 // import SupportImg from '../../assets/page 8.png';
@@ -52,7 +51,7 @@ const handleForceDownload = async (url: string, filename: string) => {
 const ApplicationChatPage: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
   const { user, userProfile, refetchUserProfile } = useAuth();
-  const { messages, sendMessage, loading, isSending, error } = useApplicationChat(applicationId);
+
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -62,7 +61,7 @@ const ApplicationChatPage: React.FC = () => {
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   // Ajustar tipo de activeTab para incluir 'welcome'
-  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'chat' | 'documents'>('welcome');
+  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
 
   // useEffect também deve vir antes de qualquer return condicional
   useEffect(() => {
@@ -184,7 +183,7 @@ const ApplicationChatPage: React.FC = () => {
     ...(applicationDetails && applicationDetails.status === 'enrolled' ? [
       { id: 'i20', label: 'I-20 Control Fee', icon: FileCheck }
     ] : []),
-    { id: 'chat', label: 'Chat', icon: MessageCircle },
+    
     { id: 'documents', label: 'Documents', icon: FolderOpen },
   ];
 
@@ -254,15 +253,7 @@ const ApplicationChatPage: React.FC = () => {
                   <button onClick={() => setActiveTab('documents')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">Go to Document Requests</button>
                 </div>
               </div>
-              {/* Passo 2: Chat */}
-              <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
-                <MessageCircle className="w-10 h-10 text-blue-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="font-bold text-blue-900 text-lg mb-1">Talk to the University</div>
-                  <div className="text-base text-slate-700 mb-2">Here you can chat directly with the university, ask questions, and clarify any doubts about your process. Fast and direct communication helps speed up your application.</div>
-                  <button onClick={() => setActiveTab('chat')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">Open Chat</button>
-                </div>
-              </div>
+
               {/* Passo 3: Application Details */}
               <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
                 <UserCircle className="w-10 h-10 text-blue-600 flex-shrink-0" />
@@ -661,9 +652,8 @@ const ApplicationChatPage: React.FC = () => {
                 </div>
                 <div className="p-6">
                   <div className="space-y-3">
-                    {[
-                      { label: 'Chat with University', tab: 'chat', icon: MessageCircle },
-                      { label: 'Manage Documents', tab: 'documents', icon: FileText },
+                                         {[
+                       { label: 'Manage Documents', tab: 'documents', icon: FileText },
                       ...(applicationDetails.status === 'enrolled' ? [{ label: 'I-20 Control Fee', tab: 'i20', icon: Award }] : [])
                     ].map((action) => (
                       <button
@@ -690,7 +680,7 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="mb-3 text-sm text-slate-700">
                   The <strong>I-20 Control Fee</strong> is a mandatory fee required for the issuance and management of your I-20 document, which is essential for the F-1 student visa process in the United States. <br />
                   <span className="font-semibold">You have up to <span className="text-blue-700">10 days</span> after paying your Scholarship Fee to pay the I-20 Control Fee.</span> The timer below shows exactly how much time you have left to complete this payment. <br />
-                  Paying this fee ensures that your I-20 will be processed and sent correctly by the university. If you have any questions about this process, please contact support or chat with the university below.
+                  Paying this fee ensures that your I-20 will be processed and sent correctly by the university. If you have any questions about this process, please contact support.
                 </div>
                 {/* Cronômetro e botão lado a lado (invertidos) */}
                 <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 w-full mt-4">
@@ -756,34 +746,30 @@ const ApplicationChatPage: React.FC = () => {
             )}
           </DashboardCard>
         )}
-        {activeTab === 'chat' && (
-          <div className="bg-white rounded-2xl shadow-2xl border border-blue-100 p-0 w-full flex-1 h-full flex flex-col">
-            <div className="flex-1 flex flex-col justify-between gap-0 h-full">
-          <ApplicationChat
-            messages={messages}
-            onSend={(text: string, file?: File | null) => sendMessage(text, file ?? null)}
-            loading={loading}
-            isSending={isSending}
-            error={error}
-              currentUserId={user?.id}
-                messageContainerClassName="gap-6 py-4"
-          />
-            </div>
-        </div>
-        )}
+        
         {activeTab === 'documents' && applicationDetails && (
-          <DashboardCard>
-            <h3 className="text-xl font-bold text-[#05294E] mb-4">Document Requests</h3>
-            <DocumentRequestsCard 
-              applicationId={applicationId!} 
-              isSchool={false} 
-              currentUserId={user.id} 
-              studentType={applicationDetails.student_process_type || 'initial'}
-            />
-          </DashboardCard>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Document Management
+              </h2>
+              <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
+            </div>
+            <div className="p-6">
+              <DocumentRequestsCard 
+                applicationId={applicationId!} 
+                isSchool={false} 
+                currentUserId={user.id} 
+                studentType={applicationDetails.student_process_type || 'initial'}
+              />
+            </div>
+          </div>
         )}
         {previewUrl && (
-          <ImagePreviewModal imageUrl={previewUrl || ''} onClose={() => setPreviewUrl(null)} />
+          <DocumentViewerModal documentUrl={previewUrl || ''} onClose={() => setPreviewUrl(null)} />
         )}
       </div>
     </div>

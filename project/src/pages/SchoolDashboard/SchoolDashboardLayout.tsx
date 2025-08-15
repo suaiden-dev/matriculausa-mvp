@@ -21,7 +21,8 @@ import {
   Mail,
   MessageSquare,
   Gift,
-  Bell
+  Bell,
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -56,6 +57,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/profile')) return 'profile';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/students')) return 'students';
+    if (path.includes('/selection-process')) return 'selection-process';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
 
     if (path.includes('/inbox')) return 'inbox';
@@ -157,6 +159,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/school/dashboard/scholarships', badge: university?.profile_completed ? null : 'Setup' },
     { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
+    { id: 'selection-process', label: 'Selection Process', icon: UserCheck, path: '/school/dashboard/selection-process', badge: null },
     { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
@@ -342,6 +345,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'scholarships' && 'Manage Scholarships'}
                   {activeTab === 'profile' && 'University Profile'}
                   {activeTab === 'students' && 'Students'}
+                  {activeTab === 'selection-process' && 'Selection Process'}
                   {activeTab === 'analytics' && 'Analytics & Reports'}
                 </h1>
                 <p className="text-slate-600">
@@ -349,6 +353,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'scholarships' && 'Create and manage scholarship opportunities'}
                   {activeTab === 'profile' && 'Keep your university information up to date'}
                   {activeTab === 'students' && 'Manage applicants and students'}
+                  {activeTab === 'selection-process' && 'Review and approve student applications'}
                   {activeTab === 'analytics' && 'Detailed performance analysis and metrics'}
                 </p>
               </div>
