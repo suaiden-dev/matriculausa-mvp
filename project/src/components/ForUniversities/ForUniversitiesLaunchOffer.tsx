@@ -141,7 +141,7 @@ const ForUniversitiesLaunchOffer: React.FC<ForUniversitiesLaunchOfferProps> = ({
             onClick={onScheduleClick}
             className="group bg-transparent text-white px-10 py-5 rounded-2xl text-xl font-bold hover:bg-white/10 transition-all duration-300 border-2 border-white/30 flex items-center justify-center"
           >
-            Schedule a Demo
+            Schedule Your Meeting
             <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>

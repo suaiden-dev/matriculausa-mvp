@@ -54,7 +54,7 @@ const ForUniversitiesHero: React.FC<ForUniversitiesHeroProps> = ({ onButtonClick
               <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </button>
             <button onClick={onScheduleClick} className="group bg-transparent text-[#05294E] px-12 py-6 rounded-2xl text-xl font-bold hover:bg-[#05294E] hover:text-white transition-all duration-300 border-2 border-[#05294E] flex items-center justify-center">
-              Schedule a Demo
+              Schedule Your Meeting
               <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
