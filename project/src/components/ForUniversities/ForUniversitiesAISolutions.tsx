@@ -220,67 +220,6 @@ const ForUniversitiesAISolutions: React.FC = () => {
           ))}
         </div>
       </div>
-
-      {/* Benefits Section */}
-      <div className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h3 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">
-              Why Choose Our AI Solutions?
-            </h3>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Our AI solutions are designed to transform your university operations 
-              and provide measurable results from day one.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {benefits.map((benefit, index) => (
-              <div key={index} className="text-center">
-                <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <benefit.icon className="h-8 w-8 text-white" />
-                </div>
-                <h4 className="text-xl font-bold text-slate-900 mb-4">{benefit.title}</h4>
-                <p className="text-slate-600 leading-relaxed">{benefit.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Process Section */}
-      <div className="bg-gradient-to-r from-slate-50 to-blue-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h3 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">
-              Simple Implementation Process
-            </h3>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Get your AI solution up and running in just 4 simple steps. 
-              Our team handles everything from setup to training.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {processSteps.map((step, index) => (
-              <div key={index} className="relative">
-                <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <div className="bg-gradient-to-br from-[#05294E] to-[#D0151C] w-12 h-12 rounded-2xl flex items-center justify-center mb-6">
-                    <span className="text-white font-bold text-lg">{step.step}</span>
-                  </div>
-                  <h4 className="text-xl font-bold text-slate-900 mb-4">{step.title}</h4>
-                  <p className="text-slate-600 leading-relaxed">{step.description}</p>
-                </div>
-                {index < processSteps.length - 1 && (
-                  <div className="hidden lg:block absolute top-1/2 -right-4 transform -translate-y-1/2">
-                    <ArrowRight className="h-8 w-8 text-[#05294E]" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </section>
   );
 };
