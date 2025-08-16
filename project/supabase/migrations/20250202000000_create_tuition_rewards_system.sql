@@ -234,6 +234,10 @@ BEGIN
     'status', 'pending'
   ) INTO result;
   
+  -- NOTA: A notificação para a universidade será enviada pela Edge Function
+  -- 'notify-university-discount-redemption' que deve ser chamada pelo frontend
+  -- após o sucesso desta função. Os dados necessários estão no resultado retornado.
+  
   RETURN result;
 END;
 $$ LANGUAGE plpgsql;
