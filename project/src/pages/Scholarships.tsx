@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe } from 'lucide-react';
+import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
@@ -7,6 +7,7 @@ import type { Scholarship } from '../types';
 import { supabase } from '../lib/supabase';
 
 import SmartChat from '../components/SmartChat';
+import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
 
 const Scholarships: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +18,10 @@ const Scholarships: React.FC = () => {
   const { scholarships, loading, error } = useScholarships();
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
   const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
+
+  // Estados para o modal de detalhes
+  const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Get min and max scholarship values from data
   const scholarshipValues = scholarships.map((s: Scholarship) => s.amount).filter(val => val && val > 0);
@@ -238,6 +243,17 @@ const Scholarships: React.FC = () => {
     if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50' };
     if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
+  };
+
+  // Funções para controlar o modal
+  const openScholarshipModal = (scholarship: any) => {
+    setSelectedScholarshipForModal(scholarship);
+    setIsModalOpen(true);
+  };
+
+  const closeScholarshipModal = () => {
+    setIsModalOpen(false);
+    setSelectedScholarshipForModal(null);
   };
 
   const PAGE_SIZE = 20;
@@ -464,11 +480,11 @@ const Scholarships: React.FC = () => {
 
                     {/* Scholarship Image */}
                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                      {scholarship.image_url ? (
+                      {scholarship.image_url && isAuthenticated && userProfile?.has_paid_selection_process_fee ? (
                         <img
                           src={scholarship.image_url}
                           alt={scholarship.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
                         />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
@@ -488,20 +504,6 @@ const Scholarships: React.FC = () => {
                              Exclusive
                            </div>
                          )}
-                         
-                         {/* Savings Badge */}
-                         {savingsPercentage > 0 && (
-                           <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                             <DollarSign className="h-3 w-3" />
-                             {savingsPercentage}% OFF
-                           </div>
-                         )}
-                         
-                         {/* Deadline Badge - Below other badges with proper spacing */}
-                         <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                           <Clock className="h-3 w-3" />
-                           {daysLeft <= 0 ? 'Expired' : `${daysLeft} days`}
-                         </div>
                        </div>
                     </div>
                     
@@ -615,36 +617,49 @@ const Scholarships: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Action Button - Agora sempre na parte inferior */}
+                    {/* Action Buttons - Agora sempre na parte inferior */}
                     <div className="px-6 pb-6 mt-auto">
-                      {(!isAuthenticated) ? (
+                      <div className="flex gap-3">
+                        {/* View Details Button */}
                         <button
-                          className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                          onClick={() => navigate('/login')}
-                          aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                          onClick={() => openScholarshipModal(scholarship)}
+                          className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          aria-label={`View details for ${scholarship.title} scholarship`}
                         >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                          <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                          <span className="relative z-10">Apply Now</span>
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          <span>Details</span>
                         </button>
-                      ) : (
-                        <button
-                          className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                          onClick={async () => {
-                            if (!userProfile?.has_paid_selection_process_fee) {
-                              navigate('/student/dashboard');
-                              return;
-                            }
-                            navigate('/student/dashboard/scholarships');
-                          }}
-                          aria-label={`Apply for ${scholarship.title} scholarship`}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                          <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                          <span className="relative z-10">Apply Now</span>
-                          <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                        </button>
-                      )}
+                        
+                        {/* Apply Now Button - Maior */}
+                        {(!isAuthenticated) ? (
+                          <button
+                            className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            onClick={() => navigate('/login')}
+                            aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                            <span className="relative z-10">Apply Now</span>
+                          </button>
+                        ) : (
+                          <button
+                            className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            onClick={async () => {
+                              if (!userProfile?.has_paid_selection_process_fee) {
+                                navigate('/student/dashboard');
+                                return;
+                              }
+                              navigate('/student/dashboard/scholarships');
+                            }}
+                            aria-label={`Apply for ${scholarship.title} scholarship`}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                            <span className="relative z-10">Apply Now</span>
+                            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </article>
                 );
@@ -885,36 +900,49 @@ const Scholarships: React.FC = () => {
 
                      </div>
 
-                     {/* Action Button - Agora sempre na parte inferior */}
+                     {/* Action Buttons - Agora sempre na parte inferior */}
                      <div className="px-6 pb-6 mt-auto">
-                       {(!isAuthenticated) ? (
+                       <div className="flex gap-3">
+                         {/* View Details Button */}
                          <button
-                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                           onClick={() => navigate('/login')}
-                           aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                           onClick={() => openScholarshipModal(scholarship)}
+                           className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                           aria-label={`View details for ${scholarship.title} scholarship`}
                          >
-                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                           <span className="relative z-10">Apply Now</span>
+                           <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                           <span>Details</span>
                          </button>
-                       ) : (
-                         <button
-                           className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                           onClick={async () => {
-                             if (!userProfile?.has_paid_selection_process_fee) {
-                               navigate('/student/dashboard');
-                               return;
-                             }
-                             navigate('/student/dashboard/scholarships');
-                           }}
-                           aria-label={`Apply for ${scholarship.title} scholarship`}
-                         >
-                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                           <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                           <span className="relative z-10">Apply Now</span>
-                           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                         </button>
-                       )}
+                         
+                         {/* Apply Now Button - Maior */}
+                         {(!isAuthenticated) ? (
+                           <button
+                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             onClick={() => navigate('/login')}
+                             aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                           >
+                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                             <span className="relative z-10">Apply Now</span>
+                           </button>
+                         ) : (
+                           <button
+                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             onClick={async () => {
+                               if (!userProfile?.has_paid_selection_process_fee) {
+                                 navigate('/student/dashboard');
+                                 return;
+                               }
+                               navigate('/student/dashboard/scholarships');
+                             }}
+                             aria-label={`Apply for ${scholarship.title} scholarship`}
+                           >
+                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                             <span className="relative z-10">Apply Now</span>
+                             <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                           </button>
+                         )}
+                       </div>
                      </div>
                      
                      {/* Enhanced Hover Effect Overlay */}
@@ -1016,6 +1044,15 @@ const Scholarships: React.FC = () => {
           </button>
         </div>
       </div>
+      
+      {/* Modal de Detalhes da Bolsa */}
+      <ScholarshipDetailModal
+        scholarship={selectedScholarshipForModal}
+        isOpen={isModalOpen}
+        onClose={closeScholarshipModal}
+        userProfile={userProfile}
+      />
+      
       <SmartChat />
     </div>
   );
