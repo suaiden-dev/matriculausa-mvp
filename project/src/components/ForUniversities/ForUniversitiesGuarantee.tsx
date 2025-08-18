@@ -37,7 +37,7 @@ const ForUniversitiesGuarantee: React.FC = () => {
           {/* Support Card */}
           <div className="bg-gradient-to-br from-[#05294E] to-[#05294E]/80 rounded-3xl p-8 text-white shadow-2xl">
             <div className="text-center">
-              <div className="text-6xl font-black text-yellow-300 mb-4">24/7</div>
+              <div className="text-6xl font-black text-slate-300 mb-4">24/7</div>
               <h3 className="text-xl font-bold mb-3">Expert Support</h3>
               <p className="text-white/90 leading-relaxed">
                 Dedicated specialists to ensure your success throughout the trial.
