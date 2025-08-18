@@ -1044,7 +1044,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                          <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>
                          <button
                            onClick={() => openScholarshipModal(scholarship)}
-                           className="w-full py-3 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
+                           className="w-full py-4 sm:py-4 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
                            title="View scholarship details"
                            aria-label="View scholarship details"
                          >
