@@ -740,7 +740,7 @@ const Inbox: React.FC = () => {
   // Se mostrar integração de email, renderizar a página de integração
   if (showEmailIntegration) {
     return (
-      <div className="h-full bg-slate-50 p-6">
+      <div className="h-full p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="bg-gradient-to-r from-[#05294E] to-[#D0151C] px-6 py-4 rounded-2xl mb-6">
@@ -889,7 +889,7 @@ const Inbox: React.FC = () => {
   // Se não estiver conectado, mostrar tela de conexão
   if (!activeConnection) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">

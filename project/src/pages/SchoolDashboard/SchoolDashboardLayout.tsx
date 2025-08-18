@@ -478,7 +478,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 bg-slate-50 sm:px-6 lg:px-10 pb-6 max-w-full">
+        <main className="flex justify-center pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
           {/* Welcome Message for Incomplete Profiles */}
           {(!university || !university.profile_completed) && (
             <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
