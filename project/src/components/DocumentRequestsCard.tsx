@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import ImagePreviewModal from './ImagePreviewModal';
+import DocumentViewerModal from './DocumentViewerModal';
 import { useUniversity } from '../context/UniversityContext';
 import { useAuth } from '../hooks/useAuth';
 
@@ -54,6 +55,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   const [acceptanceLetterSignedUrls, setAcceptanceLetterSignedUrls] = useState<{ [key: string]: string | null }>({});
   const [loadingAcceptanceUrls, setLoadingAcceptanceUrls] = useState<{ [key: string]: boolean }>({});
   const [acceptanceLoading, setAcceptanceLoading] = useState(false);
+  // Estados para loading dos botões de ação
+  const [downloadingAcceptanceLetter, setDownloadingAcceptanceLetter] = useState(false);
+  const [viewingAcceptanceLetter, setViewingAcceptanceLetter] = useState(false);
+  // Estado para o modal da carta de aceite
+  const [acceptanceLetterPreviewUrl, setAcceptanceLetterPreviewUrl] = useState<string | null>(null);
   const universityContext = isSchool ? useUniversity() : null;
   const refreshData = universityContext ? universityContext.refreshData : undefined;
   // 1. Adicionar estado para logo da universidade
@@ -68,13 +74,27 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   useEffect(() => {
     // Buscar dados da carta de aceite da aplicação
     const fetchAcceptanceLetter = async () => {
+      console.log('=== DEBUG fetchAcceptanceLetter ===');
+      console.log('applicationId:', applicationId);
+      
       const { data, error } = await supabase
         .from('scholarship_applications')
         .select('id, acceptance_letter_url, acceptance_letter_status, acceptance_letter_sent_at')
         .eq('id', applicationId)
         .maybeSingle();
-      if (!error && data) setAcceptanceLetter(data);
+      
+      console.log('Resultado da busca:', { data, error });
+      
+      if (!error && data) {
+        console.log('Acceptance letter encontrada:', data);
+        setAcceptanceLetter(data);
+      } else if (error) {
+        console.error('Erro ao buscar acceptance letter:', error);
+      } else {
+        console.log('Nenhuma acceptance letter encontrada para applicationId:', applicationId);
+      }
     };
+    
     fetchAcceptanceLetter();
   }, [applicationId]);
 
@@ -630,7 +650,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                                   if (isImage) {
                                     setPreviewUrl(fileUrl);
                                   } else {
-                                    window.open(fileUrl, '_blank');
+                                    // Abrir no modal ao invés de nova aba
+                                    setPreviewUrl(fileUrl);
                                   }
                                 }
                               }}
@@ -712,10 +733,129 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           
           {/* Status para o aluno */}
           {!isSchool && (
-            <div className="flex justify-center">
-              <span className="px-6 py-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-xl text-base font-semibold">
-                Waiting for university
-              </span>
+            <div className="flex flex-col items-center gap-4">
+              {console.log('=== DEBUG Acceptance Letter Render ===', { 
+                acceptanceLetter, 
+                status: acceptanceLetter?.acceptance_letter_status,
+                url: acceptanceLetter?.acceptance_letter_url 
+              })}
+              {acceptanceLetter && acceptanceLetter.acceptance_letter_status === 'approved' ? (
+                <div className="text-center">
+                  <div className="mb-4">
+                    <span className="px-6 py-3 bg-green-100 text-green-800 border border-green-300 rounded-xl text-base font-semibold">
+                      Acceptance Letter Received! 🎉
+                    </span>
+                  </div>
+                  <p className="text-green-700 text-sm mb-4">
+                    You have been enrolled! Check your dashboard for next steps.
+                  </p>
+                  {acceptanceLetter.acceptance_letter_url && (
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={downloadingAcceptanceLetter}
+                        onClick={async () => {
+                          try {
+                            setDownloadingAcceptanceLetter(true);
+                            console.log('=== DEBUG Download Acceptance Letter ===');
+                            console.log('File URL:', acceptanceLetter.acceptance_letter_url);
+                            
+                            // Gerar signed URL diretamente
+                            const { data, error } = await supabase.storage
+                              .from('document-attachments')
+                              .createSignedUrl(acceptanceLetter.acceptance_letter_url, 60 * 60);
+                            
+                            if (error) {
+                              console.error('Erro ao gerar signed URL:', error);
+                              alert('Erro ao baixar documento. Tente novamente.');
+                              return;
+                            }
+                            
+                            console.log('Signed URL gerada:', data.signedUrl);
+                            
+                            // Fazer download
+                            const response = await fetch(data.signedUrl);
+                            if (!response.ok) {
+                              throw new Error('Failed to download document');
+                            }
+                            
+                            const blob = await response.blob();
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = 'acceptance_letter.pdf';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                            
+                            console.log('Download concluído com sucesso');
+                          } catch (error) {
+                            console.error('Erro no download:', error);
+                            alert('Erro ao baixar documento. Tente novamente.');
+                          } finally {
+                            setDownloadingAcceptanceLetter(false);
+                          }
+                        }}
+                      >
+                        {downloadingAcceptanceLetter ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Downloading...
+                          </div>
+                        ) : (
+                          'Download Acceptance Letter'
+                        )}
+                      </button>
+                      <button
+                        className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={viewingAcceptanceLetter}
+                        onClick={async () => {
+                          try {
+                            setViewingAcceptanceLetter(true);
+                            console.log('=== DEBUG View Acceptance Letter ===');
+                            console.log('File URL:', acceptanceLetter.acceptance_letter_url);
+                            
+                            // Gerar signed URL diretamente
+                            const { data, error } = await supabase.storage
+                              .from('document-attachments')
+                              .createSignedUrl(acceptanceLetter.acceptance_letter_url, 60 * 60);
+                            
+                            if (error) {
+                              console.error('Erro ao gerar signed URL:', error);
+                              alert('Erro ao visualizar documento. Tente novamente.');
+                              return;
+                            }
+                            
+                            console.log('Signed URL gerada para visualização:', data.signedUrl);
+                            
+                            // Abrir no modal ao invés de nova aba
+                            setAcceptanceLetterPreviewUrl(data.signedUrl);
+                          } catch (error) {
+                            console.error('Erro ao visualizar:', error);
+                            alert('Erro ao visualizar documento. Tente novamente.');
+                          } finally {
+                            setViewingAcceptanceLetter(false);
+                          }
+                        }}
+                      >
+                        {viewingAcceptanceLetter ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            Opening...
+                          </div>
+                        ) : (
+                          'View'
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="px-6 py-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-xl text-base font-semibold">
+                  Waiting for university
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -781,7 +921,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition"
                       onClick={async () => {
                         const signedUrl = await getSignedUrl(upload.file_url, upload.id);
-                        if (signedUrl) window.open(signedUrl, '_blank');
+                        if (signedUrl) {
+                          setPreviewUrl(signedUrl);
+                        }
                       }}
                     >
                       View
@@ -1024,7 +1166,16 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         </div>
       )}
       {previewUrl && (
-        <ImagePreviewModal imageUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+        <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
+
+      {/* Modal da carta de aceite */}
+      {acceptanceLetterPreviewUrl && (
+        <DocumentViewerModal 
+          documentUrl={acceptanceLetterPreviewUrl} 
+          onClose={() => setAcceptanceLetterPreviewUrl(null)} 
+          fileName="acceptance_letter.pdf"
+        />
       )}
 
       {/* Modal de justificativa para rejeição */}
