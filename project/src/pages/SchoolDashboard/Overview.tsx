@@ -115,7 +115,7 @@ const Overview: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-3 sm:px-4 py-2 text-xs sm:text-sm whitespace-nowrap">
-                            <Link to={`/school/dashboard/applications/${app.id}`} className="text-blue-600 hover:text-blue-700 font-medium">
+                            <Link to={`/school/dashboard/student/${app.id}`} className="text-blue-600 hover:text-blue-700 font-medium">
                               View
                             </Link>
                           </td>
