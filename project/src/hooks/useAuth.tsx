@@ -10,6 +10,7 @@ interface User {
   role: 'student' | 'school' | 'admin';
   university_id?: string;
   hasPaidProcess?: boolean;
+  university_image?: string;
 }
 
 // Definição completa do tipo para o perfil do usuário (incluindo todas as colunas do seu schema)
@@ -103,12 +104,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const { data: university } = await supabase
             .from('universities')
-            .select('id')
+            .select('id, image_url, logo_url')
             .eq('user_id', sessionUser.id)
             .single();
           
           if (university) {
             role = 'school';
+            // Adicionar a imagem da universidade ao user
+            if (university.image_url || university.logo_url) {
+              sessionUser.university_image = university.image_url || university.logo_url;
+            }
           }
         } catch (error) {
           // Se não encontrar universidade, continuar com a lógica normal
@@ -126,6 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role,
         university_id: currentProfile?.university_id ?? undefined,
         hasPaidProcess: currentProfile?.has_paid_selection_process_fee,
+        university_image: (sessionUser as any).university_image || null,
       };
       return builtUser;
     };
@@ -355,11 +361,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Se tiver universidade vinculada, forçar role 'school'
             const { data: uni } = await supabase
               .from('universities')
-              .select('id')
+              .select('id, image_url, logo_url')
               .eq('user_id', session.user.id)
               .single();
             if (uni) {
               finalRole = 'school';
+              // Atualizar a imagem da universidade no user se necessário
+              if (uni.image_url || uni.logo_url) {
+                session.user.university_image = uni.image_url || uni.logo_url;
+              }
             }
           }
 

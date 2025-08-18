@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, BookOpen, Zap, Shield, ChevronDown, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import StepByStepButton from './OnboardingTour/StepByStepButton';
 
 const Header: React.FC = () => {
@@ -9,6 +10,42 @@ const Header: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, userProfile, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [schoolImageUrl, setSchoolImageUrl] = useState<string | null>(null);
+
+  // Garantir imagem da universidade quando usuário é "school"
+  useEffect(() => {
+    const ensureSchoolImage = async () => {
+      if (!user || user.role !== 'school') return;
+      if (user.university_image) {
+        setSchoolImageUrl(user.university_image);
+        return;
+      }
+      try {
+        // Tentar por university_id do perfil primeiro
+        if (userProfile?.university_id) {
+          const { data } = await supabase
+            .from('universities')
+            .select('image_url, logo_url')
+            .eq('id', userProfile.university_id)
+            .single();
+          if (data) {
+            setSchoolImageUrl(data.image_url || data.logo_url || null);
+            return;
+          }
+        }
+        // Fallback: procurar pela relação user_id
+        const { data: uniByUser } = await supabase
+          .from('universities')
+          .select('image_url, logo_url')
+          .eq('user_id', user.id)
+          .single();
+        if (uniByUser) setSchoolImageUrl(uniByUser.image_url || uniByUser.logo_url || null);
+      } catch (e) {
+        // silencioso
+      }
+    };
+    ensureSchoolImage();
+  }, [user?.id, user?.role, user?.university_image, userProfile?.university_id]);
 
   const handleLogout = async () => {
     try {
@@ -97,9 +134,17 @@ const Header: React.FC = () => {
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
+                  {
+                    user?.avatar_url && user.role === 'student' ? (
+                      <img src={user.avatar_url} alt="User Avatar" className="w-8 h-8 rounded-lg" />
+                    ) : user?.role === 'school' && (user?.university_image || schoolImageUrl) ? (
+                      <img src={user.university_image || schoolImageUrl || ''} alt="University Logo" className="w-10 h-10 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                    )
+                  }
                   <div className="hidden md:block text-left">
                     <p className="font-semibold text-slate-900 text-sm">{userProfile?.full_name || user.email}</p>
                     <p className="text-xs text-slate-500 capitalize">{user.role}</p>
