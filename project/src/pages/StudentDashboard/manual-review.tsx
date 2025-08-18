@@ -397,8 +397,8 @@ const ManualReview: React.FC = () => {
               checked={confirmAllTrue} 
               onChange={e => setConfirmAllTrue(e.target.checked)} 
             />
-            <label htmlFor="confirmTruth" className="text-slate-700 leading-relaxed">
-              <span className="font-semibold">Declaration of Accuracy:</span> I confirm that all the information and documents provided are accurate and true to the best of my knowledge. I understand that providing false information may result in the rejection of my application.
+            <label htmlFor="confirmTruth" className="text-slate-700 text-sm  sm:text-base leading-relaxed">
+              <span className="font-semibold ">Declaration of Accuracy:</span> I confirm that all the information and documents provided are accurate and true to the best of my knowledge. I understand that providing false information may result in the rejection of my application.
             </label>
           </div>
         </div>

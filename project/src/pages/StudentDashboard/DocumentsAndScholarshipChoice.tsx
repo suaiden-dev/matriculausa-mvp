@@ -4,7 +4,6 @@ import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { 
-  FileText, 
   Upload, 
   CheckCircle, 
   AlertTriangle, 
@@ -405,34 +404,34 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="max-w-4xl mx-auto py-4 sm:py-8 px-4">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-800 mb-4">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 mb-3 sm:mb-4">
             Application Process Setup
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto px-2">
             Complete your student application process by selecting your status and uploading required documents
           </p>
         </div>
 
         {/* Step 1: Status Selection */}
         {!processType && (
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 mb-8">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                <User className="w-8 h-8 text-blue-600" />
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-6 sm:mb-8">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full mb-3 sm:mb-4">
+                <User className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
                 What is your current status in the US?
               </h2>
-              <p className="text-slate-600 max-w-xl mx-auto">
+              <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto px-2">
                 Please select your current immigration status to help us provide the best guidance for your application process.
               </p>
             </div>
             
-            <div className="space-y-4 max-w-2xl mx-auto">
-              <label className={`group flex items-start p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+            <div className="space-y-3 sm:space-y-4 max-w-2xl mx-auto">
+              <label className={`group flex items-start p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                 studentType === 'initial' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-slate-200 hover:border-blue-300'
               }`}>
                 <input
@@ -441,24 +440,24 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   value="initial"
                   checked={studentType === 'initial'}
                   onChange={() => setStudentType('initial')}
-                  className="mt-2 mr-4 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  className="mt-1 sm:mt-2 mr-3 sm:mr-4 h-4 w-4 sm:h-5 sm:w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
                   disabled={isSavingType}
                 />
                 <div className="flex-1">
                   <div className="flex items-center mb-2">
-                    <Shield className="w-5 h-5 text-blue-600 mr-2" />
-                    <div className="font-bold text-slate-800 text-lg">First-time F-1 Visa Application</div>
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-2" />
+                    <div className="font-bold text-slate-800 text-base sm:text-lg">First-time F-1 Visa Application</div>
                   </div>
-                  <div className="text-slate-600">
+                  <div className="text-sm sm:text-base text-slate-600">
                     I am outside the US and need an F-1 student visa to study in America.
                   </div>
                 </div>
-                <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${
+                <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 transition-transform flex-shrink-0 ${
                   studentType === 'initial' ? 'transform rotate-90 text-blue-500' : ''
                 }`} />
               </label>
 
-              <label className={`group flex items-start p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+              <label className={`group flex items-start p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                 studentType === 'transfer' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-slate-200 hover:border-blue-300'
               }`}>
                 <input
@@ -467,24 +466,24 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   value="transfer"
                   checked={studentType === 'transfer'}
                   onChange={() => setStudentType('transfer')}
-                  className="mt-2 mr-4 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  className="mt-1 sm:mt-2 mr-3 sm:mr-4 h-4 w-4 sm:h-5 sm:w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
                   disabled={isSavingType}
                 />
                 <div className="flex-1">
                   <div className="flex items-center mb-2">
-                    <GraduationCap className="w-5 h-5 text-green-600 mr-2" />
-                    <div className="font-bold text-slate-800 text-lg">School Transfer</div>
+                    <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mr-2" />
+                    <div className="font-bold text-slate-800 text-base sm:text-lg">School Transfer</div>
                   </div>
-                  <div className="text-slate-600">
+                  <div className="text-sm sm:text-base text-slate-600">
                     I am already in the US with an F-1 student visa and want to transfer schools.
                   </div>
                 </div>
-                <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${
+                <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 transition-transform flex-shrink-0 ${
                   studentType === 'transfer' ? 'transform rotate-90 text-blue-500' : ''
                 }`} />
               </label>
 
-              <label className={`group flex items-start p-6 rounded-2xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+              <label className={`group flex items-start p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
                 studentType === 'change_of_status' ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-slate-200 hover:border-blue-300'
               }`}>
                 <input
@@ -493,27 +492,27 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   value="change_of_status"
                   checked={studentType === 'change_of_status'}
                   onChange={() => setStudentType('change_of_status')}
-                  className="mt-2 mr-4 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  className="mt-1 sm:mt-2 mr-3 sm:mr-4 h-4 w-4 sm:h-5 sm:w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
                   disabled={isSavingType}
                 />
                 <div className="flex-1">
                   <div className="flex items-center mb-2">
-                    <Clock className="w-5 h-5 text-amber-600 mr-2" />
-                    <div className="font-bold text-slate-800 text-lg">Status Change</div>
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mr-2" />
+                    <div className="font-bold text-slate-800 text-base sm:text-lg">Status Change</div>
                   </div>
-                  <div className="text-slate-600">
+                  <div className="text-sm sm:text-base text-slate-600">
                     I am already in the US with another visa (e.g., tourist) and want to change my status to student.
                   </div>
                 </div>
-                <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${
+                <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 transition-transform flex-shrink-0 ${
                   studentType === 'change_of_status' ? 'transform rotate-90 text-blue-500' : ''
                 }`} />
               </label>
             </div>
             
-            <div className="text-center mt-8">
+            <div className="text-center mt-6 sm:mt-8">
               <button
-                className="bg-blue-600 text-white px-12 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="bg-blue-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full sm:w-auto"
                 disabled={!studentType || isSavingType}
                 onClick={() => studentType && saveStudentType(studentType)}
               >
@@ -532,66 +531,66 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
         {/* Step 2: Document Upload */}
         {processType && !documentsApproved && (showDocumentSection || processType) && (
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 mb-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-6 sm:mb-8">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
                 Upload Required Documents
               </h2>
-              <p className="text-slate-600 max-w-xl mx-auto mb-2">
+              <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto mb-2 px-2">
                 Please upload the following documents to proceed with your application process.
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-xs sm:text-sm text-slate-500 px-2">
                 <strong>All files must be clear and legible.</strong> Each field accepts only one file.
               </p>
             </div>
 
             {/* Document Upload List */}
-            <div className="space-y-4 mb-8">
+            <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
               {DOCUMENT_TYPES.map((doc) => {
                 const IconComponent = doc.icon;
                 const hasFile = files[doc.key];
                 const hasError = fieldErrors[doc.key];
                 
                 return (
-                  <div key={doc.key} className={`relative p-6 rounded-2xl border-2 transition-all duration-200 ${
+                  <div key={doc.key} className={`relative p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 ${
                     hasError ? 'border-red-300 bg-red-50' :
                     hasFile ? 'border-green-300 bg-green-50' : 
                     'border-slate-200 bg-slate-50 hover:border-blue-300'
                   }`}>
-                    <div className="flex items-center gap-6">
-                      <div className={`flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0 ${
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                      <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0 ${
                         hasError ? 'bg-red-100' :
                         hasFile ? 'bg-green-100' : 'bg-slate-100'
                       }`}>
-                        <IconComponent className={`w-6 h-6 ${
+                        <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 ${
                           hasError ? 'text-red-600' :
                           hasFile ? 'text-green-600' : 'text-slate-600'
                         }`} />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-slate-800 mb-1">{doc.label}</h3>
-                        <p className="text-sm text-slate-600 mb-3">{doc.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-800 mb-1 text-sm sm:text-base">{doc.label}</h3>
+                        <p className="text-xs sm:text-sm text-slate-600 mb-3">{doc.description}</p>
                         
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                           <input
                             type="file"
                             accept="application/pdf,image/*"
                             onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
                             disabled={uploading || analyzing}
-                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer"
+                            className="w-full text-xs sm:text-sm text-slate-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer"
                           />
                           
                           {hasFile && (
-                            <div className="flex items-center text-sm text-green-600 bg-green-50 p-2 rounded-lg">
-                              <CheckCircle className="w-4 h-4 mr-2" />
+                            <div className="flex items-center text-xs sm:text-sm text-green-600 bg-green-50 p-2 rounded-lg">
+                              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
                               <span className="truncate">{hasFile.name}</span>
                             </div>
                           )}
                           
                           {hasError && (
-                            <div className="flex items-start text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-                              <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                              <span>{hasError}</span>
+                            <div className="flex items-start text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded-lg">
+                              <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-2 mt-0.5 flex-shrink-0" />
+                              <span className="break-words">{hasError}</span>
                             </div>
                           )}
                         </div>
@@ -603,12 +602,12 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             </div>
 
             {/* Upload Button */}
-            <div className="text-center flex justify-center items-center space-x-4">
+            <div className="text-center flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">
               {Object.values(fieldErrors).some(Boolean) && (
                 <button
                   onClick={() => navigate('/student/dashboard/manual-review')}
                   disabled={analyzing}
-                  className="bg-amber-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-amber-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  className="bg-amber-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base hover:bg-amber-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg w-full sm:w-auto"
                 >
                   Continue to Manual Review
                 </button>
@@ -617,7 +616,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               <button
                 onClick={handleUpload}
                 disabled={uploading || !allFilesSelected || analyzing}
-                className="bg-blue-600 text-white px-12 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="bg-blue-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-blue-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full sm:w-auto"
               >
                 {uploading ? (
                   <span className="flex items-center justify-center">
@@ -648,23 +647,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
         {/* Step 3: Documents Approved */}
         {processType && documentsApproved && (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-3xl p-8 text-center shadow-lg">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center shadow-lg">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full mb-4 sm:mb-6">
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-green-800 mb-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-green-800 mb-3 sm:mb-4">
               Documents Approved! ✅
             </h2>
-            <p className="text-green-700 text-lg mb-6 max-w-xl mx-auto">
+            <p className="text-green-700 text-sm sm:text-lg mb-4 sm:mb-6 max-w-xl mx-auto px-2">
               Excellent! Your documents have been approved and you're ready to proceed with the application fee payment.
             </p>
             <button
               onClick={() => navigate('/student/dashboard/application-fee')}
-              className="bg-green-600 text-white px-12 py-4 rounded-2xl font-bold text-lg hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="bg-green-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full sm:w-auto"
             >
               <span className="flex items-center justify-center">
                 Proceed to Payment
-                <ChevronRight className="w-5 h-5 ml-2" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
               </span>
             </button>
           </div>
@@ -672,18 +671,18 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
         {/* Analysis Loading Overlay */}
         {analyzing && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center border border-slate-100 max-w-sm mx-4">
-              <div className="relative mb-6">
-                <div className="animate-spin h-16 w-16 border-4 border-blue-100 border-t-blue-600 rounded-full"></div>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-700 text-xl font-bold">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 flex flex-col items-center border border-slate-100 max-w-sm mx-4 w-full">
+              <div className="relative mb-4 sm:mb-6">
+                <div className="animate-spin h-12 w-12 sm:h-16 sm:w-16 border-3 sm:border-4 border-blue-100 border-t-blue-600 rounded-full"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-700 text-lg sm:text-xl font-bold">
                   AI
                 </div>
               </div>
-              <div className="text-xl font-bold text-slate-800 mb-2 animate-pulse text-center">
+              <div className="text-lg sm:text-xl font-bold text-slate-800 mb-2 animate-pulse text-center">
                 Analyzing your documents...
               </div>
-              <div className="text-slate-500 text-center text-sm">
+              <div className="text-slate-500 text-center text-xs sm:text-sm px-2">
                 This may take up to 40 seconds.<br />
                 Please do not close this window.
               </div>
