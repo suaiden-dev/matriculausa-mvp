@@ -40,7 +40,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(profile?.avatar_url);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(profile?.avatar_url || user?.avatar_url);
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     phone: profile?.phone || '',
@@ -402,9 +402,9 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
             <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0 mb-6 sm:mb-8">
               <div className="relative">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
-                  {avatarUrl ? (
+                  {user?.avatar_url ? (
                     <img 
-                      src={avatarUrl} 
+                      src={user.avatar_url} 
                       alt="Profile Avatar" 
                       className="w-full h-full object-cover"
                     />

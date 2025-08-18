@@ -67,7 +67,7 @@ const ForUniversitiesFAQ: React.FC<ForUniversitiesFAQProps> = ({ onScheduleClick
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
-            Frequently Asked <span className="text-yellow-300">Questions</span>
+            Frequently Asked <span className="text-slate-300">Questions</span>
           </h2>
           <p className="text-xl text-white/80 max-w-3xl mx-auto">
             Everything you need to know about partnering with MatriculaUSA
@@ -88,9 +88,9 @@ const ForUniversitiesFAQ: React.FC<ForUniversitiesFAQProps> = ({ onScheduleClick
                   {faq.question}
                 </h3>
                 {openIndex === index ? (
-                  <ChevronUp className="h-6 w-6 text-yellow-300 flex-shrink-0" />
+                  <ChevronUp className="h-6 w-6 text-slate-300 flex-shrink-0" />
                 ) : (
-                  <ChevronDown className="h-6 w-6 text-yellow-300 flex-shrink-0" />
+                  <ChevronDown className="h-6 w-6 text-slate-300 flex-shrink-0" />
                 )}
               </button>
               
@@ -118,7 +118,7 @@ const ForUniversitiesFAQ: React.FC<ForUniversitiesFAQProps> = ({ onScheduleClick
             </p>
             <button 
               onClick={onScheduleClick}
-              className="bg-yellow-300 text-slate-900 px-8 py-4 rounded-2xl font-bold hover:bg-yellow-200 transition-all duration-300 flex items-center mx-auto shadow-lg"
+              className="bg-slate-300 text-slate-900 px-8 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-all duration-300 flex items-center mx-auto shadow-lg"
             >
               <MessageCircle className="mr-3 h-5 w-5" />
               Talk to an Expert

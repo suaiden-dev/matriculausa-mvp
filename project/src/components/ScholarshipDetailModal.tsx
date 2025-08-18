@@ -172,7 +172,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                 {/* Close Button */}
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 bg-white/20 backdrop-blur-md text-white p-2 rounded-full hover:bg-white/30 transition-all duration-200"
+                  className="absolute top-4 right-4 bg-white text-black p-2 rounded-full border border-gray-300 shadow-md hover:bg-gray-100 transition-all duration-200"
                 >
                   <X className="h-6 w-6" />
                 </button>

@@ -39,8 +39,8 @@ const Universities: React.FC = () => {
           .eq('is_featured', false) // Exclude featured universities from search results
           .ilike('name', `%${searchTerm}%`);
         if (selectedLocation !== 'all') {
-          // Filtro por estado no address.street ou location
-          query = query.or(`address->>street.ilike.%${selectedLocation}%,location.ilike.%${selectedLocation}%`);
+          // Filtro por estado usando o campo address.state padronizado
+          query = query.eq('address->>state', selectedLocation);
         }
         const { data, error } = await query;
         if (!error && data) {
@@ -65,7 +65,7 @@ const Universities: React.FC = () => {
         .eq('is_featured', false) // Exclude featured universities from paginated results
         .range(from, to);
       if (selectedLocation !== 'all') {
-        query = query.or(`address->>street.ilike.%${selectedLocation}%,location.ilike.%${selectedLocation}%`);
+        query = query.eq('address->>state', selectedLocation);
       }
       const { data, error, count } = await query;
       if (!error && data) {
@@ -93,8 +93,7 @@ const Universities: React.FC = () => {
       const { data, error } = await supabase
         .from('universities')
         .select('location, address')
-        .eq('is_approved', true)
-        .eq('is_featured', false); // Exclude featured universities from states filter
+        .eq('is_approved', true); // Include all approved universities for states filter
       if (!error && data) {
         setAllUniversities(data);
       } else {
@@ -128,23 +127,8 @@ const Universities: React.FC = () => {
 
   // Get unique states for filter a partir de allUniversities
   const states = Array.from(new Set(allUniversities.map(school => {
-    // Tenta extrair o estado do address.street
-    const street = school.address?.street || '';
-    let state = null;
-    if (street) {
-      const parts = street.split(',');
-      if (parts.length >= 3) {
-        state = parts[parts.length - 2].trim();
-      } else if (parts.length === 2) {
-        state = parts[1].trim().split(' ')[0];
-      }
-    }
-    if (!state) {
-      const loc = school.location || '';
-      const locParts = loc.split(',');
-      state = locParts.length > 1 ? locParts[1].trim() : null;
-    }
-    return state;
+    // Usar o campo address.state que já está padronizado
+    return school.address?.state || null;
   }))).filter(Boolean).sort();
   console.log('Estados disponíveis para filtro:', states);
 
@@ -152,23 +136,9 @@ const Universities: React.FC = () => {
     const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (school.location || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === 'all' || school.type === selectedType;
-    // Extrai o estado do address.street para filtrar
-    let schoolState = '';
-    const street = school.address?.street || '';
-    if (street) {
-      const parts = street.split(',');
-      if (parts.length >= 3) {
-        schoolState = parts[parts.length - 2].trim().toLowerCase();
-      } else if (parts.length === 2) {
-        schoolState = parts[1].trim().split(' ')[0].toLowerCase();
-      }
-    }
-    if (!schoolState) {
-      const loc = school.location || '';
-      const locParts = loc.split(',');
-      schoolState = locParts.length > 1 ? locParts[1].trim().toLowerCase() : '';
-    }
-    const matchesLocation = selectedLocation === 'all' || schoolState === selectedLocation.toLowerCase();
+    // Usar o campo address.state que já está padronizado
+    const schoolState = school.address?.state || '';
+    const matchesLocation = selectedLocation === 'all' || schoolState === selectedLocation;
     return matchesSearch && matchesType && matchesLocation;
   });
 

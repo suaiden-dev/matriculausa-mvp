@@ -159,6 +159,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     if (path.includes('/applications') || path.includes('/application/')) return 'applications';
     if (path.includes('/rewards')) return 'rewards';
     if (path.includes('/profile')) return 'profile';
+    if (path.includes('/manual-review')) return 'cart';
+    if (path.includes('/documents-and-scholarship-choice')) return 'cart';
     return 'overview';
   };
 
@@ -230,9 +232,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
-                  {profile?.avatar_url ? (
+                  {user?.avatar_url ? (
                     <img 
-                      src={profile.avatar_url} 
+                      src={user.avatar_url} 
                       alt="Profile Avatar" 
                       className="w-full h-full object-cover"
                     />
@@ -384,9 +386,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {profile?.avatar_url ? (
+                    {user?.avatar_url ? (
                       <img 
-                        src={profile.avatar_url} 
+                        src={user?.avatar_url} 
                         alt="Profile Avatar" 
                         className="w-full h-full object-cover"
                       />
