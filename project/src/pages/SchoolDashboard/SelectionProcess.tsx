@@ -1178,9 +1178,9 @@ const SelectionProcess: React.FC = () => {
       title="Complete your profile to manage selection process"
       description="Finish setting up your university profile to view and manage student selection process"
     >
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+      <div className="min-h-screen">
         {/* Header + Filters Section */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="max-w-full mx-auto bg-slate-50">
               {/* Header: title + note + counter */}
