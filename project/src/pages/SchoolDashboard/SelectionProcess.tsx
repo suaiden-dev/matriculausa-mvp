@@ -1179,77 +1179,78 @@ const SelectionProcess: React.FC = () => {
       description="Finish setting up your university profile to view and manage student selection process"
     >
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
-        {/* Header Section */}
-        <div className="bg-white shadow-sm border-b border-slate-200">
-          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                  Selection Process
-                </h1>
-                <p className="mt-1 text-sm text-slate-600">
-                  Review and approve student applications pending fee payments
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  Students automatically move to the Students page once both Application Fee and Scholarship Fee are paid
-                </p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-700 border border-blue-300">
-                  <Clock className="w-4 h-4 mr-1.5" />
-                  {filteredApplications.length} Pending Fees
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters and Search Section */}
+        {/* Header + Filters Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            {/* Search and Filters */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Search Bar */}
-                <div className="lg:col-span-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Search students in selection process..."
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+            <div className="max-w-full mx-auto bg-slate-50">
+              {/* Header: title + note + counter */}
+              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    Students in the Process
+                  </h1>
+                  <p className="mt-2 text-sm sm:text-base text-slate-600">
+                    The students are interested in your college and are participating in the admissions process. By accepting them, you authorize them to complete the enrollment process.
+                  </p>
+                  <p className="mt-3 text-sm text-slate-500">
+                    The student must be informed that the university will only be notified after both fees are paid: the application fee and the scholarship fee.
+                  </p>
+                </div>
+
+                <div className="flex items-center">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                    <Clock className="w-5 h-5 mr-2" />
+                    {filteredApplications.length} Pending Fees
                   </div>
                 </div>
+              </div>
 
-                {/* Scholarship Filter */}
-                <div>
-                  <select
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                    value={selectedScholarship}
-                    onChange={(e) => setSelectedScholarship(e.target.value)}
-                  >
-                    <option value="">All Scholarships</option>
-                    {scholarships.map(s => (
-                      <option key={s.id} value={s.id}>{s.title}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Separation and Filters row */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Search Bar */}
+                    <div className="lg:col-span-2">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          placeholder="Search students in selection process..."
+                          className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      </div>
+                    </div>
 
-                {/* Country Filter */}
-                <div>
-                  <select
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                    value={selectedCountry}
-                    onChange={(e) => setSelectedCountry(e.target.value)}
-                  >
-                    <option value="">All Countries</option>
-                    {countries.map(country => (
-                      <option key={country} value={country}>{country}</option>
-                    ))}
-                  </select>
+                    {/* Scholarship Filter */}
+                    <div>
+                      <select
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        value={selectedScholarship}
+                        onChange={(e) => setSelectedScholarship(e.target.value)}
+                      >
+                        <option value="">All Scholarships</option>
+                        {scholarships.map(s => (
+                          <option key={s.id} value={s.id}>{s.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Country Filter */}
+                    <div>
+                      <select
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        value={selectedCountry}
+                        onChange={(e) => setSelectedCountry(e.target.value)}
+                      >
+                        <option value="">All Countries</option>
+                        {countries.map(country => (
+                          <option key={country} value={country}>{country}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1499,7 +1500,7 @@ const SelectionProcess: React.FC = () => {
                                     </div>
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">Country</dt>
-                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.country || 'Not specified'}</dd>
+                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.country || 'Not specified'}</dd>
                                     </div>
                                   </div>
                                 </div>
@@ -1510,19 +1511,19 @@ const SelectionProcess: React.FC = () => {
                                   <div className="space-y-3">
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">Field of Interest</dt>
-                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.field_of_interest || 'Not specified'}</dd>
+                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.field_of_interest || 'Not specified'}</dd>
                                     </div>
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">Academic Level</dt>
-                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.academic_level || 'Not specified'}</dd>
+                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.academic_level || 'Not specified'}</dd>
                                     </div>
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">GPA</dt>
-                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.gpa || 'Not provided'}</dd>
+                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.gpa || 'Not provided'}</dd>
                                     </div>
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">English Proficiency</dt>
-                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.english_proficiency || 'Not specified'}</dd>
+                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.english_proficiency || 'Not specified'}</dd>
                                     </div>
                                   </div>
                                 </div>
@@ -1533,7 +1534,7 @@ const SelectionProcess: React.FC = () => {
                                   <div className="space-y-3">
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">Student Type</dt>
-                                      <dd className="text-base text-slate-900 mt-1">
+                                      <dd className="text-base font-semibold text-slate-900 mt-1">
                                         {selectedStudent.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
                                          selectedStudent.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
                                          selectedStudent.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
@@ -1728,7 +1729,7 @@ const SelectionProcess: React.FC = () => {
                                               <button
                                                 disabled={!d || updating === d.type || status === 'approved'}
                                                 onClick={() => d && approveDoc(d.type)}
-                                                className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                                className={`flex items-center px-3 py-1.5 text-sm fontmedium rounded-lg transition-colors ${
                                                   status === 'approved' 
                                                     ? 'bg-green-600 text-white' 
                                                     : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
