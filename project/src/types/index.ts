@@ -121,6 +121,7 @@ export interface UserProfile {
   id: string;
   user_id: string;
   full_name: string | null;
+  email: string | null;
   phone: string | null;
   country: string | null;
   field_of_interest: string | null;

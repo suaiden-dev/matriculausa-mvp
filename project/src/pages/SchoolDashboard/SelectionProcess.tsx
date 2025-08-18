@@ -32,8 +32,7 @@ const DOCUMENTS_INFO = [
 ];
 
 const TABS = [
-  { id: 'details', label: 'Details', icon: UserCircle },
-  { id: 'documents', label: 'Documents', icon: FileText }
+  { id: 'details', label: 'Details', icon: UserCircle }
 ];
 
 const SelectionProcess: React.FC = () => {
@@ -50,7 +49,7 @@ const SelectionProcess: React.FC = () => {
   const [studentLoading, setStudentLoading] = useState(false);
   const [studentDocs, setStudentDocs] = useState<any[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
+  const [activeTab, setActiveTab] = useState<'details'>('details');
   const [updating, setUpdating] = useState<string | null>(null);
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [pendingRejectType, setPendingRejectType] = useState<string | null>(null);
@@ -590,7 +589,26 @@ const SelectionProcess: React.FC = () => {
   // Função para visualizar arquivo
   const handleViewDocument = (doc: any) => {
     if (!doc.file_url) return;
-    setPreviewUrl(doc.file_url);
+    
+    // Converter a URL do storage para URL pública
+    try {
+      // Se file_url é um path do storage, converter para URL pública
+      if (doc.file_url && !doc.file_url.startsWith('http')) {
+        const publicUrl = supabase.storage
+          .from('document-attachments')
+          .getPublicUrl(doc.file_url)
+          .data.publicUrl;
+        
+        setPreviewUrl(publicUrl);
+      } else {
+        // Se já é uma URL completa, usar diretamente
+        setPreviewUrl(doc.file_url);
+      }
+    } catch (error) {
+      console.error('Erro ao gerar URL pública:', error);
+      // Fallback: tentar usar a URL original
+      setPreviewUrl(doc.file_url);
+    }
   };
 
   // Função para baixar template
@@ -622,7 +640,26 @@ const SelectionProcess: React.FC = () => {
   // Função para visualizar upload de um request
   const handleViewUpload = (upload: any) => {
     if (!upload.file_url) return;
-    setPreviewUrl(upload.file_url);
+    
+    // Converter a URL do storage para URL pública
+    try {
+      // Se file_url é um path do storage, converter para URL pública
+      if (upload.file_url && !upload.file_url.startsWith('http')) {
+        const publicUrl = supabase.storage
+          .from('document-attachments')
+          .getPublicUrl(upload.file_url)
+          .data.publicUrl;
+        
+        setPreviewUrl(publicUrl);
+      } else {
+        // Se já é uma URL completa, usar diretamente
+        setPreviewUrl(upload.file_url);
+      }
+    } catch (error) {
+      console.error('Erro ao gerar URL pública:', error);
+      // Fallback: tentar usar a URL original
+      setPreviewUrl(upload.file_url);
+    }
   };
 
   // Função para aprovar documento enviado pelo aluno
@@ -1322,6 +1359,15 @@ const SelectionProcess: React.FC = () => {
                                 </span>
                               )}
                             </div>
+                            
+                            {/* Scholarship Information */}
+                            {(app as any).scholarships && (
+                              <div className="mt-2 flex items-center space-x-1">
+                                <span className="text-xs text-slate-600">
+                                  <span className="font-medium">Scholarship:</span> {(app as any).scholarships.title}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       
@@ -1442,6 +1488,10 @@ const SelectionProcess: React.FC = () => {
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">Full Name</dt>
                                       <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.full_name}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-sm font-medium text-slate-600">Email</dt>
+                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.email || 'Not provided'}</dd>
                                     </div>
                                     <div>
                                       <dt className="text-sm font-medium text-slate-600">Phone</dt>
@@ -1616,92 +1666,97 @@ const SelectionProcess: React.FC = () => {
                               <p className="text-slate-200 text-sm mt-1">Review each document and approve or request changes</p>
                             </div>
                             <div className="p-5">
-                              <div className="space-y-6">
-                                {DOCUMENTS_INFO.map((doc) => {
+                              <div className="space-y-0">
+                                {DOCUMENTS_INFO.map((doc, index) => {
                                   const d = latestDocByType(doc.key);
                                   const status = d?.status || 'not_submitted';
                                   
                                   return (
-                                    <div key={doc.key} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                                        <div className="flex-1">
-                                          <div className="flex items-start justify-between mb-3">
-                                            <div>
-                                              <h3 className="font-semibold text-slate-900 text-lg">{doc.label}</h3>
-                                              <p className="text-sm text-slate-600 mt-1 leading-relaxed">{doc.description}</p>
-                                            </div>
-                                            <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                                              status === 'approved' ? 'bg-green-100 text-green-800' :
-                                              status === 'changes_requested' ? 'bg-red-100 text-red-800' :
-                                              status === 'under_review' ? 'bg-slate-100 text-slate-800' :
-                                              'bg-slate-100 text-slate-700'
-                                            }`}>
-                                              <div className={`w-2 h-2 rounded-full mr-2 ${
-                                                status === 'approved' ? 'bg-green-500' :
-                                                status === 'changes_requested' ? 'bg-red-500' :
-                                                status === 'under_review' ? 'bg-slate-400' :
-                                                'bg-slate-400'
-                                              }`} />
-                                              {status === 'approved' ? 'Approved' :
-                                               status === 'changes_requested' ? 'Changes Requested' :
-                                               status === 'under_review' ? 'Under Review' :
-                                               d?.file_url ? 'Submitted' : 'Not Submitted'}
-                                            </div>
+                                    <div key={doc.key}>
+                                      <div className="bg-white p-4">
+                                        <div className="flex items-start space-x-4">
+                                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
                                           </div>
-                                        </div>
-                                        
-                                        <div className="flex flex-col sm:flex-row gap-3">
-                                          {d?.file_url && (
-                                            <div className="flex gap-2">
-                                              <a 
-                                                className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
-                                                href={d.file_url} 
-                                                target="_blank" 
-                                                rel="noreferrer"
-                                              >
-                                                <Eye className="w-4 h-4 mr-2" />
-                                                Preview
-                                              </a>
-                                              <a 
-                                                className="flex items-center px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
-                                                href={d.file_url} 
-                                                download
-                                              >
-                                                <Download className="w-4 h-4 mr-2" />
-                                                Download
-                                              </a>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center space-x-3 mb-1">
+                                              <p className="font-medium text-slate-900">{doc.label}</p>
+                                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                status === 'changes_requested' ? 'bg-red-100 text-red-800' :
+                                                status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-slate-100 text-slate-700'
+                                              }`}>
+                                                {status === 'approved' ? 'Approved' :
+                                                 status === 'changes_requested' ? 'Changes Requested' :
+                                                 status === 'under_review' ? 'Under Review' :
+                                                 d?.file_url ? 'Submitted' : 'Not Submitted'}
+                                              </span>
                                             </div>
-                                          )}
-                                          
-                                          <div className="flex gap-2">
-                                            <button
-                                              disabled={!d || updating === d.type || status === 'approved'}
-                                              onClick={() => d && approveDoc(d.type)}
-                                              className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                                status === 'approved' 
-                                                  ? 'bg-green-600 text-white' 
-                                                  : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
-                                              }`}
-                                            >
-                                              <CheckCircle2 className="w-4 h-4 mr-2" />
-                                              {status === 'approved' ? 'Approved' : 'Approve'}
-                                            </button>
-                                            <button
-                                              disabled={!d || updating === d.type || status === 'approved'}
-                                              onClick={() => {
-                                                if (d) {
-                                                  setPendingRejectType(d.type);
-                                                  setShowReasonModal(true);
-                                                }
-                                              }}
-                                              className="flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                              <XCircle className="w-4 h-4 mr-2" />
-                                              Request Changes
-                                            </button>
+                                            <p className="text-sm text-slate-600">{doc.description}</p>
+                                            {d?.file_url && (
+                                              <p className="text-xs text-slate-400 mt-1">
+                                                Uploaded: {d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : new Date().toLocaleDateString()}
+                                              </p>
+                                            )}
+                                            
+                                            {/* Botões posicionados abaixo das informações */}
+                                            <div className="flex items-center space-x-2 mt-3">
+                                              {/* Botões de Preview e Download */}
+                                              {d?.file_url && (
+                                                <div className="flex items-center space-x-2 mr-3">
+                                                  <button 
+                                                    onClick={() => handleViewDocument(d)}
+                                                    className="flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                                  >
+                                                    <Eye className="w-4 h-4 mr-2" />
+                                                    Preview
+                                                  </button>
+                                                  <button 
+                                                    onClick={() => handleDownloadDocument(d)}
+                                                    className="flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                                  >
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    Download
+                                                  </button>
+                                                </div>
+                                              )}
+                                              
+                                              {/* Botões de Approve e Request Changes - MANTIDOS */}
+                                              <button
+                                                disabled={!d || updating === d.type || status === 'approved'}
+                                                onClick={() => d && approveDoc(d.type)}
+                                                className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                                  status === 'approved' 
+                                                    ? 'bg-green-600 text-white' 
+                                                    : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
+                                                }`}
+                                              >
+                                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                                {status === 'approved' ? 'Approved' : 'Approve'}
+                                              </button>
+                                              <button
+                                                disabled={!d || updating === d.type || status === 'approved'}
+                                                onClick={() => {
+                                                  if (d) {
+                                                    setPendingRejectType(d.type);
+                                                    setShowReasonModal(true);
+                                                  }
+                                                }}
+                                                className="flex items-center px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                                              >
+                                                <XCircle className="w-4 h-4 mr-2" />
+                                                Request Changes
+                                              </button>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
+                                      {index < DOCUMENTS_INFO.length - 1 && (
+                                        <div className="border-t border-slate-200"></div>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -1822,16 +1877,7 @@ const SelectionProcess: React.FC = () => {
                             </div>
                             <div className="p-5">
                               <div className="space-y-3">
-                                <button
-                                  onClick={() => setActiveTab('documents')}
-                                  className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                                >
-                                  <div className="flex items-center space-x-3">
-                                    <FileText className="w-5 h-5 text-slate-600" />
-                                    <span className="text-sm font-medium text-slate-900">Documents</span>
-                                  </div>
-                                  <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
-                                </button>
+
                               </div>
                             </div>
                           </div>
@@ -1839,325 +1885,7 @@ const SelectionProcess: React.FC = () => {
                       </div>
                     )}
 
-                    {activeTab === 'documents' && (
-                      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-                          <h2 className="text-xl font-semibold text-white flex items-center">
-                            <FileText className="w-6 h-6 mr-3" />
-                            Document Management
-                          </h2>
-                          <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
-                        </div>
-                                                 <div className="p-6">
-                          {/* New Request Button */}
-                          <div className="flex justify-end mb-6">
-                            <button 
-                              onClick={() => setShowNewRequestModal(true)}
-                              className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-semibold shadow-sm transition-all duration-200 flex items-center space-x-3"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                              </svg>
-                              <span>New Request</span>
-                            </button>
-                          </div>
-
-                          {/* Student Uploads Section */}
-                          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-                            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
-                              <h4 className="font-semibold text-slate-900 flex items-center">
-                                <svg className="w-5 h-5 mr-3 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Document Requests
-                              </h4>
-                            </div>
-                            
-                            <div className="p-6">
-                              {/* University Document Requests */}
-                              <div className="mb-6">
-                                
-                                
-                                {documentRequests.length === 0 ? (
-                                  <div className="text-center py-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-                                    <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <p className="text-slate-600 font-medium">No document requests yet</p>
-                                    <p className="text-sm text-slate-500 mt-1">Create your first request using the button above</p>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-3">
-                                    {documentRequests.map((request) => (
-                                      <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                                        <div className="flex items-start justify-between">
-                                          <div className="flex-1">
-                                            <div className="flex items-center space-x-3 mb-2">
-                                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                              </div>
-                                              <div>
-                                                <h6 className="font-semibold text-slate-900">{request.title}</h6>
-                                                <p className="text-sm text-slate-600">{request.description}</p>
-                                                {request.due_date && (
-                                                  <p className="text-xs text-slate-500 mt-1">
-                                                    Due: {new Date(request.due_date).toLocaleDateString()}
-                                                  </p>
-                                                )}
-                                              </div>
-                                            </div>
-                                            
-                                            {/* Student Upload Status */}
-                                            {request.uploads && request.uploads.length > 0 ? (
-                                              <div className="ml-13 mt-3">
-                                                <div className="flex items-center space-x-3">
-                                                  <span className="text-sm text-slate-600">Student response:</span>
-                                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                    request.uploads[0].status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                    request.uploads[0].status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                                    'bg-yellow-100 text-yellow-800'
-                                                  }`}>
-                                                    {request.uploads[0].status === 'approved' ? 'Approved' :
-                                                     request.uploads[0].status === 'rejected' ? 'Rejected' :
-                                                     'Under Review'}
-                                                  </span>
-                                                  <button 
-                                                    onClick={() => handleViewUpload(request.uploads[0])}
-                                                    className="text-[#05294E] hover:text-[#041f38] text-sm font-medium hover:underline"
-                                                  >
-                                                    View
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            ) : (
-                                              <div className="ml-13 mt-3">
-                                                <span className="text-sm text-slate-500 italic">No response from student yet</span>
-                                              </div>
-                                            )}
-                                          </div>
-                                          
-                                          <div className="flex items-center space-x-2 ml-4">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                              request.status === 'open' ? 'bg-blue-100 text-blue-800' :
-                                              request.status === 'closed' ? 'bg-slate-100 text-slate-800' :
-                                              'bg-green-100 text-green-800'
-                                            }`}>
-                                              {request.status === 'open' ? 'Open' :
-                                               request.status === 'closed' ? 'Closed' :
-                                               request.status}
-                                            </span>
-                                            
-                                            {request.attachment_url && (
-                                              <button 
-                                                onClick={() => handleDownloadTemplate(request.attachment_url)}
-                                                className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-1 rounded-lg hover:bg-slate-100 transition-colors"
-                                              >
-                                                Template
-                                              </button>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Student Uploads */}
-                              <div className="border-t border-slate-200 pt-6">
-                                <h5 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                                  <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                  </svg>
-                                  Student Responses to Document Requests
-                                </h5>
-                                
-                                {studentDocuments.length === 0 ? (
-                                  <div className="text-center py-6 bg-slate-50 rounded-xl">
-                                    <p className="text-slate-500">No responses from student yet</p>
-                                    <p className="text-sm text-slate-400 mt-1">Documents will appear here once the student responds to your document requests</p>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-3">
-                                    {studentDocuments.map((doc) => (
-                                      <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                                        <div className="flex items-start justify-between">
-                                          <div className="flex items-start space-x-4 flex-1">
-                                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                              </svg>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <p className="font-medium text-slate-900">{doc.filename}</p>
-                                              <div className="flex items-center space-x-2 mt-1">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                  doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                                }`}>
-                                                  {doc.request_type}
-                                                </span>
-                                                <span className="text-sm text-slate-500">
-                                                  Response to: <span className="font-medium text-slate-700">{doc.request_title}</span>
-                                                </span>
-                                              </div>
-                                              {doc.request_description && (
-                                                <p className="text-xs text-slate-400 mt-1">{doc.request_description}</p>
-                                              )}
-                                              <p className="text-xs text-slate-400 mt-1">
-                                                Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
-                                              </p>
-                                            </div>
-                                          </div>
-                                          
-                                          <div className="flex items-center space-x-3 ml-4">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                              doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                              doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                              'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                              {doc.status === 'approved' ? 'Approved' :
-                                               doc.status === 'rejected' ? 'Rejected' :
-                                               'Under Review'}
-                                            </span>
-                                            
-                                            {/* Botões de ação para documentos Under Review */}
-                                            {doc.status === 'under_review' && (
-                                              <div className="flex items-center space-x-2">
-                                                <button
-                                                  onClick={() => handleApproveDocument(doc.id)}
-                                                  className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                                                >
-                                                  Approve
-                                                </button>
-                                                <button
-                                                  onClick={() => {
-                                                    setPendingRejectDocumentId(doc.id);
-                                                    setShowRejectDocumentModal(true);
-                                                  }}
-                                                  className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                                                >
-                                                  Reject
-                                                </button>
-                                              </div>
-                                            )}
-                                            
-                                            <button 
-                                              onClick={() => handleDownloadDocument(doc)}
-                                              className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                                            >
-                                              Download
-                                            </button>
-                                            <button 
-                                              onClick={() => handleViewDocument(doc)}
-                                              className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                                            >
-                                              View
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Acceptance Letter Section */}
-                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl overflow-hidden shadow-sm">
-                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5">
-                              <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
-                                  <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                </div>
-                                <div>
-                                  <h4 className="text-xl font-bold text-white">Acceptance Letter</h4>
-                                  <p className="text-blue-100 text-sm">Upload to automatically enroll the student</p>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="p-6">
-                              <div className="bg-white rounded-xl p-6 mb-6">
-                                <p className="text-slate-700 mb-6 leading-relaxed">
-                                  Please upload the student's acceptance letter and any other required documents, such as the I-20 Control Fee receipt.
-                                </p>
-                                
-                                {acceptanceLetterUploaded ? (
-                                  <div className="text-center py-8 bg-green-50 border-2 border-green-200 rounded-xl">
-                                    <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <h5 className="font-semibold text-green-900 mb-2">Acceptance Letter Uploaded Successfully!</h5>
-                                    <p className="text-green-700 text-sm">The student has been enrolled and notified.</p>
-                                  </div>
-                                ) : (
-                                  <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 bg-blue-50">
-                                    <div className="text-center">
-                                      <svg className="w-16 h-16 text-blue-500 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                      </svg>
-                                      <h5 className="font-semibold text-blue-900 mb-2">Select Acceptance Letter</h5>
-                                      <p className="text-blue-700 text-sm mb-4">Drag and drop or click to browse files</p>
-                                      
-                                      {acceptanceLetterFile ? (
-                                        <div className="mb-4">
-                                          <div className="flex items-center justify-center space-x-2 bg-blue-100 rounded-lg px-4 py-2">
-                                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            <span className="text-blue-800 font-medium">{acceptanceLetterFile.name}</span>
-                                          </div>
-                                        </div>
-                                      ) : null}
-                                      
-                                      <label className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm cursor-pointer inline-block">
-                                        <span>{acceptanceLetterFile ? 'Change File' : 'Choose File'}</span>
-                                        <input
-                                          type="file"
-                                          className="sr-only"
-                                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                          onChange={handleAcceptanceLetterFileSelect}
-                                          disabled={uploadingAcceptanceLetter}
-                                        />
-                                      </label>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {!acceptanceLetterUploaded && (
-                                <div className="flex justify-end">
-                                  <button
-                                    onClick={handleProcessAcceptanceLetter}
-                                    disabled={!acceptanceLetterFile || uploadingAcceptanceLetter}
-                                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-semibold transition-colors shadow-sm flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    {uploadingAcceptanceLetter ? (
-                                      <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                        <span>Processing...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <span>Process Acceptance</span>
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    
                   </>
                 )}
               </div>
