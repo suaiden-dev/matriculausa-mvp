@@ -106,7 +106,7 @@ const ForUniversitiesAISolutions: React.FC = () => {
   return (
     <section className="py-24 bg-slate-50">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
             The Only AI Made to <span className="text-[#05294E]">Increase University Enrollments</span>
@@ -196,7 +196,7 @@ const ForUniversitiesAISolutions: React.FC = () => {
           </div>
 
           {/* Right Side - Selected Solution Image */}
-          <div className="lg:sticky lg:top-8">
+          <div className="hidden lg:block lg:sticky lg:top-8">
             <div className="min-h-[600px] flex flex-col justify-center">
               {selectedSolution ? (
                 <div className="w-full">
