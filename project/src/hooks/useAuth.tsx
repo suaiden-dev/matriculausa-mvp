@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 
 interface User {
   id: string;
+  avatar_url: string | null;
   email: string;
   name?: string;
   role: 'student' | 'school' | 'admin';
@@ -116,9 +117,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (!role && currentProfile) role = currentProfile.is_admin ? 'admin' : undefined;
       if (!role) role = getDefaultRole(sessionUser?.email || '');
-      
+
       const builtUser: User = {
         id: sessionUser.id,
+        avatar_url: currentProfile?.avatar_url || null,
         email: sessionUser.email,
         name: sessionUser.user_metadata?.name || sessionUser.email?.split('@')[0] || '',
         role,
