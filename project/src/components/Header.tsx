@@ -138,7 +138,7 @@ const Header: React.FC = () => {
                     user?.avatar_url && user.role === 'student' ? (
                       <img src={user.avatar_url} alt="User Avatar" className="w-8 h-8 rounded-lg" />
                     ) : user?.role === 'school' && (user?.university_image || schoolImageUrl) ? (
-                      <img src={user.university_image || schoolImageUrl || ''} alt="University Logo" className="w-10 h-10 rounded-lg object-cover" />
+                      <img src={user.university_image || schoolImageUrl || ''} alt="University Logo" className="w-8 h-8 rounded-lg object-cover" />
                     ) : (
                       <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
                         <User className="h-4 w-4 text-white" />

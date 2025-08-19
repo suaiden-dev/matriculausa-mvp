@@ -868,7 +868,7 @@ const getLevelColor = (level: any) => {
                     <h3 className="text-xl font-bold text-slate-900">Pending and In Progress</h3>
                     <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} applications</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
+                  <div className="sm:grid flex justify-center sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -1058,7 +1058,7 @@ const getLevelColor = (level: any) => {
                                                    {isRejected && (
                                                      <div className="mt-3 space-y-2">
                                                        <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 w-full block text-center text-xs hover:shadow-md">
-                                                         <span>Upload New {doc.label}</span>
+                                                         <span>Send New {doc.label}</span>
                                                          <input
                                                            type="file"
                                                            className="sr-only"

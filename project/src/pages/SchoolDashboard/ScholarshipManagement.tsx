@@ -101,25 +101,25 @@ const ScholarshipManagement: React.FC = () => {
       title="Profile setup required"
       description="Complete your university profile to start creating and managing scholarships"
     >
-      <div className="space-y-8 pt-10">
-      {/* Header with Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-        <div>
-          {scholarships.length > 0 && (
-            <p className="text-slate-600">
-              {`${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`}
-            </p>
-          )}
+      <div className="space-y-8 max-w-7xl">
+        {/* Header with Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div>
+            {scholarships.length > 0 && (
+              <p className="text-slate-600">
+                {`${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`}
+              </p>
+            )}
+          </div>
+          
+          <Link
+            to="/school/dashboard/scholarship/new"
+            className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            New Scholarship
+          </Link>
         </div>
-        
-        <Link
-          to="/school/dashboard/scholarship/new"
-          className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          New Scholarship
-        </Link>
-      </div>
 
       {scholarships.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-16 text-center">

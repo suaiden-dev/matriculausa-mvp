@@ -71,8 +71,6 @@ const StudentManagement: React.FC = () => {
     console.log(`Total applications: ${applications.length}`);
     console.log(`Filtered applications (both fees paid): ${filtered.length}`);
     
-    return filtered;
-
     // Filtro por bolsa
     if (selectedScholarship) {
       filtered = filtered.filter(app => app.scholarship_id === selectedScholarship);
@@ -139,41 +137,27 @@ const StudentManagement: React.FC = () => {
       title="Complete your profile to manage students"
       description="Finish setting up your university profile to view and manage student applications"
     >
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
-        {/* Header Section */}
-        <div className="bg-white shadow-sm border-b border-slate-200">
-          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                  Student Management
-                </h1>
-                <p className="mt-1 text-sm text-slate-600">
-                  Manage and review student applications
-                </p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300">
-                  <Users className="w-4 h-4 mr-1.5" />
-                  {filteredApplications.length} Students
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen">
+
 
         {/* Filters and Search Section */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             {/* Page Header */}
             <div className="bg-slate-50 border-b border-slate-200">
               <div className="px-6 py-4">
-                <div className="flex items-center space-x-3">
-                  <Users className="w-5 h-5 text-[#05294E]" />
-                  <h2 className="text-lg font-semibold text-slate-900">All Students</h2>
-                  <span className="text-sm text-slate-600">
-                    (students who have paid both Application Fee and Scholarship Fee)
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Users className="w-5 h-5 text-[#05294E]" />
+                    <h2 className="text-lg font-semibold text-slate-900">All Students</h2>
+                    <span className="text-sm text-slate-600">
+                      (students who have paid both Application Fee and Scholarship Fee)
+                    </span>
+                  </div>
+                  <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300">
+                    <Users className="w-4 h-4 mr-1.5" />
+                    {filteredApplications.length} Students
+                  </div>
                 </div>
               </div>
             </div>
@@ -295,6 +279,15 @@ const StudentManagement: React.FC = () => {
                                   </div>
                                 )}
                               </div>
+                              
+                              {/* Scholarship Information */}
+                              {(app as any).scholarships && (
+                                <div className="mt-2 flex items-center space-x-1">
+                                  <span className="text-xs text-slate-600">
+                                    <span className="font-medium">Scholarship:</span> {(app as any).scholarships.title}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         

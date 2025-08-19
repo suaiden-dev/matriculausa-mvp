@@ -322,7 +322,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 h-screen">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 min-h-screen">
         {/* Top Header */}
         <header className="bg-white border-b border-slate-200 py-3 sticky top-0 z-50 pl-4 pr-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
@@ -478,7 +478,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 bg-slate-50 sm:px-6 lg:px-10 pb-6 max-w-full">
+        <main className="flex justify-center pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
           {/* Welcome Message for Incomplete Profiles */}
           {(!university || !university.profile_completed) && (
             <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">

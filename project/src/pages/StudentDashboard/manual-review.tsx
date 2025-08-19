@@ -282,82 +282,163 @@ const ManualReview: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Manual Document Review</h1>
-      <p className="text-slate-600 mb-6">
-        Some of your documents need manual verification by the university. You can reattach the problematic files below or,
-        if everything is correct, confirm that all information is true to proceed with manual review.
-      </p>
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-slate-800 mb-4">Manual Document Review</h1>
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            Some of your documents need manual verification by the university. You can reattach the problematic files below or confirm that all information is accurate to proceed with manual review.
+          </p>
+        </div>
 
-      <div className="space-y-4 bg-white border border-slate-200 rounded-xl p-4">
-        {entries.map(e => (
-          <div key={e.key} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <label className="font-semibold text-slate-800 text-sm">{e.label}</label>
-              {docByType(e.key) && (
-                <a className="text-xs text-blue-600 hover:underline" href={docByType(e.key)!.url} target="_blank" rel="noreferrer">View previous file</a>
-              )}
-            </div>
-            {statusOf(e.key) === 'changes_requested' && (
-              <div className="text-xs text-red-600 mb-1">
-                University requested changes for this document.
-              </div>
-            )}
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              {usePrev[e.key] && docByType(e.key) ? (
-                <div className="border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 text-slate-700 text-sm truncate max-w-[260px]">
-                  {docByType(e.key)!.name || docByType(e.key)!.url.split('/').pop()}
-                </div>
-              ) : (
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  onChange={(ev) => attachFile(e.key, ev.target.files?.[0] || null)}
-                  className={`border border-slate-200 rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition text-sm`}
-                />
-              )}
-            </div>
-            {docByType(e.key) && (
-              <label className="mt-2 inline-flex items-center gap-2 text-xs text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={usePrev[e.key]}
-                  onChange={(ev) => setUsePrev(prev => ({ ...prev, [e.key]: ev.target.checked }))}
-                />
-                Use previous file (uncheck to replace)
-              </label>
-            )}
-            {fieldErrors[e.key] && (
-              <span className="text-xs text-red-500 mt-1">{fieldErrors[e.key]}</span>
-            )}
+        {/* Document Review Section */}
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 mb-8">
+          <div className="text-center mb-8">
+            
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">Review Your Documents</h2>
+            <p className="text-slate-600">
+              Please review each document below and make any necessary corrections
+            </p>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-6 flex items-start gap-2">
-        <input id="confirmTruth" type="checkbox" className="h-4 w-4 mt-1" checked={confirmAllTrue} onChange={e => setConfirmAllTrue(e.target.checked)} />
-        <label htmlFor="confirmTruth" className="text-sm text-slate-700">
-          I confirm that all the information and documents provided are accurate and true to the best of my knowledge.
-        </label>
-      </div>
+          <div className="space-y-6">
+            {entries.map(e => (
+              <div key={e.key} className="p-6 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-300 transition-all duration-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      statusOf(e.key) === 'changes_requested' ? 'bg-red-100' : 'bg-blue-100'
+                    }`}>
+                      <svg className={`w-5 h-5 ${
+                        statusOf(e.key) === 'changes_requested' ? 'text-red-600' : 'text-blue-600'
+                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800">{e.label}</h3>
+                      {statusOf(e.key) === 'changes_requested' && (
+                        <div className="text-sm text-red-600 font-medium">
+                          University requested changes for this document
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {docByType(e.key) && (
+                    <a 
+                      className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium px-3 py-1 rounded-lg hover:bg-blue-50 transition-all duration-200" 
+                      href={docByType(e.key)!.url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                    >
+                      View Current File
+                    </a>
+                  )}
+                </div>
+                
+                <div className="space-y-3">
+                  {usePrev[e.key] && docByType(e.key) ? (
+                    <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-green-700 font-medium text-sm">
+                        Using current file: {docByType(e.key)!.name || docByType(e.key)!.url.split('/').pop()}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700">
+                        Upload replacement file:
+                      </label>
+                      <input
+                        type="file"
+                        accept="application/pdf,image/*"
+                        onChange={(ev) => attachFile(e.key, ev.target.files?.[0] || null)}
+                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+                  
+                  {docByType(e.key) && (
+                    <label className="inline-flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:text-slate-800 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={usePrev[e.key]}
+                        onChange={(ev) => setUsePrev(prev => ({ ...prev, [e.key]: ev.target.checked }))}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      Use current file (uncheck to upload a new one)
+                    </label>
+                  )}
+                  
+                  {fieldErrors[e.key] && (
+                    <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <svg className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm text-red-600">{fieldErrors[e.key]}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-      {error && <div className="text-red-600 text-sm mt-4">{error}</div>}
+        {/* Confirmation Section */}
+        <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 mb-8">
+          <div className="flex items-start gap-4">
+            <input 
+              id="confirmTruth" 
+              type="checkbox" 
+              className="h-5 w-5 mt-1 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+              checked={confirmAllTrue} 
+              onChange={e => setConfirmAllTrue(e.target.checked)} 
+            />
+            <label htmlFor="confirmTruth" className="text-slate-700 text-sm  sm:text-base leading-relaxed">
+              <span className="font-semibold ">Declaration of Accuracy:</span> I confirm that all the information and documents provided are accurate and true to the best of my knowledge. I understand that providing false information may result in the rejection of my application.
+            </label>
+          </div>
+        </div>
 
-      <div className="mt-6 flex gap-3">
-        <button
-          onClick={() => navigate('/student/dashboard')}
-          className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50"
-          disabled={submitting}
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || (!confirmAllTrue && !Object.entries(files).some(([k, f]) => !usePrev[k] && f))}
-          className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
-        >
-          {submitting ? 'Submitting...' : 'Submit for Manual Review'}
-        </button>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-8">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-red-600">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            onClick={() => navigate('/student/dashboard')}
+            className="px-8 py-3 rounded-2xl border-2 border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 disabled:opacity-50"
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || (!confirmAllTrue && !Object.entries(files).some(([k, f]) => !usePrev[k] && f))}
+            className="px-8 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+          >
+            {submitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                Submitting...
+              </span>
+            ) : (
+              'Submit for Manual Review'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

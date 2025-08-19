@@ -16,21 +16,39 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   // Função para tentar gerar signed URL se a URL pública falhar
   const getSignedUrl = async (originalUrl: string): Promise<string | null> => {
     try {
-      // Extrair o path do bucket da URL pública
-      const urlParts = originalUrl.split('/storage/v1/object/public/student-documents/');
-      if (urlParts.length !== 2) return null;
+      console.log('=== DEBUG getSignedUrl ===');
+      console.log('Original URL:', originalUrl);
       
-      const filePath = urlParts[1];
-      const { data, error } = await supabase.storage
-        .from('student-documents')
-        .createSignedUrl(filePath, 60 * 60); // 1 hora
+      // Tentar diferentes buckets
+      const buckets = ['document-attachments', 'student-documents'];
       
-      if (error) {
-        console.error('Error creating signed URL:', error);
-        return null;
+      for (const bucket of buckets) {
+        try {
+          const urlParts = originalUrl.split(`/storage/v1/object/public/${bucket}/`);
+          if (urlParts.length === 2) {
+            const filePath = urlParts[1];
+            console.log(`Tentando bucket ${bucket} com path:`, filePath);
+            
+            const { data, error } = await supabase.storage
+              .from(bucket)
+              .createSignedUrl(filePath, 60 * 60); // 1 hora
+            
+            if (error) {
+              console.error(`Error creating signed URL for bucket ${bucket}:`, error);
+              continue;
+            }
+            
+            console.log(`Signed URL criada com sucesso para bucket ${bucket}:`, data.signedUrl);
+            return data.signedUrl;
+          }
+        } catch (e) {
+          console.error(`Exception creating signed URL for bucket ${bucket}:`, e);
+          continue;
+        }
       }
       
-      return data.signedUrl;
+      console.log('Nenhum bucket funcionou para criar signed URL');
+      return null;
     } catch (e) {
       console.error('Exception creating signed URL:', e);
       return null;
@@ -42,8 +60,23 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     const fullName = name || url;
     const lowerName = fullName.toLowerCase();
     
-    if (lowerName.includes('.pdf')) return 'pdf';
-    if (lowerName.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/)) return 'image';
+    console.log('=== DEBUG detectDocumentType ===');
+    console.log('URL:', url);
+    console.log('Name:', name);
+    console.log('Full name:', fullName);
+    console.log('Lower name:', lowerName);
+    
+    if (lowerName.includes('.pdf')) {
+      console.log('Tipo detectado: PDF');
+      return 'pdf';
+    }
+    
+    if (lowerName.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/)) {
+      console.log('Tipo detectado: IMAGE');
+      return 'image';
+    }
+    
+    console.log('Tipo detectado: UNKNOWN');
     return 'unknown';
   };
 
@@ -150,12 +183,19 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
 
     // Para imagens, usa img tag
     if (documentType === 'image') {
+      console.log('=== Renderizando imagem ===');
+      console.log('URL da imagem:', actualUrl);
+      
       return (
         <img 
           src={actualUrl} 
           alt="Document preview" 
           className="object-contain w-full h-full max-h-[80vh]"
-          onError={() => {
+          onLoad={() => {
+            console.log('Imagem carregada com sucesso');
+          }}
+          onError={(e) => {
+            console.error('Erro ao carregar imagem:', e);
             setError('Erro ao carregar imagem. Tente fazer o download.');
           }}
         />
