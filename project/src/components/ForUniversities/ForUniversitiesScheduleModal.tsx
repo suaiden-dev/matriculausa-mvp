@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar as CalendarIcon, Building2, Mail, MessageCircle } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Building2, Mail, MessageCircle, Clock } from 'lucide-react';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { TextField } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { formatInTimeZone } from 'date-fns-tz';
 
 interface ScheduleModalProps {
   isOpen: boolean;
@@ -14,144 +16,216 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
   const [formData, setFormData] = useState({
     university_name: '',
     contact_email: '',
-    preferred_datetime: null as Date | null,
-    meeting_type: ''
+    preferred_date: null as Date | null,
+    preferred_time: '',
+    meeting_type: '',
+    user_timezone: ''
   });
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [submitMessage, setSubmitMessage] = useState('');
 
-  // Initialize default time when modal opens
+  // Centralized timezone offset function
+  const getTimezoneOffset = (timezone: string): number => {
+    const timezoneOffsets: { [key: string]: number } = {
+      'America/New_York': 1,      // ET (UTC-4) → Brasil (UTC-3) = +1h
+      'America/Chicago': 2,        // CT (UTC-5) → Brasil (UTC-3) = +2h
+      'America/Denver': 3,         // MT (UTC-6) → Brasil (UTC-3) = +3h
+      'America/Los_Angeles': 4,    // PT (UTC-7) → Brasil (UTC-3) = +4h
+      'America/Phoenix': 4,        // AZ (UTC-7) → Brasil (UTC-3) = +4h (4PM AZ = 8PM BR)
+      'America/Anchorage': 5,      // AKT (UTC-8) → Brasil (UTC-3) = +5h
+      'Pacific/Honolulu': 7,       // HST (UTC-10) → Brasil (UTC-3) = +7h
+      'America/Indiana/Indianapolis': 1, // EST (UTC-4) → Brasil (UTC-3) = +1h
+      'America/Detroit': 1,        // EST (UTC-4) → Brasil (UTC-3) = +1h
+      'America/Boise': 3           // MST (UTC-6) → Brasil (UTC-3) = +3h
+    };
+    
+    return timezoneOffsets[timezone] || 0;
+  };
+
+  // Centralized UTC offset function for minutes
+  const getUTCOffsetMinutes = (timezone: string): number => {
+    const utcOffsets: { [key: string]: number } = {
+      'America/New_York': -240,      // ET (UTC-4)
+      'America/Chicago': -300,       // CT (UTC-5)
+      'America/Denver': -360,        // MT (UTC-6)
+      'America/Los_Angeles': -420,   // PT (UTC-7)
+      'America/Phoenix': -420,       // AZ (UTC-7)
+      'America/Anchorage': -480,     // AKT (UTC-8)
+      'Pacific/Honolulu': -600,      // HST (UTC-10)
+      'America/Indiana/Indianapolis': -240, // EST (UTC-4)
+      'America/Detroit': -240,       // EST (UTC-4)
+      'America/Boise': -360          // MST (UTC-6)
+    };
+    return utcOffsets[timezone] || 0;
+  };
+
+  // Available time slots - US format (12-hour AM/PM)
+  const availableTimeSlots = [
+    '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
+  ];
+
+  // Major time zones for selection - US Only
+  const timeZones = [
+    { value: 'America/New_York', label: 'Eastern Time (ET)' },
+    { value: 'America/Chicago', label: 'Central Time (CT)' },
+    { value: 'America/Denver', label: 'Mountain Time (MT)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+    { value: 'America/Phoenix', label: 'Arizona Time (AZ)' },
+    { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
+    { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
+    { value: 'America/Indiana/Indianapolis', label: 'Indiana Time (EST)' },
+    { value: 'America/Detroit', label: 'Michigan Time (EST)' },
+    { value: 'America/Boise', label: 'Idaho Time (MST)' }
+  ].sort((a, b) => a.label.localeCompare(b.label));
+
+  // Function to check if date is between Monday and Friday
+  // getDay() returns: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
+  const isWeekday = (date: Date): boolean => {
+    const day = date.getDay();
+    // Only allow Monday (1) through Friday (5)
+    // Sunday (0) and Saturday (6) are blocked
+    return day >= 1 && day <= 5;
+  };
+
+  // Function to get the next business day
+  const getNextBusinessDay = (startDate: Date): Date => {
+    let currentDate = new Date(startDate);
+    while (!isWeekday(currentDate)) {
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return currentDate;
+  };
+
+  // Validate if selected time is within business hours in Brazil (13h-21h UTC-3)
+  // This only checks if the time falls within our business hours, NOT if it's actually available in Google Calendar
+  const isTimeValidForBusiness = (date: Date, time: string, timezone: string): boolean => {
+    try {
+      // Convert AM/PM time to 24-hour format for validation
+      const convertTo24Hour = (timeStr: string): string => {
+        const [time, period] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        
+        if (period === 'PM' && hours !== 12) {
+          hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      };
+      
+      const time24Hour = convertTo24Hour(time);
+      
+      // Create datetime in user's timezone
+      const userDateTime = new Date(`${date.toISOString().split('T')[0]}T${time24Hour}:00`);
+      
+      // Calculate timezone offset manually for more accurate conversion
+      const offset = getTimezoneOffset(timezone);
+      const brazilHour = parseInt(time24Hour.split(':')[0]) + offset;
+      
+      // Enhanced debug log to see exactly what's happening
+      console.log('=== TIME VALIDATION DEBUG ===');
+      console.log(`User timezone: ${timezone}`);
+      console.log(`User time: ${time} (${time24Hour})`);
+      console.log(`User hours: ${parseInt(time24Hour.split(':')[0])}`);
+      console.log(`Timezone offset: +${offset}h`);
+      console.log(`Brazil time calculation: ${parseInt(time24Hour.split(':')[0])} + ${offset} = ${brazilHour}h`);
+      console.log(`Business hours range: 13h - 21h`);
+      console.log(`Valid for business: ${brazilHour >= 13 && brazilHour <= 21}`);
+      console.log('=============================');
+      
+      // Check if between 13h and 21h (Brazil time)
+      const isValid = brazilHour >= 13 && brazilHour <= 21;
+      
+      return isValid;
+    } catch (error) {
+      console.error('Error validating time:', error);
+      return false;
+    }
+  };
+
+  // Initialize default timezone when modal opens
   useEffect(() => {
-    if (isOpen && !formData.preferred_datetime) {
-      const defaultTime = getNextBusinessHour(new Date());
-      handleInputChange('preferred_datetime', defaultTime);
+    if (isOpen) {
+      // Detect user's timezone automatically with fallback
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      console.log('Detected timezone:', userTimezone);
+      
+      // If UTC is detected, it might be wrong - try to get a better default
+      let defaultTimezone = timeZones.find(tz => tz.value === userTimezone)?.value;
+      
+      // If no match found or UTC detected, use a sensible default
+      if (!defaultTimezone || userTimezone === 'UTC') {
+        console.log('UTC detected or no match found, using Eastern Time as default');
+        defaultTimezone = 'America/New_York'; // Sensible default for US users
+      }
+      
+      // Initialize all default values at once
+      const defaultDate = getNextBusinessDay(new Date());
+      
+      setFormData(prev => ({
+        ...prev,
+        user_timezone: defaultTimezone,
+        preferred_date: defaultDate,
+        preferred_time: '9:00 AM'
+      }));
+      
+      // Debug: Log the initialization
+      console.log('=== INITIALIZATION DEBUG ===');
+      console.log('Default timezone:', defaultTimezone);
+      console.log('Default date:', defaultDate);
+      console.log('Default time: 9:00 AM');
+      console.log('================================');
     }
   }, [isOpen]);
 
-  // Meeting types
-  const meetingTypes = [
-    { value: 'demo', label: 'Platform Meeting' },
-    { value: 'consultation', label: 'Recruitment Consultation' },
-    { value: 'partnership', label: 'Strategic Partnership' },
-    { value: 'custom', label: 'Custom Meeting' }
-  ];
-
-  // Function to check if date is between Monday and Friday
-  const isWeekday = (date: Date) => {
-    const day = date.getDay();
-    // 0 = Sunday, 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday
-    return day >= 1 && day <= 5; // Monday to Friday
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  // Function to get next available weekday
-  const getNextWeekday = (date: Date) => {
-    let nextDate = new Date(date);
-    while (!isWeekday(nextDate)) {
-      nextDate.setDate(nextDate.getDate() + 1);
-    }
-    return nextDate;
-  };
-
-  // Function to check if a date is within business hours
-  const isBusinessHours = (date: Date) => {
-    if (!isWeekday(date)) {
-      return false;
-    }
-    
-    const localHour = date.getHours();
-    const localMinutes = date.getMinutes();
-    const localSeconds = date.getSeconds();
-    
-    // Check if minutes and seconds are 0 (exact hour intervals only)
-    const isExactHour = localMinutes === 0 && localSeconds === 0;
-    
-    // Define allowed business hours: 9 AM - 5 PM (9, 10, 11, 12, 13, 14, 15, 16, 17)
-    const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
-    const isBusinessHour = allowedHours.includes(localHour) && isExactHour;
-    
-    return isBusinessHour;
-  };
-
-  // Function to validate business hours for the selected date
-  const validateBusinessHours = (date: Date) => {
-    if (!isWeekday(date)) {
-      return false;
-    }
-    
-    const localHour = date.getHours();
-    const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
-    
-    // Only check if the hour is within allowed range
-    // Minutes and seconds validation is handled separately
-    return allowedHours.includes(localHour);
-  };
-
-  // Function to get next available business hour
-  const getNextBusinessHour = (date: Date) => {
-    let nextDate = new Date(date);
-    
-    // If it's weekend, move to next Monday
-    if (!isWeekday(nextDate)) {
-      nextDate = getNextWeekday(nextDate);
-    }
-    
-    // Set to 9 AM local time
-    nextDate.setHours(9, 0, 0, 0);
-    
-    // Ensure we're not setting a time in the past
-    const now = new Date();
-    if (nextDate <= now) {
-      // If the calculated time is in the past, move to next day
-      nextDate.setDate(nextDate.getDate() + 1);
-      nextDate.setHours(9, 0, 0, 0);
-    }
-    
-    return nextDate;
-  };
-
-  // Function to get next valid business hour from a given time
-  const getNextValidBusinessHour = (date: Date) => {
-    const currentHour = date.getHours();
-    const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
-    
-    // Find the next allowed hour
-    let nextHour = allowedHours.find(hour => hour > currentHour);
-    
-    if (!nextHour) {
-      // If no hour found today, move to next business day at 9 AM
-      const nextDay = new Date(date);
-      nextDay.setDate(nextDay.getDate() + 1);
-      return getNextBusinessHour(nextDay);
-    }
-    
-    // Set to the next valid hour
-    const nextTime = new Date(date);
-    nextTime.setHours(nextHour, 0, 0, 0);
-    return nextTime;
+  const handlePhoneChange = (value: string | undefined) => {
+    setFormData(prev => ({
+      ...prev,
+      meeting_type: value || ''
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.university_name || !formData.contact_email || !formData.preferred_datetime || !formData.meeting_type) {
+    // Debug: Log form data before validation
+    console.log('=== FORM VALIDATION DEBUG ===');
+    console.log('Form data before validation:', formData);
+    console.log('University name:', formData.university_name);
+    console.log('Contact email:', formData.contact_email);
+    console.log('Preferred date:', formData.preferred_date);
+    console.log('Preferred time:', formData.preferred_time);
+    console.log('Meeting type:', formData.meeting_type);
+    console.log('User timezone:', formData.user_timezone);
+    console.log('================================');
+    
+    if (!formData.university_name || !formData.contact_email || !formData.preferred_date || !formData.preferred_time || !formData.meeting_type || !formData.user_timezone) {
       setSubmitStatus('error');
       setSubmitMessage('Please fill in all required fields.');
       return;
     }
 
-    // Additional validation for weekdays
-    if (formData.preferred_datetime && !isWeekday(formData.preferred_datetime)) {
+    // Validate business hours
+    if (!isTimeValidForBusiness(formData.preferred_date, formData.preferred_time, formData.user_timezone)) {
       setSubmitStatus('error');
-      setSubmitMessage('Please select a weekday (Monday - Friday) for your meeting.');
+      setSubmitMessage('Horário não disponível. Please select another time.');
       return;
     }
 
-    // Additional validation for business hours
-    if (formData.preferred_datetime && !isBusinessHours(formData.preferred_datetime)) {
+    // Additional validation for weekdays
+    if (formData.preferred_date && !isWeekday(formData.preferred_date)) {
       setSubmitStatus('error');
-      setSubmitMessage('Please select a time between 9:00 AM and 5:00 PM (local time) in 1-hour intervals only.');
+      setSubmitMessage('Please select a weekday (Monday - Friday) for your meeting.');
       return;
     }
 
@@ -159,115 +233,178 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
     setSubmitStatus('idle');
 
     try {
-      // O usuário seleciona o horário como se fosse Eastern Time (EUA)
-      // Não precisamos fazer conversão, apenas enviar o horário selecionado
-      const selectedTime = formData.preferred_datetime;
+      // Convert AM/PM time to 24-hour format for payload
+      const convertTo24Hour = (timeStr: string): string => {
+        const [time, period] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        
+        if (period === 'PM' && hours !== 12) {
+          hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      };
       
-      // Criar string no formato ISO (Eastern Time)
-      const year = selectedTime.getFullYear();
-      const month = String(selectedTime.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedTime.getDate()).padStart(2, '0');
-      const hours = String(selectedTime.getHours()).padStart(2, '0');
-      const minutes = String(selectedTime.getMinutes()).padStart(2, '0');
-      const seconds = String(selectedTime.getSeconds()).padStart(2, '0');
+      const time24Hour = convertTo24Hour(formData.preferred_time);
       
-      // Formato: YYYY-MM-DDTHH:MM:SS (assumindo Eastern Time)
-      const easternDateTimeString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-
-      // Debug: Verificar se a hora está sendo extraída corretamente
-      console.log('🔍 Debug - Extração da hora:', {
-        selectedTime: selectedTime,
-        getHours: selectedTime.getHours(),
-        hours: hours,
-        minutes: minutes,
-        fullDateTime: easternDateTimeString
-      });
-
+      // Create payload with the EXACT format the webhook expects
       const payload = {
         university_name: formData.university_name,
         contact_email: formData.contact_email,
-        preferred_datetime: easternDateTimeString, // Horário selecionado como Eastern Time
-        preferred_date: `${year}-${month}-${day}`, // Data no formato YYYY-MM-DD
-        preferred_time: `${hours}:${minutes}`, // Hora no formato HH:MM
-        timezone: 'America/New_York', // Fuso horário dos Estados Unidos
-        // Informações para debug e validação
-        local_datetime: formData.preferred_datetime.toLocaleString(),
-        selected_hours: hours,
-        selected_minutes: minutes,
-        user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        utc_offset_minutes: formData.preferred_datetime.getTimezoneOffset(),
-        meeting_type: meetingTypes.find(t => t.value === formData.meeting_type)?.label || formData.meeting_type
+        preferred_datetime: (() => {
+          // Convert user's local time to Brazil time (UTC-3) with timezone offset
+          const date = formData.preferred_date;
+          const [hours, minutes] = time24Hour.split(':');
+          
+          // Calculate timezone offset to convert to Brazil time
+          const offset = getTimezoneOffset(formData.user_timezone);
+          const brazilHour = parseInt(hours) + offset;
+          
+          // Debug logs for timezone conversion
+          console.log('=== TIMEZONE CONVERSION DEBUG ===');
+          console.log(`User timezone: ${formData.user_timezone}`);
+          console.log(`User time: ${formData.preferred_time} (${time24Hour})`);
+          console.log(`User hours: ${hours}, minutes: ${minutes}`);
+          console.log(`Timezone offset: +${offset}h`);
+          console.log(`Brazil time: ${brazilHour}:${minutes}`);
+          console.log(`Final datetime: ${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${brazilHour.toString().padStart(2, '0')}:${minutes}:00-03:00`);
+          console.log('================================');
+          
+          // Since N8N converts to UTC anyway, send UTC directly to avoid compensation
+          // Convert Brazil time to UTC (Brazil UTC-3, so +3 hours)
+          const utcHour = brazilHour + 3;
+          const utcDate = new Date(date);
+          utcDate.setHours(utcHour, parseInt(minutes), 0, 0);
+          
+          console.log(`Sending UTC time: ${utcDate.toISOString()} (${utcHour}:${minutes} UTC)`);
+          
+          // Return UTC time to avoid N8N compensation
+          return utcDate.toISOString();
+        })(),
+        preferred_date: formData.preferred_date.toISOString().split('T')[0], // YYYY-MM-DD
+        
+        // Keep preferred_time for N8N compatibility
+        preferred_time: (() => {
+          const [hours, minutes] = time24Hour.split(':');
+          const offset = getTimezoneOffset(formData.user_timezone);
+          const brazilHour = parseInt(hours) + offset;
+          return `${brazilHour.toString().padStart(2, '0')}:${minutes}`;
+        })(),
+        
+        // Simplified time field - just the Brazil time without timezone
+        brazil_time: (() => {
+          const [hours, minutes] = time24Hour.split(':');
+          const offset = getTimezoneOffset(formData.user_timezone);
+          const brazilHour = parseInt(hours) + offset;
+          return `${brazilHour.toString().padStart(2, '0')}:${minutes}`;
+        })(),
+        
+        // UTC time for N8N (to avoid compensation)
+        utc_time: (() => {
+          const [hours, minutes] = time24Hour.split(':');
+          const offset = getTimezoneOffset(formData.user_timezone);
+          const brazilHour = parseInt(hours) + offset;
+          const utcHour = brazilHour + 3;
+          return `${utcHour.toString().padStart(2, '0')}:${minutes}`;
+        })(),
+        
+        // User's original timezone for reference
+        user_timezone: formData.user_timezone,
+        
+        // Phone number - keep both fields for compatibility
+        meeting_type: formData.meeting_type,  // For N8N compatibility
+        phone_number: formData.meeting_type,  // For clarity
+        
+        // Additional fields for debugging Google Calendar behavior
+        debug_datetime_utc: (() => {
+          // Test: Send as UTC time for comparison
+          const date = formData.preferred_date;
+          const [hours, minutes] = time24Hour.split(':');
+          const offset = getTimezoneOffset(formData.user_timezone);
+          const brazilHour = parseInt(hours) + offset;
+          
+          // Convert Brazil time to UTC (Brazil UTC-3, so +3 hours)
+          const utcHour = brazilHour + 3;
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${utcHour.toString().padStart(2, '0')}:${minutes}:00Z`;
+        })(),
+        debug_timezone_info: {
+          user_timezone: formData.user_timezone,
+          brazil_offset: '-03:00',
+          conversion_explanation: `${formData.preferred_time} ${formData.user_timezone} → ${(() => {
+            const [hours, minutes] = time24Hour.split(':');
+            const offset = getTimezoneOffset(formData.user_timezone);
+            const brazilHour = parseInt(hours) + offset;
+            return `${brazilHour}:${minutes} Brasil`;
+          })()}`
+        }
       };
 
-      // Debug: Log do horário sendo enviado
-      console.log('🕐 Debug - Horário selecionado:', {
-        original: formData.preferred_datetime,
-        localString: formData.preferred_datetime.toLocaleString(),
-        isoString: formData.preferred_datetime.toISOString(),
-        easternDateTimeString: easternDateTimeString,
-        selectedTime: selectedTime,
-        selectedHours: hours,
-        selectedMinutes: minutes,
-        timezone: 'America/New_York',
-        userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        utcOffsetMinutes: formData.preferred_datetime.getTimezoneOffset(),
-        payload: payload
-      });
+      // Log the final payload for debugging
+      console.log('=== FINAL PAYLOAD DEBUG ===');
+      console.log('Payload being sent to webhook:');
+      console.log(JSON.stringify(payload, null, 2));
+      console.log('Meeting type value:', formData.meeting_type);
+      console.log('===========================');
 
+      // Send request to webhook
       const response = await fetch('https://nwh.suaiden.com/webhook/university-schedule', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
-      const result = await response.json();
-
-      // Simplified logic to handle the response
-      const responseText = result.response || '';
-      const isBusy = responseText.toLowerCase().includes('busy') || responseText.toLowerCase().includes('occupied');
-      const isSuccess = responseText.toLowerCase().includes('success') || result.success === true;
-      const hasResponse = result.response && result.response.trim() !== '';
-      
-      if (isBusy) {
-        // Time slot busy - show exact webhook message
-        setSubmitStatus('error');
-        setSubmitMessage(result.response || 'This time slot is busy. Please choose another available time.');
-      } else if (isSuccess || !hasResponse) {
-        // Success - show webhook message or default message if no response
-        setSubmitStatus('success');
-        setSubmitMessage(result.response || 'Meeting scheduled successfully! See you soon!');
-        
-        // Reset form after successful submission
-        setTimeout(() => {
-          setFormData({
-            university_name: '',
-            contact_email: '',
-            preferred_datetime: null,
-            meeting_type: ''
-          });
-          setSubmitStatus('idle');
-          setSubmitMessage('');
-        }, 5000); // 5 seconds for user to read the message
-      } else {
-        // Other types of errors - show exact webhook message
-        setSubmitStatus('error');
-        setSubmitMessage(result.response || result.message || 'Error scheduling meeting. Please try again.');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('Webhook response:', result);
+      
+      // ✅ USAR A RESPOSTA REAL DO WEBHOOK
+      if (result.response) {
+        setSubmitStatus('success');
+        setSubmitMessage(result.response); // Usa a mensagem do webhook
+      } else {
+        setSubmitStatus('success');
+        setSubmitMessage('Your meeting request has been submitted successfully! We will contact you soon to confirm the details.');
+      }
+      
+      // Reset form after successful submission
+      setTimeout(() => {
+        setFormData({
+          university_name: '',
+          contact_email: '',
+          preferred_date: null,
+          preferred_time: '',
+          meeting_type: '',
+          user_timezone: ''
+        });
+        setSubmitStatus('idle');
+        setSubmitMessage('');
+      }, 5000); // 5 seconds for user to read the message
+      
     } catch (error) {
+      console.error('Error submitting request:', error);
+      
+      let errorMessage = 'An error occurred while submitting your request. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('HTTP error')) {
+          errorMessage = 'Server error. Please try again later or contact support.';
+        } else if (error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        }
+      }
+      
       setSubmitStatus('error');
-      setSubmitMessage('Connection error. Please check your internet and try again.');
+      setSubmitMessage(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
 
   if (!isOpen) return null;
@@ -277,26 +414,17 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
       <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <div className="flex items-center space-x-3">
-            <div className="bg-[#05294E] p-2 rounded-xl">
-              <CalendarIcon className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Schedule Your Meeting</h2>
-              <p className="text-slate-600">Let's discuss how to transform your recruitment</p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold text-slate-800">Schedule a Meeting</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            aria-label="Close modal"
             title="Close modal"
-            aria-label="Close scheduling modal"
           >
             <X className="h-6 w-6 text-slate-600" />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* University Name */}
           <div>
@@ -309,7 +437,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
               value={formData.university_name}
               onChange={(e) => handleInputChange('university_name', e.target.value)}
               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
-              placeholder="Enter your institution name"
+              placeholder="Enter your university name"
               required
             />
           </div>
@@ -325,234 +453,143 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
               value={formData.contact_email}
               onChange={(e) => handleInputChange('contact_email', e.target.value)}
               className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
-              placeholder="your-email@university.com"
+              placeholder="Enter your contact email"
               required
             />
           </div>
 
-          {/* Meeting Type */}
+          {/* Phone Number */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
               <MessageCircle className="inline h-4 w-4 mr-2" />
-              Meeting Type *
+              Phone Number *
             </label>
+            <div className="w-full px-4 py-3 border border-slate-300 rounded-xl focus-within:ring-2 focus-within:ring-[#05294E] focus-within:border-transparent transition-all">
+              <PhoneInput
+                placeholder="Enter phone number"
+                value={formData.meeting_type}
+                onChange={handlePhoneChange}
+                defaultCountry="US"
+                className="w-full"
+                countryCallingCodeEditable={true}
+                international
+                required
+              />
+            </div>
+          </div>
+
+          {/* Time Zone Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <Clock className="inline h-4 w-4 mr-2" />
+              Your Time Zone *
+            </label>
+            
+            {/* Timezone warning */}
+            {formData.user_timezone === 'UTC' && (
+              <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ <strong>Important:</strong> UTC timezone detected. Please select your actual timezone below to ensure accurate scheduling.
+                </p>
+              </div>
+            )}
+            
             <select
-              value={formData.meeting_type}
-              onChange={(e) => handleInputChange('meeting_type', e.target.value)}
-              className="w-full h-12 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent px-3 py-2"
+              value={formData.user_timezone}
+              onChange={(e) => handleInputChange('user_timezone', e.target.value)}
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
               required
-              title="Meeting type"
-              aria-label="Select meeting type"
+              aria-label="Select your timezone"
+              title="Select your timezone"
             >
-              <option value="">Select meeting type</option>
-              {meetingTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
+              {timeZones.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Date and Time Picker */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              <CalendarIcon className="inline h-4 w-4 mr-2" />
-              Preferred Date & Time * (Monday - Friday, 9:00 AM - 5:00 PM local time)
-            </label>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DateTimePicker
-                value={formData.preferred_datetime}
-                onChange={(newValue) => {
-                  if (newValue) {
-                    // Create a new date object and round to the nearest hour
-                    const roundedTime = new Date(newValue);
-                    roundedTime.setMinutes(0, 0, 0);
-                    roundedTime.setSeconds(0, 0);
-                    roundedTime.setMilliseconds(0);
-                    
-                    // Always use the rounded time - the shouldDisableTime will prevent invalid selections
-                    handleInputChange('preferred_datetime', roundedTime);
-                  }
-                }}
-                minDateTime={getNextBusinessHour(new Date())}
-                shouldDisableDate={(date) => !isWeekday(date)}
-                shouldDisableTime={(value, view) => {
-                  if (view === 'hours') {
-                    // Only allow business hours: 9 AM - 5 PM (9, 10, 11, 12, 13, 14, 15, 16, 17)
-                    const localHour = value.getHours();
-                    const allowedHours = [9, 10, 11, 12, 13, 14, 15, 16, 17];
-                    return !allowedHours.includes(localHour);
-                  }
-                  
-                  // Disable minutes view - meetings are only available in 1-hour intervals
-                  if (view === 'minutes') {
-                    return true;
-                  }
-                  
-                  return false;
-                }}
-                views={['year', 'month', 'day', 'hours']}
-                ampm={true}
-                openTo="hours"
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    variant: 'outlined',
-                    className: 'w-full',
-                    helperText: 'Select a weekday between 9:00 AM - 5:00 PM',
-                    sx: {
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '12px',
-                        height: '56px',
-                        fontSize: '16px',
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#05294E',
-                          borderWidth: '2px',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#05294E',
-                          borderWidth: '2px',
-                        },
-                      },
-                      '& .MuiInputBase-input': {
-                        padding: '16px 20px',
-                        fontSize: '16px',
-                        fontWeight: '500',
-                      },
-                      '& .MuiFormHelperText-root': {
-                        fontSize: '14px',
-                        marginTop: '8px',
-                        color: '#6b7280',
-                      },
-                    },
-                  },
-                  popper: {
-                    sx: {
-                      '& .MuiPaper-root': {
-                        borderRadius: '16px',
-                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                        border: '1px solid #e2e8f0',
-                      },
-                      '& .MuiPickersLayout-root': {
-                        minWidth: '400px',
-                        minHeight: '500px',
-                      },
-                      '& .MuiPickersLayout-contentWrapper': {
-                        padding: '24px',
-                      },
-                      '& .MuiPickersLayout-toolbar': {
-                        padding: '16px 24px',
-                        borderBottom: '1px solid #e2e8f0',
-                        '& .MuiTypography-root': {
-                          fontSize: '20px',
-                          fontWeight: '600',
-                          color: '#05294E',
-                        },
-                      },
-                      '& .MuiPickersLayout-actionBar': {
-                        padding: '16px 24px',
-                        borderTop: '1px solid #e2e8f0',
-                        '& .MuiButton-root': {
-                          borderRadius: '8px',
-                          padding: '10px 24px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          textTransform: 'none',
-                          '&.MuiButton-textPrimary': {
-                            color: '#6b7280',
-                            '&:hover': {
-                              backgroundColor: '#f3f4f6',
-                            },
-                          },
-                          '&.MuiButton-containedPrimary': {
-                            backgroundColor: '#05294E',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: '#041f3d',
-                            },
-                          },
-                        },
-                      },
-                      '& .MuiPickersDay-root': {
-                        width: '40px',
-                        height: '40px',
-                        fontSize: '16px',
-                        fontWeight: '500',
-                        borderRadius: '8px',
-                        margin: '2px',
-                        '&.Mui-selected': {
-                          backgroundColor: '#05294E',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#041f3d',
-                          },
-                        },
-                        '&:hover': {
-                          backgroundColor: '#f1f5f9',
-                        },
-                      },
-                      '& .MuiClock-root': {
-                        '& .MuiClockNumber-root': {
-                          fontSize: '18px',
-                          fontWeight: '500',
-                          '&.Mui-selected': {
-                            backgroundColor: '#05294E',
-                            color: 'white',
-                          },
-                        },
-                        '& .MuiClock-pin': {
-                          backgroundColor: '#05294E',
-                        },
-                        '& .MuiClockPointer-thumb': {
-                          backgroundColor: '#05294E',
-                          border: '2px solid white',
-                        },
-                        '& .MuiClockPointer-line': {
-                          backgroundColor: '#05294E',
-                        },
-                      },
-                    },
-                  },
-                }}
-              />
-            </LocalizationProvider>
-            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-              <p className="text-sm text-slate-600">
-                <span className="font-medium text-slate-700">Available times:</span> Monday - Friday, 9:00 AM - 5:00 PM (1-hour intervals)
-                <br />
-                <span className="text-xs text-slate-500 mt-1 block">
-                  Your timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-                </span>
-              </p>
+          {/* Date and Time with validation feedback */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Preferred Date *
+              </label>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  value={formData.preferred_date}
+                  onChange={(newDate) => handleInputChange('preferred_date', newDate)}
+                  slotProps={{
+                    textField: {
+                      placeholder: "Select date (Monday - Friday only)",
+                      className: "w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
+                    }
+                  }}
+                  minDate={new Date()}
+                  shouldDisableDate={(date) => !isWeekday(date)}
+                  disablePast
+                />
+                <p className="mt-2 text-sm text-slate-500">
+                  Only business days (Monday - Friday) are available for scheduling
+                </p>
+              </LocalizationProvider>
+            </div>
+
+            {/* Time */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <Clock className="inline h-4 w-4 mr-2" />
+                Preferred Time *
+              </label>
+              <select
+                value={formData.preferred_time}
+                onChange={(e) => handleInputChange('preferred_time', e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
+                required
+                aria-label="Select preferred time"
+                title="Select preferred time"
+              >
+                {availableTimeSlots.map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+              
+              {/* Time validation feedback */}
+              {formData.preferred_date && formData.preferred_time && formData.user_timezone && (
+                <div className="mt-2 text-sm">
+                  {isTimeValidForBusiness(formData.preferred_date, formData.preferred_time, formData.user_timezone) ? (
+                    <span className="text-green-600">Business hours valid</span>
+                  ) : (
+                    <span className="text-red-600">Outside business hours</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Submit Status Messages */}
-          {submitStatus === 'success' && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <p className="text-green-800 font-medium">{submitMessage}</p>
-            </div>
-          )}
-
-          {submitStatus === 'error' && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <p className="text-red-800 font-medium">{submitMessage}</p>
-            </div>
-          )}
 
           {/* Submit Button */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white py-4 rounded-xl font-bold text-lg hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+            className="w-full bg-[#05294E] text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-[#041f3d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Scheduling...' : 'Confirm Meeting'}
+            {isSubmitting ? 'Sending to webhook...' : 'Schedule Meeting'}
           </button>
 
-          {/* Info Text */}
-          <p className="text-sm text-slate-500 text-center">
-            You will receive an email confirmation within 5 minutes
-          </p>
+          {/* Status Messages */}
+          {submitStatus !== 'idle' && (
+            <div className={`p-4 rounded-xl text-center ${
+              submitStatus === 'success' 
+                ? 'bg-green-50 text-green-800 border border-green-200' 
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}>
+              {submitMessage}
+            </div>
+          )}
         </form>
       </div>
     </div>
