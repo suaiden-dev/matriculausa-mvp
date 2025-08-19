@@ -164,7 +164,10 @@ const ApplicationFeePage: React.FC = () => {
             productId="applicationFee"
             paymentType="application_fee"
             feeType="application_fee"
-            buttonText="Pay Application Fee ($350)"
+            buttonText={`Pay Application Fee ($${selectedScholarshipId && cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount 
+              ? Number(cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount).toFixed(2)
+              : '350.00'
+            })`}
             successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
             cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
             disabled={!selectedScholarshipId}
@@ -173,6 +176,12 @@ const ApplicationFeePage: React.FC = () => {
               selected_scholarship_id: selectedScholarshipId,
               student_process_type: localStorage.getItem('studentProcessType') || null,
             }}
+            scholarshipData={selectedScholarshipId ? {
+              title: cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.title || '',
+              universityName: cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.universities?.name || 
+                             cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.university_name || 'Unknown University',
+              applicationFeeAmount: cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount || 350.00
+            } : undefined}
           />
         </div>
       </div>

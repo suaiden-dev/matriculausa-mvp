@@ -40,6 +40,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
+
   const { isAuthenticated, updateUserProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
@@ -249,6 +250,8 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           productPrice={feeType === 'selection_process' ? 50 : 350}
         />
       )}
+
+
 
       {error && (
         <div className="mt-2 text-red-600 text-sm">
