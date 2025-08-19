@@ -1058,7 +1058,7 @@ const getLevelColor = (level: any) => {
                                                    {isRejected && (
                                                      <div className="mt-3 space-y-2">
                                                        <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 w-full block text-center text-xs hover:shadow-md">
-                                                         <span>Upload New {doc.label}</span>
+                                                         <span>Send New {doc.label}</span>
                                                          <input
                                                            type="file"
                                                            className="sr-only"
