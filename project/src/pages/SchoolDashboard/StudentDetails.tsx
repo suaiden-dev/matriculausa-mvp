@@ -1213,9 +1213,9 @@ const StudentDetails: React.FC = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
+    <div className="min-h-screen">
       {/* Header Section */}
-      <div className="bg-white shadow-sm border-b border-slate-200">
+      <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -1244,7 +1244,7 @@ const StudentDetails: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-slate-300 rounded-b-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8 overflow-x-auto" role="tablist">
             {TABS.map(tab => (
@@ -1277,8 +1277,8 @@ const StudentDetails: React.FC = () => {
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
             <div className="xl:col-span-8 space-y-6">
               {/* Student Information Card */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <UserCircle className="w-6 h-6 mr-3" />
                     Student Information
@@ -1411,7 +1411,7 @@ const StudentDetails: React.FC = () => {
               
               {/* Scholarship Information Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4">
+                <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -1564,7 +1564,7 @@ const StudentDetails: React.FC = () => {
             <div className="xl:col-span-4 space-y-4">
               {/* Quick Stats Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
+                <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#041f38] px-6 py-4">
                   <h3 className="text-lg font-semibold text-white">Application Summary</h3>
                 </div>
                 <div className="p-6 space-y-3">
@@ -1581,7 +1581,7 @@ const StudentDetails: React.FC = () => {
 
               {/* Recent Activity Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
+                <div className="bg-gradient-to-r rounded-t-2xl from-slate-600 to-slate-700 px-6 py-4">
                   <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
                 </div>
                 <div className="p-6">
@@ -1608,7 +1608,7 @@ const StudentDetails: React.FC = () => {
 
               {/* Quick Actions Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
+                <div className="bg-gradient-to-r rounded-t-2xl from-slate-500 to-slate-600 px-6 py-4">
                   <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
                 </div>
                 <div className="p-6">

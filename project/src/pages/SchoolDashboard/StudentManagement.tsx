@@ -272,12 +272,6 @@ const StudentManagement: React.FC = () => {
                                     {student.country}
                                   </div>
                                 )}
-                                {student?.phone && (
-                                  <div className="flex items-center">
-                                    <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                    {student.phone}
-                                  </div>
-                                )}
                               </div>
                               
                               {/* Scholarship Information */}

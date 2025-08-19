@@ -18,6 +18,8 @@ const Scholarships: React.FC = () => {
   const { scholarships, loading, error } = useScholarships();
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
   const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
+  // Approved universities ids cache
+  const [approvedUniversityIds, setApprovedUniversityIds] = useState<Set<number | string>>(new Set());
 
   // Estados para o modal de detalhes
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
@@ -85,6 +87,7 @@ const Scholarships: React.FC = () => {
           .order('featured_order', { ascending: true });
         
         if (!scholarshipsError && scholarshipsData) {
+          console.log('Featured Scholarships:', scholarshipsData);
           setFeaturedScholarships(scholarshipsData);
           
           // Fetch universities of featured scholarships to display information
@@ -108,6 +111,27 @@ const Scholarships: React.FC = () => {
     fetchFeaturedScholarships();
   }, []);
 
+  // Load approved universities ids to filter out scholarships from unapproved universities
+  useEffect(() => {
+    const loadApprovedUniversities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('is_approved', true);
+
+        if (!error && data) {
+          const ids = new Set(data.map((u: any) => u.id));
+          setApprovedUniversityIds(ids);
+        }
+      } catch (err) {
+        console.error('Error loading approved universities:', err);
+      }
+    };
+
+    loadApprovedUniversities();
+  }, []);
+
   const levelOptions = [
     { value: 'all', label: 'All Levels' },
     { value: 'graduate', label: 'Graduate' },
@@ -123,6 +147,11 @@ const Scholarships: React.FC = () => {
     if (scholarship.is_highlighted) {
       return false;
     }
+    // Exclude scholarships whose university is not approved (if we have the approved list)
+    if (approvedUniversityIds.size > 0) {
+      const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
+      if (uniId && !approvedUniversityIds.has(uniId)) return false;
+    }
     
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
     const value = scholarship.annual_value_with_scholarship ?? 0;
@@ -133,6 +162,25 @@ const Scholarships: React.FC = () => {
     const matchesWorkPermission = selectedWorkPermission === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkPermission));
     return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
   });
+
+  // Apply the same filter logic to featured scholarships so the featureds respect the page filters
+  const matchesFilters = (scholarship: Scholarship) => {
+    // Exclude scholarships from unapproved universities if we have the approved list
+    if (approvedUniversityIds.size > 0) {
+      const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
+      if (uniId && !approvedUniversityIds.has(uniId)) return false;
+    }
+    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const value = scholarship.annual_value_with_scholarship ?? 0;
+    const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
+    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
+    const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
+    const matchesDeliveryMode = selectedDeliveryMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedDeliveryMode);
+    const matchesWorkPermission = selectedWorkPermission === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkPermission));
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
+  };
+
+  const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
 
   // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
   useEffect(() => {
@@ -273,14 +321,6 @@ const Scholarships: React.FC = () => {
   useEffect(() => {
     setPage(0);
   }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, minPrice, maxPrice]);
-
-  // Debug: check how many scholarships we have (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Total scholarships:', scholarships.length);
-    console.log('Filtered scholarships:', filteredScholarships.length);
-    
-    console.log('Paginated scholarships:', paginatedScholarships.length);
-  }
 
   return (
     <div className="bg-white min-h-screen">
@@ -436,7 +476,7 @@ const Scholarships: React.FC = () => {
         </div>
 
         {/* Featured Scholarships Section */}
-        {featuredScholarships.length > 0 && (
+  {filteredFeaturedScholarships.length > 0 && (
           <div className="mb-12">
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-6 py-2 mb-4">
@@ -452,7 +492,7 @@ const Scholarships: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-              {featuredScholarships.slice(0, 6).map((scholarship) => {
+              {filteredFeaturedScholarships.slice(0, 6).map((scholarship) => {
                 const deadlineStatus = getDeadlineStatus(scholarship.deadline);
                 const daysLeft = getDaysUntilDeadline(scholarship.deadline);
                 const originalValue = scholarship.original_annual_value ?? 0;

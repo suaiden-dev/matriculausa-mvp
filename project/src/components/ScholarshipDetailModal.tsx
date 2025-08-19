@@ -156,7 +156,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             <div className="relative">
               {/* Hero Image */}
               <div className="h-64 overflow-hidden relative">
-                {scholarship.image_url ? (
+                {scholarship.image_url && userProfile?.has_paid_selection_process_fee ? (
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}

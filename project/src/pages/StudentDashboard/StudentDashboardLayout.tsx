@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
+import NotificationsModal from '../../components/NotificationsModal';
 // import { StripeCheckout } from '../../components/StripeCheckout';
 // import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 
@@ -38,155 +40,38 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotif, setShowNotif] = useState(false);
-  const [newNotificationCount, setNewNotificationCount] = useState(0);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   
-  // Realtime notifications
+  // Usar Polling Inteligente em vez de Supabase Real-time
+  const {
+    notifications,
+    unreadCount: newNotificationCount,
+    markAsRead,
+    markAllAsRead,
+    requestNotificationPermission
+  } = useSmartPollingNotifications({
+    userType: 'student',
+    userId: user?.id || '',
+    onNotificationReceived: (notification) => {
+      console.log('🔔 Nova notificação recebida via polling:', notification);
+    }
+  });
+
+  // Solicitar permissão para notificações nativas na primeira renderização
   useEffect(() => {
-    let channel: any;
-    const fetchInitial = async () => {
-      if (!user?.id) return;
-      
-      try {
-        // Primeiro busca o perfil do usuário para obter o student_id
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (profileError) {
-          console.error('Erro ao buscar perfil do usuário:', profileError);
-          return;
-        }
-        
-        if (profileData) {
-          console.log('Buscando notificações para student_id:', profileData.id);
-          
-          const { data, error } = await supabase
-            .from('student_notifications')
-            .select('*')
-            .eq('student_id', profileData.id)
-            .order('created_at', { ascending: false })
-            .limit(10);
-          
-          if (error) {
-            console.error('Erro ao buscar notificações:', error);
-            return;
-          }
-          
-          console.log('Notificações iniciais carregadas:', data?.length || 0);
-          setNotifications(data || []);
-          
-          // Contar notificações não lidas
-          const unreadCount = (data || []).filter(n => !n.read_at).length;
-          setNewNotificationCount(unreadCount);
-          
-          // Configurar Supabase Realtime
-          channel = supabase
-            .channel(`student-notifs-${profileData.id}`)
-            .on('postgres_changes', { 
-              event: 'INSERT', 
-              schema: 'public', 
-              table: 'student_notifications', 
-              filter: `student_id=eq.${profileData.id}` 
-            }, (payload: any) => {
-              console.log('Nova notificação recebida em tempo real:', payload.new);
-              
-              // Adicionar notificação ao estado
-              setNotifications(prev => {
-                const newNotifications = [payload.new, ...prev].slice(0, 10);
-                console.log('Estado das notificações atualizado:', newNotifications.length);
-                return newNotifications;
-              });
-              
-              // Incrementar contador de novas notificações
-              setNewNotificationCount(prev => prev + 1);
-              
-              // Mostrar toast de notificação (opcional)
-              if (payload.new.title && payload.new.message) {
-                console.log(`🔔 Nova notificação: ${payload.new.title} - ${payload.new.message}`);
-              }
-            })
-            .on('postgres_changes', { 
-              event: 'UPDATE', 
-              schema: 'public', 
-              table: 'student_notifications', 
-              filter: `student_id=eq.${profileData.id}` 
-            }, (payload: any) => {
-              console.log('Notificação atualizada em tempo real:', payload.new);
-              setNotifications(prev => 
-                prev.map(n => n.id === payload.new.id ? payload.new : n)
-              );
-              
-              // Atualizar contador de notificações não lidas
-              const unreadCount = notifications.filter(n => !n.read_at).length;
-              setNewNotificationCount(unreadCount);
-            })
-            .on('postgres_changes', { 
-              event: 'DELETE', 
-              schema: 'public', 
-              table: 'student_notifications', 
-              filter: `student_id=eq.${profileData.id}` 
-            }, (payload: any) => {
-              console.log('Notificação removida em tempo real:', payload.old);
-              setNotifications(prev => 
-                prev.filter(n => n.id !== payload.old.id)
-              );
-              
-              // Atualizar contador de notificações não lidas
-              const unreadCount = notifications.filter(n => !n.read_at).length;
-              setNewNotificationCount(unreadCount);
-            })
-            .subscribe((status) => {
-              console.log('Status da conexão Realtime:', status);
-              
-              // Testar se a conexão está funcionando
-              if (status === 'SUBSCRIBED') {
-                console.log('✅ Canal Realtime conectado com sucesso!');
-                
-                // Teste: enviar uma mensagem de teste para verificar se está funcionando
-                setTimeout(() => {
-                  console.log('🧪 Testando conexão Realtime...');
-                  channel.send({
-                    type: 'broadcast',
-                    event: 'test',
-                    payload: { message: 'Teste de conexão Realtime' }
-                  });
-                }, 1000);
-              } else if (status === 'CHANNEL_ERROR') {
-                console.error('❌ Erro na conexão Realtime');
-              } else if (status === 'TIMED_OUT') {
-                console.error('⏰ Timeout na conexão Realtime');
-              }
-            });
-        }
-      } catch (error) {
-        console.error('Erro ao configurar notificações em tempo real:', error);
-      }
-    };
-    
-    fetchInitial();
-    
-    return () => {
-      if (channel) {
-        console.log('Removendo canal Realtime');
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [user?.id]);
+    requestNotificationPermission();
+  }, []);
+  
+  // Solicitar permissão para notificações nativas na primeira renderização
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   const openNotification = async (n: any) => {
     try {
       if (n && !n.read_at) {
-        await supabase
-          .from('student_notifications')
-          .update({ read_at: new Date().toISOString() })
-          .eq('id', n.id);
-        
-        // Atualizar contador de notificações não lidas
-        setNewNotificationCount(prev => Math.max(0, prev - 1));
+        await markAsRead(n.id);
       }
     } catch {}
     setShowNotif(false);
@@ -194,29 +79,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     navigate(target);
   };
 
-  const markAllAsRead = async () => {
+  const markAllNotificationsAsRead = async () => {
     try {
-      if (!user?.id) return;
-      
-      // Busca o perfil do usuário para obter o student_id
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileData) {
-        await supabase
-          .from('student_notifications')
-          .update({ read_at: new Date().toISOString() })
-          .eq('student_id', profileData.id)
-          .is('read_at', null as any);
-        
-        setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
-        
-        // Zerar contador de notificações não lidas
-        setNewNotificationCount(0);
-      }
+      await markAllAsRead();
     } catch {}
   };
 
@@ -236,16 +101,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           .from('student_notifications')
           .delete()
           .eq('student_id', profileData.id);
-        
-        setNotifications([]);
-        
-        // Zerar contador de notificações não lidas
-        setNewNotificationCount(0);
       }
     } catch {}
-  };
-
-  // Close notifications dropdown when clicking outside
+  };  // Close notifications dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
@@ -446,25 +304,32 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
               {/* Notifications Bell */}
               <div className="relative notifications-container">
                 <button
-                  onClick={() => setShowNotif(!showNotif)}
+                  onClick={() => {
+                    // Em mobile, abre modal; em desktop, abre dropdown
+                    if (window.innerWidth < 768) {
+                      setShowNotificationsModal(true);
+                    } else {
+                      setShowNotif(!showNotif);
+                    }
+                  }}
                   className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
                   title="Notifications"
                 >
                   <Bell className="h-5 w-5 text-slate-600" />
                   {newNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-semibold animate-pulse">
-                      {newNotificationCount > 9 ? '9+' : newNotificationCount}
+                    <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium min-w-[20px]">
+                      {newNotificationCount > 99 ? '99+' : newNotificationCount}
                     </span>
                   )}
                 </button>
 
-                {/* Notifications Dropdown */}
+                {/* Notifications Dropdown - only show on desktop */}
                 {showNotif && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                  <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
                     <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
                       <span>Notifications</span>
                       <div className="flex items-center gap-2 text-xs">
-                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
+                        <button onClick={markAllNotificationsAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
                         <span className="text-slate-300">|</span>
                         <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
                       </div>
@@ -555,6 +420,25 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           {children}
         </main>
       </div>
+
+      {/* Notifications Modal - for mobile */}
+      <NotificationsModal
+        isOpen={showNotificationsModal}
+        onClose={() => setShowNotificationsModal(false)}
+        notifications={notifications}
+        onNotificationClick={async (notification) => {
+          await markAsRead(notification.id);
+          if (notification.link) {
+            navigate(notification.link);
+          }
+          setShowNotificationsModal(false);
+        }}
+        onMarkAllAsRead={markAllAsRead}
+        onClearAll={() => {
+          // Implementar clearAll se necessário
+          console.log('Clear all notifications');
+        }}
+      />
     </div>
   );
 };
