@@ -582,39 +582,7 @@ const ApplicationChatPage: React.FC = () => {
                       {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Documents</span>
-                    <span className="text-sm text-slate-900">
-                      {DOCUMENTS_INFO.filter(doc => {
-                        let docData = Array.isArray(applicationDetails.documents)
-                          ? applicationDetails.documents.find((d: any) => d.type === doc.key)
-                          : null;
-                        if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
-                          docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
-                        }
-                        return docData?.status === 'approved';
-                      }).length} / {DOCUMENTS_INFO.length} approved
-                    </span>
-                  </div>
-                  <div className="pt-4 border-t border-slate-200">
-                    <div className="text-sm text-slate-600 mb-2">Progress</div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-[#05294E] to-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${(DOCUMENTS_INFO.filter(doc => {
-                            let docData = Array.isArray(applicationDetails.documents)
-                              ? applicationDetails.documents.find((d: any) => d.type === doc.key)
-                              : null;
-                            if (!docData && Array.isArray(applicationDetails.user_profiles?.documents)) {
-                              docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
-                            }
-                            return docData?.status === 'approved';
-                          }).length / DOCUMENTS_INFO.length) * 100}%`
-                        }}
-                      />
-                    </div>
-                  </div>
+
                 </div>
               </div>
 

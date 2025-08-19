@@ -8,6 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { MessageCircle, FileText, UserCircle, Eye, Download, CheckCircle2, XCircle } from 'lucide-react';
+const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 
 interface ApplicationDetails extends Application {
   user_profiles: UserProfile;
@@ -389,6 +390,14 @@ const StudentDetails: React.FC = () => {
     }
   };
 
+  // Debug: verificar estado da autenticação
+  useEffect(() => {
+    console.log('=== DEBUG: Estado da autenticação ===');
+    console.log('User:', user);
+    console.log('User ID:', user?.id);
+    console.log('User role:', user?.role);
+  }, [user]);
+
   if (loading) {
     return (
       <div className="p-4 md:p-6">
@@ -510,11 +519,53 @@ const StudentDetails: React.FC = () => {
             o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
           };
 
-          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(webhookPayload),
-          });
+          console.log('Enviando webhook...');
+          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
+          console.log('Webhook payload:', webhookPayload);
+          
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
+            
+            console.log('Webhook response status:', webhookResponse.status);
+            console.log('Webhook response ok:', webhookResponse.ok);
+            
+            if (!webhookResponse.ok) {
+              const webhookErrorText = await webhookResponse.text();
+              console.error('Webhook error:', webhookErrorText);
+            } else {
+              console.log('Webhook enviado com sucesso');
+            }
+          } catch (webhookError) {
+            console.error('Erro ao enviar webhook:', webhookError);
+          }
+
+          // Notificação in-app no sino do aluno
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (accessToken) {
+              await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                  user_id: application?.user_profiles.user_id,
+                  title: 'Document approved',
+                  message: `Your document ${uploadData.file_url?.split('/').pop()} was approved for request ${uploadData.document_requests?.title}.`,
+                  type: 'document_approved',
+                  link: '/student/dashboard',
+                }),
+              });
+            }
+          } catch (e) {
+            console.error('Error sending in-app student notification:', e);
+          }
         }
       } catch (notificationError) {
         console.error('Error sending approval notification:', notificationError);
@@ -681,6 +732,11 @@ const StudentDetails: React.FC = () => {
 
   const handleRejectDocument = async (documentId: string, reason: string) => {
     try {
+      console.log('=== DEBUG: handleRejectDocument chamada ===');
+      console.log('Document ID:', documentId);
+      console.log('Reason:', reason);
+      console.log('Application:', application);
+      
       // Primeiro, buscar informações do upload para notificação
       const { data: uploadData, error: fetchError } = await supabase
         .from('document_request_uploads')
@@ -696,8 +752,11 @@ const StudentDetails: React.FC = () => {
         .single();
 
       if (fetchError) {
+        console.error('Erro ao buscar dados do upload:', fetchError);
         throw new Error('Failed to fetch upload data: ' + fetchError.message);
       }
+
+      console.log('Upload data encontrado:', uploadData);
 
       // Atualizar o status para rejeitado
       const { error } = await supabase
@@ -709,16 +768,22 @@ const StudentDetails: React.FC = () => {
         .eq('id', documentId);
       
       if (error) {
+        console.error('Erro ao atualizar status:', error);
         throw new Error('Failed to reject document: ' + error.message);
       }
 
+      console.log('Status atualizado com sucesso');
+
       // Enviar notificação ao aluno
       try {
+        console.log('Buscando dados do usuário...');
         const { data: userData } = await supabase
           .from('user_profiles')
           .select('email')
           .eq('user_id', application?.user_profiles.user_id)
           .single();
+
+        console.log('User data encontrado:', userData);
 
         if (userData?.email) {
           const webhookPayload = {
@@ -729,17 +794,94 @@ const StudentDetails: React.FC = () => {
             o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
           };
 
-          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(webhookPayload),
-          });
+          console.log('Enviando webhook...');
+          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
+          console.log('Webhook payload:', webhookPayload);
+          
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
+            
+            console.log('Webhook response status:', webhookResponse.status);
+            console.log('Webhook response ok:', webhookResponse.ok);
+            
+            if (!webhookResponse.ok) {
+              const webhookErrorText = await webhookResponse.text();
+              console.error('Webhook error:', webhookErrorText);
+            } else {
+              console.log('Webhook enviado com sucesso');
+            }
+          } catch (webhookError) {
+            console.error('Erro ao enviar webhook:', webhookError);
+          }
+
+          console.log('Webhook enviado com sucesso');
+
+          // Notificação in-app no sino do aluno — deve ser enviada SEMPRE, independente do e-mail
+        }
+
+        try {
+          console.log('=== DEBUG: Enviando notificação in-app para rejeição de documento ===');
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          console.log('Access token:', accessToken ? 'Presente' : 'Ausente');
+          console.log('Student user ID:', application?.user_profiles.user_id);
+          console.log('Session:', session);
+          
+          if (accessToken) {
+                          const notificationPayload = {
+                user_id: application?.user_profiles.user_id,
+                title: 'Document rejected',
+                message: `Your document ${uploadData.file_url?.split('/').pop()} was rejected. Reason: ${reason}`,
+                type: 'document_rejected',
+                link: '/student/dashboard',
+              };
+            console.log('Payload da notificação:', notificationPayload);
+            
+            console.log('Chamando Edge Function...');
+            const response = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+            
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            let responseData;
+            try {
+              responseData = await response.json();
+              console.log('Response data:', responseData);
+            } catch (parseError) {
+              console.error('Erro ao fazer parse da resposta:', parseError);
+              const responseText = await response.text();
+              console.log('Response text:', responseText);
+            }
+            
+            if (!response.ok) {
+              console.error('Erro na Edge Function:', responseData);
+            } else {
+              console.log('Notificação criada com sucesso!');
+            }
+          } else {
+            console.error('Access token não encontrado');
+          }
+        } catch (e) {
+          console.error('Error sending in-app student notification:', e);
+          console.error('Error details:', e);
         }
       } catch (notificationError) {
         console.error('Error sending rejection notification:', notificationError);
       }
 
       // Recarregar documentos do estudante
+      console.log('Recarregando documentos...');
       fetchStudentDocuments();
       alert('Document rejected successfully! The student will be notified.');
     } catch (err: any) {
@@ -835,11 +977,53 @@ const StudentDetails: React.FC = () => {
             o_que_enviar: `Congratulations! Your acceptance letter has been processed and you are now enrolled. Please check your dashboard for next steps.`
           };
 
-          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(webhookPayload),
-          });
+          console.log('Enviando webhook...');
+          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
+          console.log('Webhook payload:', webhookPayload);
+          
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
+            
+            console.log('Webhook response status:', webhookResponse.status);
+            console.log('Webhook response ok:', webhookResponse.ok);
+            
+            if (!webhookResponse.ok) {
+              const webhookErrorText = await webhookResponse.text();
+              console.error('Webhook error:', webhookErrorText);
+            } else {
+              console.log('Webhook enviado com sucesso');
+            }
+          } catch (webhookError) {
+            console.error('Erro ao enviar webhook:', webhookError);
+          }
+
+          // Notificação in-app no sino do aluno
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (accessToken) {
+              await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                  user_id: application.user_profiles.user_id,
+                  title: 'Enrolled - Acceptance letter processed',
+                  message: 'Your enrollment is confirmed. Check your dashboard for next steps.',
+                  type: 'enrolled',
+                  link: '/student/dashboard',
+                }),
+              });
+            }
+          } catch (e) {
+            console.error('Error sending in-app student notification:', e);
+          }
         }
       } catch (notificationError) {
         console.error('Error sending acceptance notification:', notificationError);
@@ -950,11 +1134,53 @@ const StudentDetails: React.FC = () => {
             o_que_enviar: `A new document request has been submitted for your review: <strong>${newDocumentRequest.title}</strong>. Please log in to your dashboard to view the details and upload the requested document.`
           };
 
-          await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(webhookPayload),
-          });
+          console.log('Enviando webhook...');
+          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
+          console.log('Webhook payload:', webhookPayload);
+          
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
+            
+            console.log('Webhook response status:', webhookResponse.status);
+            console.log('Webhook response ok:', webhookResponse.ok);
+            
+            if (!webhookResponse.ok) {
+              const webhookErrorText = await webhookResponse.text();
+              console.error('Webhook error:', webhookErrorText);
+            } else {
+              console.log('Webhook enviado com sucesso');
+            }
+          } catch (webhookError) {
+            console.error('Erro ao enviar webhook:', webhookError);
+          }
+
+          // Notificação in-app no sino do aluno
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (accessToken) {
+              await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/create-student-notification', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                  user_id: application.user_profiles.user_id,
+                  title: 'New document request',
+                  message: `A new document request was created: ${newDocumentRequest.title}.`,
+                  type: 'document_request_created',
+                  link: '/student/documents',
+                }),
+              });
+            }
+          } catch (e) {
+            console.error('Error sending in-app student notification:', e);
+          }
         }
       } catch (notificationError) {
         console.error('Error sending notification:', notificationError);
@@ -1041,7 +1267,7 @@ const StudentDetails: React.FC = () => {
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
             <div className="xl:col-span-8 space-y-6">
               {/* Student Information Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <UserCircle className="w-6 h-6 mr-3" />
@@ -1338,29 +1564,8 @@ const StudentDetails: React.FC = () => {
                       {new Date((application as any).created_at || Date.now()).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Documents</span>
-                    <span className="text-sm text-slate-900">
-                      {DOCUMENTS_INFO.filter(doc => {
-                        const d = latestDocByType(doc.key);
-                        return d?.status === 'approved';
-                      }).length} / {DOCUMENTS_INFO.length} approved
-                    </span>
-                  </div>
-                  <div className="pt-4 border-t border-slate-200">
-                    <div className="text-sm text-slate-600 mb-2">Progress</div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-[#05294E] to-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${(DOCUMENTS_INFO.filter(doc => {
-                            const d = latestDocByType(doc.key);
-                            return d?.status === 'approved';
-                          }).length / DOCUMENTS_INFO.length) * 100}%`
-                        }}
-                      />
-                    </div>
-                  </div>
+
+
                 </div>
               </div>
 

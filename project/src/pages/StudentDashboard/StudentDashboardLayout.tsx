@@ -40,6 +40,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotif, setShowNotif] = useState(false);
+  const [newNotificationCount, setNewNotificationCount] = useState(0);
   
   // Realtime notifications
   useEffect(() => {
@@ -47,33 +48,132 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     const fetchInitial = async () => {
       if (!user?.id) return;
       
-      // Primeiro busca o perfil do usuário para obter o student_id
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileData) {
-        const { data } = await supabase
-          .from('student_notifications')
-          .select('*')
-          .eq('student_id', profileData.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
-        setNotifications(data || []);
+      try {
+        // Primeiro busca o perfil do usuário para obter o student_id
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
         
-        channel = supabase
-          .channel('student-notifs')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'student_notifications', filter: `student_id=eq.${profileData.id}` }, (payload: any) => {
-            setNotifications(prev => [payload.new, ...prev].slice(0, 10));
-          })
-          .subscribe();
+        if (profileError) {
+          console.error('Erro ao buscar perfil do usuário:', profileError);
+          return;
+        }
+        
+        if (profileData) {
+          console.log('Buscando notificações para student_id:', profileData.id);
+          
+          const { data, error } = await supabase
+            .from('student_notifications')
+            .select('*')
+            .eq('student_id', profileData.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          
+          if (error) {
+            console.error('Erro ao buscar notificações:', error);
+            return;
+          }
+          
+          console.log('Notificações iniciais carregadas:', data?.length || 0);
+          setNotifications(data || []);
+          
+          // Contar notificações não lidas
+          const unreadCount = (data || []).filter(n => !n.read_at).length;
+          setNewNotificationCount(unreadCount);
+          
+          // Configurar Supabase Realtime
+          channel = supabase
+            .channel(`student-notifs-${profileData.id}`)
+            .on('postgres_changes', { 
+              event: 'INSERT', 
+              schema: 'public', 
+              table: 'student_notifications', 
+              filter: `student_id=eq.${profileData.id}` 
+            }, (payload: any) => {
+              console.log('Nova notificação recebida em tempo real:', payload.new);
+              
+              // Adicionar notificação ao estado
+              setNotifications(prev => {
+                const newNotifications = [payload.new, ...prev].slice(0, 10);
+                console.log('Estado das notificações atualizado:', newNotifications.length);
+                return newNotifications;
+              });
+              
+              // Incrementar contador de novas notificações
+              setNewNotificationCount(prev => prev + 1);
+              
+              // Mostrar toast de notificação (opcional)
+              if (payload.new.title && payload.new.message) {
+                console.log(`🔔 Nova notificação: ${payload.new.title} - ${payload.new.message}`);
+              }
+            })
+            .on('postgres_changes', { 
+              event: 'UPDATE', 
+              schema: 'public', 
+              table: 'student_notifications', 
+              filter: `student_id=eq.${profileData.id}` 
+            }, (payload: any) => {
+              console.log('Notificação atualizada em tempo real:', payload.new);
+              setNotifications(prev => 
+                prev.map(n => n.id === payload.new.id ? payload.new : n)
+              );
+              
+              // Atualizar contador de notificações não lidas
+              const unreadCount = notifications.filter(n => !n.read_at).length;
+              setNewNotificationCount(unreadCount);
+            })
+            .on('postgres_changes', { 
+              event: 'DELETE', 
+              schema: 'public', 
+              table: 'student_notifications', 
+              filter: `student_id=eq.${profileData.id}` 
+            }, (payload: any) => {
+              console.log('Notificação removida em tempo real:', payload.old);
+              setNotifications(prev => 
+                prev.filter(n => n.id !== payload.old.id)
+              );
+              
+              // Atualizar contador de notificações não lidas
+              const unreadCount = notifications.filter(n => !n.read_at).length;
+              setNewNotificationCount(unreadCount);
+            })
+            .subscribe((status) => {
+              console.log('Status da conexão Realtime:', status);
+              
+              // Testar se a conexão está funcionando
+              if (status === 'SUBSCRIBED') {
+                console.log('✅ Canal Realtime conectado com sucesso!');
+                
+                // Teste: enviar uma mensagem de teste para verificar se está funcionando
+                setTimeout(() => {
+                  console.log('🧪 Testando conexão Realtime...');
+                  channel.send({
+                    type: 'broadcast',
+                    event: 'test',
+                    payload: { message: 'Teste de conexão Realtime' }
+                  });
+                }, 1000);
+              } else if (status === 'CHANNEL_ERROR') {
+                console.error('❌ Erro na conexão Realtime');
+              } else if (status === 'TIMED_OUT') {
+                console.error('⏰ Timeout na conexão Realtime');
+              }
+            });
+        }
+      } catch (error) {
+        console.error('Erro ao configurar notificações em tempo real:', error);
       }
     };
+    
     fetchInitial();
+    
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (channel) {
+        console.log('Removendo canal Realtime');
+        supabase.removeChannel(channel);
+      }
     };
   }, [user?.id]);
 
@@ -84,6 +184,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           .from('student_notifications')
           .update({ read_at: new Date().toISOString() })
           .eq('id', n.id);
+        
+        // Atualizar contador de notificações não lidas
+        setNewNotificationCount(prev => Math.max(0, prev - 1));
       }
     } catch {}
     setShowNotif(false);
@@ -108,7 +211,11 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           .update({ read_at: new Date().toISOString() })
           .eq('student_id', profileData.id)
           .is('read_at', null as any);
+        
         setNotifications(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
+        
+        // Zerar contador de notificações não lidas
+        setNewNotificationCount(0);
       }
     } catch {}
   };
@@ -129,7 +236,11 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
           .from('student_notifications')
           .delete()
           .eq('student_id', profileData.id);
+        
         setNotifications([]);
+        
+        // Zerar contador de notificações não lidas
+        setNewNotificationCount(0);
       }
     } catch {}
   };
@@ -340,8 +451,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   title="Notifications"
                 >
                   <Bell className="h-5 w-5 text-slate-600" />
-                  {notifications.some(n => !n.read_at) && (
-                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full"></span>
+                  {newNotificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-semibold animate-pulse">
+                      {newNotificationCount > 9 ? '9+' : newNotificationCount}
+                    </span>
                   )}
                 </button>
 
