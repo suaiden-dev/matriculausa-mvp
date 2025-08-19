@@ -878,7 +878,7 @@ const getLevelColor = (level: any) => {
                       const scholarship = application.scholarships;
                       if (!scholarship) return null;
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
+                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
                           <div className="p-4 sm:p-6">
                             {/* Header Section - mesma estrutura da seção aprovada */}
                             <div className="mb-4 sm:mb-6">
