@@ -54,6 +54,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [featuredScholarships, setFeaturedScholarships] = useState<any[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState(false);
+  // Approved universities filter: keep only scholarships from approved universities
+  const [approvedUniversityIds, setApprovedUniversityIds] = useState<Set<number>>(new Set());
 
   // Estados para o PreCheckoutModal (Matricula Rewards)
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
@@ -226,6 +228,30 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   // Carregar bolsas destacadas quando o componente montar
   useEffect(() => {
     loadFeaturedScholarships();
+  }, []);
+
+  // Load approved universities (ids) so we can exclude scholarships from unapproved schools
+  useEffect(() => {
+    const loadApprovedUniversities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('is_approved', true);
+
+        if (error) {
+          console.error('Error loading approved universities:', error);
+          return;
+        }
+
+        const ids = new Set((data || []).map((u: any) => u.id));
+        setApprovedUniversityIds(ids);
+      } catch (err) {
+        console.error('Error loading approved universities:', err);
+      }
+    };
+
+    loadApprovedUniversities();
   }, []);
 
   // Remova o flyAnimation antigo e use Framer Motion
@@ -408,7 +434,11 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
       const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
       
-      const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline;
+  // Exclude scholarships from universities that are not approved (if we have an approved set)
+  const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
+  const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
+
+  const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && fromApprovedUniversity;
       
       // Log detalhado para a primeira bolsa que não passa nos filtros (debug)
       if (!passes && scholarships.indexOf(scholarship) === 0) {
@@ -457,7 +487,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
     const searchWords = (appliedSearch || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
 
-    return featuredScholarships.filter(scholarship => {
+  return featuredScholarships.filter(scholarship => {
       const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
       const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
 
@@ -480,9 +510,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
       const daysLeft = getDaysUntilDeadline(scholarship.deadline);
       const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
-      const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
+  const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
 
-      return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline;
+  const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
+  const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
+
+  return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && fromApprovedUniversity;
     });
   }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays]);
 
@@ -945,7 +978,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
                   {/* Scholarship Image */}
                   <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
-                    {scholarship.image_url ? (
+                    {scholarship.image_url && userProfile?.has_paid_selection_process_fee ? (
                       <img
                         src={scholarship.image_url}
                         alt={scholarship.title}
@@ -1195,7 +1228,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             >
               {/* Scholarship Image */}
               <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
-                {scholarship.image_url ? (
+                {scholarship.image_url && userProfile?.has_paid_selection_process_fee? (
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}

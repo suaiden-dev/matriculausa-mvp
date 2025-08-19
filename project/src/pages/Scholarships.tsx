@@ -18,6 +18,8 @@ const Scholarships: React.FC = () => {
   const { scholarships, loading, error } = useScholarships();
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
   const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
+  // Approved universities ids cache
+  const [approvedUniversityIds, setApprovedUniversityIds] = useState<Set<number | string>>(new Set());
 
   // Estados para o modal de detalhes
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
@@ -85,6 +87,7 @@ const Scholarships: React.FC = () => {
           .order('featured_order', { ascending: true });
         
         if (!scholarshipsError && scholarshipsData) {
+          console.log('Featured Scholarships:', scholarshipsData);
           setFeaturedScholarships(scholarshipsData);
           
           // Fetch universities of featured scholarships to display information
@@ -108,6 +111,27 @@ const Scholarships: React.FC = () => {
     fetchFeaturedScholarships();
   }, []);
 
+  // Load approved universities ids to filter out scholarships from unapproved universities
+  useEffect(() => {
+    const loadApprovedUniversities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('universities')
+          .select('id')
+          .eq('is_approved', true);
+
+        if (!error && data) {
+          const ids = new Set(data.map((u: any) => u.id));
+          setApprovedUniversityIds(ids);
+        }
+      } catch (err) {
+        console.error('Error loading approved universities:', err);
+      }
+    };
+
+    loadApprovedUniversities();
+  }, []);
+
   const levelOptions = [
     { value: 'all', label: 'All Levels' },
     { value: 'graduate', label: 'Graduate' },
@@ -123,6 +147,11 @@ const Scholarships: React.FC = () => {
     if (scholarship.is_highlighted) {
       return false;
     }
+    // Exclude scholarships whose university is not approved (if we have the approved list)
+    if (approvedUniversityIds.size > 0) {
+      const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
+      if (uniId && !approvedUniversityIds.has(uniId)) return false;
+    }
     
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
     const value = scholarship.annual_value_with_scholarship ?? 0;
@@ -136,6 +165,11 @@ const Scholarships: React.FC = () => {
 
   // Apply the same filter logic to featured scholarships so the featureds respect the page filters
   const matchesFilters = (scholarship: Scholarship) => {
+    // Exclude scholarships from unapproved universities if we have the approved list
+    if (approvedUniversityIds.size > 0) {
+      const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
+      if (uniId && !approvedUniversityIds.has(uniId)) return false;
+    }
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
     const value = scholarship.annual_value_with_scholarship ?? 0;
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
@@ -287,14 +321,6 @@ const Scholarships: React.FC = () => {
   useEffect(() => {
     setPage(0);
   }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, minPrice, maxPrice]);
-
-  // Debug: check how many scholarships we have (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Total scholarships:', scholarships.length);
-    console.log('Filtered scholarships:', filteredScholarships.length);
-    
-    console.log('Paginated scholarships:', paginatedScholarships.length);
-  }
 
   return (
     <div className="bg-white min-h-screen">
