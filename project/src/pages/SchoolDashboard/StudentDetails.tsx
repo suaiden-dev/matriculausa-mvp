@@ -74,6 +74,16 @@ const StudentDetails: React.FC = () => {
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
   const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState(false);
 
+  // Bloqueia scroll do body enquanto a página de detalhes estiver aberta
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev || '';
+    };
+  }, []);
+
   // Estados para o modal de nova solicitação de documento
   const [newDocumentRequest, setNewDocumentRequest] = useState({
     title: '',
@@ -1722,6 +1732,7 @@ const StudentDetails: React.FC = () => {
                                     <div className="flex items-center space-x-3">
                                       <span className="text-sm text-slate-600">Student response:</span>
                                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+
                                         request.uploads[0].status === 'approved' ? 'bg-green-100 text-green-800' :
                                         request.uploads[0].status === 'rejected' ? 'bg-red-100 text-red-800' :
                                         'bg-yellow-100 text-yellow-800'
@@ -2220,4 +2231,4 @@ const StudentDetails: React.FC = () => {
   );
 };
 
-export default StudentDetails; 
+export default StudentDetails;

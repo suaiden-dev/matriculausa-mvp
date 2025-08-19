@@ -870,7 +870,7 @@ const SelectionProcess: React.FC = () => {
                   'Authorization': `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({
-                  student_user_id: selectedStudent?.user_profiles.user_id,
+                  user_id: selectedStudent.user_profiles.user_id,
                   title: 'Document approved',
                   message: `Your document ${uploadData.file_url?.split('/').pop()} was approved for request ${uploadData.document_requests?.title}.`,
                   type: 'document_approved',
@@ -1450,6 +1450,21 @@ const SelectionProcess: React.FC = () => {
     }
   };
 
+  // Quando um estudante é selecionado mostramos um overlay/modal —
+  // desabilita o scroll no body para evitar navegar pela página debaixo
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const previousOverflow = document.body.style.overflow;
+    if (selectedStudent) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = previousOverflow || '';
+    }
+    return () => {
+      document.body.style.overflow = previousOverflow || '';
+    };
+  }, [selectedStudent]);
+
   return (
     <ProfileCompletionGuard 
       isProfileCompleted={university?.profile_completed}
@@ -1670,22 +1685,9 @@ const SelectionProcess: React.FC = () => {
 
         {/* Student Details View */}
         {selectedStudent && (
-          <div className="fixed top-16 bottom-0 left-0 right-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto">
+          <div className="fixed top-20 bottom-0 left-0 right-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto">
             <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
-              {/* Header Section - Simplified */}
-              <div className="bg-white shadow-sm border-b border-slate-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => setSelectedStudent(null)}
-                      className="flex items-center px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-                    >
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back to Selection Process
-                    </button>
-                  </div>
-                </div>
-              </div>
+              
 
               {/* Page Title and Navigation Section */}
               <div className="bg-white border-b border-slate-200">
