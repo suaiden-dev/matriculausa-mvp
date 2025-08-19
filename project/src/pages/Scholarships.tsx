@@ -519,7 +519,7 @@ const Scholarships: React.FC = () => {
                     )}
 
                     {/* Scholarship Image */}
-                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center ">
                       {scholarship.image_url && isAuthenticated && userProfile?.has_paid_selection_process_fee ? (
                         <img
                           src={scholarship.image_url}
@@ -535,7 +535,7 @@ const Scholarships: React.FC = () => {
                       {/* Gradient Overlay for better text contrast */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                       
-                                             {/* Top Left Badges */}
+                        {/* Top Left Badges */}
                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
                          {/* Exclusive Badge */}
                          {scholarship.is_exclusive && (
@@ -773,7 +773,7 @@ const Scholarships: React.FC = () => {
                  const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
                  
                  return (
-                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
+                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
                      {/* Deadline Urgency Indicator */}
                      {daysLeft <= 7 && daysLeft > 0 && (
                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>
@@ -783,12 +783,12 @@ const Scholarships: React.FC = () => {
                      )}
 
                      {/* Scholarship Image */}
-                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
                        {scholarship.image_url ? (
                          <img
                            src={scholarship.image_url}
                            alt={scholarship.title}
-                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                           className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
                          />
                        ) : (
                          <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
@@ -806,14 +806,6 @@ const Scholarships: React.FC = () => {
                            <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
                              <Star className="h-3 w-3" />
                              Exclusive
-                           </div>
-                         )}
-                         
-                         {/* Savings Badge */}
-                         {savingsPercentage > 0 && (
-                           <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                             <DollarSign className="h-3 w-3" />
-                             {savingsPercentage}% OFF
                            </div>
                          )}
                        </div>

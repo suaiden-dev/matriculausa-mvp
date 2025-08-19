@@ -982,7 +982,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <img
                         src={scholarship.image_url}
                         alt={scholarship.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
@@ -1232,7 +1232,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
