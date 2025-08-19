@@ -2,13 +2,14 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 
 interface ForUniversitiesFinalCTAProps {
+  id?: string;
   onScheduleClick: () => void;
   onButtonClick: () => void;
 }
 
-const ForUniversitiesFinalCTA: React.FC<ForUniversitiesFinalCTAProps> = ({ onScheduleClick, onButtonClick }) => {
+const ForUniversitiesFinalCTA: React.FC<ForUniversitiesFinalCTAProps> = ({ id, onScheduleClick, onButtonClick }) => {
   return (
-    <section className="py-24 bg-slate-50 text-slate-900 relative overflow-hidden">
+    <section id={id} className="py-24 bg-slate-50 text-slate-900 relative overflow-hidden">
       {/* Modern Background Pattern */}
       <div className="absolute inset-0">
         {/* Floating blur elements */}

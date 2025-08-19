@@ -51,26 +51,35 @@ import {
 } from '../components/ForUniversities';
 
 const ForUniversities: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
-  const navigate = useNavigate();
   const { universities, loading } = useUniversityLogos();
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
-  // Função para determinar o destino do botão
-  const getButtonDestination = () => {
-    if (!isAuthenticated) {
-      return '/register';
+  // Função para scroll suave para uma seção
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      // Método simples e direto
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+      
+      // Ajustar offset após o scroll
+      setTimeout(() => {
+        window.scrollBy(0, -100);
+      }, 100);
+    } else {
+      console.error('Elemento não encontrado com ID:', sectionId);
     }
-    
-    if (user?.role === 'school') {
-      return '/school/dashboard';
-    }
-    
-    return '/';
   };
 
+
   const handleButtonClick = () => {
-    navigate(getButtonDestination());
+    
+    // Usar setTimeout para garantir que o DOM esteja renderizado
+    setTimeout(() => {
+      scrollToSection('final-cta-section');
+    }, 100);
   };
 
   const handleScheduleClick = () => {
@@ -199,7 +208,11 @@ const ForUniversities: React.FC = () => {
       <ForUniversitiesFAQ onScheduleClick={handleScheduleClick} />
 
       {/* Final CTA Section */}
-      <ForUniversitiesFinalCTA onScheduleClick={handleScheduleClick} onButtonClick={handleButtonClick} />
+      <ForUniversitiesFinalCTA 
+        id="final-cta-section"
+        onScheduleClick={handleScheduleClick} 
+        onButtonClick={handleButtonClick} 
+      />
 
       {/* SmartChat Component */}
       <SmartChat />
