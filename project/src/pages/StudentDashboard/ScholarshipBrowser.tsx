@@ -451,6 +451,41 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const appliedScholarshipIds = useMemo(() => new Set(applications.map(app => app.scholarship_id)), [applications]);
   const cartScholarshipIds = useMemo(() => new Set(cart.map(s => s.scholarships.id)), [cart]);
 
+  // Apply same applied-* filters to featured scholarships so featureds respect the user's filters
+  const filteredFeaturedScholarships = useMemo(() => {
+    if (!featuredScholarships || featuredScholarships.length === 0) return [];
+
+    const searchWords = (appliedSearch || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+    return featuredScholarships.filter(scholarship => {
+      const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
+      const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
+
+      const matchesLevel = appliedLevel === 'all' || (scholarship.level && typeof scholarship.level === 'string' && scholarship.level.toLowerCase() === appliedLevel.toLowerCase());
+
+      const matchesField = appliedField === 'all' || 
+        (scholarship.field_of_study && typeof scholarship.field_of_study === 'string' && scholarship.field_of_study.toLowerCase() === appliedField.toLowerCase()) ||
+        (appliedField === 'any' && scholarship.field_of_study === 'any field');
+
+      const matchesDeliveryMode = appliedDeliveryMode === 'all' || (scholarship.delivery_mode && typeof scholarship.delivery_mode === 'string' && scholarship.delivery_mode.toLowerCase() === appliedDeliveryMode.toLowerCase());
+
+      const matchesWorkPermission = appliedWorkPermission === 'all' || 
+        (scholarship.work_permissions && Array.isArray(scholarship.work_permissions) && scholarship.work_permissions.some((perm: any) => perm && typeof perm === 'string' && perm.toLowerCase() === appliedWorkPermission.toLowerCase()));
+
+      const scholarshipValue = scholarship.annual_value_with_scholarship ?? scholarship.amount ?? 0;
+      const minValueNum = appliedMinValue && appliedMinValue !== '' && !isNaN(Number(appliedMinValue)) ? Number(appliedMinValue) : null;
+      const maxValueNum = appliedMaxValue && appliedMaxValue !== '' && !isNaN(Number(appliedMaxValue)) ? Number(appliedMaxValue) : null;
+      const matchesMin = minValueNum === null || (scholarshipValue >= minValueNum);
+      const matchesMax = maxValueNum === null || (scholarshipValue <= maxValueNum);
+
+      const daysLeft = getDaysUntilDeadline(scholarship.deadline);
+      const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
+      const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
+
+      return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline;
+    });
+  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays]);
+
   const handleAddToCart = (scholarship: any) => {
     if (user) {
       addToCart(scholarship, user.id);
@@ -868,7 +903,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             </div>
           </div>
         </div>
-      ) : featuredScholarships.length > 0 ? (
+  ) : filteredFeaturedScholarships.length > 0 ? (
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl sm:rounded-2xl border border-blue-200 p-4 sm:p-6 mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
             <div>
@@ -880,13 +915,13 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               </p>
             </div>
             <div className="text-left sm:text-right">
-              <div className="text-xl sm:text-2xl font-bold text-[#05294E]">{featuredScholarships.length}</div>
+              <div className="text-xl sm:text-2xl font-bold text-[#05294E]">{filteredFeaturedScholarships.length}</div>
               <div className="text-xs sm:text-sm text-slate-500">Featured</div>
             </div>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {featuredScholarships.map((scholarship) => {
+            {filteredFeaturedScholarships.map((scholarship) => {
               const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
               const inCart = cartScholarshipIds.has(scholarship.id);
               const layoutId = `featured-scholarship-${scholarship.id}`;
