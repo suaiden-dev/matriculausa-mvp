@@ -62,6 +62,11 @@ export interface Scholarship {
   annual_value_with_scholarship?: number;
   scholarship_type?: string;
   work_permissions?: string[];
+  // Novos campos para taxas dinâmicas
+  application_fee_amount?: number;
+  platform_fee_percentage?: number;
+  is_stripe_connect_enabled?: boolean;
+  university_stripe_account_id?: string;
   // Algumas consultas retornam também um campo denormalizado com o nome da universidade
   // Usado como fallback quando o relacionamento "universities" não está carregado
   university_name?: string;

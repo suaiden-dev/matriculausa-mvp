@@ -13,6 +13,7 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number>(350.00);
   const { user, userProfile, loading } = useAuth();
 
   useEffect(() => {
@@ -25,12 +26,35 @@ const ApplicationFeeSuccess: React.FC = () => {
       }
 
       try {
-        const { error: functionError } = await supabase.functions.invoke('verify-stripe-session', {
+        // Buscar informações da sessão para obter o valor pago
+        const { data: sessionData, error: sessionError } = await supabase.functions.invoke('verify-stripe-session-application-fee', {
           body: { sessionId },
         });
 
-        if (functionError) {
-          throw new Error(`Verification failed: ${functionError.message}`);
+        if (sessionError) {
+          throw new Error(`Verification failed: ${sessionError.message}`);
+        }
+
+        // Se a verificação foi bem-sucedida, buscar o valor da taxa da bolsa
+        if (sessionData?.applicationId) {
+          try {
+            const { data: application, error: appError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                scholarship_id,
+                scholarships (
+                  application_fee_amount
+                )
+              `)
+              .eq('id', sessionData.applicationId)
+              .single();
+
+            if (!appError && application?.scholarships?.application_fee_amount) {
+              setPaymentAmount(application.scholarships.application_fee_amount);
+            }
+          } catch (fetchError) {
+            console.log('Could not fetch scholarship fee amount, using default:', fetchError);
+          }
         }
         
         setStatus('success');
@@ -57,7 +81,7 @@ const ApplicationFeeSuccess: React.FC = () => {
             <CheckCircle className="h-16 w-16 text-green-600 mb-4 mx-auto" />
             <h1 className="text-3xl font-bold text-green-700 mb-2">Application Fee Payment Successful!</h1>
             <p className="text-slate-700 mb-6 text-center">
-              Your payment of <span className="font-bold">$350</span> was processed successfully.<br/>
+              Your payment of <span className="font-bold">${paymentAmount.toFixed(2)}</span> was processed successfully.<br/>
               Your application will now proceed to the next step.
             </p>
             <button

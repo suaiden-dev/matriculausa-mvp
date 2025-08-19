@@ -65,6 +65,9 @@ const NewScholarship: React.FC = () => {
     original_value_per_credit: '',
     annual_value_with_scholarship: '',
     work_permissions: [] as string[],
+    // Novos campos para taxas dinâmicas
+    application_fee_amount: '350.00',
+    platform_fee_percentage: '15.00',
   });
 
   // Helper texts for work permissions
@@ -160,6 +163,9 @@ const NewScholarship: React.FC = () => {
           original_value_per_credit: scholarship.original_value_per_credit?.toString() || '',
           annual_value_with_scholarship: scholarship.annual_value_with_scholarship?.toString() || '',
           work_permissions: Array.isArray(scholarship.work_permissions) ? scholarship.work_permissions : [],
+          // Novos campos para taxas dinâmicas
+          application_fee_amount: scholarship.application_fee_amount || '350.00',
+          platform_fee_percentage: scholarship.platform_fee_percentage || '15.00',
         });
 
         // Set image preview if exists
@@ -450,6 +456,19 @@ const NewScholarship: React.FC = () => {
       return;
     }
 
+    // Validação para campos de taxa dinâmica
+    if (!formData.application_fee_amount || isNaN(Number(formData.application_fee_amount)) || Number(formData.application_fee_amount) < 0) {
+      setError('Application fee amount must be a valid positive number');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.platform_fee_percentage || isNaN(Number(formData.platform_fee_percentage)) || Number(formData.platform_fee_percentage) < 0 || Number(formData.platform_fee_percentage) > 100) {
+      setError('Platform fee percentage must be a valid number between 0 and 100');
+      setLoading(false);
+      return;
+    }
+
     if (!formData.deadline.trim()) {
       setError('Application deadline is required');
       setLoading(false);
@@ -493,6 +512,9 @@ const NewScholarship: React.FC = () => {
           original_annual_value: Number(formData.original_annual_value),
           original_value_per_credit: Number(formData.original_value_per_credit),
           annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
+          // Novos campos para taxas dinâmicas
+          application_fee_amount: Number(formData.application_fee_amount),
+          platform_fee_percentage: Number(formData.platform_fee_percentage),
         };
         if (includeWP) payload.work_permissions = formData.work_permissions.filter((wp) => wp !== 'F1');
         if (includeDM) payload.delivery_mode = formData.delivery_mode;
@@ -1168,6 +1190,69 @@ const NewScholarship: React.FC = () => {
                 </div>
 
                 {/* Active Scholarship removed as requested */}
+              </div>
+            </div>
+
+            {/* Dynamic Fees Section */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                <DollarSign className="h-5 w-5 mr-2 text-purple-600" />
+                Dynamic Fees
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Application Fee Amount (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    name="application_fee_amount"
+                    value={formData.application_fee_amount}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 350.00"
+                    required
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Set the application fee amount for this scholarship. Students will see this value when applying.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Platform Fee Percentage (%) *
+                  </label>
+                  <input
+                    type="number"
+                    name="platform_fee_percentage"
+                    value={formData.platform_fee_percentage}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 15.00"
+                    required
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Percentage of the application fee that goes to the platform (0-100%).
+                  </p>
+                </div>
+              </div>
+              
+              {/* Information about dynamic fees */}
+              <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                <div className="flex items-start">
+                  <Info className="h-5 w-5 text-purple-600 mr-3 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-purple-800 mb-1">About Dynamic Fees</h4>
+                    <p className="text-sm text-purple-700">
+                      You can now set custom application fees for each scholarship. This allows you to:
+                    </p>
+                    <ul className="text-sm text-purple-700 mt-2 space-y-1">
+                      <li>• Set different fees based on program value and complexity</li>
+                      <li>• Cover specific administrative costs for each scholarship</li>
+                      <li>• Provide transparent pricing to students</li>
+                      <li>• Maintain competitive advantage in the market</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
 

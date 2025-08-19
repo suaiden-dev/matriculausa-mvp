@@ -471,6 +471,8 @@ const getLevelColor = (level: any) => {
                   </h3>
                   <div className="space-y-4">
                     
+                    
+                    
                     <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-4 border border-amber-200">
                       <div className="flex items-start relative">
                         <AlertCircle className="h-5 w-5 absolute text-amber-600 mt-0.5 flex-shrink-0" />
@@ -507,13 +509,21 @@ const getLevelColor = (level: any) => {
                   productId="applicationFee"
                   feeType="application_fee"
                   paymentType="application_fee"
-                  buttonText="Yes, Secure My Scholarship ($350)"
+                  buttonText={`Yes, Secure My Scholarship ($${pendingApplication.scholarships?.application_fee_amount ? 
+                    Number(pendingApplication.scholarships.application_fee_amount).toFixed(2) : 
+                    '350.00'
+                  })`}
                   className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-bold hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm text-center mb-3 sm:mb-0"
                   successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                   cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
                   disabled={false}
                   scholarshipsIds={[pendingApplication.scholarship_id]}
                   metadata={{ application_id: pendingApplication.id, selected_scholarship_id: pendingApplication.scholarship_id }}
+                  scholarshipData={pendingApplication.scholarships ? {
+                    title: pendingApplication.scholarships.title || '',
+                    universityName: pendingApplication.scholarships.universities?.name || 'Unknown University',
+                    applicationFeeAmount: pendingApplication.scholarships.application_fee_amount || 350.00
+                  } : undefined}
                 />
                 <button
                   type="button"
@@ -780,8 +790,15 @@ const getLevelColor = (level: any) => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">Application Fee</span>
-                          <span className="text-base font-bold text-gray-700">$350</span>
+                          <span className="text-base font-bold text-gray-700">
+                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                          </span>
                         </div>
+                        {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 && (
+                          <div className="text-xs text-purple-600 mb-2 font-medium">
+                            Custom fee set by university
+                          </div>
+                        )}
                         {applicationFeePaid ? (
                           <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                             <CheckCircle className="h-3 w-3 mr-1" />

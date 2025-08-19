@@ -933,6 +933,22 @@ const Scholarships: React.FC = () => {
                                  </div>
                                </div>
                              )}
+
+                             {/* Application Fee Information */}
+                             <div className="pt-3 border-t border-slate-200">
+                               <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                                 <span>Application Fee</span>
+                                 <span className="font-semibold text-purple-600">
+                                   ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                                 </span>
+                               </div>
+                               <div className="text-xs text-slate-400 text-center">
+                                 {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                                   'Custom fee set by university' : 
+                                   'Standard application fee'
+                                 }
+                               </div>
+                             </div>
                            </div>
                          </div>
                        </div>
