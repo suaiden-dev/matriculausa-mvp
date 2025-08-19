@@ -138,9 +138,6 @@ const StudentManagement: React.FC = () => {
       description="Finish setting up your university profile to view and manage student applications"
     >
       <div className="min-h-screen">
-
-
-        {/* Filters and Search Section */}
         <div className="max-w-7xl">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             {/* Page Header */}
@@ -148,7 +145,7 @@ const StudentManagement: React.FC = () => {
               <div className="px-6 py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <Users className="w-5 h-5 text-[#05294E]" />
+                    <Users className="hidden sm:block sm:w-5 sm:h-5 text-[#05294E]" />
                     <h2 className="text-lg font-semibold text-slate-900">All Students</h2>
                     <span className="text-sm text-slate-600">
                       (students who have paid both Application Fee and Scholarship Fee)
