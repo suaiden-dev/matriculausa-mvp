@@ -260,23 +260,51 @@ async function handleEvent(event: Stripe.Event) {
     if (paymentType === 'application_fee') {
       const userId = metadata.user_id || metadata.student_id;
       const applicationId = metadata.application_id;
+      const applicationFeeAmount = metadata.application_fee_amount || '350.00';
+      const platformFeePercentage = metadata.platform_fee_percentage || '15.00';
 
       if (userId && applicationId) {
         // Atualizar o status da aplicação existente para 'under_review'
-        const { error } = await supabase
+        const { error: appError } = await supabase
           .from('scholarship_applications')
           .update({ 
             status: 'under_review',
+            is_application_fee_paid: true, // ✅ ADICIONAR ESTA LINHA
+            payment_status: 'paid',
+            paid_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
           .eq('id', applicationId)
           .eq('student_id', userId);
 
-        if (error) {
-          console.error('Error updating application status:', error);
+        if (appError) {
+          console.error('Error updating application status:', appError);
         } else {
           console.log('Application fee payment processed successfully for user:', userId);
         }
+
+        // Atualizar também o perfil do usuário para manter consistência
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .update({ 
+            is_application_fee_paid: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+
+        if (profileError) {
+          console.error('Error updating user profile:', profileError);
+        } else {
+          console.log('User profile updated - application fee paid');
+        }
+
+        // Log dos valores dinâmicos processados
+        console.log('Application fee payment processed with dynamic values:', {
+          userId,
+          applicationId,
+          applicationFeeAmount,
+          platformFeePercentage
+        });
       }
     }
     

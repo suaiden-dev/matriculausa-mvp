@@ -134,22 +134,67 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Buscar valor dinâmico da taxa da bolsa
+    let applicationFeeAmount = 350.00; // Valor padrão como fallback
+    let platformFeePercentage = 15.00; // Porcentagem padrão da plataforma
+    
+    if (application.scholarship_id) {
+      try {
+        // Usar função RPC para buscar taxas da bolsa
+        const { data: feeData, error: feeError } = await supabase
+          .rpc('get_scholarship_fees', { p_scholarship_id: application.scholarship_id });
+        
+        if (!feeError && feeData && feeData.length > 0) {
+          applicationFeeAmount = feeData[0].application_fee_amount || 350.00;
+          platformFeePercentage = feeData[0].platform_fee_percentage || 15.00;
+          console.log('[stripe-checkout-application-fee] Taxas dinâmicas encontradas:', {
+            applicationFeeAmount,
+            platformFeePercentage
+          });
+        } else {
+          console.log('[stripe-checkout-application-fee] Usando valores padrão (função RPC não retornou dados):', feeError);
+        }
+      } catch (error) {
+        console.error('[stripe-checkout-application-fee] Erro ao buscar taxas dinâmicas:', error);
+        console.log('[stripe-checkout-application-fee] Usando valores padrão como fallback');
+      }
+    }
+
+    // Calcular valor em centavos para o Stripe
+    const amountInCents = Math.round(applicationFeeAmount * 100);
+    
+    console.log('[stripe-checkout-application-fee] Configurando checkout com valor dinâmico:', {
+      originalAmount: applicationFeeAmount,
+      amountInCents,
+      platformFeePercentage
+    });
+
     // Monta o metadata para o Stripe (usando user.id para compatibilidade com webhooks)
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'application_fee',
       application_id: applicationId,
       student_process_type: application?.student_process_type || metadata?.student_process_type || null,
+      application_fee_amount: applicationFeeAmount.toString(),
+      platform_fee_percentage: platformFeePercentage.toString(),
       ...metadata,
     };
 
+    // Criar sessão Stripe com valor customizado em vez de price_id
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
       line_items: [
         {
-          price: price_id,
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Application Fee',
+              description: `Application fee for scholarship application`,
+            },
+            unit_amount: amountInCents,
+          },
           quantity: 1,
         },
       ],
@@ -159,7 +204,12 @@ Deno.serve(async (req) => {
       metadata: sessionMetadata,
     });
 
-    console.log('[stripe-checkout-application-fee] Created Stripe session with metadata:', session.metadata);
+    console.log('[stripe-checkout-application-fee] Created Stripe session with dynamic amount:', {
+      amount: applicationFeeAmount,
+      amountInCents,
+      sessionId: session.id,
+      metadata: session.metadata
+    });
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {

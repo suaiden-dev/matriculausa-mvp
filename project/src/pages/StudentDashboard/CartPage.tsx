@@ -215,8 +215,17 @@ const CartPage: React.FC = () => {
                 <p className="text-green-700 text-sm">Complete your application with the one-time fee</p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-green-800">$350</div>
+                <div className="text-2xl font-bold text-green-800">
+                  ${selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
+                    ? Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount).toFixed(2)
+                    : '350.00'
+                  }
+                </div>
                 <div className="text-green-600 text-xs">Application Fee</div>
+                {selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
+                  && Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount) !== 350 && (
+                  <div className="text-purple-600 text-xs font-medium">Custom fee set by university</div>
+                )}
               </div>
             </div>
             <StripeCheckout
@@ -224,12 +233,21 @@ const CartPage: React.FC = () => {
               paymentType="application_fee"
               feeType="application_fee"
               scholarshipsIds={selectedScholarship ? [selectedScholarship] : []}
-              buttonText="Pay Application Fee ($350)"
+              buttonText={`Pay Application Fee ($${selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
+                ? Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount).toFixed(2)
+                : '350.00'
+              })`}
               successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
               cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
               disabled={!selectedScholarship}
               beforeCheckout={createOrGetApplication}
               metadata={{ selected_scholarship_id: selectedScholarship }}
+              scholarshipData={selectedScholarship ? {
+                title: cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.title || '',
+                universityName: cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.universities?.name || 
+                               cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.university_name || 'Unknown University',
+                applicationFeeAmount: cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount || 350.00
+              } : undefined}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
             />
             <div className="mt-3 text-center">
