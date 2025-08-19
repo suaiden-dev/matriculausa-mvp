@@ -134,6 +134,20 @@ const Scholarships: React.FC = () => {
     return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
   });
 
+  // Apply the same filter logic to featured scholarships so the featureds respect the page filters
+  const matchesFilters = (scholarship: Scholarship) => {
+    const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const value = scholarship.annual_value_with_scholarship ?? 0;
+    const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
+    const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
+    const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
+    const matchesDeliveryMode = selectedDeliveryMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedDeliveryMode);
+    const matchesWorkPermission = selectedWorkPermission === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkPermission));
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
+  };
+
+  const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
+
   // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -436,7 +450,7 @@ const Scholarships: React.FC = () => {
         </div>
 
         {/* Featured Scholarships Section */}
-        {featuredScholarships.length > 0 && (
+  {filteredFeaturedScholarships.length > 0 && (
           <div className="mb-12">
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-6 py-2 mb-4">
@@ -452,7 +466,7 @@ const Scholarships: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-              {featuredScholarships.slice(0, 6).map((scholarship) => {
+              {filteredFeaturedScholarships.slice(0, 6).map((scholarship) => {
                 const deadlineStatus = getDeadlineStatus(scholarship.deadline);
                 const daysLeft = getDaysUntilDeadline(scholarship.deadline);
                 const originalValue = scholarship.original_annual_value ?? 0;
