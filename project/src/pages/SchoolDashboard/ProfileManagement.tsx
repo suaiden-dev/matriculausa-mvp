@@ -30,6 +30,7 @@ const ProfileManagement: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>(university?.image_url);
+  const [bannerUrl, setBannerUrl] = useState<string | undefined>(university?.banner_url);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -62,26 +63,31 @@ const ProfileManagement: React.FC = () => {
     }
   });
 
-  // Sincronizar imageUrl com dados da universidade
+  // Sincronizar imageUrl e bannerUrl com dados da universidade
   useEffect(() => {
     if (university?.image_url) {
       setImageUrl(university.image_url);
     }
-  }, [university?.image_url]);
+    if (university?.banner_url) {
+      setBannerUrl(university.banner_url);
+    }
+  }, [university?.image_url, university?.banner_url]);
 
   const profileCompleteness = university ? (
-    (university.name ? 20 : 0) +
-    (university.description ? 20 : 0) +
+    (university.name ? 15 : 0) +
+    (university.description ? 15 : 0) +
     (university.location ? 15 : 0) +
-    (university.website ? 15 : 0) +
+    (university.website ? 10 : 0) +
+    (university.image_url ? 10 : 0) +
+    (university.banner_url ? 10 : 0) +
     (university.contact?.email ? 10 : 0) +
     (university.contact?.phone ? 10 : 0) +
-    (university.programs && university.programs.length > 0 ? 10 : 0)
+    (university.programs && university.programs.length > 0 ? 5 : 0)
   ) : 0;
 
 
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (file: File, type: 'logo' | 'banner' = 'logo') => {
     if (!university || !user) return;
 
     setUploading(true);
@@ -99,11 +105,12 @@ const ProfileManagement: React.FC = () => {
       }
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `university_${university.id}_${Date.now()}.${fileExt}`;
+      const fileName = `university_${university.id}_${type}_${Date.now()}.${fileExt}`;
+      const bucketName = type === 'banner' ? 'university-banners' : 'user-avatars';
 
       // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
-        .from('user-avatars')
+        .from(bucketName)
         .upload(fileName, file, { 
           upsert: true,
           contentType: file.type
@@ -124,28 +131,41 @@ const ProfileManagement: React.FC = () => {
 
       // Get public URL
       const { data: publicUrlData } = supabase.storage
-        .from('user-avatars')
+        .from(bucketName)
         .getPublicUrl(fileName);
 
       const publicUrl = publicUrlData?.publicUrl;
       if (!publicUrl) throw new Error('Could not get image URL');
 
       // Update university record
+      const updateData = type === 'banner' 
+        ? { banner_url: publicUrl }
+        : { image_url: publicUrl };
+
       const { error: updateError } = await supabase
         .from('universities')
-        .update({ image_url: publicUrl })
+        .update(updateData)
         .eq('id', university.id);
 
       if (updateError) throw updateError;
 
       // Update local state
-      setImageUrl(publicUrl);
-      updateImage(publicUrl);
+      if (type === 'banner') {
+        setBannerUrl(publicUrl);
+        updateImage(publicUrl, 'banner_url');
+      } else {
+        setImageUrl(publicUrl);
+        updateImage(publicUrl, 'image_url');
+      }
       
       // Refresh university data to update context
       await refreshData();
       
-      setSuccessMessage('University logo updated successfully!');
+      const successMessage = type === 'banner' 
+        ? 'University banner updated successfully!' 
+        : 'University logo updated successfully!';
+      
+      setSuccessMessage(successMessage);
       setTimeout(() => setSuccessMessage(null), 3000);
 
     } catch (err: any) {
@@ -325,6 +345,162 @@ const ProfileManagement: React.FC = () => {
               )}
             </div>
           </div>
+          
+          {/* Banner Preview - Movido para o contexto */}
+          {bannerUrl && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-semibold text-white flex items-center">
+                    <Globe className="h-5 w-5 mr-2 text-blue-200" />
+                    University Banner
+                  </h3>
+                </div>
+                {isEditing && (
+                  <button
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) {
+                          handleImageUpload(file, 'banner');
+                        }
+                      };
+                      input.click();
+                    }}
+                    className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium flex items-center gap-2 shadow-lg hover:shadow-xl"
+                    title="Change university banner"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Change Banner
+                  </button>
+                )}
+              </div>
+              
+              <div className="relative group">
+                <div className="w-full h-48 sm:h-56 bg-gradient-to-br from-white/90 to-gray-100/90 backdrop-blur-sm rounded-xl overflow-hidden border border-white/30 shadow-lg">
+                  <img 
+                    src={bannerUrl} 
+                    alt="University Banner Preview" 
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
+                  />
+                </div>
+                
+                {/* Overlay com instruções quando hover */}
+                {isEditing && (
+                  <div className="absolute inset-0 bg-black/60 opacity-0 rounded-xl group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <Edit className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-sm font-medium">Click "Change Banner" above to update</p>
+                      <p className="text-xs text-white/80 mt-1">Recommended: 800×267px</p>
+                    </div>
+                  </div>
+                )}    
+              </div>
+            </div>
+          )}
+          
+          {/* Banner Upload Section - Quando não há banner */}
+          {!bannerUrl && isEditing && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-semibold text-white flex items-center">
+                    <Globe className="h-5 w-5 mr-2 text-blue-200" />
+                    University Banner
+                  </h3>
+                  <span className="text-xs text-blue-200 bg-white/10 px-2 py-1 rounded-full">
+                    Add New
+                  </span>
+                </div>
+                
+                {/* Botão de Upload Prominente */}
+                <button
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) {
+                        handleImageUpload(file, 'banner');
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="bg-white text-[#05294E] px-4 py-2 rounded-lg hover:bg-blue-50 transition-all duration-300 font-medium flex items-center gap-2 shadow-lg hover:shadow-xl"
+                  title="Upload university banner"
+                >
+                  <Plus className="h-4 w-4" />
+                  Upload Banner
+                </button>
+              </div>
+              
+              {/* Indicador de Dimensões Recomendadas */}
+              <div className="mb-3 p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
+                <div className="flex items-center justify-between text-xs text-blue-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                    <span className="font-medium">Recommended Dimensions:</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <span className="text-blue-100">Hero:</span>
+                      <span className="font-mono bg-white/20 px-2 py-1 rounded">1920×640px</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-blue-100">Ratio:</span>
+                      <span className="font-mono bg-white/20 px-2 py-1 rounded">3:1</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-blue-200 mt-2">
+                  Upload a banner image to make your university profile more attractive
+                </p>
+              </div>
+              
+              {/* Upload Area - Mais Prominente */}
+              <div className="w-full h-48 sm:h-56 bg-gradient-to-br from-white/90 to-gray-100/90 backdrop-blur-sm rounded-xl border-2 border-dashed border-slate-400/50 flex items-center justify-center hover:border-slate-500/70 transition-colors cursor-pointer group"
+                   onClick={() => {
+                     const input = document.createElement('input');
+                     input.type = 'file';
+                     input.accept = 'image/*';
+                     input.onchange = (e) => {
+                       const file = (e.target as HTMLInputElement).files?.[0];
+                       if (file) {
+                         handleImageUpload(file, 'banner');
+                       }
+                     };
+                     input.click();
+                   }}
+              >
+                <div className="text-center text-slate-700 group-hover:text-slate-900 transition-colors">
+                  <Globe className="h-16 w-16 mx-auto mb-3 text-slate-400 group-hover:text-slate-600 transition-colors" />
+                  <p className="text-lg font-medium mb-1">Click here to upload banner</p>
+                  <p className="text-sm text-slate-500 group-hover:text-slate-700">JPG, PNG, WebP (max 5MB)</p>
+                  <p className="text-xs text-slate-400 mt-2">Recommended: 1920×640px</p>
+                </div>
+              </div>
+              
+              {uploading && (
+                <div className="mt-3 text-center">
+                  <div className="inline-flex items-center gap-2 text-blue-200 text-sm bg-white/10 px-3 py-2 rounded-lg">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-200"></div>
+                    Uploading banner...
+                  </div>
+                </div>
+              )}
+              
+              {uploadError && (
+                <div className="mt-3 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                  <p className="text-red-200 text-sm text-center font-medium">{uploadError}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Profile Completeness */}
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 sm:p-4 mt-4">
             <div className="flex flex-col sm:flex-row items-center justify-between mb-2 gap-2">

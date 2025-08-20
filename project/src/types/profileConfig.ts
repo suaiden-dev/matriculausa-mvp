@@ -25,6 +25,7 @@ export interface ProfileFormData {
   website: string;
   location: string;
   image_url: string;
+  banner_url: string;
   contact: {
     phone: string;
     email: string;

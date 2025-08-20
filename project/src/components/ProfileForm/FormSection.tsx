@@ -13,7 +13,7 @@ interface FormSectionProps {
   onToggleSensitive?: () => void;
   onFieldChange?: (key: string, value: string) => void;
   getFieldRef?: (key: string) => React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
-  onImageUpload?: (file: File) => void;
+  onImageUpload?: (file: File, type?: 'logo' | 'banner') => void;
   imageUploading?: boolean;
   imageUploadError?: string | null;
 }

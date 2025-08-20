@@ -125,7 +125,7 @@ const UniversityDetail: React.FC = () => {
       contact: university?.contact || { phone: '', email: '', admissionsEmail: '', fax: '' },
       programs: university?.programs || []
     });
-    setImageUrl(university?.image_url || university?.image || university?.logo_url);
+    setImageUrl(university?.banner_url || university?.image_url || university?.image || university?.logo_url);
   }, [university]);
 
   const handleEditClick = () => setIsEditing(true);
@@ -278,7 +278,7 @@ const UniversityDetail: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* Header Navigation */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {isOwner && (
               isEditing ? (
                 <div className="flex gap-2">
@@ -315,7 +315,7 @@ const UniversityDetail: React.FC = () => {
       {/* Hero Section */}
       <section className="relative h-80 overflow-hidden">
         <img
-          src={imageUrl || '/university-placeholder.png'}
+          src={university.banner_url || university.image_url || '/university-placeholder.png'}
           alt={`${formData.name} campus`}
           className="w-full h-full object-cover"
         />
@@ -344,45 +344,57 @@ const UniversityDetail: React.FC = () => {
         )}
         <div className="absolute inset-0 flex items-end">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 w-full">
+            
             <div className="text-white">
+              {/* Badges com Backdrop Blur */}
               <div className="flex items-center space-x-3 mb-4">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  university.type === 'Private' ? 'bg-[#05294E]' : 'bg-green-600'
-                }`}>
-                  {university.type || (university.is_public ? 'Public' : 'Private')}
-                </span>
                 {isOwner && (
-                  <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                  <span className="bg-blue-500/90 backdrop-blur-md border border-white/20 text-white px-3 py-2 rounded-full text-sm font-medium flex items-center shadow-lg">
                     <Settings className="h-3 w-3 mr-1" />
                     Your University
                   </span>
                 )}
               </div>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={e => handleInputChange('name', e.target.value)}
-                  className="text-4xl md:text-5xl font-black mb-3 bg-white/80 text-[#05294E] rounded-lg px-4 py-2 w-full"
-                  placeholder="University Name"
-                />
-              ) : (
-                <h1 className="text-4xl md:text-5xl font-black mb-3">
-                  {university.name}
-                </h1>
-              )}
+              
+              {/* Nome da Universidade com Backdrop Blur */}
+              <div className="mb-3">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={e => handleInputChange('name', e.target.value)}
+                    className="text-4xl md:text-5xl font-black w-full bg-white/95 backdrop-blur-sm text-[#05294E] rounded-xl px-6 py-4 shadow-2xl border-2 border-white/30 focus:outline-none focus:ring-4 focus:ring-white/50 focus:border-white transition-all duration-300"
+                    placeholder="University Name"
+                  />
+                ) : (
+                  <div className="relative group">
+                    {/* Card com backdrop blur atrás do texto */}
+                    <div className="bg-black/40 backdrop-blur-md rounded-xl px-6 py-4 inline-block">
+                      <h1 className="text-4xl md:text-5xl font-black text-white">
+                        {university.name}
+                      </h1>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Localização com Backdrop Blur */}
               <div className="flex items-center text-lg">
-                <MapPin className="h-5 w-5 mr-2" />
+                <MapPin className="h-5 w-5 mr-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
                 {isEditing ? (
                   <input
                     type="text"
                     value={formData.location}
                     onChange={e => handleInputChange('location', e.target.value)}
-                    className="bg-white/80 text-[#05294E] rounded-lg px-2 py-1 w-1/2"
+                    className="bg-white/95 backdrop-blur-sm text-[#05294E] rounded-lg px-4 py-2 w-1/2 shadow-lg border-2 border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white transition-all duration-300"
                     placeholder="Location"
                   />
                 ) : (
-                  university.location
+                  <div className="bg-black/40 backdrop-blur-md rounded-lg px-4 py-2 inline-block">
+                    <span className="text-white font-medium">
+                      {university.location}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
