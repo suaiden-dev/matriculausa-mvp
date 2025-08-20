@@ -91,7 +91,7 @@ const ApplicationMonitoring: React.FC = () => {
           onChange={e => setSearchTerm(e.target.value)}
         />
         <select
-          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all duration-200"
+          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
           title="Filter by status"
@@ -103,7 +103,7 @@ const ApplicationMonitoring: React.FC = () => {
           <option value="under_review">Under Review</option>
         </select>
         <select
-          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all duration-200"
+          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
           value={universityFilter}
           onChange={e => setUniversityFilter(e.target.value)}
           title="Filter by university"
@@ -117,7 +117,7 @@ const ApplicationMonitoring: React.FC = () => {
           <button
             onClick={() => handleViewModeChange('grid')}
             className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
-              viewMode === 'grid' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              viewMode === 'grid' ? 'bg-white text-[#05294E] shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
             title="Grid view"
           >
@@ -126,7 +126,7 @@ const ApplicationMonitoring: React.FC = () => {
           <button
             onClick={() => handleViewModeChange('list')}
             className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
-              viewMode === 'list' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              viewMode === 'list' ? 'bg-white text-[#05294E] shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
             title="List view"
           >
@@ -151,7 +151,7 @@ const ApplicationMonitoring: React.FC = () => {
                 <p className="text-slate-600 text-xs">Applied on: {new Date(app.applied_at).toLocaleDateString()}</p>
               </div>
               <button
-                className="mt-4 w-full bg-purple-600 text-white py-2.5 px-4 rounded-xl hover:bg-purple-700 transition-colors font-medium text-sm"
+                className="mt-4 w-full bg-[#05294E] text-white py-2.5 px-4 rounded-xl hover:bg-[#102336] transition-colors font-medium text-sm"
                 onClick={() => navigate(`/admin/dashboard/application-monitoring/${app.id}`)}
               >
                 View Details

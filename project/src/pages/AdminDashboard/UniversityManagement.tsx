@@ -95,7 +95,7 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Pending Approval</p>
-              <p className="text-3xl font-bold text-orange-600">{stats.pending}</p>
+              <p className="text-3xl font-bold text-slate-900">{stats.pending}</p>
             </div>
             <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
               <Clock className="h-6 w-6 text-orange-600" />
@@ -107,7 +107,7 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Approved</p>
-              <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
+              <p className="text-3xl font-bold text-slate-900">{stats.approved}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
               <CheckCircle className="h-6 w-6 text-green-600" />
@@ -150,7 +150,7 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                 onClick={() => handleViewModeChange('grid')}
                 className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
                   viewMode === 'grid'
-                    ? 'bg-white text-purple-600 shadow-sm'
+                    ? 'bg-white text-[#05294E] shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
                 title="Grid view"
@@ -161,7 +161,7 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                 onClick={() => handleViewModeChange('list')}
                 className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
                   viewMode === 'list'
-                    ? 'bg-white text-purple-600 shadow-sm'
+                    ? 'bg-white text-[#05294E] shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
                 title="List view"
@@ -208,7 +208,7 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                             <Building className="h-6 w-6 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-purple-600 transition-colors">
+                            <h4 className="font-bold text-slate-900 mb-1 truncate group-hover:text-[#05294E] transition-colors">
                               {university.name}
                             </h4>
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

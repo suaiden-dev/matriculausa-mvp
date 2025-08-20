@@ -37,6 +37,8 @@ interface SchoolDashboardLayoutProps {
 }
 
 const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, children }) => {
+  // Estado para dropdowns da sidebar
+  const [dropdownOpen, setDropdownOpen] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -152,18 +154,25 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/school/dashboard/scholarships', badge: university?.profile_completed ? null : 'Setup' },
-    { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
     { id: 'selection-process', label: 'Selection Process', icon: UserCheck, path: '/school/dashboard/selection-process', badge: null },
-    { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
+    { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
     { id: 'stripe-transfers', label: 'Transferências', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
-    { id: 'ai-solutions', label: 'AI Solutions', icon: Brain, path: '/school/dashboard/ai-solutions', badge: null },
-
-    { id: 'whatsapp', label: 'WhatsApp Connection', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
+    {
+      id: 'ai-solutions',
+      label: 'AI Solutions',
+      icon: Brain,
+      path: '/school/dashboard/ai-solutions',
+      badge: null,
+      dropdown: [
+        { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
+        { id: 'whatsapp', label: 'WhatsApp Connection', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
+      ]
+    }
   ];
 
   return (
@@ -251,41 +260,97 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              const isDisabled = item.badge === 'Coming Soon';
-              
-              // Don't disable the students tab anymore
-              const finalIsDisabled = isDisabled && item.id !== 'students';
-              
-              return (
-                <Link
-                  key={item.id}
-                  to={finalIsDisabled ? '#' : item.path}
-                  className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-[#05294E] text-white shadow-lg'
-                      : finalIsDisabled
-                      ? 'text-slate-400 cursor-not-allowed'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                  onClick={(e) => finalIsDisabled && e.preventDefault()}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : finalIsDisabled ? 'text-slate-400' : 'text-slate-500'}`} />
-                    <span className="text-sm">{item.label}</span>
+              if (item.dropdown) {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id || item.dropdown.some(sub => activeTab === sub.id);
+                return (
+                  <div key={item.id} className="relative group">
+                    <div className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${isActive ? 'bg-[#05294E] text-white shadow-lg' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                    >
+                      <Link
+                        to={item.path}
+                        className="flex items-center space-x-3 flex-1"
+                        style={{ textDecoration: 'none' }}
+                        onClick={() => {
+                          setSidebarOpen(false);
+                          setDropdownOpen(prev => ({ ...prev, [item.id]: true }));
+                        }}
+                      >
+                        <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                        <span className="text-sm">{item.label}</span>
+                      </Link>
+                      <button
+                        type="button"
+                        className={`ml-2 p-1 rounded transition-colors focus:outline-none ${isActive ? 'text-white' : 'text-slate-400 hover:bg-slate-200'}`}
+                        onClick={() => setDropdownOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                        tabIndex={0}
+                        aria-label="Abrir submenu"
+                      >
+                        <ChevronDown className={`h-4 w-4 transition-transform ${dropdownOpen?.[item.id] ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                    {/* Dropdown */}
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ${dropdownOpen?.[item.id] ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'} bg-slate-50 rounded-xl shadow-lg border border-slate-200 mt-2 ml-4 mr-4`}
+                      style={{ pointerEvents: dropdownOpen?.[item.id] ? 'auto' : 'none' }}
+                    >
+                      {item.dropdown.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeTab === sub.id;
+                        return (
+                          <Link
+                            key={sub.id}
+                            to={sub.path}
+                            className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                              isSubActive ? 'bg-[#05294E] text-white shadow' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
+                            onClick={() => {
+                              setSidebarOpen(false);
+                            }}
+                          >
+                            <SubIcon className={`h-5 w-5 ${isSubActive ? 'text-white' : 'text-slate-500'}`} />
+                            <span className="text-sm ml-3">{sub.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {item.badge && item.id !== 'students' && (
-                    <span className={`px-2 py-1 text-xs font-medium rounded-lg ${
-                      item.badge === 'Coming Soon' 
-                        ? 'bg-slate-100 text-slate-500'
-                        : 'bg-orange-100 text-orange-700'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
+                );
+              } else {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                const isDisabled = item.badge === 'Coming Soon';
+                // Don't disable the students tab anymore
+                const finalIsDisabled = isDisabled && item.id !== 'students';
+                return (
+                  <Link
+                    key={item.id}
+                    to={finalIsDisabled ? '#' : item.path}
+                    className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-[#05294E] text-white shadow-lg'
+                        : finalIsDisabled
+                        ? 'text-slate-400 cursor-not-allowed'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                    onClick={(e) => finalIsDisabled && e.preventDefault()}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Icon className={`h-5 w-5 ${isActive ? 'text-white' : finalIsDisabled ? 'text-slate-400' : 'text-slate-500'}`} />
+                      <span className="text-sm">{item.label}</span>
+                    </div>
+                    {item.badge && item.id !== 'students' && (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-lg ${
+                        item.badge === 'Coming Soon' 
+                          ? 'bg-slate-100 text-slate-500'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              }
             })}
           </nav>
 

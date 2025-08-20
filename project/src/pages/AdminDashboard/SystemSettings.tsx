@@ -208,7 +208,7 @@ const SystemSettings: React.FC = () => {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-purple-600 text-white px-6 py-3 rounded-xl hover:bg-purple-700 transition-colors font-medium flex items-center disabled:opacity-50"
+            className="bg-[#05294E] text-white px-6 py-3 rounded-xl hover:bg-[#112335] transition-colors font-medium flex items-center disabled:opacity-50"
           >
             {saving ? (
               <>
@@ -307,7 +307,7 @@ const SystemSettings: React.FC = () => {
                           onChange={(e) => handleSettingChange(setting.key, e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#05294E] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#05294E]"></div>
                       </label>
                     )}
                     
@@ -318,7 +318,7 @@ const SystemSettings: React.FC = () => {
                         max={setting.max}
                         value={settings[setting.key as keyof typeof settings] as number}
                         onChange={(e) => handleSettingChange(setting.key, parseInt(e.target.value))}
-                        className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                        className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
                       />
                     )}
                     
@@ -327,7 +327,7 @@ const SystemSettings: React.FC = () => {
                         type="text"
                         value={settings[setting.key as keyof typeof settings] as string}
                         onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-                        className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                        className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
                       />
                     )}
                     
@@ -336,7 +336,7 @@ const SystemSettings: React.FC = () => {
                         type="email"
                         value={settings[setting.key as keyof typeof settings] as string}
                         onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-                        className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                        className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
                       />
                     )}
                     
@@ -344,7 +344,7 @@ const SystemSettings: React.FC = () => {
                       <select
                         value={settings[setting.key as keyof typeof settings] as string}
                         onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-                        className="w-40 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-purple-600 text-sm"
+                        className="w-40 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
                       >
                         {setting.options?.map((option) => (
                           <option key={option.value} value={option.value}>

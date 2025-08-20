@@ -27,6 +27,8 @@ interface University {
 
 const FeaturedUniversitiesManagement: React.FC = () => {
   const [universities, setUniversities] = useState<University[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const universitiesPerPage = 10;
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -68,6 +70,13 @@ const FeaturedUniversitiesManagement: React.FC = () => {
     
     return matchesSearch && matchesStatus;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredUniversities.length / universitiesPerPage);
+  const paginatedUniversities = filteredUniversities.slice(
+    (currentPage - 1) * universitiesPerPage,
+    currentPage * universitiesPerPage
+  );
 
   // Mark/unmark as featured
   const toggleFeatured = async (universityId: string, currentFeatured: boolean) => {
@@ -330,59 +339,83 @@ const FeaturedUniversitiesManagement: React.FC = () => {
             No universities found with current filters.
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredUniversities.map((university) => (
-              <div key={university.id} className="p-6 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-start gap-4">
-                      {university.logo_url && (
-                        <img
-                          src={university.logo_url}
-                          alt={`${university.name} logo`}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          {university.name}
-                        </h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <span className="flex items-center gap-2">
-                            <Building className="h-4 w-4" />
-                            {university.location}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            university.is_approved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {university.is_approved ? 'Approved' : 'Pending'}
-                          </span>
-                          {university.is_featured && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              ★ Featured
+          <>
+            <div className="divide-y divide-gray-200">
+              {paginatedUniversities.map((university) => (
+                <div key={university.id} className="p-6 hover:bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-4">
+                        {university.logo_url && (
+                          <img
+                            src={university.logo_url}
+                            alt={`${university.name} logo`}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            {university.name}
+                          </h3>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span className="flex items-center gap-2">
+                              <Building className="h-4 w-4" />
+                              {university.location}
                             </span>
-                          )}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              university.is_approved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {university.is_approved ? 'Approved' : 'Pending'}
+                            </span>
+                            {university.is_featured && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                ★ Featured
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="ml-4">
-                    <button
-                      onClick={() => toggleFeatured(university.id, !!university.is_featured)}
-                      disabled={!university.is_featured && universities.filter(u => u.is_featured).length >= 6}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        university.is_featured
-                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400'
-                      }`}
-                    >
-                      {university.is_featured ? '★ Featured' : '☆ Mark'}
-                    </button>
+                    <div className="ml-4">
+                      <button
+                        onClick={() => toggleFeatured(university.id, !!university.is_featured)}
+                        disabled={!university.is_featured && universities.filter(u => u.is_featured).length >= 6}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          university.is_featured
+                            ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400'
+                        }`}
+                      >
+                        {university.is_featured ? '★ Featured' : '☆ Mark'}
+                      </button>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 py-6">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 disabled:bg-gray-200 disabled:text-gray-400"
+                >
+                  Previous
+                </button>
+                <span className="px-2 text-sm text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 disabled:bg-gray-200 disabled:text-gray-400"
+                >
+                  Next
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

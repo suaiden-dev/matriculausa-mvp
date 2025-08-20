@@ -211,7 +211,7 @@ const AdminPayoutRequests: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Payout Requests</h1>
           <p className="text-slate-600 mt-2">
-                            Manage university payment requests
+            Manage university payment requests
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -231,7 +231,7 @@ const AdminPayoutRequests: React.FC = () => {
           const Icon = config.icon;
           
           return (
-            <div key={status} className={`${config.bgColor} border border-slate-200 rounded-xl p-4`}>
+            <div key={status} className={`bg-white border border-slate-200 rounded-xl p-4`}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600 capitalize">
@@ -274,7 +274,7 @@ const AdminPayoutRequests: React.FC = () => {
             return (
               <div 
                 key={request.id} 
-                className={`${statusConfig.bgColor} border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 cursor-pointer`}
+                className={`bg-white border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 cursor-pointer`}
                 onClick={() => {
                   setSelectedRequest(request);
                   setShowDetails(true);
@@ -390,7 +390,7 @@ const AdminPayoutRequests: React.FC = () => {
                       className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
                     >
                       <CheckCircle className="h-4 w-4" />
-                      <span>Marcar como Pago</span>
+                      <span>Paid</span>
                     </button>
                   </div>
                 )}

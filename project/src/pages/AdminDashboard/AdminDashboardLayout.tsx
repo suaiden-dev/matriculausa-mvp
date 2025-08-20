@@ -48,6 +48,8 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/payments')) return 'payments';
     if (path.includes('/featured-universities')) return 'featured-universities';
     if (path.includes('/featured-scholarships')) return 'featured-scholarships';
+    if (path.includes('/payout-requests')) return 'payout-requests';
+    if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -132,7 +134,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
           {/* Admin Status */}
           <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center shadow-lg">
                 <Crown className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
@@ -142,7 +144,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
             </div>
             
             <div className="flex items-center justify-center mt-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-[#05294E]">
                 <Shield className="h-3 w-3 mr-1" />
                 Full Access
               </span>
@@ -161,7 +163,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   to={item.path}
                   className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-purple-600 text-white shadow-lg'
+                      ? 'bg-[#05294E] text-white shadow-lg'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
@@ -255,7 +257,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   onClick={() => { setUserMenuOpen(!userMenuOpen); setSidebarOpen(false); }}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-[#05294E] rounded-lg flex items-center justify-center">
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div className="hidden md:block text-left">

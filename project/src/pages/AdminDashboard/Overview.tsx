@@ -99,7 +99,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
       title: 'Monitor Scholarships',
       description: 'Track scholarship programs',
       icon: Award,
-      color: 'bg-gradient-to-r from-purple-500 to-purple-600',
+      color: 'bg-[#05294E]',
       link: '/admin/dashboard/scholarships',
       count: stats.totalScholarships
     }
@@ -160,11 +160,11 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
               <p className="text-sm font-medium text-slate-500 mb-1">Total Scholarships</p>
               <p className="text-3xl font-bold text-slate-900">{stats.totalScholarships}</p>
               <div className="flex items-center mt-2">
-                <DollarSign className="h-4 w-4 text-purple-500 mr-1" />
-                <span className="text-sm font-medium text-purple-600">{formatCurrency(stats.totalFunding)}</span>
+                <DollarSign className="h-4 w-4 text-[#05294E] mr-1" />
+                <span className="text-sm font-medium text-[#05294E]">{formatCurrency(stats.totalFunding)}</span>
               </div>
             </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+            <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Award className="h-7 w-7 text-white" />
             </div>
           </div>
@@ -432,7 +432,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           </div>
 
           {/* Admin Tools */}
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg text-white p-6">
+          <div className="bg-gradient-to-br from-[#05294E] to-blue-700 rounded-2xl shadow-lg text-white p-6">
             <h3 className="text-lg font-bold mb-4 flex items-center">
               <Crown className="h-5 w-5 mr-2" />
               Admin Tools
