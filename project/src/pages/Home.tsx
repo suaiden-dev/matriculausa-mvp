@@ -226,15 +226,6 @@ const Home: React.FC = () => {
                     className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                   
-                  {/* Type Badge */}
-                  <div className="absolute top-4 left-4">
-                    <span className={`px-3 py-1 rounded-xl text-xs font-bold text-white shadow-lg ${
-                      school.type === 'Private' ? 'bg-[#05294E]' : 'bg-green-600'
-                    }`}>
-                      {school.type || (school.is_public ? 'Public' : 'Private')}
-                    </span>
-                  </div>
-                  
                   {/* Ranking Badge */}
                   {school.ranking && (
                     <div className="absolute top-4 right-4">
@@ -483,7 +474,7 @@ const Home: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Maria Silva</div>
-                  <div className="text-sm text-[#05294E] font-medium">MIT, Computer Science</div>
+                  <div className="text-sm text-[#05294E] font-medium">Computer Science</div>
                 </div>
               </div>
             </div>
@@ -505,7 +496,7 @@ const Home: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Carlos Rodriguez</div>
-                  <div className="text-sm text-[#D0151C] font-medium">Harvard Business School</div>
+                  <div className="text-sm text-[#D0151C] font-medium">Business School</div>
                 </div>
               </div>
             </div>
@@ -527,7 +518,7 @@ const Home: React.FC = () => {
                 />
                 <div>
                   <div className="font-bold text-slate-900">Ana Chen</div>
-                  <div className="text-sm text-green-600 font-medium">Stanford Engineering</div>
+                  <div className="text-sm text-green-600 font-medium">Engineering</div>
                 </div>
               </div>
             </div>
