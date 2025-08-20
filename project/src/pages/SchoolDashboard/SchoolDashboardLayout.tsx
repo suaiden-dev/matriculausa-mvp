@@ -159,7 +159,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
-    { id: 'stripe-transfers', label: 'Transferências', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null },
+    { id: 'stripe-transfers', label: 'Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
     {
