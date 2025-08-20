@@ -261,6 +261,127 @@ const MyApplications: React.FC = () => {
     return status.replace('_', ' ').toUpperCase();
   };
 
+  // Função para gerar mensagens detalhadas sobre o status
+  const getStatusDescription = (application: ApplicationWithScholarship) => {
+    const status = application.status;
+    const hasDocuments = (application as any)?.documents && Array.isArray((application as any).documents) && (application as any).documents.length > 0;
+    const hasPendingDocuments = hasDocuments && (application as any).documents.some((doc: any) => 
+      doc.status === 'pending' || doc.status === 'under_review' || doc.status === 'changes_requested'
+    );
+    const applicationFeePaid = !!(application as any).is_application_fee_paid;
+    const scholarshipFeePaid = !!(application as any).is_scholarship_fee_paid;
+
+    switch (status) {
+      case 'approved':
+        if (hasPendingDocuments) {
+          return {
+            title: 'Documents Approved by University',
+            description: 'Great news! Your application has been approved, but some documents still need attention.',
+            nextSteps: ['Complete any pending document uploads', 'Pay the application fee to secure your spot', 'Prepare for the next phase of enrollment'],
+            icon: '📋',
+            color: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200'
+          };
+        } else if (!applicationFeePaid) {
+          return {
+            title: 'Application Approved - Payment Required',
+            description: 'Congratulations! Your application has been fully approved. The next step is to pay the application fee.',
+            nextSteps: ['Pay the application fee to secure your scholarship', 'Complete enrollment process', 'Prepare for your academic journey'],
+            icon: '💳',
+            color: 'text-green-700',
+            bgColor: 'bg-green-50',
+            borderColor: 'border-green-200'
+          };
+        } else if (!scholarshipFeePaid) {
+          return {
+            title: 'Application Fee Paid - Scholarship Fee Required',
+            description: 'Excellent! Your application fee has been confirmed. Now pay the scholarship fee to finalize your enrollment.',
+            nextSteps: ['Pay the scholarship fee to complete enrollment', 'Receive final confirmation', 'Begin your academic program'],
+            icon: '🎓',
+            color: 'text-purple-700',
+            bgColor: 'bg-purple-50',
+            borderColor: 'border-purple-200'
+          };
+        } else {
+          return {
+            title: 'Fully Enrolled!',
+            description: 'Perfect! You have successfully completed all requirements and are officially enrolled.',
+            nextSteps: ['Access your student portal', 'Review class schedule', 'Connect with academic advisors'],
+            icon: '🎉',
+            color: 'text-emerald-700',
+            bgColor: 'bg-emerald-50',
+            borderColor: 'border-emerald-200'
+          };
+        }
+      
+      case 'rejected':
+        return {
+          title: 'Application Not Selected',
+          description: 'Unfortunately, your application was not selected for this scholarship opportunity.',
+          nextSteps: ['Review other available scholarships', 'Consider improving your application', 'Apply for different programs'],
+          icon: '📝',
+          color: 'text-red-700',
+          bgColor: 'bg-red-50',
+          borderColor: 'border-red-200'
+        };
+      
+      case 'under_review':
+        return {
+          title: 'Application Under Review',
+          description: 'Your application is currently being evaluated by the university. This process typically takes 2-4 weeks.',
+          nextSteps: ['Wait for university decision', 'Monitor your email for important notifications', 'Check application status regularly', 'Be patient during the review process'],
+          icon: '🔍',
+          color: 'text-amber-700',
+          bgColor: 'bg-amber-50',
+          borderColor: 'border-amber-200'
+        };
+      
+      case 'pending_scholarship_fee':
+        return {
+          title: 'Application Fee Confirmed',
+          description: 'Your application fee has been received and confirmed. You are now eligible for the scholarship.',
+          nextSteps: ['Pay the scholarship fee to complete enrollment', 'Submit any remaining documents', 'Prepare for your program start'],
+          icon: '✅',
+          color: 'text-blue-700',
+          bgColor: 'bg-blue-50',
+          borderColor: 'border-blue-200'
+        };
+      
+      case 'pending':
+      default:
+        if (hasPendingDocuments) {
+          return {
+            title: 'Documents Under University Review',
+            description: 'Your application has been submitted with all required documents. The university is currently reviewing your materials.',
+            nextSteps: ['Wait for university document review', 'Monitor your email for notifications', 'Check application status regularly'],
+            icon: '📋',
+            color: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200'
+          };
+        } else {
+          return {
+            title: 'Application Submitted',
+            description: 'Your application has been successfully submitted and is awaiting initial review.',
+            nextSteps: ['Wait for document review', 'Monitor application status', 'Prepare for next steps'],
+            icon: '📤',
+            color: 'text-slate-700',
+            bgColor: 'bg-slate-50',
+            borderColor: 'border-slate-200'
+          };
+        }
+    }
+  };
+
+  // Função para verificar se há documentos pendentes
+  const hasPendingDocuments = (application: ApplicationWithScholarship) => {
+    const docs = parseApplicationDocuments((application as any).documents);
+    return docs.some(doc => 
+      doc.status === 'pending' || doc.status === 'under_review' || doc.status === 'changes_requested'
+    );
+  };
+
   // Estilo para status dos documentos (nível do documento, não da aplicação)
   const getDocBadgeClasses = (status: string) => {
     const s = (status || '').toLowerCase();
@@ -591,12 +712,26 @@ const getLevelColor = (level: any) => {
 
         {/* Guidance: explain fees and next steps */}
         <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 lg:p-8 mb-8">
+          {/* Important Notice */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+            <div className="flex items-start">
+              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">!</div>
+              <div>
+                <h3 className="font-bold text-blue-900 text-sm mb-2">Stay Updated!</h3>
+                <p className="text-blue-800 text-sm leading-relaxed">
+                  <strong>Important:</strong> Always check your email for notifications from the university. 
+                  Application status updates, document requests, and important deadlines will be sent to your registered email address.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Mobile: Collapsible steps */}
           <div className="block sm:hidden">
             <details className="group">
               <summary className="flex items-center justify-between cursor-pointer p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">3</div>
+                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">4</div>
                   <span className="font-bold text-slate-900">Application Process Steps</span>
                 </div>
                 <svg className="w-5 h-5 text-blue-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -621,8 +756,15 @@ const getLevelColor = (level: any) => {
                 <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
                   <div>
-                    <div className="font-semibold text-slate-900 text-sm mb-1">Pay Fees</div>
-                    <div className="text-xs text-slate-600">Application Fee → Scholarship Fee</div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">Pay Application Fee</div>
+                    <div className="text-xs text-slate-600">Secure your approved scholarship spot</div>
+                  </div>
+                </div>
+                <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">4</div>
+                  <div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">Pay Scholarship Fee</div>
+                    <div className="text-xs text-slate-600">Complete enrollment and start your program</div>
                   </div>
                 </div>
               </div>
@@ -630,7 +772,7 @@ const getLevelColor = (level: any) => {
           </div>
 
           {/* Desktop: Original layout */}
-          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
               <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 1 — Submit your documents</div>
               <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Upload passport, high school diploma and proof of funds so the university can evaluate your application.</div>
@@ -639,9 +781,13 @@ const getLevelColor = (level: any) => {
               <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 2 — University review</div>
               <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Your application will show as Pending/Under Review until the university approves your candidacy.</div>
             </div>
-            <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 sm:col-span-2 lg:col-span-1">
-              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 3 — Payments</div>
-              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">After approval, pay the Application Fee. Once confirmed, pay the Scholarship Fee to secure your benefits.</div>
+            <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 3 — Application fee</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">After approval, pay the Application Fee to secure your scholarship spot and proceed to enrollment.</div>
+            </div>
+            <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 4 — Scholarship fee</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Once confirmed, pay the Scholarship Fee to complete enrollment and begin your academic program.</div>
             </div>
           </div>
         </div>
@@ -717,6 +863,10 @@ const getLevelColor = (level: any) => {
                       const applicationFeePaid = !!application.is_application_fee_paid;
                       const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
                       if (!scholarship) return null;
+
+                      // Obter descrição detalhada do status
+                      const statusInfo = getStatusDescription(application);
+                      
                       return (
                         <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
                 <div className="p-4 sm:p-6">
@@ -748,6 +898,37 @@ const getLevelColor = (level: any) => {
                         {scholarship.level.charAt(0).toUpperCase() + scholarship.level.slice(1)}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Status Description Card */}
+                  <div className={`mb-4 sm:mb-6 rounded-2xl p-4 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
+                    <div className="flex items-start mb-3">
+                      <div className="flex-1">
+                        <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
+                          {statusInfo.title}
+                        </h3>
+                        <p className="text-sm text-slate-700 leading-relaxed">
+                          {statusInfo.description}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Next Steps */}
+                    {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
+                          Next Steps:
+                        </h4>
+                        <ul className="space-y-2">
+                          {statusInfo.nextSteps.map((step, index) => (
+                            <li key={index} className="flex items-start text-xs text-slate-700">
+                              <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
+                              {step}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
   
                   {/* Details Section */}
@@ -794,11 +975,6 @@ const getLevelColor = (level: any) => {
                             ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
                           </span>
                         </div>
-                        {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 && (
-                          <div className="text-xs text-purple-600 mb-2 font-medium">
-                            Custom fee set by university
-                          </div>
-                        )}
                         {applicationFeePaid ? (
                           <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -894,6 +1070,10 @@ const getLevelColor = (level: any) => {
                       const Icon = getStatusIcon(application.status);
                       const scholarship = application.scholarships;
                       if (!scholarship) return null;
+
+                      // Obter descrição detalhada do status
+                      const statusInfo = getStatusDescription(application);
+                      
                       return (
                         <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
                           <div className="p-4 sm:p-6">
@@ -926,7 +1106,39 @@ const getLevelColor = (level: any) => {
                                 </span>
                               </div>
                             </div>
-                            
+
+                            {/* Status Description Card */}
+                            <div className={`mb-4 sm:mb-6 rounded-2xl p-4 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
+                              <div className="flex items-start mb-3">
+                                <div className="flex-1">
+                                  <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
+                                    {statusInfo.title}
+                                  </h3>
+                                  <p className="text-sm text-slate-700 leading-relaxed">
+                                    {statusInfo.description}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Next Steps */}
+                              {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
+                                <div className="mt-4">
+                                  <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
+                                    Next Steps:
+                                  </h4>
+                                  <ul className="space-y-2">
+                                    {statusInfo.nextSteps.map((step, index) => (
+                                      <li key={index} className="flex items-start text-xs text-slate-700">
+                                        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
+                                        {step}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Scholarship Details */}
                             <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-4 mb-6 border border-slate-200">
                               <div className="grid grid-cols-1 gap-4 text-sm">
                                 <div className="flex items-center">
