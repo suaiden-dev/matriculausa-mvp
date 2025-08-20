@@ -29,6 +29,8 @@ interface FeaturedScholarship extends Scholarship {
 
 const FeaturedScholarshipsManagement: React.FC = () => {
   const [scholarships, setScholarships] = useState<FeaturedScholarship[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const scholarshipsPerPage = 10;
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -89,6 +91,13 @@ const FeaturedScholarshipsManagement: React.FC = () => {
     
     return matchesSearch && matchesStatus;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredScholarships.length / scholarshipsPerPage);
+  const paginatedScholarships = filteredScholarships.slice(
+    (currentPage - 1) * scholarshipsPerPage,
+    currentPage * scholarshipsPerPage
+  );
 
   // Featured scholarships
   const featuredScholarships = scholarships.filter(s => s.is_highlighted).sort((a, b) => 
@@ -441,76 +450,100 @@ const FeaturedScholarshipsManagement: React.FC = () => {
             No scholarships found with current filters.
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredScholarships.map((scholarship) => (
-              <div key={scholarship.id} className="p-6 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-start gap-4">
-                      {scholarship.university_logo_url && (
-                        <img
-                          src={scholarship.university_logo_url}
-                          alt={`${scholarship.university_name} logo`}
-                          className="w-12 h-12 rounded-lg object-cover"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                          {scholarship.title}
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4" />
-                            <span>{scholarship.university_name}</span>
+          <>
+            <div className="divide-y divide-gray-200">
+              {paginatedScholarships.map((scholarship) => (
+                <div key={scholarship.id} className="p-6 hover:bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-4">
+                        {scholarship.university_logo_url && (
+                          <img
+                            src={scholarship.university_logo_url}
+                            alt={`${scholarship.university_name} logo`}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            {scholarship.title}
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Building className="h-4 w-4" />
+                              <span>{scholarship.university_name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              <span>{scholarship.field_of_study}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4" />
+                              <span>{formatCurrency(scholarship.annual_value_with_scholarship || 0)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Globe className="h-4 w-4" />
+                              <span>{scholarship.level}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4" />
-                            <span>{scholarship.field_of_study}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4" />
-                            <span>{formatCurrency(scholarship.amount || 0)}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4" />
-                            <span>{scholarship.level}</span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(scholarship.level)}`}>
-                            {scholarship.level}
-                          </span>
-                          {scholarship.is_exclusive && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                              Exclusive
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(scholarship.level)}`}>
+                              {scholarship.level}
                             </span>
-                          )}
-                          {scholarship.is_highlighted && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              ★ Featured
-                            </span>
-                          )}
+                            {scholarship.is_exclusive && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                Exclusive
+                              </span>
+                            )}
+                            {scholarship.is_highlighted && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                ★ Featured
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="ml-4">
-                    <button
-                      onClick={() => toggleFeatured(scholarship.id, !!scholarship.is_highlighted)}
-                      disabled={!scholarship.is_highlighted && featuredScholarships.length >= 6}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        scholarship.is_highlighted
-                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400'
-                      }`}
-                    >
-                      {scholarship.is_highlighted ? '★ Featured' : '☆ Mark'}
-                    </button>
+                    <div className="ml-4">
+                      <button
+                        onClick={() => toggleFeatured(scholarship.id, !!scholarship.is_highlighted)}
+                        disabled={!scholarship.is_highlighted && featuredScholarships.length >= 6}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          scholarship.is_highlighted
+                            ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400'
+                        }`}
+                      >
+                        {scholarship.is_highlighted ? '★ Featured' : '☆ Mark'}
+                      </button>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 py-6">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 disabled:bg-gray-200 disabled:text-gray-400"
+                >
+                  Previous
+                </button>
+                <span className="px-2 text-sm text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 disabled:bg-gray-200 disabled:text-gray-400"
+                >
+                  Next
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
