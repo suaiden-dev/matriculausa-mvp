@@ -253,7 +253,7 @@ const Universities: React.FC = () => {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 mb-8">
               {featuredUniversities.map((school) => (
                 <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
                   {/* Featured Badge */}
@@ -269,17 +269,10 @@ const Universities: React.FC = () => {
                     <img
                       src={school.logo_url || school.image || '/university-placeholder.png'}
                       alt={`${school.name} campus`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                     
-                    {/* Type Badge */}
-                    <div className="absolute top-4 left-4">
-                      <span className={`px-3 py-1 rounded-xl text-xs font-bold text-white shadow-lg ${
-                        school.type === 'Private' ? 'bg-[#05294E]' : 'bg-green-600'
-                      }`}>
-                        {school.type || (school.is_public ? 'Public' : 'Private')}
-                      </span>
-                    </div>
+                    
                     
                     {/* Ranking Badge */}
                     {school.ranking && (
@@ -337,7 +330,7 @@ const Universities: React.FC = () => {
         )}
 
         {/* Universities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading ? (
             skeletonArray.map((_, idx) => (
               <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-80" />
@@ -351,15 +344,6 @@ const Universities: React.FC = () => {
                   alt={`${school.name} campus`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                
-                {/* Type Badge */}
-                <div className="absolute top-4 left-4">
-                  <span className={`px-3 py-1 rounded-xl text-xs font-bold text-white shadow-lg ${
-                    school.type === 'Private' ? 'bg-[#05294E]' : 'bg-green-600'
-                  }`}>
-                    {school.type || (school.is_public ? 'Public' : 'Private')}
-                  </span>
-                </div>
                 
                 {/* Ranking Badge */}
                 {school.ranking && (
