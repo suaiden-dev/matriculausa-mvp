@@ -784,7 +784,7 @@ const Scholarships: React.FC = () => {
 
                      {/* Scholarship Image */}
                      <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
-                       {scholarship.image_url ? (
+                       {scholarship.image_url && isAuthenticated && userProfile?.has_paid_selection_process_fee ? (
                          <img
                            src={scholarship.image_url}
                            alt={scholarship.title}
@@ -1006,32 +1006,6 @@ const Scholarships: React.FC = () => {
              )}
            </div>
          </div>
-
-        {/* No Results */}
-        {filteredScholarships.length === 0 && (
-          <div className="text-center py-20">
-            <div className="bg-gradient-to-br from-slate-100 to-slate-200 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
-              <Award className="h-16 w-16 text-slate-400" />
-            </div>
-            <h3 className="text-3xl font-bold text-slate-600 mb-4">No scholarships found</h3>
-            <p className="text-slate-500 text-lg mb-8">Try adjusting your search criteria to discover more opportunities</p>
-            <button 
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedLevel('all');
-                setSelectedField('all');
-                setSelectedDeliveryMode('all');
-                setSelectedWorkPermission('all');
-                setMaxPrice(() => maxScholarshipValue);
-                setMinPrice(0);
-                localStorage.removeItem('scholarshipsPageFilters');
-              }}
-              className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"
-            >
-              Clear Filters
-            </button>
-          </div>
-        )}
 
         {/* Call to Action */}
         <div className="mt-20 bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] rounded-3xl p-12 text-white text-center relative overflow-hidden shadow-2xl">
