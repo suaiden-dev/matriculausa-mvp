@@ -13,12 +13,6 @@ export const profileFieldsConfig: FieldSection[] = [
         placeholder: 'Upload university logo'
       },
       {
-        key: 'banner_url',
-        label: 'University Banner',
-        type: 'image',
-        placeholder: 'Upload university banner image for hero section'
-      },
-      {
         key: 'name',
         label: 'University Name',
         type: 'text',
@@ -29,21 +23,21 @@ export const profileFieldsConfig: FieldSection[] = [
         key: 'description',
         label: 'Description',
         type: 'textarea',
+        required: true,
         placeholder: 'Describe your university...'
       },
       {
         key: 'website',
         label: 'Website',
         type: 'url',
-        placeholder: 'https://university.edu',
-        group: 'location-info'
+        placeholder: 'https://university.edu'
       },
       {
         key: 'location',
         label: 'Location',
         type: 'text',
-        placeholder: 'City, State',
-        group: 'location-info'
+        required: true,
+        placeholder: 'City, State, Country'
       }
     ],
     columns: 2
