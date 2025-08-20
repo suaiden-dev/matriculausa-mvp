@@ -718,9 +718,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
-
-      {/* Smart Chat with WhatsApp */}
-      <SmartChat />
+      
     </div>
   );
 };

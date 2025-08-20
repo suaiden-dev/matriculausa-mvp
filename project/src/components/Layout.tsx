@@ -4,6 +4,7 @@ import Footer from './Footer';
 // import StepByStepButton from './OnboardingTour/StepByStepButton';
 // import GuideTestButton from './OnboardingTour/GuideTestButton';
 import { useLocation } from 'react-router-dom';
+import SmartChat from './SmartChat';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname.startsWith('/student');
   const hideFooter = hideHeader;
   const isDashboard = hideHeader;
+  const isAdmin = location.pathname.startsWith('/admin');
+  
+  // Detectar se é uma tela de estudante para ajustar posicionamento
+  const isStudentPage = location.pathname.startsWith('/student');
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -26,6 +31,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {!hideHeader && <Header />}
       <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
         {children}
+        {
+          !isAdmin && <SmartChat 
+            isStudentPage={isStudentPage}
+          />
+        }
       </main>
       {!hideFooter && <Footer />}
       {/* <StepByStepButton /> */}

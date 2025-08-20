@@ -6,13 +6,18 @@ interface Message {
   timestamp: Date;
 }
 
-const SmartChat: React.FC = () => {
+interface SmartChatProps {
+  isStudentPage?: boolean;
+}
+
+const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
+  const [isHelpExpanded, setIsHelpExpanded] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +54,10 @@ const SmartChat: React.FC = () => {
       setIsOpen(false);
       setIsAnimating(false);
     }, 200);
+  };
+
+  const toggleHelp = () => {
+    setIsHelpExpanded(!isHelpExpanded);
   };
 
   const appendMessage = (sender: 'You' | 'AI', content: string) => {
@@ -101,21 +110,76 @@ const SmartChat: React.FC = () => {
 
   return (
     <>
-      {/* Smart Assistant Chat Bubble */}
+      {/* Botão de Ajuda - Dropdown para cima */}
+      <div
+        onClick={toggleHelp}
+        className={`w-16 h-16 rounded-full bg-[#193156] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(99,102,241,0.4)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-300 group relative hover:scale-105 ${
+          isHelpExpanded ? 'rotate-180 scale-110' : ''
+        }`}
+        style={{
+          position: 'fixed',
+          bottom: isStudentPage ? '100px' : '20px',
+          right: '20px',
+          width: '64px',
+          height: '64px',
+          zIndex: 10002,
+          background: '#193156',
+          boxShadow: '0 0 0 2.5px #f7f7f7, 0 6px 20px rgba(25,49,86,0.4)'
+        }}
+        title={"Help & Support Options"}
+      >
+        {/* Tooltip */}
+        {
+          !isHelpExpanded && (
+            <div className="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-3 py-1 bg-[#161d29] text-[#f7f7f7] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap border border-[#2e3f60] shadow-lg">
+              Help & Support
+              <div className="absolute top-1/2 left-full transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-[#161d29]"></div>
+            </div>
+          )
+        }
+        
+        {/* Ícone de Ajuda */}
+        <svg 
+          width="28" 
+          height="28" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          className={`transition-transform duration-300 ${isHelpExpanded ? 'rotate-180' : ''}`}
+        >
+          {/* Círculo de fundo */}
+          <circle cx="12" cy="12" r="12" fill="#193156" />
+          
+          {/* Borda branca */}
+          <circle cx="12" cy="12" r="11" fill="none" stroke="white" strokeWidth="2" />
+          
+          {/* Interrogação branca */}
+          <path 
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" 
+            fill="white"
+          />
+        </svg>
+      </div>
+
+      {/* Smart Assistant Chat Bubble - Com animação de dropdown */}
       <div
         onClick={openChat}
-        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-200 group relative ${
+        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center cursor-pointer z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out group relative ${
           isOpen ? 'scale-90 opacity-70' : 'hover:scale-105'
         }`}
         style={{
           position: 'fixed',
-          bottom: '100px',
+          bottom: isHelpExpanded 
+            ? (isStudentPage ? '256px' : '200px') 
+            : (isStudentPage ? '100px' : '20px'),
           right: '20px',
           width: '64px',
           height: '64px',
-          zIndex: 10000,
+          zIndex: 10001,
           background: 'linear-gradient(135deg, #193156 60%, #a41e22 100%)',
-          boxShadow: '0 0 0 2.5px #f7f7f7, 0 6px 20px rgba(10,20,40,0.6)'
+          boxShadow: '0 0 0 2.5px #f7f7f7, 0 6px 20px rgba(10,20,40,0.6)',
+          transform: `translateY(${isHelpExpanded ? '0px' : '0px'})`,
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
         title="Smart Assistant - Ask me anything!"
       >
@@ -132,18 +196,22 @@ const SmartChat: React.FC = () => {
         </svg>
       </div>
 
-      {/* WhatsApp Button */}
+      {/* WhatsApp Button - Com animação de dropdown */}
       <div
-        className="fixed rounded-full bg-[#25D366] text-white flex items-center justify-center cursor-pointer shadow-[0_8px_32px_rgba(37,211,102,0.3)] z-[1000] font-['Montserrat',Arial,sans-serif] hover:scale-105 transition-all duration-200 border-[3px] border-white group relative"
+        className="fixed rounded-full bg-[#25D366] text-white flex items-center justify-center  cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] hover:scale-105 transition-all duration-500 ease-out border-[3px] border-white group relative"
         style={{
           position: 'fixed',
-          bottom: '20px',
+          bottom: isHelpExpanded 
+            ? (isStudentPage ? '180px' : '120px') 
+            : (isStudentPage ? '100px' : '20px'),
           right: '20px',
           width: '64px',
           height: '64px',
-          zIndex: 9999,
+          zIndex: 10000,
           backgroundColor: '#25D366',
-          boxShadow: '0 8px 32px rgba(37, 211, 102, 0.3)'
+          boxShadow: '0 0 0 0, 0 6px 20px rgba(10,20,40,0.6)',
+          transform: `translateY(${isHelpExpanded ? '0px' : '0px'})`,
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
         title="Contact us via WhatsApp"
       >
