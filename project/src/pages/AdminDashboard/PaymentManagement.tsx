@@ -86,6 +86,10 @@ const PaymentManagement: React.FC = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20); // 20 itens por página para melhor visualização
+
   useEffect(() => {
     if (user && user.role === 'admin') {
       loadPaymentData();
@@ -96,6 +100,17 @@ const PaymentManagement: React.FC = () => {
   useEffect(() => {
     const saved = localStorage.getItem('payment-view-mode') as 'grid' | 'list';
     if (saved) setViewMode(saved);
+  }, []);
+
+  // Carregar preferência de itens por página
+  useEffect(() => {
+    const saved = localStorage.getItem('payment-items-per-page');
+    if (saved) {
+      const items = Number(saved);
+      if ([10, 20, 50, 100].includes(items)) {
+        setItemsPerPage(items);
+      }
+    }
   }, []);
 
   const loadUniversities = async () => {
@@ -380,6 +395,19 @@ const PaymentManagement: React.FC = () => {
     localStorage.setItem('payment-view-mode', mode);
   };
 
+  // Salvar preferência de itens por página
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset para primeira página
+    localStorage.setItem('payment-items-per-page', newItemsPerPage.toString());
+  };
+
+  // Resetar para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.search, filters.university, filters.feeType, filters.status, filters.dateFrom, filters.dateTo]);
+
+  // Calcular paginação
   const filteredPayments = payments.filter(payment => {
     const searchTerm = filters.search.toLowerCase();
     const matchesSearch = 
@@ -405,6 +433,64 @@ const PaymentManagement: React.FC = () => {
 
     return matchesSearch && matchesUniversity && matchesFeeType && matchesStatus && matchesDate;
   });
+
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPayments = filteredPayments.slice(startIndex, endIndex);
+
+  // Funções de navegação
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToFirstPage = () => {
+    setCurrentPage(1);
+  };
+
+  const goToLastPage = () => {
+    setCurrentPage(totalPages);
+  };
+
+  // Gerar array de páginas para exibição
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Se temos poucas páginas, mostrar todas
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Se temos muitas páginas, mostrar uma janela deslizante
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      // Ajustar se estamos no final
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
+  };
 
   const handleExport = () => {
     const csvContent = [
@@ -446,6 +532,7 @@ const PaymentManagement: React.FC = () => {
       dateFrom: '',
       dateTo: ''
     });
+    setCurrentPage(1); // Reset para primeira página
   };
 
   if (loading) {
@@ -660,6 +747,14 @@ const PaymentManagement: React.FC = () => {
 
         <div className="mt-4 text-sm text-gray-600">
           Showing {filteredPayments.length} of {payments.length} payments
+          {totalPages > 1 && (
+            <>
+              <span className="mx-2">•</span>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -694,7 +789,7 @@ const PaymentManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredPayments.length === 0 ? (
+                {currentPayments.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
                       <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
@@ -705,7 +800,7 @@ const PaymentManagement: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredPayments.map((payment) => (
+                  currentPayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -777,7 +872,7 @@ const PaymentManagement: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPayments.map((payment) => (
+          {currentPayments.map((payment) => (
             <div key={payment.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between hover:shadow-lg transition-all duration-300">
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -813,6 +908,116 @@ const PaymentManagement: React.FC = () => {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Paginação */}
+      {filteredPayments.length > 0 && totalPages > 1 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Informações da paginação */}
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length}
+              </span>
+              <span className="ml-2">
+                payments
+              </span>
+            </div>
+
+            {/* Controles de navegação */}
+            <div className="flex items-center gap-2">
+              {/* Botão Primeira Página */}
+              <button
+                onClick={goToFirstPage}
+                disabled={currentPage === 1}
+                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Go to first page"
+                aria-label="Go to first page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {/* Botão Página Anterior */}
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Go to previous page"
+                aria-label="Go to previous page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {/* Números das páginas */}
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => goToPage(page)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      page === currentPage
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title={`Go to page ${page}`}
+                    aria-label={`Go to page ${page}`}
+                    aria-current={page === currentPage ? 'page' : undefined}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              {/* Botão Próxima Página */}
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Go to next page"
+                aria-label="Go to next page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {/* Botão Última Página */}
+              <button
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages}
+                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Go to last page"
+                aria-label="Go to last page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Seletor de itens por página */}
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Show:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                className="px-2 py-1 border border-gray-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                title="Items per page"
+                aria-label="Items per page"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>per page</span>
+            </div>
+          </div>
         </div>
       )}
 
