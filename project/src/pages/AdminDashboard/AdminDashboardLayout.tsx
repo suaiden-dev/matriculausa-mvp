@@ -49,6 +49,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/featured-universities')) return 'featured-universities';
     if (path.includes('/featured-scholarships')) return 'featured-scholarships';
     if (path.includes('/payout-requests')) return 'payout-requests';
+    if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
