@@ -160,7 +160,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center">

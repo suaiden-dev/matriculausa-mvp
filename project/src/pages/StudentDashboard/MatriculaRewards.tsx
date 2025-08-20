@@ -57,6 +57,8 @@ const MatriculaRewards: React.FC = () => {
   const [universitiesLoading, setUniversitiesLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [universitiesPerPage] = useState(9); // 3x3 grid
+  const [searchTerm, setSearchTerm] = useState('');
+  // Removido selectedType
 
   useEffect(() => {
     if (user?.id) {
@@ -68,6 +70,11 @@ const MatriculaRewards: React.FC = () => {
     // Dispara apenas quando o identificador do usuário mudar,
     // evitando re-fetch em eventos de refresh de token/visibility
   }, [user?.id]);
+
+  useEffect(() => {
+    // Reset to first page when search changes
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const loadParticipatingUniversities = async () => {
     try {
@@ -356,6 +363,14 @@ const MatriculaRewards: React.FC = () => {
     );
   }
 
+  const filteredUniversities = participatingUniversities.filter(university => {
+    const matchesSearchTerm = !searchTerm || 
+      university.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      university.location.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesSearchTerm;
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-10">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
@@ -577,15 +592,43 @@ const MatriculaRewards: React.FC = () => {
             they may not have opted to participate in the program yet.
           </p>
           
+          {/* Search Component */}
+          <div className="mb-6">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search universities by name, location, or type..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <svg className="h-5 w-5 text-slate-400 hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+          
           {universitiesLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-2 text-slate-600">Loading universities...</span>
             </div>
-          ) : participatingUniversities.length > 0 ? (
+          ) : filteredUniversities.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {participatingUniversities
+                {filteredUniversities
                   .slice((currentPage - 1) * universitiesPerPage, currentPage * universitiesPerPage)
                   .map((university) => (
                   <div key={university.id} className="rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow">
@@ -616,7 +659,7 @@ const MatriculaRewards: React.FC = () => {
               </div>
               
               {/* Pagination Controls */}
-              {participatingUniversities.length > universitiesPerPage && (
+              {filteredUniversities.length > universitiesPerPage && (
                 <div className="mt-8 flex items-center justify-center space-x-2">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -627,7 +670,7 @@ const MatriculaRewards: React.FC = () => {
                   </button>
                   
                   <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.ceil(participatingUniversities.length / universitiesPerPage) }, (_, i) => (
+                    {Array.from({ length: Math.ceil(filteredUniversities.length / universitiesPerPage) }, (_, i) => (
                       <button
                         key={i + 1}
                         onClick={() => setCurrentPage(i + 1)}
@@ -643,8 +686,8 @@ const MatriculaRewards: React.FC = () => {
                   </div>
                   
                   <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(participatingUniversities.length / universitiesPerPage)))}
-                    disabled={currentPage === Math.ceil(participatingUniversities.length / universitiesPerPage)}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredUniversities.length / universitiesPerPage)))}
+                    disabled={currentPage === Math.ceil(filteredUniversities.length / universitiesPerPage)}
                     className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
@@ -653,9 +696,9 @@ const MatriculaRewards: React.FC = () => {
               )}
               
               {/* Page Info */}
-              {participatingUniversities.length > universitiesPerPage && (
+              {filteredUniversities.length > universitiesPerPage && (
                 <div className="text-center text-sm text-slate-500 mt-2">
-                  Showing {((currentPage - 1) * universitiesPerPage) + 1} to {Math.min(currentPage * universitiesPerPage, participatingUniversities.length)} of {participatingUniversities.length} universities
+                  Showing {((currentPage - 1) * universitiesPerPage) + 1} to {Math.min(currentPage * universitiesPerPage, filteredUniversities.length)} of {filteredUniversities.length} universities
                 </div>
               )}
             </>
@@ -671,7 +714,7 @@ const MatriculaRewards: React.FC = () => {
             </div>
           )}
           
-          {participatingUniversities.length > 0 && (
+          {filteredUniversities.length > 0 && (
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 flex-shrink-0 mt-0.5">

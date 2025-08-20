@@ -43,6 +43,8 @@ const UniversityProgramOptInModal: React.FC<UniversityProgramOptInModalProps> = 
     
     setHasAccepted(true);
     onAccept();
+    // Recarregar a página automaticamente
+    window.location.reload();
   };
 
   const handleDecline = async () => {

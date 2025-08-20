@@ -137,24 +137,26 @@ const StudentManagement: React.FC = () => {
       title="Complete your profile to manage students"
       description="Finish setting up your university profile to view and manage student applications"
     >
-      <div className="min-h-screen">
-
-
-        {/* Filters and Search Section */}
-        <div className="max-w-7xl">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+      <div className="min-h-screen px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             {/* Page Header */}
             <div className="bg-slate-50 border-b border-slate-200">
-              <div className="px-6 py-4">
-                <div className="flex items-center justify-between">
+              <div className="px-4 sm:px-6 py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center space-x-3">
-                    <Users className="w-5 h-5 text-[#05294E]" />
-                    <h2 className="text-lg font-semibold text-slate-900">All Students</h2>
-                    <span className="text-sm text-slate-600">
-                      (students who have paid both Application Fee and Scholarship Fee)
-                    </span>
+                    <Users className="w-5 h-5 text-[#05294E] flex-shrink-0" />
+                    <div>
+                      <h2 className="text-base sm:text-lg font-semibold text-slate-900">All Students</h2>
+                      <p className="text-xs text-slate-600 mt-0.5 block md:hidden">
+                        (Paid Application & Scholarship Fee)
+                      </p>
+                      <p className="text-xs sm:text-sm text-slate-600 hidden md:block">
+                        (students who have paid both Application Fee and Scholarship Fee)
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300">
+                  <div className="flex items-center self-end sm:self-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 flex-shrink-0">
                     <Users className="w-4 h-4 mr-1.5" />
                     {filteredApplications.length} Students
                   </div>
@@ -163,16 +165,16 @@ const StudentManagement: React.FC = () => {
             </div>
 
             {/* Search and Filters */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                 {/* Search Bar */}
-                <div className="lg:col-span-2">
+                <div className="sm:col-span-2 lg:col-span-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <input
                       type="text"
                       placeholder="Search students..."
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -180,9 +182,9 @@ const StudentManagement: React.FC = () => {
                 </div>
 
                 {/* Scholarship Filter */}
-                <div>
+                <div className="lg:col-span-1">
                   <select
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    className="w-full px-3 py-2 sm:py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     value={selectedScholarship}
                     onChange={(e) => setSelectedScholarship(e.target.value)}
                   >
@@ -193,10 +195,10 @@ const StudentManagement: React.FC = () => {
                   </select>
                 </div>
 
-                                 {/* Status Filter */}
-                 <div>
+                {/* Status Filter */}
+                <div className="lg:col-span-1">
                    <select
-                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                     className="w-full px-3 py-2 sm:py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                      value={selectedStatus}
                      onChange={(e) => setSelectedStatus(e.target.value)}
                    >
@@ -209,9 +211,9 @@ const StudentManagement: React.FC = () => {
                  </div>
 
                 {/* Country Filter */}
-                <div>
+                <div className="lg:col-span-1">
                   <select
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    className="w-full px-3 py-2 sm:py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     value={selectedCountry}
                     onChange={(e) => setSelectedCountry(e.target.value)}
                   >
@@ -227,11 +229,11 @@ const StudentManagement: React.FC = () => {
 
           {/* Students Grid */}
           <div className="space-y-4">
-                         {filteredApplications.length === 0 ? (
-               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-                 <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                 <h3 className="text-lg font-medium text-slate-900 mb-2">No students with both fees paid</h3>
-                 <p className="text-slate-600">Students will appear here once they have paid both Application Fee and Scholarship Fee.</p>
+             {filteredApplications.length === 0 ? (
+               <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 p-8 sm:p-12 text-center">
+                 <Users className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-4" />
+                 <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students with both fees paid</h3>
+                 <p className="text-sm sm:text-base text-slate-600 max-w-md mx-auto">Students will appear here once they have paid both Application Fee and Scholarship Fee.</p>
                </div>
              ) : (
               filteredApplications.map((app) => {
@@ -243,32 +245,32 @@ const StudentManagement: React.FC = () => {
                     <Link 
                       to={`/school/dashboard/student/${app.id}`} 
                       key={app.id} 
-                      className="block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200"
+                      className="block bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200"
                     >
-                      <div className="p-6">
-                        <div className="flex sm:flex-row items-start sm:items-center justify-between">
-                          <div className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-0">
+                      <div className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                          <div className="flex items-start space-x-4 flex-1 min-w-0">
                             {student?.avatar_url ? (
                               <img
                                 src={student.avatar_url}
                                 alt={student?.full_name || student?.name || 'Student Avatar'}
-                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 bg-slate-100"
+                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
                               />
                             ) : (
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center">
-                                <span className="text-white font-semibold text-sm sm:text-lg">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span className="text-white font-semibold text-base sm:text-lg">
                                   {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
                                 </span>
                               </div>
                             )}
-                            <div>
-                              <h3 className="text-sm text-wrap sm:text-lg font-semibold text-slate-900">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
                                 {student?.full_name || student?.name || 'Unknown Student'}
                               </h3>
-                              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-slate-600 mt-1">
                                 {student?.country && (
                                   <div className="flex items-center">
-                                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-slate-400" />
                                     {student.country}
                                   </div>
                                 )}
@@ -276,17 +278,17 @@ const StudentManagement: React.FC = () => {
                               
                               {/* Scholarship Information */}
                               {(app as any).scholarships && (
-                                <div className="mt-2 flex items-center space-x-1">
-                                  <span className="text-xs text-slate-600">
-                                    <span className="font-medium">Scholarship:</span> {(app as any).scholarships.title}
-                                  </span>
+                                <div className="mt-2 flex items-center text-xs text-slate-600">
+                                  <FileText className="w-3 h-3 mr-1.5 text-slate-400 flex-shrink-0" />
+                                  <span className="font-medium mr-1">Scholarship:</span> 
+                                  <span className="truncate">{(app as any).scholarships.title}</span>
                                 </div>
                               )}
                             </div>
                           </div>
                         
-                          <div className="flex flex-col items-end space-y-2 sm:space-y-3">
-                            <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${status.class}`}>
+                          <div className="flex flex-col items-stretch sm:items-end space-y-2 w-full sm:w-auto flex-shrink-0">
+                            <span className={`inline-flex items-center justify-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${status.class}`}>
                               <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
                               {status.text}
                             </span>

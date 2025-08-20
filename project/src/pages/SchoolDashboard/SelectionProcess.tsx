@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Clock, FileText, Globe, Phone, AlertCircle, Eye, Download, CheckCircle2, XCircle, UserCircle, ArrowLeft } from 'lucide-react';
+import { Search, Clock, FileText, Globe, Phone, AlertCircle, Eye, Download, CheckCircle2, XCircle, UserCircle, ArrowLeft, X } from 'lucide-react';
 import type { Scholarship, Application, UserProfile } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -1551,22 +1551,22 @@ const SelectionProcess: React.FC = () => {
 
           {/* Selection Process Summary */}
           {selectionProcessApplications.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900">Selection Process Active</h3>
-                    <p className="text-sm text-slate-600">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Selection Process Active</h3>
+                    <p className="text-xs sm:text-sm text-slate-600">
                       {selectionProcessApplications.length} students are pending fee payments to complete enrollment
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">{selectionProcessApplications.length}</div>
-                  <div className="text-sm text-slate-600">Pending Fees</div>
+                <div className="text-center sm:text-right">
+                  <div className="text-xl sm:text-2xl font-bold text-blue-600">{selectionProcessApplications.length}</div>
+                  <div className="text-xs sm:text-sm text-slate-600">Pending Fees</div>
                 </div>
               </div>
             </div>
@@ -1575,18 +1575,18 @@ const SelectionProcess: React.FC = () => {
           {/* Students Grid */}
           <div className="space-y-4">
             {filteredApplications.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 sm:p-12 text-center">
                 {selectionProcessApplications.length === 0 ? (
                   <>
-                    <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">No students pending fees</h3>
-                    <p className="text-slate-600">All students have completed their fee payments and moved to the Students page.</p>
+                    <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students pending fees</h3>
+                    <p className="text-sm sm:text-base text-slate-600">All students have completed their fee payments and moved to the Students page.</p>
                   </>
                 ) : (
                   <>
-                    <Search className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">No students found</h3>
-                    <p className="text-slate-600">Try adjusting your filters or search terms.</p>
+                    <Search className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students found</h3>
+                    <p className="text-sm sm:text-base text-slate-600">Try adjusting your filters or search terms.</p>
                   </>
                 )}
               </div>
@@ -1602,46 +1602,46 @@ const SelectionProcess: React.FC = () => {
                     onClick={() => fetchStudentDetails(app.id)}
                     className="block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
                   >
-                    <div className="p-6">
-                      <div className="flex sm:flex-row items-start sm:items-center justify-between">
-                        <div className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-0 flex-1">
+                    <div className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                           {student?.avatar_url ? (
                             <img
                               src={student.avatar_url}
                               alt={student?.full_name || student?.name || 'Student Avatar'}
-                              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 bg-slate-100"
+                              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                              <span className="text-white font-semibold text-sm sm:text-lg">
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-white font-semibold text-base sm:text-lg">
                                 {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
                               </span>
                             </div>
                           )}
                           
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-sm text-wrap sm:text-lg font-semibold text-slate-900">
+                            <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words">
                               {student?.full_name || student?.name || 'Unknown Student'}
                             </h3>
-                            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
+                            <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-600 mt-1">
                               {student?.country && (
                                 <div className="flex items-center">
-                                  <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                  {student.country}
+                                  <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                                  <span className="truncate">{student.country}</span>
                                 </div>
                               )}
                               {student?.phone && (
                                 <div className="flex items-center">
-                                  <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                  {student.phone}
+                                  <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                                  <span className="truncate">{student.phone}</span>
                                 </div>
                               )}
                             </div>
                             
                             {/* Document Progress */}
-                            <div className="mt-2 flex items-center space-x-2">
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
                               <div className="flex items-center space-x-1">
-                                <FileText className="w-3 h-3 text-slate-400" />
+                                <FileText className="w-3 h-3 text-slate-400 flex-shrink-0" />
                                 <span className="text-xs text-slate-600">
                                   Documents: {progress.reviewed}/{progress.total} reviewed
                                 </span>
@@ -1656,8 +1656,8 @@ const SelectionProcess: React.FC = () => {
                             
                             {/* Scholarship Information */}
                             {(app as any).scholarships && (
-                              <div className="mt-2 flex items-center space-x-1">
-                                <span className="text-xs text-slate-600">
+                              <div className="mt-2">
+                                <span className="text-xs text-slate-600 break-words">
                                   <span className="font-medium">Scholarship:</span> {(app as any).scholarships.title}
                                 </span>
                               </div>
@@ -1665,7 +1665,7 @@ const SelectionProcess: React.FC = () => {
                           </div>
                         </div>
                       
-                        <div className="flex flex-col items-end space-y-2 sm:space-y-3">
+                        <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-3">
                           <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
                             <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
                             In Review
@@ -1685,23 +1685,30 @@ const SelectionProcess: React.FC = () => {
 
         {/* Student Details View */}
         {selectedStudent && (
-          <div className="fixed top-20 bottom-0 left-0 right-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto">
+          <div className="fixed inset-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto">
             <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
               
 
               {/* Page Title and Navigation Section */}
               <div className="bg-white border-b border-slate-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
                         Student Application
                       </h1>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-slate-600 break-words">
                         Review and manage {selectedStudent.user_profiles.full_name}'s application details
                       </p>
                     </div>
                     <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => setSelectedStudent(null)}
+                        className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+                      >
+                        <X className="w-4 h-4 mr-1.5" />
+                        Close
+                      </button>
                       {selectedStudent.status === 'enrolled' || selectedStudent.acceptance_letter_status === 'approved' ? (
                         <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
                           <CheckCircle2 className="w-4 h-4 mr-1.5" />
@@ -1742,7 +1749,7 @@ const SelectionProcess: React.FC = () => {
               </div>
 
               {/* Student Details Content */}
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
                 {studentLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
@@ -1754,67 +1761,67 @@ const SelectionProcess: React.FC = () => {
                         <div className="lg:col-span-8 space-y-6">
                           {/* Student Information Card */}
                           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-5 py-3">
-                              <h2 className="text-lg font-semibold text-white flex items-center">
-                                <UserCircle className="w-5 h-5 mr-2" />
+                            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-4 sm:px-5 py-3">
+                              <h2 className="text-base sm:text-lg font-semibold text-white flex items-center">
+                                <UserCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                                 Student Information
                               </h2>
                             </div>
-                            <div className="p-5">
-                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="p-4 sm:p-5">
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                                 {/* Personal Information */}
                                 <div className="space-y-4">
-                                  <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Personal Details</h3>
+                                  <h3 className="text-base sm:text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Personal Details</h3>
                                   <div className="space-y-3">
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Full Name</dt>
-                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.full_name}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Full Name</dt>
+                                      <dd className="text-sm sm:text-base font-semibold text-slate-900 mt-1 break-words">{selectedStudent.user_profiles.full_name}</dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Email</dt>
-                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.email || 'Not provided'}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Email</dt>
+                                      <dd className="text-sm sm:text-base text-slate-900 mt-1 break-words">{selectedStudent.user_profiles.email || 'Not provided'}</dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Phone</dt>
-                                      <dd className="text-base text-slate-900 mt-1">{selectedStudent.user_profiles.phone || 'Not provided'}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Phone</dt>
+                                      <dd className="text-sm sm:text-base text-slate-900 mt-1">{selectedStudent.user_profiles.phone || 'Not provided'}</dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Country</dt>
-                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.country || 'Not specified'}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Country</dt>
+                                      <dd className="text-sm sm:text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.country || 'Not specified'}</dd>
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Academic Information */}
                                 <div className="space-y-4">
-                                  <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Academic Profile</h3>
+                                  <h3 className="text-base sm:text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Academic Profile</h3>
                                   <div className="space-y-3">
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Field of Interest</dt>
-                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.field_of_interest || 'Not specified'}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Field of Interest</dt>
+                                      <dd className="text-sm sm:text-base font-semibold text-slate-900 mt-1 break-words">{selectedStudent.user_profiles.field_of_interest || 'Not specified'}</dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Academic Level</dt>
-                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.academic_level || 'Not specified'}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Academic Level</dt>
+                                      <dd className="text-sm sm:text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.academic_level || 'Not specified'}</dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">GPA</dt>
-                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.gpa || 'Not provided'}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">GPA</dt>
+                                      <dd className="text-sm sm:text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.gpa || 'Not provided'}</dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">English Proficiency</dt>
-                                      <dd className="text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.english_proficiency || 'Not specified'}</dd>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">English Proficiency</dt>
+                                      <dd className="text-sm sm:text-base font-semibold text-slate-900 mt-1">{selectedStudent.user_profiles.english_proficiency || 'Not specified'}</dd>
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Application & Status */}
                                 <div className="space-y-4">
-                                  <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Application Status</h3>
+                                  <h3 className="text-base sm:text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Application Status</h3>
                                   <div className="space-y-3">
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Student Type</dt>
-                                      <dd className="text-base font-semibold text-slate-900 mt-1">
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Student Type</dt>
+                                      <dd className="text-sm sm:text-base font-semibold text-slate-900 mt-1 break-words">
                                         {selectedStudent.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
                                          selectedStudent.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
                                          selectedStudent.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
@@ -1822,13 +1829,13 @@ const SelectionProcess: React.FC = () => {
                                       </dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Application Fee</dt>
                                       <dd className="mt-1">
                                         <div className="flex items-center space-x-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             selectedStudent.user_profiles.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
                                           }`}></div>
-                                          <span className={`text-sm font-medium ${
+                                          <span className={`text-xs sm:text-sm font-medium ${
                                             selectedStudent.user_profiles.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
                                           }`}>
                                             {selectedStudent.user_profiles.is_application_fee_paid ? 'Paid' : 'Pending'}
@@ -1837,7 +1844,7 @@ const SelectionProcess: React.FC = () => {
                                       </dd>
                                     </div>
                                     <div>
-                                      <dt className="text-sm font-medium text-slate-600">Documents Status</dt>
+                                      <dt className="text-xs sm:text-sm font-medium text-slate-600">Documents Status</dt>
                                       <dd className="mt-1">
                                         <div className="flex items-center space-x-2">
                                           <div className={`w-2 h-2 rounded-full ${
@@ -1847,7 +1854,7 @@ const SelectionProcess: React.FC = () => {
                                             selectedStudent.user_profiles.documents_status === 'analyzing' ? 'bg-blue-500' :
                                             'bg-slate-400'
                                           }`}></div>
-                                          <span className={`text-sm font-medium ${
+                                          <span className={`text-xs sm:text-sm font-medium ${
                                             selectedStudent.user_profiles.documents_status === 'approved' ? 'text-green-700' :
                                             selectedStudent.user_profiles.documents_status === 'rejected' ? 'text-red-700' :
                                             selectedStudent.user_profiles.documents_status === 'pending' ? 'text-yellow-700' :
@@ -1937,16 +1944,16 @@ const SelectionProcess: React.FC = () => {
 
                           {/* Document Review & Approval Section */}
                           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-5 py-3">
-                              <h2 className="text-lg font-semibold text-white flex items-center">
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-4 sm:px-5 py-3">
+                              <h2 className="text-base sm:text-lg font-semibold text-white flex items-center">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 Document Review & Approval
                               </h2>
-                              <p className="text-slate-200 text-sm mt-1">Review each document and approve or request changes</p>
+                              <p className="text-slate-200 text-xs sm:text-sm mt-1">Review each document and approve or request changes</p>
                             </div>
-                            <div className="p-5">
+                            <div className="p-4 sm:p-5">
                               <div className="space-y-0">
                                 {DOCUMENTS_INFO.map((doc, index) => {
                                   const d = latestDocByType(doc.key);
@@ -1954,17 +1961,17 @@ const SelectionProcess: React.FC = () => {
                                   
                                   return (
                                     <div key={doc.key}>
-                                      <div className="bg-white p-4">
-                                        <div className="flex items-start space-x-4">
-                                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <div className="bg-white p-3 sm:p-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0 sm:space-x-4">
+                                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                             </svg>
                                           </div>
                                           <div className="flex-1 min-w-0">
-                                            <div className="flex items-center space-x-3 mb-1">
-                                              <p className="font-medium text-slate-900">{doc.label}</p>
-                                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-3 mb-2">
+                                              <p className="text-sm sm:text-base font-medium text-slate-900">{doc.label}</p>
+                                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                                                 status === 'approved' ? 'bg-green-100 text-green-800' :
                                                 status === 'changes_requested' ? 'bg-red-100 text-red-800' :
                                                 status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
@@ -1976,61 +1983,64 @@ const SelectionProcess: React.FC = () => {
                                                  d?.file_url ? 'Submitted' : 'Not Submitted'}
                                               </span>
                                             </div>
-                                            <p className="text-sm text-slate-600">{doc.description}</p>
+                                            <p className="text-xs sm:text-sm text-slate-600 mb-2">{doc.description}</p>
                                             {d?.file_url && (
-                                              <p className="text-xs text-slate-400 mt-1">
+                                              <p className="text-xs text-slate-400 mb-3">
                                                 Uploaded: {d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : new Date().toLocaleDateString()}
                                               </p>
                                             )}
                                             
-                                            {/* Botões posicionados abaixo das informações */}
-                                            <div className="flex items-center space-x-2 mt-3">
+                                            {/* Botões responsivos */}
+                                            <div className="flex flex-col sm:flex-row gap-2">
                                               {/* Botões de Preview e Download */}
                                               {d?.file_url && (
-                                                <div className="flex items-center space-x-2 mr-3">
+                                                <div className="flex gap-2">
                                                   <button 
                                                     onClick={() => handleViewDocument(d)}
-                                                    className="flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                                    className="flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
                                                   >
-                                                    <Eye className="w-4 h-4 mr-2" />
+                                                    <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
                                                     Preview
                                                   </button>
                                                   <button 
                                                     onClick={() => handleDownloadDocument(d)}
-                                                    className="flex items-center px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
+                                                    className="flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors" 
                                                   >
-                                                    <Download className="w-4 h-4 mr-2" />
+                                                    <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
                                                     Download
                                                   </button>
                                                 </div>
                                               )}
                                               
-                                              {/* Botões de Approve e Request Changes - MANTIDOS */}
-                                              <button
-                                                disabled={!d || updating === d.type || status === 'approved'}
-                                                onClick={() => d && approveDoc(d.type)}
-                                                className={`flex items-center px-3 py-1.5 text-sm fontmedium rounded-lg transition-colors ${
-                                                  status === 'approved' 
-                                                    ? 'bg-green-600 text-white' 
-                                                    : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
-                                                }`}
-                                              >
-                                                <CheckCircle2 className="w-4 h-4 mr-2" />
-                                                {status === 'approved' ? 'Approved' : 'Approve'}
-                                              </button>
-                                              <button
-                                                disabled={!d || updating === d.type || status === 'approved'}
-                                                onClick={() => {
-                                                  if (d) {
-                                                    setPendingRejectType(d.type);
-                                                    setShowReasonModal(true);
-                                                  }
-                                                }}
-                                                className="flex items-center px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-                                              >
-                                                <XCircle className="w-4 h-4 mr-2" />
-                                                Request Changes
-                                              </button>
+                                              {/* Botões de Approve e Request Changes */}
+                                              <div className="flex gap-2">
+                                                <button
+                                                  disabled={!d || updating === d.type || status === 'approved'}
+                                                  onClick={() => d && approveDoc(d.type)}
+                                                  className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
+                                                    status === 'approved' 
+                                                      ? 'bg-green-600 text-white' 
+                                                      : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
+                                                  }`}
+                                                >
+                                                  <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                                                  {status === 'approved' ? 'Approved' : 'Approve'}
+                                                </button>
+                                                <button
+                                                  disabled={!d || updating === d.type || status === 'approved'}
+                                                  onClick={() => {
+                                                    if (d) {
+                                                      setPendingRejectType(d.type);
+                                                      setShowReasonModal(true);
+                                                    }
+                                                  }}
+                                                  className="flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                                                >
+                                                  <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                                                  <span className="hidden sm:inline">Request Changes</span>
+                                                  <span className="sm:hidden">Changes</span>
+                                                </button>
+                                              </div>
                                             </div>
                                           </div>
                                         </div>
@@ -2047,34 +2057,34 @@ const SelectionProcess: React.FC = () => {
 
                           {/* Final Application Approval Section */}
                           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-5 py-3">
-                              <h3 className="text-lg font-semibold text-white flex items-center">
-                                <CheckCircle2 className="w-5 h-5 mr-2" />
+                            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-4 sm:px-5 py-3">
+                              <h3 className="text-base sm:text-lg font-semibold text-white flex items-center">
+                                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                                 Final Application Approval
                               </h3>
                             </div>
-                            <div className="p-5">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-slate-900 font-medium">
+                            <div className="p-4 sm:p-5">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm sm:text-base text-slate-900 font-medium">
                                     {allApproved ? 'All documents have been approved' : 'Approve all documents to proceed'}
                                   </p>
-                                  <p className="text-sm text-slate-600 mt-1">
+                                  <p className="text-xs sm:text-sm text-slate-600 mt-1">
                                     This will approve the student's application and allow them to proceed with the next steps.
                                   </p>
                                 </div>
-                                <div className="flex gap-3">
+                                <div className="flex flex-col sm:flex-row gap-3">
                                   <button
                                     onClick={() => setShowRejectStudentModal(true)}
                                     disabled={acceptanceLoading || rejectingLoading}
-                                    className="px-5 py-2 rounded-lg font-semibold text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                    className="px-4 sm:px-5 py-2 rounded-lg font-semibold text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors text-center"
                                   >
                                     Reject Application
                                   </button>
                                   <button
                                     disabled={!allApproved || acceptanceLoading || rejectingLoading}
                                     onClick={approveStudent}
-                                    className="px-5 py-2 rounded-lg font-semibold bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 transition-colors"
+                                    className="px-4 sm:px-5 py-2 rounded-lg font-semibold bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 transition-colors text-center"
                                   >
                                     {acceptanceLoading ? 'Approving...' : 'Approve Student'}
                                   </button>
@@ -2088,13 +2098,13 @@ const SelectionProcess: React.FC = () => {
                         <div className="lg:col-span-4 space-y-6">
                           {/* Quick Stats Card */}
                           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-5 py-3">
-                              <h3 className="text-lg font-semibold text-white">Application Summary</h3>
+                            <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-4 sm:px-5 py-3">
+                              <h3 className="text-base sm:text-lg font-semibold text-white">Application Summary</h3>
                             </div>
-                            <div className="p-5 space-y-4">
+                            <div className="p-4 sm:p-5 space-y-4">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-slate-600">Status</span>
-                                <span className="text-sm text-slate-900">
+                                <span className="text-xs sm:text-sm text-slate-600">Status</span>
+                                <span className="text-xs sm:text-sm text-slate-900">
                                   {selectedStudent.status === 'enrolled' || selectedStudent.acceptance_letter_status === 'approved' ? 'Approved' : 'Pending'}
                                 </span>
                               </div>
@@ -2143,20 +2153,20 @@ const SelectionProcess: React.FC = () => {
 
         {/* New Request Modal */}
         {showNewRequestModal && selectedStudent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg mx-4 border border-slate-200">
-              <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">New Document Request</h3>
-              <p className="text-sm text-slate-600 mb-6 text-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8 w-full max-w-lg mx-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
+              <h3 className="font-extrabold text-lg sm:text-xl mb-4 sm:mb-6 text-[#05294E] text-center">New Document Request</h3>
+              <p className="text-xs sm:text-sm text-slate-600 mb-4 sm:mb-6 text-center">
                 Request a new document from {selectedStudent.user_profiles.full_name}
               </p>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">
                     Document Title <span className="text-red-500">*</span>
                   </label>
                   <input
-                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                    className="border border-slate-300 rounded-lg px-3 sm:px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-sm sm:text-base"
                     placeholder="e.g., Additional Reference Letter"
                     value={newDocumentRequest.title}
                     onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, title: e.target.value }))}
@@ -2165,11 +2175,11 @@ const SelectionProcess: React.FC = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">
                     Description
                   </label>
                   <textarea
-                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base min-h-[80px] resize-vertical"
+                    className="border border-slate-300 rounded-lg px-3 sm:px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-sm sm:text-base min-h-[80px] resize-vertical"
                     placeholder="Describe what document you need and any specific requirements..."
                     value={newDocumentRequest.description}
                     onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, description: e.target.value }))}
@@ -2178,11 +2188,11 @@ const SelectionProcess: React.FC = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">
                     Due Date
                   </label>
                   <input
-                    className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-base"
+                    className="border border-slate-300 rounded-lg px-3 sm:px-4 py-2 w-full focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition text-sm sm:text-base"
                     type="date"
                     value={newDocumentRequest.due_date}
                     onChange={(e) => setNewDocumentRequest(prev => ({ ...prev, due_date: e.target.value }))}
@@ -2190,12 +2200,12 @@ const SelectionProcess: React.FC = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">
                     Template/Attachment (Optional)
                   </label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <div className="flex flex-col sm:flex-row items-start gap-3">
+                    <label className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700 text-xs sm:text-sm">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" />
                       </svg>
                       <span>{newDocumentRequest.attachment ? 'Change file' : 'Select file'}</span>
@@ -2210,7 +2220,7 @@ const SelectionProcess: React.FC = () => {
                       />
                     </label>
                     {newDocumentRequest.attachment && (
-                      <span className="text-xs text-slate-700 truncate max-w-[180px]">
+                      <span className="text-xs text-slate-700 truncate max-w-[200px]">
                         {newDocumentRequest.attachment.name}
                       </span>
                     )}
@@ -2218,7 +2228,7 @@ const SelectionProcess: React.FC = () => {
                 </div>
               </div>
               
-              <div className="flex gap-3 mt-8">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6 sm:mt-8">
                 <button
                   className="flex-1 bg-slate-200 text-slate-800 px-4 py-2 rounded-lg font-medium hover:bg-slate-300 transition disabled:opacity-50"
                   onClick={() => {
@@ -2255,19 +2265,19 @@ const SelectionProcess: React.FC = () => {
 
         {/* Modal para justificar solicitação de mudanças */}
         {showReasonModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
-              <h3 className="text-xl font-semibold text-slate-900 mb-4">Request Changes</h3>
-              <p className="text-sm text-slate-600 mb-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl p-4 sm:p-6 max-w-lg w-full mx-4">
+              <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Request Changes</h3>
+              <p className="text-xs sm:text-sm text-slate-600 mb-4">
                 Please provide a reason for requesting changes to this document. This will help the student understand what needs to be fixed.
               </p>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                className="w-full h-24 sm:h-32 p-3 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 placeholder="Enter your reason here..."
               />
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-4">
                 <button
                   onClick={() => {
                     setShowReasonModal(false);
