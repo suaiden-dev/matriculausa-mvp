@@ -5,16 +5,13 @@ import {
   Building, 
   GraduationCap, 
   Search, 
-  Filter, 
   Ban, 
   UserX, 
-  Eye,
   Mail,
   Phone,
   MapPin,
   Calendar,
   Activity,
-  AlertTriangle,
   List,
   Grid3X3
 } from 'lucide-react';
@@ -41,15 +38,37 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20); // 20 itens por página para melhor visualização
+
   // Carregar preferência do localStorage
   useEffect(() => {
     const saved = localStorage.getItem('user-view-mode') as 'grid' | 'list';
     if (saved) setViewMode(saved);
   }, []);
 
+  // Carregar preferência de itens por página
+  useEffect(() => {
+    const saved = localStorage.getItem('user-items-per-page');
+    if (saved) {
+      const items = Number(saved);
+      if ([10, 20, 50, 100].includes(items)) {
+        setItemsPerPage(items);
+      }
+    }
+  }, []);
+
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setViewMode(mode);
     localStorage.setItem('user-view-mode', mode);
+  };
+
+  // Salvar preferência de itens por página
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset para primeira página
+    localStorage.setItem('user-items-per-page', newItemsPerPage.toString());
   };
 
   const filteredUsers = users.filter(user => {
@@ -61,6 +80,70 @@ const UserManagement: React.FC<UserManagementProps> = ({
     
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  // Resetar para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter, statusFilter]);
+
+  // Calcular paginação
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentUsers = filteredUsers.slice(startIndex, endIndex);
+
+  // Funções de navegação
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToFirstPage = () => {
+    setCurrentPage(1);
+  };
+
+  const goToLastPage = () => {
+    setCurrentPage(totalPages);
+  };
+
+  // Gerar array de páginas para exibição
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Se temos poucas páginas, mostrar todas
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Se temos muitas páginas, mostrar uma janela deslizante
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      // Ajustar se estamos no final
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
+  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -213,13 +296,21 @@ const UserManagement: React.FC<UserManagementProps> = ({
           <span className="ml-1">
             user{filteredUsers.length !== 1 ? 's' : ''} found
           </span>
+          {totalPages > 1 && (
+            <>
+              <span className="mx-2">•</span>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
       {/* Users Grid/List */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredUsers.map((user) => {
+          {currentUsers.map((user) => {
             const RoleIcon = getRoleIcon(user.role);
             
             return (
@@ -312,7 +403,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
+              {currentUsers.map((user) => (
                 <tr key={user.id} className="border-b">
                   <td className="px-4 py-2 font-medium text-slate-900">{user.full_name}</td>
                   <td className="px-4 py-2 text-slate-600">{user.email}</td>
@@ -379,6 +470,122 @@ const UserManagement: React.FC<UserManagementProps> = ({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Paginação */}
+      {filteredUsers.length > 0 && totalPages > 1 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Informações da paginação */}
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length}
+              </span>
+              <span className="ml-2">
+                users
+              </span>
+            </div>
+
+            {/* Controles de navegação */}
+            <div className="flex items-center gap-2">
+              {/* Botão Primeira Página */}
+              <button
+                onClick={goToFirstPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg border transition-colors ${
+                  currentPage === 1
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="First page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {/* Botão Página Anterior */}
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg border transition-colors ${
+                  currentPage === 1
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Previous page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {/* Números das páginas */}
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((pageNumber, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToPage(pageNumber)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      currentPage === pageNumber
+                        ? 'bg-[#05294E] text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+              </div>
+
+              {/* Botão Próxima Página */}
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg border transition-colors ${
+                  currentPage === totalPages
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Next page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {/* Botão Última Página */}
+              <button
+                onClick={goToLastPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg border transition-colors ${
+                  currentPage === totalPages
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Last page"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Seletor de itens por página */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Items per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
         </div>
       )}
 

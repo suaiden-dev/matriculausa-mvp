@@ -152,12 +152,12 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                           
                           {/* Close Button */}
-                          <button
-                            onClick={closeModal}
+                      <button
+                        onClick={closeModal}
                             className="absolute top-4 right-4 bg-white text-black p-2 rounded-full border border-gray-300 shadow-md hover:bg-gray-100 transition-all duration-200"
-                          >
+                      >
                             <X className="h-6 w-6" />
-                          </button>
+                      </button>
 
                           {/* Exclusive Badge */}
                           {selectedScholarship.is_exclusive && (
@@ -284,12 +284,12 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                     <div className="flex items-center gap-2 mb-2">
                                       <Zap className="h-4 w-4 text-slate-600" />
                                       <span className="font-semibold text-slate-700">Status</span>
-                                    </div>
+                      </div>
                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                                       selectedScholarship.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
                                     }`}>
-                                      {selectedScholarship.is_active ? <><Zap className="h-3 w-3 mr-1" />Active</> : <><Clock className="h-3 w-3 mr-1" />Inactive</>}
-                                    </span>
+                          {selectedScholarship.is_active ? <><Zap className="h-3 w-3 mr-1" />Active</> : <><Clock className="h-3 w-3 mr-1" />Inactive</>}
+                        </span>
                                   </div>
                                 </div>
 
@@ -381,7 +381,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                       selectedScholarship.needcpt ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
                                     }`}>
                                       {selectedScholarship.needcpt ? 'Yes' : 'No'}
-                                    </span>
+                          </span>
                                   </div>
 
                                   {selectedScholarship.visaassistance && (
@@ -402,8 +402,8 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                       </div>
                                       <span className="text-slate-900">{selectedScholarship.scholarship_type}</span>
                                     </div>
-                                  )}
-                                </div>
+                        )}
+                      </div>
 
                                 <div className="space-y-4">
                                   {selectedScholarship.platform_fee_percentage && (
@@ -439,10 +439,10 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                       </span>
                                     </div>
                                   )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                        </div>
+                        </div>
+                      </div>
+                      </div>
 
                           {/* Sidebar */}
                           <div className="space-y-6">
@@ -456,9 +456,9 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                 <span className={`font-bold text-lg ${getDeadlineStatus(selectedScholarship.deadline).color}`}>
                                   Application Deadline
                                 </span>
-                              </div>
+                        </div>
                               <div className="space-y-2">
-                                {getDaysUntilDeadline(selectedScholarship.deadline) > 0 ? (
+                          {getDaysUntilDeadline(selectedScholarship.deadline) > 0 ? (
                                   <p className="text-2xl font-bold text-slate-900">
                                     {getDaysUntilDeadline(selectedScholarship.deadline)} days left
                                   </p>
@@ -553,9 +553,9 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                     <div className="text-blue-700 text-sm leading-relaxed whitespace-pre-line">
                                       {selectedScholarship.benefits}
                                     </div>
-                                  )}
-                                </div>
-                              </div>
+                          )}
+                        </div>
+                      </div>
                             )}
 
                             {/* Eligibility */}
@@ -581,10 +581,10 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                     </div>
                                   )}
                                 </div>
-                              </div>
-                            )}
-                          </div>
                         </div>
+                            )}
+                        </div>
+                      </div>
                       </div>
                     </div>
                   </div>
