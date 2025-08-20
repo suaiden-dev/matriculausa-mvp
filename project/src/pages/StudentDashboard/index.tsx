@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useSmartChat } from '../../contexts/SmartChatContext';
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
 import ScholarshipBrowser from './ScholarshipBrowser';
@@ -65,6 +66,9 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
+  
+  // Hook para controlar visibilidade do SmartChat
+  const { isSmartChatOpen } = useSmartChat();
   
   // Fase 5: Referral Code System
   const { 
@@ -275,75 +279,73 @@ const StudentDashboard: React.FC = () => {
       <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
         {/* Área de proteção para o botão */}
         <div className="floating-cart-area" />
-        {/* Botão flutuante super robusto - sempre visível */}
-        <div 
-          className="floating-cart-button"
-          id="floating-cart-hat"
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            zIndex: 99999,
-            pointerEvents: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <button
-            onClick={() => navigate('/student/dashboard/cart')}
+        {/* Botão do Carrinho - Oculto quando SmartChat estiver aberto */}
+        {!isSmartChatOpen && (
+          <div
             style={{
-              backgroundColor: '#05294E',
-              color: 'white',
-              borderRadius: '50%',
-              width: '60px',
-              height: '60px',
+              position: 'fixed',
+              bottom: '20px',
+              right: '20px',
+              zIndex: 99999,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              border: '3px solid white',
-              boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              position: 'relative',
-              zIndex: 99999,
-              minWidth: '60px',
-              minHeight: '60px',
-              outline: 'none'
+              justifyContent: 'center'
             }}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            aria-label={`Cart with ${cart.length} items`}
           >
-            <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
-            {cart.length > 0 && (
-              <span 
-                style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '28px',
-                  height: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  border: '2px solid white',
-                  zIndex: 100000
-                }}
-              >
-                {cart.length > 99 ? '99+' : cart.length}
-              </span>
-            )}
-          </button>
-        </div>
+            <button
+              onClick={() => navigate('/student/dashboard/cart')}
+              style={{
+                backgroundColor: '#05294E',
+                color: 'white',
+                borderRadius: '50%',
+                width: '60px',
+                height: '60px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '3px solid white',
+                boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+                zIndex: 99999,
+                minWidth: '60px',
+                minHeight: '60px',
+                outline: 'none'
+              }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+              onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              aria-label={`Cart with ${cart.length} items`}
+            >
+              <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
+              {cart.length > 0 && (
+                <span 
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    border: '2px solid white',
+                    zIndex: 100000
+                  }}
+                >
+                  {cart.length > 99 ? '99+' : cart.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
         <Routes>
           <Route 
             index 
