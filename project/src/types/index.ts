@@ -15,6 +15,7 @@ export interface University {
   description: string;
   website?: string;
   image_url?: string;
+  banner_url?: string;
   type?: string;
   ranking?: number;
   programs?: string[];

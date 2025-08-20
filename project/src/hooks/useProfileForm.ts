@@ -22,6 +22,7 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
     website: university?.website || '',
     location: university?.location || '',
     image_url: university?.image_url || '',
+    banner_url: university?.banner_url || '',
     contact: {
       phone: university?.contact?.phone || '',
       email: university?.contact?.email || '',
@@ -167,10 +168,10 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
   }, []);
 
   // Atualizar imagem diretamente
-  const updateImage = useCallback((imageUrl: string) => {
+  const updateImage = useCallback((imageUrl: string, field: 'image_url' | 'banner_url' = 'image_url') => {
     setFormData(prev => ({
       ...prev,
-      image_url: imageUrl
+      [field]: imageUrl
     }));
   }, []);
 

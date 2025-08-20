@@ -13,6 +13,12 @@ export const profileFieldsConfig: FieldSection[] = [
         placeholder: 'Upload university logo'
       },
       {
+        key: 'banner_url',
+        label: 'University Banner',
+        type: 'image',
+        placeholder: 'Upload university banner image for hero section'
+      },
+      {
         key: 'name',
         label: 'University Name',
         type: 'text',
