@@ -223,7 +223,7 @@ const Home: React.FC = () => {
                   <img
                     src={school.image || school.logo_url || '/university-placeholder.png'}
                     alt={`${school.name} campus`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                   />
                   
                   {/* Type Badge */}
