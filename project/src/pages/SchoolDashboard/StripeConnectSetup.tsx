@@ -10,7 +10,9 @@ import {
   RefreshCw,
   Shield,
   DollarSign,
-  Info
+  Info,
+  Settings,
+  Building
 } from 'lucide-react';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
@@ -80,7 +82,6 @@ const StripeConnectSetup: React.FC = () => {
     setError(null);
 
     try {
-      // Chamar edge function para iniciar o processo de Stripe Connect
       const { data, error } = await supabase.functions.invoke('initiate-stripe-connect', {
         body: {
           university_id: university.id,
@@ -93,13 +94,12 @@ const StripeConnectSetup: React.FC = () => {
       }
 
       if (data?.url) {
-        // Redirecionar para o Stripe para autorização
         window.location.href = data.url;
       } else {
-        throw new Error('Não foi possível obter URL de autorização do Stripe');
+        throw new Error('Unable to get Stripe authorization URL');
       }
     } catch (error: any) {
-      setError(error.message || 'Erro ao conectar com Stripe');
+      setError(error.message || 'Error connecting with Stripe');
     } finally {
       setLoading(false);
     }
@@ -110,7 +110,6 @@ const StripeConnectSetup: React.FC = () => {
 
     setLoading(true);
     try {
-      // Chamar edge function para atualizar status
       const { data, error } = await supabase.functions.invoke('refresh-stripe-connect-status', {
         body: { university_id: university.id }
       });
@@ -119,10 +118,9 @@ const StripeConnectSetup: React.FC = () => {
         throw new Error(error.message);
       }
 
-      // Atualizar status local
       await fetchStripeConnectStatus();
     } catch (error: any) {
-      setError(error.message || 'Erro ao atualizar status');
+      setError(error.message || 'Error updating status');
     } finally {
       setLoading(false);
     }
@@ -131,7 +129,7 @@ const StripeConnectSetup: React.FC = () => {
   const disconnectStripe = async () => {
     if (!university || !connectStatus?.is_connected) return;
 
-    if (!confirm('Tem certeza que deseja desconectar sua conta Stripe? Isso desabilitará as transferências automáticas.')) {
+    if (!confirm('Are you sure you want to disconnect your Stripe account? This will disable automatic transfers.')) {
       return;
     }
 
@@ -145,10 +143,9 @@ const StripeConnectSetup: React.FC = () => {
         throw new Error(error.message);
       }
 
-      // Atualizar status local
       await fetchStripeConnectStatus();
     } catch (error: any) {
-      setError(error.message || 'Erro ao desconectar Stripe');
+      setError(error.message || 'Error disconnecting Stripe');
     } finally {
       setLoading(false);
     }
@@ -157,7 +154,7 @@ const StripeConnectSetup: React.FC = () => {
   if (!university) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
       </div>
     );
   }
@@ -169,160 +166,198 @@ const StripeConnectSetup: React.FC = () => {
       description="Finish setting up your university profile to connect with Stripe and receive payments"
     >
       <div className="min-h-screen bg-slate-50">
-        <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Configuração do Stripe Connect
-            </h1>
-            <p className="text-gray-600">
-              Conecte sua conta Stripe para receber pagamentos de application fees automaticamente
+          <div className="mb-6 sm:mb-8">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CreditCard className="h-6 w-6 text-blue-600" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                Stripe Connect Setup
+              </h1>
+            </div>
+            <p className="text-slate-600 text-sm sm:text-base max-w-3xl">
+              Connect your Stripe account to automatically receive application fee payments and manage your financial operations securely.
             </p>
           </div>
 
           {/* Status Card */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Status da Conexão
-              </h2>
-              <button
-                onClick={refreshStripeStatus}
-                disabled={loading}
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                <span>Atualizar</span>
-              </button>
-            </div>
-
-            {connectStatus?.is_connected ? (
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-6 w-6 text-green-500" />
-                  <span className="text-green-700 font-medium">
-                    Conta Stripe Conectada
-                  </span>
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 mb-6 sm:mb-8">
+            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                    Connection Status
+                  </h2>
+                  <p className="text-slate-500 text-sm">
+                    Monitor your Stripe account integration status
+                  </p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <CreditCard className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">ID da Conta</span>
-                    </div>
-                    <p className="text-sm text-gray-600 font-mono">
-                      {connectStatus.account_id}
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Shield className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Status</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        {connectStatus.charges_enabled ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-yellow-500" />
-                        )}
-                        <span className="text-sm text-gray-600">
-                          {connectStatus.charges_enabled ? 'Cobranças habilitadas' : 'Cobranças pendentes'}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {connectStatus.payouts_enabled ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-yellow-500" />
-                        )}
-                        <span className="text-sm text-gray-600">
-                          {connectStatus.payouts_enabled ? 'Transferências habilitadas' : 'Transferências pendentes'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex space-x-3">
-                  <button
-                    onClick={disconnectStripe}
-                    disabled={loading}
-                    className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-md transition-colors"
-                  >
-                    Desconectar Conta
-                  </button>
-                  <a
-                    href="https://dashboard.stripe.com/connect/accounts"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-md transition-colors"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>Abrir Dashboard Stripe</span>
-                  </a>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <CreditCard className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Nenhuma conta Stripe conectada
-                </h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Conecte sua conta Stripe para receber pagamentos de application fees automaticamente. 
-                  Você será redirecionado para o Stripe para autorizar a conexão.
-                </p>
                 <button
-                  onClick={initiateStripeConnect}
+                  onClick={refreshStripeStatus}
                   disabled={loading}
-                  className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
                 >
-                  {loading ? (
-                    <RefreshCw className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-5 w-5" />
-                  )}
-                  <span>Conectar com Stripe</span>
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
                 </button>
               </div>
-            )}
+            </div>
+
+            <div className="p-4 sm:p-5 lg:p-6">
+              {connectStatus?.is_connected ? (
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                    <div>
+                      <span className="text-green-800 font-semibold">
+                        Stripe Account Connected
+                      </span>
+                      <p className="text-green-700 text-sm">
+                        Your account is successfully integrated with Stripe
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Building className="h-4 w-4 text-slate-500" />
+                        <span className="text-sm font-medium text-slate-700">Account ID</span>
+                      </div>
+                      <p className="text-sm text-slate-600 font-mono bg-white px-3 py-2 rounded border">
+                        {connectStatus.account_id}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Settings className="h-4 w-4 text-slate-500" />
+                        <span className="text-sm font-medium text-slate-700">Account Status</span>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600">Charges</span>
+                          <div className="flex items-center space-x-2">
+                            {connectStatus.charges_enabled ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-yellow-500" />
+                            )}
+                            <span className={`text-sm font-medium ${
+                              connectStatus.charges_enabled ? 'text-green-700' : 'text-yellow-700'
+                            }`}>
+                              {connectStatus.charges_enabled ? 'Enabled' : 'Pending'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-slate-600">Transfers</span>
+                          <div className="flex items-center space-x-2">
+                            {connectStatus.payouts_enabled ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-yellow-500" />
+                            )}
+                            <span className={`text-sm font-medium ${
+                              connectStatus.payouts_enabled ? 'text-green-700' : 'text-yellow-700'
+                            }`}>
+                              {connectStatus.payouts_enabled ? 'Enabled' : 'Pending'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-4 border-t border-slate-200">
+                    <button
+                      onClick={disconnectStripe}
+                      disabled={loading}
+                      className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 rounded-lg transition-colors"
+                    >
+                      Disconnect Account
+                    </button>
+                    <a
+                      href="https://dashboard.stripe.com/connect/accounts"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center space-x-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      <span>Open Stripe Dashboard</span>
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 sm:py-12">
+                  <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CreditCard className="h-10 w-10 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-3">
+                    No Stripe Account Connected
+                  </h3>
+                  <p className="text-slate-600 mb-8 max-w-md mx-auto text-sm sm:text-base">
+                    Connect your Stripe account to automatically receive application fee payments. 
+                    You will be redirected to Stripe to authorize the connection securely.
+                  </p>
+                  <button
+                    onClick={initiateStripeConnect}
+                    disabled={loading}
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <RefreshCw className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-5 w-5" />
+                    )}
+                    <span>Connect with Stripe</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Benefits Card */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Benefícios do Stripe Connect
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <DollarSign className="h-6 w-6 text-green-600" />
+          {/* Benefits Section */}
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 mb-6 sm:mb-8">
+            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                Integration Benefits
+              </h2>
+              <p className="text-slate-500 text-sm">
+                Why connect your Stripe account with our platform
+              </p>
+            </div>
+            <div className="p-4 sm:p-5 lg:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <DollarSign className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mb-2">Automatic Transfers</h3>
+                  <p className="text-sm text-slate-600">
+                    Receive application fees directly to your bank account without manual intervention
+                  </p>
                 </div>
-                <h3 className="font-medium text-gray-900 mb-2">Transferências Automáticas</h3>
-                <p className="text-sm text-gray-600">
-                  Receba application fees diretamente na sua conta bancária
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Shield className="h-6 w-6 text-blue-600" />
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Shield className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mb-2">Secure Integration</h3>
+                  <p className="text-sm text-slate-600">
+                    Your Stripe account, your data, complete control over your financial operations
+                  </p>
                 </div>
-                <h3 className="font-medium text-gray-900 mb-2">Segurança Total</h3>
-                <p className="text-sm text-gray-600">
-                  Sua conta Stripe, seus dados, seu controle total
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <Info className="h-6 w-6 text-purple-600" />
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Info className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mb-2">Full Transparency</h3>
+                  <p className="text-sm text-slate-600">
+                    Track all payments and transactions in your Stripe dashboard with real-time updates
+                  </p>
                 </div>
-                <h3 className="font-medium text-gray-900 mb-2">Transparência</h3>
-                <p className="text-sm text-gray-600">
-                  Acompanhe todos os pagamentos no seu dashboard Stripe
-                </p>
               </div>
             </div>
           </div>
@@ -332,9 +367,9 @@ const StripeConnectSetup: React.FC = () => {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="h-5 w-5 text-red-500" />
-                <span className="text-red-700 font-medium">Erro</span>
+                <span className="text-red-700 font-medium">Error</span>
               </div>
-              <p className="text-red-600 mt-2">{error}</p>
+              <p className="text-red-600 mt-2 text-sm">{error}</p>
             </div>
           )}
         </div>
