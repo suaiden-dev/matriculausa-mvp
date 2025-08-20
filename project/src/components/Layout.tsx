@@ -5,6 +5,7 @@ import Footer from './Footer';
 // import GuideTestButton from './OnboardingTour/GuideTestButton';
 import { useLocation } from 'react-router-dom';
 import SmartChat from './SmartChat';
+import { SmartChatProvider } from '../contexts/SmartChatContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,20 +28,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col w-full overflow-x-hidden">
-      {!hideHeader && <Header />}
-      <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
-        {children}
-        {
-          !isAdmin && <SmartChat 
-            isStudentPage={isStudentPage}
-          />
-        }
-      </main>
-      {!hideFooter && <Footer />}
-      {/* <StepByStepButton /> */}
-      {/* <GuideTestButton /> */}
-    </div>
+    <SmartChatProvider>
+      <div className="min-h-screen bg-gray-50 flex flex-col w-full overflow-x-hidden">
+        {!hideHeader && <Header />}
+        <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
+          {children}
+          {
+            !isAdmin && <SmartChat 
+              isStudentPage={isStudentPage}
+            />
+          }
+        </main>
+        {!hideFooter && <Footer />}
+        {/* <StepByStepButton /> */}
+        {/* <GuideTestButton /> */}
+      </div>
+    </SmartChatProvider>
   );
 };
 
