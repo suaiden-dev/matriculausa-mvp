@@ -134,28 +134,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Buscar valor dinâmico da taxa da bolsa
+    // Buscar valor dinâmico da taxa da bolsa e universidade
     let applicationFeeAmount = 350.00; // Valor padrão como fallback
     let platformFeePercentage = 15.00; // Porcentagem padrão da plataforma
+    let universityId = null;
     
     if (application.scholarship_id) {
       try {
-        // Usar função RPC para buscar taxas da bolsa
-        const { data: feeData, error: feeError } = await supabase
-          .rpc('get_scholarship_fees', { p_scholarship_id: application.scholarship_id });
+        // Buscar dados da bolsa incluindo universidade
+        const { data: scholarshipData, error: scholarshipError } = await supabase
+          .from('scholarships')
+          .select('id, university_id, application_fee_amount, platform_fee_percentage')
+          .eq('id', application.scholarship_id)
+          .single();
         
-        if (!feeError && feeData && feeData.length > 0) {
-          applicationFeeAmount = feeData[0].application_fee_amount || 350.00;
-          platformFeePercentage = feeData[0].platform_fee_percentage || 15.00;
-          console.log('[stripe-checkout-application-fee] Taxas dinâmicas encontradas:', {
+        if (!scholarshipError && scholarshipData) {
+          applicationFeeAmount = scholarshipData.application_fee_amount || 350.00;
+          platformFeePercentage = scholarshipData.platform_fee_percentage || 15.00;
+          universityId = scholarshipData.university_id;
+          console.log('[stripe-checkout-application-fee] Dados da bolsa encontrados:', {
             applicationFeeAmount,
-            platformFeePercentage
+            platformFeePercentage,
+            universityId
           });
         } else {
-          console.log('[stripe-checkout-application-fee] Usando valores padrão (função RPC não retornou dados):', feeError);
+          console.log('[stripe-checkout-application-fee] Usando valores padrão (bolsa não encontrada):', scholarshipError);
         }
       } catch (error) {
-        console.error('[stripe-checkout-application-fee] Erro ao buscar taxas dinâmicas:', error);
+        console.error('[stripe-checkout-application-fee] Erro ao buscar dados da bolsa:', error);
         console.log('[stripe-checkout-application-fee] Usando valores padrão como fallback');
       }
     }
@@ -177,6 +183,7 @@ Deno.serve(async (req) => {
       student_process_type: application?.student_process_type || metadata?.student_process_type || null,
       application_fee_amount: applicationFeeAmount.toString(),
       platform_fee_percentage: platformFeePercentage.toString(),
+      university_id: universityId,
       ...metadata,
     };
 

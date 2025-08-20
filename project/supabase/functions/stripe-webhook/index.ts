@@ -262,6 +262,7 @@ async function handleEvent(event: Stripe.Event) {
       const applicationId = metadata.application_id;
       const applicationFeeAmount = metadata.application_fee_amount || '350.00';
       const platformFeePercentage = metadata.platform_fee_percentage || '15.00';
+      const universityId = metadata.university_id;
 
       if (userId && applicationId) {
         // Atualizar o status da aplicação existente para 'under_review'
@@ -269,7 +270,7 @@ async function handleEvent(event: Stripe.Event) {
           .from('scholarship_applications')
           .update({ 
             status: 'under_review',
-            is_application_fee_paid: true, // ✅ ADICIONAR ESTA LINHA
+            is_application_fee_paid: true,
             payment_status: 'paid',
             paid_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -303,8 +304,49 @@ async function handleEvent(event: Stripe.Event) {
           userId,
           applicationId,
           applicationFeeAmount,
-          platformFeePercentage
+          platformFeePercentage,
+          universityId
         });
+
+        // Processar transferência via Stripe Connect se aplicável
+        if (universityId && amount_total) {
+          try {
+            console.log('Processing Stripe Connect transfer for university:', universityId);
+            
+            // Chamar a função de transferência
+            const transferResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-stripe-connect-transfer`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({
+                session_id: session.id,
+                payment_intent_id: session.payment_intent,
+                amount: amount_total,
+                university_id: universityId,
+                application_id: applicationId,
+                user_id: userId
+              })
+            });
+
+            if (transferResponse.ok) {
+              const transferResult = await transferResponse.json();
+              console.log('Stripe Connect transfer result:', transferResult);
+              
+              if (transferResult.transfer_type === 'stripe_connect') {
+                console.log('Transfer completed successfully via Stripe Connect');
+              } else {
+                console.log('Using current flow (no Stripe Connect)');
+              }
+            } else {
+              console.error('Error calling transfer function:', transferResponse.status);
+            }
+          } catch (transferError) {
+            console.error('Error processing Stripe Connect transfer:', transferError);
+            // Não falhar o webhook por causa da transferência
+          }
+        }
       }
     }
     

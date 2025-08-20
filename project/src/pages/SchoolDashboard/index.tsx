@@ -20,6 +20,9 @@ import Inbox from './Inbox';
 import WhatsAppConnection from './WhatsAppConnection';
 import ConnectWhatsApp from './ConnectWhatsApp';
 import UniversityRewardsDashboard from './UniversityRewardsDashboard';
+import StripeConnectSetup from './StripeConnectSetup';
+import StripeConnectCallback from './StripeConnectCallback';
+import StripeConnectTransfers from './StripeConnectTransfers';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
@@ -43,7 +46,9 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />
             <Route path="inbox" element={<Inbox />} />
             <Route path="ai-solutions" element={<AISolutions />} />
-
+            <Route path="stripe-connect" element={<StripeConnectSetup />} />
+            <Route path="stripe-connect/callback" element={<StripeConnectCallback />} />
+            <Route path="stripe-connect/transfers" element={<StripeConnectTransfers />} />
 
             <Route path="matricula-rewards" element={<UniversityRewardsDashboard />} />
             <Route path="whatsapp" element={<WhatsAppConnection />} />
