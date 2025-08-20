@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Brain, Zap, Clock, MessageCircle, Mail, Smartphone, Target, TrendingUp, Shield, Users, FileText, CheckCircle, ArrowRight, Star, Rocket, Settings, BarChart3, Bot, Phone, Send, Heart, History, Cog
+  Brain, Zap, Clock, MessageCircle, Mail, Smartphone, Target, TrendingUp, Shield, Users, FileText, CheckCircle, ArrowRight, Star, Rocket, Settings, BarChart3, Bot, Phone, Send, Heart, History, Cog, Plus, X
 } from 'lucide-react';
 
 const AISolutions: React.FC = () => {
@@ -13,7 +13,7 @@ const AISolutions: React.FC = () => {
       title: 'WhatsApp AI Assistant',
       description: 'Automate WhatsApp customer service with intelligent AI',
       icon: MessageCircle,
-      image: '/freepik__closeup-of-a-smartphone-showcasing-an-automated-te__75623.png',
+      image: '/pexels-cottonbro-5053740.jpg',
       features: [
         '24/7 automatic responses',
         'Integration with university database',
@@ -45,7 +45,7 @@ const AISolutions: React.FC = () => {
       title: 'SMS AI Campaigns',
       description: 'Intelligent and personalized SMS campaigns',
       icon: Smartphone,
-      image: '/freepik__the-style-is-candid-image-photography-with-natural__75620.png',
+      image: '/freepik__closeup-of-a-smartphone-showcasing-an-automated-te__75623.png',
       features: [
         'Automatic student segmentation',
         'Personalized messages by profile',
@@ -57,21 +57,20 @@ const AISolutions: React.FC = () => {
       color: 'from-purple-500 to-violet-600'
     },
     {
-      id: 'chatbot',
-      title: 'Advanced AI Chatbot',
-      description: 'Intelligent chatbot for websites and applications',
-      icon: Bot,
-      image: '/freepik__friendly-ai-chatbot-interface-with-soft-blue-tones__75624.png',
-      features: [
-        'Natural and contextual conversations',
-        'Integration with academic systems',
-        'Multi-language support',
-        'User intent analysis',
-        'Enrollment calendar integration'
-      ],
-      implementation: '72-96 hours',
-      color: 'from-orange-500 to-red-600'
-    },
+          id: 'chatbot',
+          title: 'Advanced AI Chatbot',
+          description: 'Intelligent chatbot for websites and applications',
+          icon: Bot,
+          image: '/freepik__friendly-ai-chatbot-interface-with-soft-blue-tones__75624.png',
+          features: [
+            'Natural and contextual conversations',
+            'Integration with academic systems',
+            'Multi-language support',
+            'User intent analysis',
+            'Enrollment calendar integration'
+          ],
+          implementation: '72-96 hours',
+        },
     {
       id: 'analytics',
       title: 'AI Analytics & Insights',
@@ -104,102 +103,6 @@ const AISolutions: React.FC = () => {
       implementation: '72-96 hours',
       color: 'from-pink-500 to-rose-600'
     },
-    {
-      id: 'student-matching',
-      title: 'AI Student Matching',
-      description: 'Intelligent matching between students and programs',
-      icon: Target,
-      image: '/freepik__the-style-is-candid-image-photography-with-natural__75627.jpeg',
-      features: [
-        'Academic profile analysis',
-        'Personalized recommendations',
-        'Academic success prediction',
-        'Scholarship matching',
-        'Slot optimization'
-      ],
-      implementation: '96-120 hours',
-      color: 'from-indigo-500 to-purple-600'
-    },
-    {
-      id: 'automation',
-      title: 'Process Automation',
-      description: 'Intelligent automation of administrative processes',
-      icon: Settings,
-      image: '/freepik__the-style-is-candid-image-photography-with-natural__75628.jpeg',
-      features: [
-        'Workflow automation',
-        'System integration',
-        'Manual task reduction',
-        'Real-time monitoring',
-        'Efficiency reports'
-      ],
-      implementation: '120-144 hours',
-      color: 'from-slate-500 to-gray-600'
-    },
-    {
-      id: 'voice-assistant',
-      title: 'AI Voice Assistant',
-      description: 'Voice assistant for phone support',
-      icon: Phone,
-      image: '/freepik__futuristic-ai-voice-assistant-device-with-a-hologr__75630.jpeg',
-      features: [
-        'Natural voice support',
-        'Multi-language recognition',
-        'Telephony system integration',
-        'Automatic transcription',
-        'Voice sentiment analysis'
-      ],
-      implementation: '96-120 hours',
-      color: 'from-yellow-500 to-amber-600'
-    },
-    {
-      id: 'predictive-maintenance',
-      title: 'Predictive Maintenance',
-      description: 'Predictive maintenance for infrastructure',
-      icon: Shield,
-      image: '/freepik__the-style-is-candid-image-photography-with-natural__75629.jpeg',
-      features: [
-        'Equipment monitoring',
-        'Maintenance alerts',
-        'Resource optimization',
-        'Downtime reduction',
-        'Efficiency reports'
-      ],
-      implementation: '144-168 hours',
-      color: 'from-emerald-500 to-green-600'
-    },
-    {
-      id: 'content-generation',
-      title: 'AI Content Generation',
-      description: 'Automatic generation of academic content',
-      icon: FileText,
-      image: '/freepik__the-style-is-candid-image-photography-with-natural__75631.jpeg',
-      features: [
-        'Course description generation',
-        'Promotional material creation',
-        'Content personalization',
-        'SEO optimization',
-        'Multiple output formats'
-      ],
-      implementation: '72-96 hours',
-      color: 'from-cyan-500 to-blue-600'
-    },
-    {
-      id: 'sentiment-analysis',
-      title: 'Sentiment Analysis',
-      description: 'Sentiment analysis in feedback and social media',
-      icon: Heart,
-      image: '/freepik__the-style-is-candid-image-photography-with-natural__75632.jpeg',
-      features: [
-        'Social media monitoring',
-        'Student feedback analysis',
-        'Reputation crisis alerts',
-        'Satisfaction reports',
-        'Improvement insights'
-      ],
-      implementation: '48-72 hours',
-      color: 'from-rose-500 to-pink-600'
-    }
   ];
 
   const benefits = [
@@ -249,7 +152,7 @@ const AISolutions: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen">
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] py-20">
         <div className="absolute inset-0">
@@ -271,10 +174,7 @@ const AISolutions: React.FC = () => {
               Transform your university operations with cutting-edge AI solutions. 
               From student engagement to administrative efficiency, we have the tools you need.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              
-              
-            </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center"></div>
           </div>
         </div>
       </div>
@@ -283,105 +183,133 @@ const AISolutions: React.FC = () => {
 
 
       {/* AI Solutions Section */}
-      <div className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-6">
-              Future AI Solutions
-            </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Choose from our range of AI solutions designed specifically for educational institutions. 
-              Each solution is customizable and can be implemented in 48-72 hours.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {aiSolutions.map((solution) => {
-              // Definir as rotas para cada solução
-              const getSolutionRoute = (solutionId: string) => {
-                switch (solutionId) {
-                  case 'whatsapp':
-                    return '/school/dashboard/whatsapp';
-                  case 'email':
-                    return '/school/dashboard/inbox';
-                  default:
-                    return '#';
-                }
-              };
-
-              const solutionRoute = getSolutionRoute(solution.id);
-              const isClickable = solution.id === 'whatsapp' || solution.id === 'email';
-
-              return (
-                <div 
-                  key={solution.id}
-                  className={`bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 overflow-hidden border border-slate-200 ${
-                    isClickable ? 'cursor-pointer' : 'cursor-default'
-                  }`}
-                  onClick={() => {
-                    if (isClickable) {
-                      window.location.href = solutionRoute;
-                    } else {
-                      setSelectedSolution(solution.id);
-                    }
-                  }}
-                >
-                {/* Image Section */}
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={solution.image} 
-                    alt={solution.title}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-                  />
-                  <div className={`absolute inset-0 bg-gradient-to-t ${solution.color} opacity-20`}></div>
-                  <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm w-12 h-12 rounded-xl flex items-center justify-center">
-                    <solution.icon className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                
-                {/* Content Section */}
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-3 text-slate-900">{solution.title}</h3>
-                  <p className="text-slate-600 mb-4 leading-relaxed text-sm">{solution.description}</p>
-                  
-                  <div className="space-y-2 mb-4">
-                    {solution.features.slice(0, 3).map((feature, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span className="text-xs text-slate-600">{feature}</span>
+  {/* AI Solutions Section - Accordion/Dropdown */}
+  <section className="py-20 bg-slate-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
+                  The Only AI Made to <span className="text-[#05294E]">Increase University Enrollments</span>
+                </h2>
+                <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+                  Intelligent service and automation, created specifically for educational institutions. 
+                  Transform your student recruitment with cutting-edge AI solutions.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                {/* Left Side - Dropdown Accordion */}
+                <div className={`${!selectedSolution ? 'min-h-[600px] flex flex-col justify-center' : ''}`}>
+                  {aiSolutions.map((solution, index) => (
+                    <div 
+                      key={solution.id}
+                      className={`bg-inherit overflow-hidden transition-all duration-300 ${
+                        index < aiSolutions.length - 1 ? 'border-b border-slate-200' : ''
+                      }`}
+                    >
+                      {/* Dropdown Header */}
+                      <button
+                        onClick={() => setSelectedSolution(selectedSolution === solution.id ? '' : solution.id)}
+                        className="w-full p-5 flex items-center justify-between transition-colors duration-200"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div 
+                            className="w-12 h-12 rounded-xl flex items-center justify-center"
+                            style={{ backgroundColor: "#BCDBFB" }}
+                          >
+                            <solution.icon className="h-6 w-6 text-[#05294E]" />
+                          </div>
+                          <div className="text-left">
+                            <h3 className="text-lg font-bold text-slate-900">{solution.title}</h3>
+                            <p className="text-sm text-slate-600">{solution.description}</p>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="relative w-5 h-5">
+                            <Plus 
+                              className={`absolute inset-0 h-5 w-5 text-[#05294E] transition-all duration-300 ${
+                                selectedSolution === solution.id 
+                                  ? 'rotate-45 opacity-0' 
+                                  : 'rotate-0 opacity-100'
+                              }`} 
+                            />
+                            <X 
+                              className={`absolute inset-0 h-5 w-5 text-[#D0151C] transition-all duration-300 ${
+                                selectedSolution === solution.id 
+                                  ? 'rotate-0 opacity-100' 
+                                  : 'rotate-45 opacity-0'
+                              }`} 
+                            />
+                          </div>
+                        </div>
+                      </button>
+                      {/* Dropdown Content */}
+                      <div 
+                        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                          selectedSolution === solution.id 
+                            ? 'max-h-96 opacity-100' 
+                            : 'max-h-0 opacity-0'
+                        }`}
+                      >
+                        <div className="px-6 pb-6 border-t border-slate-200">
+                          <div className="pt-4 space-y-4">
+                            {/* Features List */}
+                            <div>
+                              <h4 className="text-sm font-semibold text-slate-900 mb-3">Principais funcionalidades:</h4>
+                              <div className="space-y-2">
+                                {solution.features.map((feature, featureIndex) => (
+                                  <div key={featureIndex} className="flex items-start space-x-3">
+                                    <CheckCircle className="h-4 w-4 text-[#05294E] mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm text-slate-600">{feature}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 pt-2">
+                              <Clock className="h-4 w-4 text-slate-400" />
+                              <span className="text-xs text-slate-500">{solution.implementation}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                    {solution.features.length > 3 && (
-                      <div className="text-xs text-slate-500">
-                        +{solution.features.length - 3} more features
+                    </div>
+                  ))}
+                </div>
+                {/* Right Side - Selected Solution Image */}
+                <div className="hidden lg:block lg:sticky lg:top-8">
+                  <div className="min-h-[600px] flex flex-col justify-center">
+                    {selectedSolution ? (
+                      <div className="w-full">
+                        {(() => {
+                          const solution = aiSolutions.find(s => s.id === selectedSolution);
+                          return solution ? (
+                            <div className="relative w-full h-[550px] rounded-2xl overflow-hidden">
+                              <img 
+                                src={solution.image} 
+                                alt={solution.title}
+                                className="w-full h-full object-cover transition-all duration-500"
+                              />
+                              {/* Overlay com cores da paleta */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/40 via-[#05294E]/20 to-[#D0151C]/30 mix-blend-overlay"></div>
+                              {/* Overlay adicional para harmonizar */}
+                              <div className="absolute inset-0 bg-[#05294E]/10"></div>
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="w-full h-[550px] bg-slate-100 rounded-2xl flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="w-24 h-24 mx-auto mb-4 bg-[#05294E] rounded-2xl flex items-center justify-center">
+                            <Brain className="h-12 w-12 text-white" />
+                          </div>
+                          <p className="text-slate-500 font-medium">Selecione uma solução de IA para visualizar</p>
+                        </div>
                       </div>
                     )}
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-3 w-3 text-slate-400" />
-                      <span className="text-xs text-slate-500">{solution.implementation}</span>
-                    </div>
-                    <div 
-                      className={`bg-gradient-to-r ${solution.color} text-white px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isClickable) {
-                          window.location.href = solutionRoute;
-                        }
-                      }}
-                    >
-                      {isClickable ? 'Get Started' : 'Learn more'}
-                    </div>
-                  </div>
                 </div>
               </div>
-            );
-            })}
-          </div>
-        </div>
-      </div>
+            </div>
+          </section>
 
       {/* Benefits Section */}
       <div className="py-20 bg-white">
@@ -475,7 +403,7 @@ const AISolutions: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+  </div>
   );
 };
 
