@@ -18,7 +18,8 @@ import {
   Clock,
   CheckCircle2,
   CreditCard,
-  Banknote
+  Banknote,
+  User
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -189,7 +190,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
         };
       default:
         return {
-          icon: AlertCircle,
+          icon: AlertTriangle,
           color: 'bg-gray-100 text-gray-800 border-gray-200',
           bgColor: 'bg-gray-50'
         };
@@ -295,13 +296,48 @@ const MatriculaRewardsAdmin: React.FC = () => {
       if (uniAccErr) console.warn('[Admin] university_rewards_account error:', uniAccErr);
       const aggBalance = (uniAccounts || []).reduce((sum: number, r: any)=> sum + (Number(r.balance_coins||0)), 0);
 
-      // 2) Tuition redemptions in the period
-      const { data: tuitionRedemptions, error: trErr } = await supabase
+      // 2) Tuition redemptions in the period - abordagem alternativa
+      const { data: tuitionRedemptionsRaw, error: trErr } = await supabase
         .from('tuition_redemptions')
-        .select('user_id, university_id, cost_coins_paid, discount_amount, redeemed_at')
+        .select(`
+          id,
+          user_id, 
+          university_id, 
+          cost_coins_paid, 
+          discount_amount, 
+          redeemed_at,
+          status
+        `)
         .gte('redeemed_at', start)
-        .order('redeemed_at', { ascending: false });
-      if (trErr) console.warn('[Admin] tuition_redemptions error:', trErr);
+        .order('redeemed_at', { ascending: false })
+        .limit(10);
+      if (trErr) {
+        console.warn('[Admin] tuition_redemptions error:', trErr);
+      }
+      
+      // Buscar perfis dos usuários para as redenções encontradas
+      const userIds = (tuitionRedemptionsRaw || []).map(r => r.user_id);
+      let userProfiles: any[] = [];
+      
+      if (userIds.length > 0) {
+        const { data: profilesData, error: upErr } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', userIds);
+        if (upErr) console.warn('[Admin] user_profiles error:', upErr);
+        userProfiles = profilesData || [];
+      }
+      
+      console.log('[Admin] User profiles loaded:', userProfiles?.length || 0);
+      
+      // Combinar os dados
+      const tuitionRedemptions = (tuitionRedemptionsRaw || []).map(redemption => {
+        const userProfile = (userProfiles || []).find(up => up.user_id === redemption.user_id);
+        return {
+          ...redemption,
+          user_profiles: userProfile
+        };
+      });
 
       const redemptionsCountPeriod = (tuitionRedemptions || []).length;
       const totalCoinsToUniversitiesPeriod = (tuitionRedemptions || []).reduce((s: number, r: any)=> s + Number(r.cost_coins_paid||0), 0);
@@ -317,14 +353,19 @@ const MatriculaRewardsAdmin: React.FC = () => {
       const payoutCounts = (payoutsData||[]).reduce((acc: any, p: any)=> { acc[p.status] = (acc[p.status]||0)+1; return acc; }, {} as Record<string,number>);
 
       // 4) Atividade recente combinando tuition redemptions e payouts
-      const recentRedemptions: any[] = (tuitionRedemptions||[]).slice(0, 10).map((r: any) => ({
+      const recentRedemptions: any[] = (tuitionRedemptions||[]).map((r: any) => ({
         id: r.id || `${r.user_id}-${r.redeemed_at}`,
         type: 'redemption',
         userId: r.user_id,
-        fullName: r.user_id,
+        fullName: r.user_profiles?.full_name || 'Student Name',
+        email: r.user_profiles?.email || 'student@email.com',
         description: `Tuition discount: ${Number(r.discount_amount||0).toFixed(0)} USD`,
         amount: Number(r.cost_coins_paid||0),
-        createdAt: r.redeemed_at
+        createdAt: r.redeemed_at,
+        rewardName: 'Tuition Discount',
+        costPaid: Number(r.cost_coins_paid||0),
+        redeemedAt: r.redeemed_at,
+        status: r.status || 'active'
       }));
 
       const recentPayouts: any[] = (payoutsData||[]).slice(0, 10).map((p: any)=> ({
@@ -439,7 +480,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E] mx-auto mb-4"></div>
           <p className="text-slate-600">Loading rewards dashboard...</p>
         </div>
       </div>
@@ -454,7 +495,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 flex items-center">
-                <Award className="h-6 w-6 mr-2 text-purple-600" />
+                <Award className="h-6 w-6 mr-2 text-[#05294E]" />
                 Matricula Rewards Admin
               </h1>
               <p className="text-slate-600">Manage the rewards program and affiliate analytics</p>
@@ -472,7 +513,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                 aria-label="Select time range"
               >
                 <option value="7d">Last 7 days</option>
@@ -492,7 +533,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
               
               <button 
                 onClick={handleExportData}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#102336] transition-colors flex items-center"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export
@@ -529,7 +570,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center transition-colors ${
                     activeTab === tab.id
-                      ? 'border-purple-600 text-purple-600'
+                      ? 'border-[#05294E] text-[#05294E]'
                       : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                   }`}
                 >
@@ -617,7 +658,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
                    <h3 className="text-lg font-semibold text-slate-900">Coupon Usage Details</h3>
                    <p className="text-sm text-slate-600">Users who used discount coupons and paid less on first fee</p>
                  </div>
-                 <div className="overflow-x-auto">
+                 <div className="overflow-x-auto rounded-b-xl">
                    <table className="w-full">
                      <thead className="bg-slate-50">
                        <tr>
@@ -671,7 +712,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
                   <div className="p-6 border-b border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900">Top Students by Balance</h3>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-b-xl">
                     <table className="w-full">
                       <thead className="bg-slate-50">
                         <tr>
@@ -700,7 +741,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
                   <div className="p-6 border-b border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900">Top Spenders (coins)</h3>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-b-xl">
                     <table className="w-full">
                       <thead className="bg-slate-50">
                         <tr>
@@ -724,14 +765,15 @@ const MatriculaRewardsAdmin: React.FC = () => {
                     </table>
                   </div>
                 </div>
-                
-                {/* Recent Reward Redemptions */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+              </div>
+
+              {/* Recent Reward Redemptions */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200">
                   <div className="p-6 border-b border-slate-200">
                     <h3 className="text-lg font-semibold text-slate-900">Recent Reward Redemptions</h3>
                     <p className="text-sm text-slate-600">What was redeemed, by whom, and the coin amount</p>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-b-xl">
                     <table className="w-full">
                       <thead className="bg-slate-50">
                         <tr>
@@ -746,33 +788,63 @@ const MatriculaRewardsAdmin: React.FC = () => {
                         {stats.recentRedemptions?.map((r, idx) => (
                           <tr key={`${r.id || r.userId || 'redemption'}-${idx}`}>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="text-sm font-medium text-slate-900">{r.fullName}</div>
-                                <div className="text-sm text-slate-500">{r.email}</div>
+                              <div className="flex items-center space-x-3">
+                                {/* Avatar do estudante */}
+                                <div className="flex-shrink-0">
+                                  <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                                    <User className="h-5 w-5 text-slate-600" />
+                                  </div>
+                                </div>
+                                {/* Informações do estudante */}
+                                <div>
+                                  <div className="text-sm font-medium text-slate-900">
+                                    {r.fullName || 'Student Name'}
+                                  </div>
+                                  <div className="text-sm text-slate-500">
+                                    {r.email || 'student@email.com'}
+                                  </div>
+                                </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{r.rewardName}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">{Number(r.costPaid || 0).toLocaleString()} coins</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">{formatActivityDate(r.redeemedAt)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                              {r.rewardName || 'Tuition Discount'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">
+                              {Number(r.costPaid || 0).toLocaleString()} coins
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">
+                              {formatActivityDate(r.redeemedAt)}
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-xs">
                               <span className={`px-2 py-1 rounded-full font-medium ${
                                 r.status === 'active' ? 'bg-green-100 text-green-800' :
                                 r.status === 'used' ? 'bg-blue-100 text-blue-800' :
                                 r.status === 'expired' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-700'
-                              }`}>{r.status}</span>
+                              }`}>
+                                {r.status || 'active'}
+                              </span>
                             </td>
                           </tr>
                         ))}
                         {(!stats.recentRedemptions || stats.recentRedemptions.length === 0) && (
                           <tr>
-                            <td colSpan={5} className="px-6 py-6 text-center text-sm text-slate-500">No recent redemptions</td>
+                            <td colSpan={5} className="px-6 py-12 text-center">
+                              <div className="flex flex-col items-center">
+                                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                                  <Award className="h-6 w-6 text-slate-400" />
+                                </div>
+                                <h3 className="text-sm font-medium text-slate-900 mb-1">No recent redemptions</h3>
+                                <p className="text-sm text-slate-500">
+                                  No reward redemptions found for the selected period
+                                </p>
+                              </div>
+                            </td>
                           </tr>
                         )}
                       </tbody>
                     </table>
                   </div>
                 </div>
-              </div>
             </div>
           </div>
         )}
