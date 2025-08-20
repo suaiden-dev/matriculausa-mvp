@@ -22,7 +22,9 @@ import {
   MessageSquare,
   Gift,
   Bell,
-  UserCheck
+  UserCheck,
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -100,6 +102,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/students')) return 'students';
     if (path.includes('/selection-process')) return 'selection-process';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
+    if (path.includes('/stripe-connect/transfers')) return 'stripe-transfers';
+    if (path.includes('/stripe-connect')) return 'stripe-connect';
 
     if (path.includes('/inbox')) return 'inbox';
     if (path.includes('/whatsapp')) return 'whatsapp';
@@ -153,6 +157,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
+    { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
+    { id: 'stripe-transfers', label: 'Transferências', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
     { id: 'ai-solutions', label: 'AI Solutions', icon: Brain, path: '/school/dashboard/ai-solutions', badge: null },
