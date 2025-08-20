@@ -47,7 +47,7 @@ interface PaymentStats {
 const FEE_TYPES = [
   { value: 'selection_process', label: 'Selection Process Fee', color: 'bg-blue-100 text-blue-800' },
   { value: 'application', label: 'Application Fee', color: 'bg-green-100 text-green-800' },
-  { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-purple-100 text-purple-800' },
+  { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-blue-100 text-[#05294E]' },
   { value: 'i20_control', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
 ];
 
@@ -504,7 +504,7 @@ const PaymentManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+        <div className="bg-[#05294E] rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">Monthly Growth</p>
