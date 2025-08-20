@@ -129,7 +129,7 @@ async function getUserData(userId: string) {
   }
 }
 
-// Função para verificar assinatura Stripe
+// Função para verificar assinatura Stripe (IMPLEMENTAÇÃO MANUAL CORRETA)
 async function verifyStripeSignature(body: string, signature: string | null, secret: string): Promise<boolean> {
   try {
     if (!signature) {
@@ -137,24 +137,54 @@ async function verifyStripeSignature(body: string, signature: string | null, sec
       return false;
     }
 
+    // Step 1: Extract timestamp and signatures from header
+    const elements = signature.split(',');
+    let timestamp = '';
+    let v1Signature = '';
+
+    for (const element of elements) {
+      const [prefix, value] = element.split('=');
+      if (prefix === 't') {
+        timestamp = value;
+      } else if (prefix === 'v1') {
+        v1Signature = value;
+      }
+    }
+
+    if (!timestamp || !v1Signature) {
+      console.error('[stripe-webhook] Formato de assinatura inválido:', signature);
+      return false;
+    }
+
+    // Step 2: Create signed_payload string
+    const signedPayload = `${timestamp}.${body}`;
+
+    // Step 3: Compute HMAC-SHA256
     const encoder = new TextEncoder();
-    const data = encoder.encode(body);
     const key = await crypto.subtle.importKey(
       'raw',
       encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA256' },
+      { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign']
     );
-    const signedData = await crypto.subtle.sign('HMAC', key, data);
-    const signatureHex = Array.from(new Uint8Array(signedData))
+
+    const signedData = await crypto.subtle.sign('HMAC', key, encoder.encode(signedPayload));
+    const expectedSignature = Array.from(new Uint8Array(signedData))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    const isValid = signatureHex === signature;
+    // Step 4: Compare signatures (constant-time comparison)
+    const isValid = expectedSignature === v1Signature;
+    
     if (!isValid) {
       console.error('[stripe-webhook] Assinatura Stripe inválida!');
+      console.error('[stripe-webhook] Esperada:', expectedSignature);
+      console.error('[stripe-webhook] Recebida:', v1Signature);
+    } else {
+      console.log('[stripe-webhook] Assinatura Stripe verificada com sucesso!');
     }
+
     return isValid;
   } catch (err) {
     console.error('[stripe-webhook] Erro ao verificar assinatura Stripe:', err);
@@ -299,21 +329,176 @@ async function handleEvent(event: Stripe.Event) {
           console.log('User profile updated - application fee paid');
         }
 
-        // Log dos valores dinâmicos processados
-        console.log('Application fee payment processed with dynamic values:', {
+        // Log dos valores processados (sem platform fee)
+        console.log('Application fee payment processed (100% to university):', {
           userId,
           applicationId,
           applicationFeeAmount,
-          platformFeePercentage,
-          universityId
+          universityId,
+          platformFeeDisabled: true
         });
 
-        // Processar transferência via Stripe Connect se aplicável
-        if (universityId && amount_total) {
+        // Processar transferência via Stripe Connect se aplicável (100% para universidade)
+        const requiresTransfer = metadata.requires_transfer === 'true';
+        const stripeConnectAccountId = metadata.stripe_connect_account_id;
+        const transferAmount = metadata.transfer_amount || amount_total; // 100% do valor
+        
+        console.log('🔍 [TRANSFER DEBUG] Iniciando verificação de transferência:', {
+          requiresTransfer,
+          stripeConnectAccountId,
+          transferAmount,
+          amount_total,
+          metadata: JSON.stringify(metadata, null, 2)
+        });
+        
+        if (requiresTransfer && stripeConnectAccountId && amount_total) {
           try {
-            console.log('Processing Stripe Connect transfer for university:', universityId);
+            console.log('🚀 [TRANSFER DEBUG] Iniciando transferência Stripe Connect:', {
+              universityId,
+              stripeConnectAccountId,
+              transferAmount: transferAmount + ' cents',
+              totalAmount: amount_total + ' cents',
+              sessionId: session.id,
+              paymentIntentId: session.payment_intent
+            });
             
-            // Chamar a função de transferência
+            // Verificar se a conta Stripe Connect existe e está ativa
+            console.log('🔍 [TRANSFER DEBUG] Verificando conta Stripe Connect...');
+            const accountInfo = await stripe.accounts.retrieve(stripeConnectAccountId);
+            console.log('✅ [TRANSFER DEBUG] Conta Stripe Connect encontrada:', {
+              accountId: accountInfo.id,
+              country: accountInfo.country,
+              chargesEnabled: accountInfo.charges_enabled,
+              payoutsEnabled: accountInfo.payouts_enabled,
+              requirementsCompleted: accountInfo.requirements?.details_submitted,
+              capabilities: accountInfo.capabilities
+            });
+            
+            // Verificar saldo da plataforma antes da transferência
+            console.log('💰 [TRANSFER DEBUG] Verificando saldo da plataforma...');
+            const balance = await stripe.balance.retrieve();
+            console.log('✅ [TRANSFER DEBUG] Saldo da plataforma:', {
+              available: balance.available.map(b => ({ amount: b.amount, currency: b.currency })),
+              pending: balance.pending.map(b => ({ amount: b.amount, currency: b.currency })),
+              instantAvailable: balance.instant_available?.map(b => ({ amount: b.amount, currency: b.currency })) || []
+            });
+            
+            // Transferir 100% do valor para a universidade
+            const finalTransferAmount = parseInt(transferAmount.toString());
+            
+            console.log('💰 [TRANSFER DEBUG] Criando transferência com parâmetros:', {
+              amount: finalTransferAmount,
+              currency: 'usd',
+              destination: stripeConnectAccountId,
+              description: `Application fee transfer for session ${session.id}`,
+              metadata: {
+                session_id: session.id,
+                application_id: applicationId,
+                university_id: universityId,
+                user_id: userId,
+                original_amount: amount_total.toString(),
+                platform_fee: '0'
+              }
+            });
+            
+            const transfer = await stripe.transfers.create({
+              amount: finalTransferAmount,
+              currency: 'usd',
+              destination: stripeConnectAccountId,
+              description: `Application fee transfer for session ${session.id}`,
+              metadata: {
+                session_id: session.id,
+                application_id: applicationId,
+                university_id: universityId,
+                user_id: userId,
+                original_amount: amount_total.toString(),
+                platform_fee: '0'
+              }
+            });
+            
+            console.log('🎉 [TRANSFER DEBUG] Transferência criada com sucesso:', {
+              transferId: transfer.id,
+              amount: finalTransferAmount + ' cents',
+              destination: stripeConnectAccountId,
+              status: transfer.pending ? 'pending' : 'completed',
+              universityPortion: '100%',
+              platformFee: 'disabled',
+              transferObject: JSON.stringify(transfer, null, 2)
+            });
+            
+            // Registrar a transferência no banco de dados
+            console.log('💾 [TRANSFER DEBUG] Salvando transferência no banco...');
+            const { error: transferError } = await supabase
+              .from('stripe_connect_transfers')
+              .insert({
+                transfer_id: transfer.id,
+                session_id: session.id,
+                payment_intent_id: session.payment_intent || '',
+                application_id: applicationId,
+                user_id: userId,
+                university_id: universityId,
+                amount: transferAmount,
+                status: transfer.pending ? 'pending' : 'succeeded',
+                destination_account: stripeConnectAccountId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            
+            if (transferError) {
+              console.error('❌ [TRANSFER DEBUG] Erro ao salvar no banco:', transferError);
+            } else {
+              console.log('✅ [TRANSFER DEBUG] Transferência salva no banco com sucesso');
+            }
+            
+          } catch (transferError) {
+            console.error('💥 [TRANSFER DEBUG] Erro ao processar transferência:', {
+              error: transferError.message,
+              errorType: transferError.type,
+              errorCode: transferError.code,
+              errorParam: transferError.param,
+              fullError: JSON.stringify(transferError, null, 2)
+            });
+            
+            // Registrar falha da transferência no banco
+            console.log('💾 [TRANSFER DEBUG] Salvando falha da transferência no banco...');
+            const { error: failedTransferError } = await supabase
+              .from('stripe_connect_transfers')
+              .insert({
+                session_id: session.id,
+                payment_intent_id: session.payment_intent || '',
+                application_id: applicationId,
+                user_id: userId,
+                university_id: universityId,
+                amount: amount_total,
+                status: 'failed',
+                destination_account: stripeConnectAccountId,
+                error_message: transferError.message,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            
+            if (failedTransferError) {
+              console.error('❌ [TRANSFER DEBUG] Erro ao salvar falha no banco:', failedTransferError);
+            } else {
+              console.log('✅ [TRANSFER DEBUG] Falha da transferência salva no banco');
+            }
+          }
+        } else {
+          console.log('⚠️ [TRANSFER DEBUG] Transferência não será processada:', {
+            requiresTransfer,
+            hasStripeConnectAccount: !!stripeConnectAccountId,
+            hasAmount: !!amount_total,
+            reason: !requiresTransfer ? 'requires_transfer = false' : 
+                    !stripeConnectAccountId ? 'sem stripe_connect_account_id' : 
+                    !amount_total ? 'sem amount_total' : 'desconhecido'
+          });
+        }
+        
+        if (universityId && amount_total) {
+          // Fallback para o fluxo antigo se não tiver Stripe Connect
+          try {
+            console.log('Using legacy transfer flow (no Stripe Connect)');
+            
             const transferResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/process-stripe-connect-transfer`, {
               method: 'POST',
               headers: {
@@ -332,19 +517,10 @@ async function handleEvent(event: Stripe.Event) {
 
             if (transferResponse.ok) {
               const transferResult = await transferResponse.json();
-              console.log('Stripe Connect transfer result:', transferResult);
-              
-              if (transferResult.transfer_type === 'stripe_connect') {
-                console.log('Transfer completed successfully via Stripe Connect');
-              } else {
-                console.log('Using current flow (no Stripe Connect)');
-              }
-            } else {
-              console.error('Error calling transfer function:', transferResponse.status);
+              console.log('Legacy transfer result:', transferResult);
             }
-          } catch (transferError) {
-            console.error('Error processing Stripe Connect transfer:', transferError);
-            // Não falhar o webhook por causa da transferência
+          } catch (legacyError) {
+            console.error('Error in legacy transfer flow:', legacyError);
           }
         }
       }
@@ -411,5 +587,5 @@ async function handleEvent(event: Stripe.Event) {
     }
   }
 
-  return new Response(JSON.stringify({ received: true }), { status: 200 });
-}
+      return new Response(JSON.stringify({ received: true }), { status: 200 });
+  }

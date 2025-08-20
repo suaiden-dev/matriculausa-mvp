@@ -7,7 +7,9 @@ import {
   CheckCircle, 
   AlertCircle, 
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  CreditCard,
+  Loader
 } from 'lucide-react';
 
 const StripeConnectCallback: React.FC = () => {
@@ -30,18 +32,17 @@ const StripeConnectCallback: React.FC = () => {
 
         if (error) {
           setStatus('error');
-          setMessage('Erro durante a autorização do Stripe');
+          setMessage('Error during Stripe authorization');
           setError(error);
           return;
         }
 
         if (!code) {
           setStatus('error');
-          setMessage('Código de autorização não recebido');
+          setMessage('Authorization code not received');
           return;
         }
 
-        // Chamar edge function para processar o callback
         const { data, error: processError } = await supabase.functions.invoke('process-stripe-connect-callback', {
           body: {
             university_id: university.id,
@@ -56,20 +57,19 @@ const StripeConnectCallback: React.FC = () => {
 
         if (data?.success) {
           setStatus('success');
-          setMessage('Conta Stripe conectada com sucesso!');
+          setMessage('Stripe account connected successfully!');
           
-          // Redirecionar após 3 segundos
           setTimeout(() => {
             navigate('/school/dashboard/stripe-connect');
           }, 3000);
         } else {
-          throw new Error(data?.message || 'Erro ao processar conexão');
+          throw new Error(data?.message || 'Error processing connection');
         }
 
       } catch (error: any) {
         console.error('Error processing callback:', error);
         setStatus('error');
-        setMessage('Erro ao processar conexão com Stripe');
+        setMessage('Error processing Stripe connection');
         setError(error.message);
       }
     };
@@ -88,7 +88,7 @@ const StripeConnectCallback: React.FC = () => {
   if (!university) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600"></div>
       </div>
     );
   }
@@ -98,42 +98,44 @@ const StripeConnectCallback: React.FC = () => {
       <div className="max-w-md mx-auto text-center">
         {status === 'loading' && (
           <>
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#05294E] mx-auto mb-6"></div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Processando conexão...
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Loader className="h-10 w-10 text-slate-600 animate-spin" />
+            </div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-3">
+              Processing Connection
             </h2>
-            <p className="text-gray-600">
-              Aguarde enquanto processamos sua conexão com o Stripe
+            <p className="text-slate-600 text-sm">
+              Please wait while we securely process your Stripe connection
             </p>
           </>
         )}
 
         {status === 'success' && (
           <>
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Sucesso!
+            <h2 className="text-xl font-semibold text-slate-900 mb-3">
+              Connection Successful
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-slate-600 mb-6 text-sm">
               {message}
             </p>
             <div className="space-y-3">
               <button
                 onClick={handleDashboard}
-                className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Voltar ao Dashboard
+                Back to Dashboard
               </button>
               <a
                 href="https://dashboard.stripe.com/connect/accounts"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center w-full px-4 py-2 text-blue-600 font-medium border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center justify-center w-full px-4 py-3 text-blue-600 font-medium border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Abrir Dashboard Stripe
+                Open Stripe Dashboard
               </a>
             </div>
           </>
@@ -141,13 +143,13 @@ const StripeConnectCallback: React.FC = () => {
 
         {status === 'error' && (
           <>
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="h-8 w-8 text-red-600" />
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="h-10 w-10 text-red-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Erro na Conexão
+            <h2 className="text-xl font-semibold text-slate-900 mb-3">
+              Connection Error
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-slate-600 mb-4 text-sm">
               {message}
             </p>
             {error && (
@@ -160,15 +162,15 @@ const StripeConnectCallback: React.FC = () => {
             <div className="space-y-3">
               <button
                 onClick={handleRetry}
-                className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Tentar Novamente
+                Try Again
               </button>
               <button
                 onClick={handleDashboard}
-                className="w-full px-4 py-2 text-gray-600 font-medium border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full px-4 py-3 text-slate-600 font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                Voltar ao Dashboard
+                Back to Dashboard
               </button>
             </div>
           </>
