@@ -74,15 +74,7 @@ const StudentDetails: React.FC = () => {
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
   const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState(false);
 
-  // Bloqueia scroll do body enquanto a página de detalhes estiver aberta
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev || '';
-    };
-  }, []);
+  // Removido: Bloqueio de scroll que estava causando problemas de navegação
 
   // Estados para o modal de nova solicitação de documento
   const [newDocumentRequest, setNewDocumentRequest] = useState({
@@ -710,6 +702,71 @@ const StudentDetails: React.FC = () => {
         .from('user_profiles')
         .update({ documents_status: 'under_review' })
         .eq('user_id', student.user_id);
+
+      // --- NOTIFICAÇÃO VIA WEBHOOK N8N ---
+      try {
+        console.log('Enviando notificação de rejeição de documento via webhook...');
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('user_id', student.user_id)
+          .single();
+
+        if (userData?.email) {
+          const documentLabel = DOCUMENTS_INFO.find(doc => doc.key === type)?.label || type;
+          const webhookPayload = {
+            tipo_notf: "Documento rejeitado",
+            email_aluno: userData.email,
+            nome_aluno: student.full_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Your document <strong>${documentLabel}</strong> has been rejected and needs changes. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+          };
+
+          console.log('Enviando webhook para documento rejeitado:', webhookPayload);
+          
+          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+          
+          console.log('Webhook response status:', webhookResponse.status);
+          
+          if (!webhookResponse.ok) {
+            const webhookErrorText = await webhookResponse.text();
+            console.error('Webhook error:', webhookErrorText);
+          } else {
+            console.log('Webhook enviado com sucesso para rejeição de documento');
+          }
+
+          // Notificação in-app no sino do aluno
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+            if (accessToken) {
+              await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
+                  user_id: student.user_id,
+                  title: 'Document rejected',
+                  message: `Your ${documentLabel} document was rejected. Reason: ${reason}`,
+                  type: 'document_rejected',
+                  link: '/student/dashboard',
+                }),
+              });
+            }
+          } catch (e) {
+            console.error('Error sending in-app student notification:', e);
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending rejection notification:', notificationError);
+      }
+      // --- FIM DA NOTIFICAÇÃO ---
     } finally {
       setUpdating(null);
     }
@@ -1213,7 +1270,7 @@ const StudentDetails: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-y-auto">
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
