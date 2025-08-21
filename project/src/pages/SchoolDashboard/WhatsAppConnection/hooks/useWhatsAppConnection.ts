@@ -51,7 +51,7 @@ export const useWhatsAppConnection = (university: any, user: any) => {
     
     try {
       // 1. Configurar Chatwoot
-      const { chatwootData, chatwootPassword } = await createChatwootAccount(user, instanceName, agentId);
+      await createChatwootAccount(user, instanceName, agentId);
 
       // 2. Gerar QR Code
       const qrCodePayload = {
@@ -68,7 +68,20 @@ export const useWhatsAppConnection = (university: any, user: any) => {
 
       const qrCodeData = await generateQRCode(qrCodePayload);
 
-      // 3. Criar conexão no banco
+      // 3. Buscar final_prompt do agente e criar conexão no banco
+      let agentFinalPrompt = null;
+      if (agentId) {
+        const { data: agentData, error: agentError } = await supabase
+          .from('ai_configurations')
+          .select('final_prompt')
+          .eq('id', agentId)
+          .single();
+        
+        if (!agentError && agentData?.final_prompt) {
+          agentFinalPrompt = agentData.final_prompt;
+        }
+      }
+
       const newConnection = {
         university_id: university.id,
         user_id: user.id,
@@ -76,6 +89,7 @@ export const useWhatsAppConnection = (university: any, user: any) => {
         phone_number: 'Connecting...',
         connection_status: 'connecting',
         instance_name: instanceName,
+        final_prompt: agentFinalPrompt,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

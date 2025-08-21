@@ -14,7 +14,7 @@ export const useAgentChat = (agentId: string) => {
   const [conversationId] = useState(`conv_${Date.now()}`); // Gera um ID único para toda a conversa
   const { user } = useAuth();
 
-  const sendToN8N = async (message: string, agentName: string, companyName: string) => {
+  const sendToN8N = async (message: string, agentName: string, companyName: string, customPrompt?: string) => {
     try {
       console.log('Enviando mensagem para webhook:', {
         message,
@@ -22,7 +22,8 @@ export const useAgentChat = (agentId: string) => {
         agent_name: agentName,
         company_name: companyName,
         conversation_id: conversationId,
-        user_id: user?.id
+        user_id: user?.id,
+        custom_prompt: customPrompt
       });
       
       const response = await fetch('https://nwh.suaiden.com/webhook/chatbot-test', {
@@ -36,7 +37,8 @@ export const useAgentChat = (agentId: string) => {
           agent_name: agentName,
           company_name: companyName,
           conversation_id: conversationId,
-          user_id: user?.id
+          user_id: user?.id,
+          custom_prompt: customPrompt
         })
       });
 
@@ -73,10 +75,10 @@ export const useAgentChat = (agentId: string) => {
       setInputMessage('');
 
       console.log('Buscando dados do agente:', agentId);
-      // Busca os dados do agente
+      // Busca os dados do agente incluindo custom_prompt
       const { data: agentData, error: agentError } = await supabase
         .from('ai_configurations')
-        .select('ai_name, company_name')
+        .select('ai_name, company_name, custom_prompt')
         .eq('id', agentId)
         .single();
 
@@ -92,7 +94,7 @@ export const useAgentChat = (agentId: string) => {
       }
 
       // Envia para o webhook
-      const { response } = await sendToN8N(userMessage.content, agentData.ai_name, agentData.company_name);
+      const { response } = await sendToN8N(userMessage.content, agentData.ai_name, agentData.company_name, agentData.custom_prompt);
 
       // Adiciona a resposta do bot
       const botMessage: Message = { type: 'bot', content: response };

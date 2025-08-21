@@ -7,6 +7,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Função para gerar caracteres aleatórios
+const generateRandomString = (length: number): string => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+};
+
+// Função para gerar instance name único (centralizada)
+const generateUniqueInstanceName = (userEmail: string): string => {
+  const userName = userEmail?.split('@')[0] || 'user';
+  const randomSuffix = generateRandomString(10);
+  return `${userName}_${randomSuffix}`;
+};
+
 // Função para gerar senha única do Chatwoot
 const generateChatwootPassword = (email: string, userId: string): string => {
   const baseString = `${email}${userId}${Date.now()}`;
@@ -64,10 +81,8 @@ Deno.serve(async (req) => {
     // Gerar senha única para o Chatwoot
     const chatwootPassword = generateChatwootPassword(body.email, body.user_id);
 
-    // Gerar nome da instância único
-    const userName = body.user_name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-    const randomStr = Math.random().toString(36).substring(2, 12);
-    const instanceName = `${userName}_${randomStr}`;
+    // Gerar nome da instância único (usando implementação centralizada)
+    const instanceName = generateUniqueInstanceName(body.email);
 
     console.log('[Edge] Iniciando integração Chatwoot + QR Code');
 
@@ -178,6 +193,7 @@ Deno.serve(async (req) => {
         evolution_instance_id: instanceName,
         connection_status: 'connecting',
         qr_code: qrCodeData,
+        final_prompt: null, // Será atualizado quando o agente for associado
         updated_at: new Date().toISOString()
       }, { 
         onConflict: 'user_id' 
