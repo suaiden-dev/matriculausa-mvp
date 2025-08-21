@@ -80,7 +80,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     try {
       if (!user) throw new Error('User not authenticated');
       
-      const uploadedDocs: { name: string; url: string; type: string; uploaded_at: string }[] = [];
+      const uploadedDocs: { name: string; url: string; type: string; uploaded_at: string; status: string }[] = [];
       const docUrls: Record<string, string> = {};
       
       for (const doc of DOCUMENT_TYPES) {
@@ -94,17 +94,14 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         
         if (storageError) throw storageError;
         
-        const file_url = storageData?.path ? 
-          supabase.storage.from('student-documents').getPublicUrl(storageData.path).data.publicUrl : null;
+        if (!storageData?.path) throw new Error('Failed to get storage path');
         
-        if (!file_url) throw new Error('Failed to get file URL');
-        
-        docUrls[doc.key] = file_url;
+        docUrls[doc.key] = storageData.path; // Salvar o caminho do storage, não a URL pública
         
         const { error: insertError } = await supabase.from('student_documents').insert({
           user_id: user.id,
           type: doc.key,
-          file_url,
+          file_url: storageData.path, // Salvar o caminho do storage
           status: 'pending',
         });
         
@@ -112,9 +109,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         
         uploadedDocs.push({ 
           name: file.name, 
-          url: file_url, 
+          url: storageData.path, // Salvar com 'url' para compatibilidade com SelectionProcess
           type: doc.key, 
-          uploaded_at: new Date().toISOString() 
+          uploaded_at: new Date().toISOString(),
+          status: 'pending'
         });
       }
 
@@ -126,9 +124,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         user_id: user.id,
         student_name: userProfile?.full_name || (user as any)?.user_metadata?.full_name || 
                      (user as any)?.user_metadata?.name || user.email || '',
-        passport_url: docUrls['passport'],
-        diploma_url: docUrls['diploma'],
-        funds_proof_url: docUrls['funds_proof'],
+        passport_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['passport']).data.publicUrl,
+        diploma_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['diploma']).data.publicUrl,
+        funds_proof_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['funds_proof']).data.publicUrl,
       };
       
       const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 
@@ -180,41 +178,27 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         const allValid = passportOk && fundsOk && degreeOk;
         
         if (allValid) {
-          // Documentos aprovados - continuar processo
+          // Documentos aprovados - continuar processo completo
           await supabase
             .from('user_profiles')
             .update({
               documents: uploadedDocs,
               documents_uploaded: true,
-              documents_status: 'under_review',
+              documents_status: 'approved',
             })
             .eq('user_id', user.id);
 
-          // Processar aplicações e limpar carrinho
-          await processApplicationsAndClearCart(docUrls);
+          // Processar aplicações, limpar carrinho E notificar universidade
+          await processApplicationsAndClearCart(docUrls, true);
           
           setAnalyzing(false);
           setFieldErrors({});
           setDocumentsApproved(true);
           navigate('/student/dashboard/application-fee');
         } else {
-          // Documentos com erro - mostrar erros específicos
-          const nextFieldErrors: Record<string, string> = {};
-          if (!passportOk && (passportErr || respPassport !== undefined)) {
-            nextFieldErrors['passport'] = passportErr || 'Invalid document.';
-          }
-          if (!fundsOk && (fundsErr || respFunds !== undefined)) {
-            nextFieldErrors['funds_proof'] = fundsErr || 'Invalid document.';
-          }
-          if (!degreeOk && (degreeErr || respDegree !== undefined)) {
-            nextFieldErrors['diploma'] = degreeErr || 'Invalid document.';
-          }
-          
-          setAnalyzing(false);
-          setError(null);
-          setFieldErrors(nextFieldErrors);
-          
-          // Atualizar perfil mesmo com erros para revisão manual
+          // Documentos com erro - apenas salvar no perfil para revisão manual
+          // NÃO criar aplicações na universidade ainda
+          // NÃO processar carrinho ainda
           await supabase
             .from('user_profiles')
             .update({
@@ -224,14 +208,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             })
             .eq('user_id', user.id);
 
-          await processApplicationsAndClearCart(docUrls);
+          // NÃO chamar saveDocumentsForManualReview aqui
+          // As aplicações só serão criadas quando o usuário completar o manual review
+          
+          setAnalyzing(false);
+          setError(null);
+          setFieldErrors({
+            passport: passportErr || 'Invalid document.',
+            funds_proof: fundsErr || 'Invalid document.',
+            diploma: degreeErr || 'Invalid document.',
+          });
           
           // Limpar apenas arquivos inválidos
           setFiles(prev => {
             const updated = { ...prev };
-            if (!passportOk && (passportErr || respPassport !== undefined)) updated['passport'] = null;
-            if (!fundsOk && (fundsErr || respFunds !== undefined)) updated['funds_proof'] = null;
-            if (!degreeOk && (degreeErr || respDegree !== undefined)) updated['diploma'] = null;
+            if (!passportOk) updated['passport'] = null;
+            if (!fundsOk) updated['funds_proof'] = null;
+            if (!degreeOk) updated['diploma'] = null;
             return updated;
           });
         }
@@ -246,8 +239,89 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     }
   };
 
-  // Função auxiliar para processar aplicações e limpar carrinho
-  const processApplicationsAndClearCart = async (docUrls: Record<string, string>) => {
+  // Função auxiliar para salvar documentos para revisão manual (sem notificar universidade)
+  const saveDocumentsForManualReview = async (docUrls: Record<string, string>) => {
+    if (!user) return;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('id, selected_scholarship_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      const scholarshipIds: string[] = [];
+      
+      // Buscar bolsas do carrinho
+      const { data: cartRows } = await supabase
+        .from('user_cart')
+        .select('scholarship_id')
+        .eq('user_id', user.id);
+      
+      if (Array.isArray(cartRows)) {
+        for (const row of cartRows) {
+          if (row?.scholarship_id && !scholarshipIds.includes(row.scholarship_id)) {
+            scholarshipIds.push(row.scholarship_id);
+          }
+        }
+      }
+      
+      if (scholarshipIds.length === 0 && profile?.selected_scholarship_id) {
+        scholarshipIds.push(profile.selected_scholarship_id);
+      }
+
+      if (profile?.id && scholarshipIds.length > 0) {
+        for (const scholarshipId of scholarshipIds) {
+          const { data: existingApp } = await supabase
+            .from('scholarship_applications')
+            .select('id')
+            .eq('student_id', profile.id)
+            .eq('scholarship_id', scholarshipId)
+            .maybeSingle();
+          
+          let applicationId: string | null = existingApp?.id || null;
+          
+          if (!applicationId) {
+            const { data: newApp } = await supabase
+              .from('scholarship_applications')
+              .insert({ 
+                student_id: profile.id, 
+                scholarship_id: scholarshipId, 
+                status: 'pending' 
+              })
+              .select('id')
+              .single();
+            applicationId = newApp?.id || null;
+          }
+          
+          if (applicationId) {
+            // Criar documentos com a estrutura correta que o SelectionProcess espera
+            const finalDocs = [
+              { type: 'passport', url: docUrls['passport'], status: 'under_review' },
+              { type: 'diploma', url: docUrls['diploma'], status: 'under_review' },
+              { type: 'funds_proof', url: docUrls['funds_proof'], status: 'under_review' },
+            ].filter(d => d.url).map(d => ({ 
+              ...d, 
+              uploaded_at: new Date().toISOString()
+            }));
+            
+            await supabase
+              .from('scholarship_applications')
+              .update({ documents: finalDocs })
+              .eq('id', applicationId);
+          }
+        }
+      }
+      
+      console.log('Documents saved for manual review - applications created with correct structure');
+      
+    } catch (error) {
+      console.error('Error saving documents for manual review:', error);
+    }
+  };
+
+  // Função auxiliar para processar aplicações e limpar carrinho (com opção de notificar universidade)
+  const processApplicationsAndClearCart = async (docUrls: Record<string, string>, notifyUniversity: boolean = false) => {
     if (!user) return;
     
     try {
@@ -330,22 +404,24 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         clearCart(user.id);
       }
 
-      // Notificar universidade
-      const { data: { session } } = await supabase.auth.getSession();
-      const notifyPayload = { 
-        user_id: user.id, 
-        tipos_documentos: ['manual_review'], 
-        scholarship_ids: scholarshipIds 
-      };
-      
-      await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${session?.access_token || ''}` 
-        },
-        body: JSON.stringify(notifyPayload),
-      });
+      // Só notificar universidade se solicitado explicitamente
+      if (notifyUniversity) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const notifyPayload = { 
+          user_id: user.id, 
+          tipos_documentos: ['manual_review'], 
+          scholarship_ids: scholarshipIds 
+        };
+        
+        await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${session?.access_token || ''}` 
+          },
+          body: JSON.stringify(notifyPayload),
+        });
+      }
     } catch (error) {
       console.error('Error processing applications:', error);
     }
@@ -590,7 +666,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                           {hasError && (
                             <div className="flex items-start text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded-lg">
                               <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-2 mt-0.5 flex-shrink-0" />
-                              <span className="break-words">{hasError}</span>
+                              <span className="flex items-center justify-center">
+                                <span className="break-words">{hasError}</span>
+                              </span>
                             </div>
                           )}
                         </div>
@@ -694,4 +772,4 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   );
 };
 
-export default DocumentsAndScholarshipChoice; 
+export default DocumentsAndScholarshipChoice;
