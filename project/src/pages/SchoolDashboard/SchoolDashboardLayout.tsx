@@ -391,21 +391,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
               }
             })}
           </nav>
-
-          {/* Support */}
-          <div className="px-4 py-4 border-t border-slate-200">
-            <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-4 border border-slate-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Shield className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 text-sm">24/7 Support</h4>
-                  <p className="text-xs text-slate-500">We're here to help</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

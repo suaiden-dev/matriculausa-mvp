@@ -253,20 +253,6 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
               })}
             </nav>
           </div>
-          {/* Academic Support colado no final da sidebar, formato card */}
-          <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-slate-200 bg-white">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 border border-blue-200">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-semibold text-slate-900 text-xs sm:text-sm truncate">Academic Support</h4>
-                  <p className="text-xs text-slate-500 truncate">24/7 assistance available</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
