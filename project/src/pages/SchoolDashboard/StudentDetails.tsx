@@ -591,7 +591,6 @@ const StudentDetails: React.FC = () => {
       // Recarregar os dados para mostrar o novo status
       fetchStudentDocuments();
 
-      alert('Document approved successfully! The student will be notified.');
     } catch (err: any) {
       console.error("Error approving document:", err);
       alert(`Failed to approve document: ${err.message}`);
