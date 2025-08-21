@@ -5,16 +5,17 @@
 @tailwind utilities;
 
 @layer base {
-  /* Controle de scroll global */
+  /* Controle de scroll global - CORRIGIDO */
   html {
     height: 100%;
-    overflow-y: hidden; /* Permite scroll na tag HTML */
+    overflow-y: hidden; /* Permitir scroll normal */
   }
   
   body {
     height: 100%;
-    overflow-y: auto; /* Permite scroll no body */
-    overflow-x: hidden; /* Previne scroll horizontal */
+    overflow-y: auto; /* Permitir scroll no body */
+    overflow-x: hidden; /* Prevenir scroll horizontal */
+    position: relative; /* Garantir posicionamento correto */
   }
 
   /* Resto do CSS existente */
@@ -73,6 +74,52 @@
   .break-words {
     word-break: break-word;
     overflow-wrap: break-word;
+  }
+  
+  /* CSS específico para inputs de arquivo - PREVENIR QUEBRAS DE LAYOUT */
+  input[type="file"] {
+    position: absolute !important;
+    left: -9999px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  
+  /* Garantir que labels de arquivo sejam estáveis */
+  label[for*="file"],
+  label:has(input[type="file"]) {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+  }
+  
+  /* Prevenir quebras de layout em containers de arquivo */
+  .file-upload-container {
+    position: relative !important;
+    overflow: hidden !important;
+    min-height: 200px !important;
+  }
+  
+  /* CSS para prevenir quebras de layout */
+  .stable-layout {
+    position: relative !important;
+    overflow: visible !important;
+    min-height: 100vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Garantir que inputs de arquivo não quebrem o layout */
+  .file-input-wrapper {
+    position: relative !important;
+    display: inline-block !important;
+    overflow: hidden !important;
+    vertical-align: middle !important;
   }
   
   /* CSS específico para mobile */
