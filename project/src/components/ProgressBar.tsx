@@ -33,10 +33,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps }) => {
   const currentIdx = steps.findIndex(step => step.current);
   // Valores das taxas (ajuste conforme necessário)
   const feeValues = [
-    '$350', // Selection Process Fee
+    '$600', // Selection Process Fee
     '$350', // Application Fee
-    '$550', // Scholarship Fee
-    '$900', // I-20 Control Fee
+    '$850', // Scholarship Fee
+    '$1,250', // I-20 Control Fee
   ];
   return (
     <div className="w-full flex flex-col items-center pb-8 md:pb-16 mb-4 md:mb-8">

@@ -1,36 +1,68 @@
 import React, { useState } from 'react';
 import { HelpCircle, Search, ChevronDown, ChevronUp, MessageCircle, Phone, Mail, CheckCircle, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import SmartChat from '../components/SmartChat';
 
 const FAQ: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
 
   const faqItems = [
     {
-      q: 'What is MatriculaUSA?',
-      a: 'MatriculaUSA is a platform that helps international students apply to American universities, find scholarships, and manage the entire admission process online.',
+      q: t('studentDashboard.faq.question1'),
+      a: t('studentDashboard.faq.answer1'),
       category: 'General'
     },
     {
-      q: 'Who can use MatriculaUSA?',
-      a: 'Any student from outside the United States who wants to study at a partner university in the U.S.',
-      category: 'Eligibility'
-    },
-    {
-      q: 'Are the application fees refundable?',
-      a: 'No. All fees are final and non-refundable.',
+      q: t('studentDashboard.faq.question2'),
+      a: t('studentDashboard.faq.answer2'),
       category: 'Payment'
     },
     {
-      q: 'How do I contact support?',
-      a: 'You can reach our team via the Contact Us page or by email at info@matriculausa.com.',
+      q: t('studentDashboard.faq.question3'),
+      a: t('studentDashboard.faq.answer3'),
+      category: 'Payment'
+    },
+    {
+      q: t('studentDashboard.faq.question4'),
+      a: t('studentDashboard.faq.answer4'),
+      category: 'Payment'
+    },
+    {
+      q: t('studentDashboard.faq.question5'),
+      a: t('studentDashboard.faq.answer5'),
+      category: 'Payment'
+    },
+    {
+      q: t('studentDashboard.faq.question6'),
+      a: t('studentDashboard.faq.answer6'),
+      category: 'Payment'
+    },
+    {
+      q: t('studentDashboard.faq.question7'),
+      a: t('studentDashboard.faq.answer7'),
+      category: 'Payment'
+    },
+    {
+      q: t('studentDashboard.faq.question8'),
+      a: t('studentDashboard.faq.answer8'),
       category: 'Support'
     },
     {
-      q: 'How do I know if I am eligible for a scholarship?',
-      a: "Eligibility depends on each scholarship's requirements. After creating your profile, you will see which scholarships you qualify for.",
-      category: 'Scholarships'
+      q: t('studentDashboard.faq.question9'),
+      a: t('studentDashboard.faq.answer9'),
+      category: 'Payment'
+    },
+    {
+      q: t('studentDashboard.faq.question10'),
+      a: t('studentDashboard.faq.answer10'),
+      category: 'Payment'
+    },
+    {
+      q: t('studentDashboard.faq.question11'),
+      a: t('studentDashboard.faq.answer11'),
+      category: 'Support'
     }
   ];
 
@@ -59,11 +91,11 @@ const FAQ: React.FC = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Frequently Asked Questions
+              {t('studentDashboard.faq.title')}
             </h1>
             
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-              Find answers to the most common questions about MatriculaUSA
+              {t('studentDashboard.faq.subtitle')}
             </p>
             
             <div className="max-w-md mx-auto relative">
@@ -72,7 +104,7 @@ const FAQ: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search questions..."
+                placeholder={t('common.search') + '...'}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
               />
             </div>
@@ -81,7 +113,7 @@ const FAQ: React.FC = () => {
             <div className="flex justify-center items-center space-x-8 mt-8 text-sm text-gray-500">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>24/7 support</span>
+                <span>24/7 {t('common.support') || 'support'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-[#05294E] rounded-full"></div>
@@ -98,7 +130,7 @@ const FAQ: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-3">
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Common Questions</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('studentDashboard.faq.badge')}</h2>
               <p className="text-gray-600">
                 {filteredItems.length} question{filteredItems.length !== 1 ? 's' : ''} found
                 {searchQuery && ` for "${searchQuery}"`}
@@ -163,7 +195,7 @@ const FAQ: React.FC = () => {
           <div className="lg:col-span-1 space-y-6">
             {/* Contact Options */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Need more help?</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('studentDashboard.matriculaRewards.helpSupport')}</h3>
               
               <div className="space-y-3">
                 <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer">
@@ -171,7 +203,7 @@ const FAQ: React.FC = () => {
                     <MessageCircle className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Smart Assistant</p>
+                    <p className="font-medium text-gray-900">{t('studentDashboard.matriculaRewards.smartAssistant')}</p>
                     <p className="text-sm text-gray-600">AI-powered help</p>
                   </div>
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -182,7 +214,7 @@ const FAQ: React.FC = () => {
                     <Phone className="h-5 w-5 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">WhatsApp Support</p>
+                    <p className="font-medium text-gray-900">WhatsApp {t('common.support') || 'Support'}</p>
                     <p className="text-sm text-gray-600">Direct messaging</p>
                   </div>
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
