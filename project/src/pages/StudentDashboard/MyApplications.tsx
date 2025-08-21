@@ -299,9 +299,9 @@ const MyApplications: React.FC = () => {
             description: 'Excellent! Your application fee has been confirmed. Now pay the scholarship fee to finalize your enrollment.',
             nextSteps: ['Pay the scholarship fee to complete enrollment', 'Receive final confirmation', 'Begin your academic program'],
             icon: '🎓',
-            color: 'text-purple-700',
-            bgColor: 'bg-purple-50',
-            borderColor: 'border-purple-200'
+            color: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200'
           };
         } else {
           return {
