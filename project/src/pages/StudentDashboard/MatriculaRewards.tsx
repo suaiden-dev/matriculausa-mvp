@@ -11,6 +11,7 @@ import {
   Mail,
   GraduationCap
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { 
@@ -27,6 +28,8 @@ import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 import WhatsAppIcon from '../../components/icons/WhatsApp';
 
 const MatriculaRewards: React.FC = () => {
+  const { t } = useTranslation();
+  
   // Logos oficiais em SVG simplificados (inline), sem dependências externas
   const FacebookLogo = () => (
     <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
@@ -332,7 +335,7 @@ const MatriculaRewards: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 font-medium">Loading Matricula Rewards...</p>
+          <p className="text-slate-600 font-medium">Loading {t('studentDashboard.matriculaRewards.title')}...</p>
         </div>
       </div>
     );
@@ -343,7 +346,7 @@ const MatriculaRewards: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <Card className="w-full max-w-lg">
           <CardHeader>
-            <CardTitle>Matricula Rewards</CardTitle>
+            <CardTitle>{t('studentDashboard.matriculaRewards.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
@@ -449,7 +452,7 @@ const MatriculaRewards: React.FC = () => {
                       className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-3 py-2 text-white hover:brightness-95"
                     >
                       <FacebookLogo />
-                      <span className="hidden sm:inline">Facebook</span>
+                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.facebook')}</span>
                     </button>
                     <button
                       aria-label="Share on Twitter"
@@ -457,7 +460,7 @@ const MatriculaRewards: React.FC = () => {
                       className="inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2] px-3 py-2 text-white hover:brightness-95"
                     >
                       <TwitterLogo />
-                      <span className="hidden sm:inline">Twitter</span>
+                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.twitter')}</span>
                     </button>
                     <button
                       aria-label="Share on LinkedIn"
@@ -465,7 +468,7 @@ const MatriculaRewards: React.FC = () => {
                       className="inline-flex items-center gap-2 rounded-xl bg-[#0A66C2] px-3 py-2 text-white hover:brightness-95"
                     >
                       <LinkedInLogo />
-                      <span className="hidden sm:inline">LinkedIn</span>
+                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.linkedin')}</span>
                     </button>
                     <button
                       aria-label="Share on WhatsApp"
@@ -473,7 +476,7 @@ const MatriculaRewards: React.FC = () => {
                       className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-3 py-2 text-white hover:brightness-95"
                     >
                       <WhatsAppIcon width={16} height={16} className="text-white" />
-                      <span className="hidden sm:inline">WhatsApp</span>
+                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.whatsapp')}</span>
                     </button>
                     <button
                       aria-label="Share via Email"
@@ -481,7 +484,7 @@ const MatriculaRewards: React.FC = () => {
                       className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-3 py-2 text-white hover:brightness-95"
                     >
                       <Mail className="h-4 w-4" />
-                      <span className="hidden sm:inline">Email</span>
+                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.email')}</span>
                     </button>
                   </div>
                 </div>
@@ -492,11 +495,11 @@ const MatriculaRewards: React.FC = () => {
 
           {/* CTA Store */}
           <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white shadow-md">
-            <h3 className="text-lg font-semibold">Spend your coins</h3>
-            <p className="text-blue-100 mt-1">Visit our store and redeem perks using your MatriculaCoins.</p>
+            <h3 className="text-lg font-semibold">{t('studentDashboard.matriculaRewards.spendYourCoins')}</h3>
+            <p className="text-blue-100 mt-1">{t('studentDashboard.matriculaRewards.visitStoreDescription')}</p>
             <Link to="/student/dashboard/rewards/store" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 ring-1 ring-white/20 hover:bg-white/20">
               <Gift className="h-4 w-4"/>
-              Visit Rewards Store
+              {t('studentDashboard.matriculaRewards.visitRewardsStore')}
               <ArrowUpRight className="h-4 w-4"/>
             </Link>
           </div>
@@ -505,7 +508,7 @@ const MatriculaRewards: React.FC = () => {
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Referrals</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.recentReferrals')}</h2>
             {referrals.length ? (
               <ul className="space-y-3">
                 {referrals.slice(0,5).map(referral => (
@@ -526,13 +529,13 @@ const MatriculaRewards: React.FC = () => {
               </ul>
             ) : (
               <Alert className="py-4">
-                <AlertTitle>No referrals yet</AlertTitle>
-                <AlertDescription>Share your code to start earning.</AlertDescription>
+                <AlertTitle>{t('studentDashboard.matriculaRewards.noReferralsYet')}</AlertTitle>
+                <AlertDescription>{t('studentDashboard.matriculaRewards.shareCodeToEarn')}</AlertDescription>
               </Alert>
             )}
           </Card>
           <Card className="p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Transactions</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.recentTransactions')}</h2>
             {transactions.length ? (
               <ul className="space-y-3">
                 {transactions.slice(0,5).map(tx => (
@@ -555,8 +558,8 @@ const MatriculaRewards: React.FC = () => {
               </ul>
             ) : (
               <Alert className="py-4">
-                <AlertTitle>No transactions yet</AlertTitle>
-                <AlertDescription>Your transaction history will appear here.</AlertDescription>
+                <AlertTitle>{t('studentDashboard.matriculaRewards.noTransactionsYet')}</AlertTitle>
+                <AlertDescription>{t('studentDashboard.matriculaRewards.transactionHistory')}</AlertDescription>
               </Alert>
             )}
           </Card>
@@ -564,32 +567,31 @@ const MatriculaRewards: React.FC = () => {
 
         {/* How it works */}
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">How It Works</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.howItWorks')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">1</div>
-              <h3 className="font-semibold text-slate-900">Share Your Code</h3>
-              <p className="text-sm text-slate-600 mt-1">Share your unique affiliate code with friends and family.</p>
+              <h3 className="font-semibold text-slate-900">{t('studentDashboard.matriculaRewards.step1Title')}</h3>
+              <p className="text-sm text-slate-600 mt-1">{t('studentDashboard.matriculaRewards.step1Description')}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">2</div>
-              <h3 className="font-semibold text-slate-900">Friends Join</h3>
-              <p className="text-sm text-slate-600 mt-1">They get $50 off their selection process fee.</p>
+              <h3 className="font-semibold text-slate-900">{t('studentDashboard.matriculaRewards.step2Title')}</h3>
+              <p className="text-sm text-slate-600 mt-1">{t('studentDashboard.matriculaRewards.step2Description')}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">3</div>
-              <h3 className="font-semibold text-slate-900">Earn Rewards</h3>
-              <p className="text-sm text-slate-600 mt-1">You earn 200 MatriculaCoins for each successful referral.</p>
+              <h3 className="font-semibold text-slate-900">{t('studentDashboard.matriculaRewards.step3Title')}</h3>
+              <p className="text-sm text-slate-600 mt-1">{t('studentDashboard.matriculaRewards.step3Description')}</p>
             </div>
           </div>
         </Card>
 
         {/* Participating Universities */}
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Participating Universities</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.participatingUniversities')}</h2>
           <p className="text-slate-600 mb-6">
-            These universities accept MatriculaCoins for tuition discounts. If your university is not listed, 
-            they may not have opted to participate in the program yet.
+            {t('studentDashboard.matriculaRewards.universitiesDescription')}
           </p>
           
           {/* Search Component */}

@@ -24,9 +24,12 @@ import {
   GraduationCap,
   CreditCard
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
+  const { t } = useTranslation();
+  
   return (
     <div className="bg-white min-h-screen">
       {/* Header Section */}
@@ -36,9 +39,9 @@ const HowItWorks: React.FC = () => {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
         </div>
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-6xl md:text-7xl font-black mb-6 leading-tight">How It Works</h1>
+          <h1 className="text-6xl md:text-7xl font-black mb-6 leading-tight">{t('howItWorks.title')}</h1>
           <h2 className="text-2xl md:text-3xl text-slate-200 max-w-2xl mx-auto mb-8 leading-relaxed font-semibold">
-            Your path to a U.S. university, step by step.
+            {t('howItWorks.subtitle')}
           </h2>
           <div className="flex flex-wrap justify-center items-center gap-8 mt-8 text-slate-300">
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
@@ -59,7 +62,7 @@ const HowItWorks: React.FC = () => {
 
       {/* Main Journey Steps */}
       <section className="max-w-4xl mx-auto px-4 py-16">
-        <h2 className="text-4xl font-black text-center mb-12 text-[#05294E]">Your Journey</h2>
+        <h2 className="text-4xl font-black text-center mb-12 text-[#05294E]">{t('howItWorks.journey')}</h2>
         <div className="space-y-10">
           {/* Step 1 */}
           <div className="bg-slate-50 rounded-3xl shadow-lg p-8 flex flex-col md:flex-row gap-8 items-center border border-slate-200">
@@ -67,12 +70,12 @@ const HowItWorks: React.FC = () => {
               <User className="h-8 w-8 text-[#05294E]" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-[#05294E]">1. Create Your Profile</h3>
-              <p className="text-slate-700 mb-2 text-lg">Fill out your academic and personal info. Our AI finds your best options.</p>
+              <h3 className="text-2xl font-bold mb-2 text-[#05294E]">1. {t('howItWorks.steps.profile.title')}</h3>
+              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.profile.description')}</p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Academic history & achievements</li>
-                <li>Career goals & preferences</li>
-                <li>Financial requirements</li>
+                {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -82,12 +85,12 @@ const HowItWorks: React.FC = () => {
               <CreditCard className="h-8 w-8 text-green-600" />
                   </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-green-700">2. Pay Selection Fee ($350)</h3>
-              <p className="text-slate-700 mb-2 text-lg">Unlock all scholarships. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="text-2xl font-bold mb-2 text-green-700">2. {t('howItWorks.steps.selectionFee.title')}</h3>
+              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.selectionFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Access to scholarship browse</li>
-                <li>Initiate application process</li>
-                <li>One-time fee</li>
+                {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
                     </div>
                   </div>
@@ -97,12 +100,12 @@ const HowItWorks: React.FC = () => {
               <FileText className="h-8 w-8 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-blue-700">3. Choose Scholarships & Upload Docs</h3>
-              <p className="text-slate-700 mb-2 text-lg">Pick scholarships and upload your documents. Fast review.</p>
+              <h3 className="text-2xl font-bold mb-2 text-blue-700">3. {t('howItWorks.steps.documents.title')}</h3>
+              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.documents.description')}</p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Select multiple scholarships</li>
-                <li>Secure document upload</li>
-                <li>Automated initial analysis</li>
+                {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
                   </div>
                 </div>
@@ -112,12 +115,12 @@ const HowItWorks: React.FC = () => {
               <GraduationCap className="h-8 w-8 text-yellow-600" />
                   </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-yellow-700">4. Pay Application Fee ($350)</h3>
-              <p className="text-slate-700 mb-2 text-lg">Confirm your university. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="text-2xl font-bold mb-2 text-yellow-700">4. {t('howItWorks.steps.applicationFee.title')}</h3>
+              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.applicationFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>See approved scholarships</li>
-                <li>Confirm university choice</li>
-                <li>Secure your spot</li>
+                {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
                     </div>
                   </div>
@@ -127,12 +130,12 @@ const HowItWorks: React.FC = () => {
               <BookOpen className="h-8 w-8 text-purple-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-purple-700">5. Pay Scholarship Fee ($550)</h3>
-              <p className="text-slate-700 mb-2 text-lg">Get direct chat with your university. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="text-2xl font-bold mb-2 text-purple-700">5. {t('howItWorks.steps.scholarshipFee.title')}</h3>
+              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.scholarshipFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Direct chat with university</li>
-                <li>Submit additional documents</li>
-                <li>Final scholarship commitment</li>
+                {(t('howItWorks.steps.scholarshipFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
                   </div>
                 </div>
@@ -142,12 +145,12 @@ const HowItWorks: React.FC = () => {
               <Lock className="h-8 w-8 text-red-600" />
                   </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-red-700">6. Pay I-20 Control Fee ($900)</h3>
-              <p className="text-slate-700 mb-2 text-lg">Needed for your F-1 visa. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="text-2xl font-bold mb-2 text-red-700">6. {t('howItWorks.steps.i20Fee.title')}</h3>
+              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.i20Fee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                <li>Essential for F-1 student visa</li>
-                <li>Covers I-20 processing</li>
-                <li>10-day payment window</li>
+                {(t('howItWorks.steps.i20Fee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -157,27 +160,27 @@ const HowItWorks: React.FC = () => {
       {/* Behind the Technology Section */}
       <section className="bg-gradient-to-br from-slate-50 to-blue-50 py-20">
         <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-4xl font-black text-center mb-12 text-[#05294E]">Why MatriculaUSA?</h2>
+          <h2 className="text-4xl font-black text-center mb-12 text-[#05294E]">{t('howItWorks.whyUs.title')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
               <Sparkles className="h-8 w-8 text-[#05294E] mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Smart Discovery</h3>
-              <p className="text-slate-600 text-lg">AI finds the best scholarships for you.</p>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.smartDiscovery.title')}</h3>
+              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.smartDiscovery.description')}</p>
             </div>
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
               <FileText className="h-8 w-8 text-blue-600 mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Document Management</h3>
-              <p className="text-slate-600 text-lg">Upload and track all your documents easily.</p>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.documentManagement.title')}</h3>
+              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.documentManagement.description')}</p>
             </div>
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
               <MessageCircle className="h-8 w-8 text-purple-600 mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Personal Support</h3>
-              <p className="text-slate-600 text-lg">Our team helps you at every step.</p>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.personalSupport.title')}</h3>
+              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.personalSupport.description')}</p>
             </div>
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
               <Star className="h-8 w-8 text-yellow-400 mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Success Tracking</h3>
-              <p className="text-slate-600 text-lg">See your progress and next steps in real time.</p>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.successTracking.title')}</h3>
+              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.successTracking.description')}</p>
             </div>
           </div>
         </div>
@@ -186,28 +189,28 @@ const HowItWorks: React.FC = () => {
       {/* FAQ Section */}
       <section className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-8 text-center text-[#05294E]">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center text-[#05294E]">{t('howItWorks.faq.title')}</h2>
           {/* FAQ List - Copiado do FAQ revisado */}
           <div className="flex flex-col gap-6 max-w-2xl mx-auto">
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">1. What fees or payments are required to use MatriculaUSA?</h3>
-              <p>MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. <strong>All fees are final and non-refundable.</strong></p>
+              <h3 className="font-bold text-[#05294E]">1. {t('howItWorks.faq.q1.question')}</h3>
+              <p>{t('howItWorks.faq.q1.answer')}</p>
               </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">2. What is the Selection Process Fee?</h3>
-              <p>The Selection Process Fee (US$350) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="font-bold text-[#05294E]">2. {t('howItWorks.faq.q2.question')}</h3>
+              <p>{t('howItWorks.faq.q2.answer')}</p>
                     </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">3. What is the Scholarship Fee?</h3>
-              <p>The Scholarship Fee (US$550) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="font-bold text-[#05294E]">3. {t('howItWorks.faq.q3.question')}</h3>
+              <p>{t('howItWorks.faq.q3.answer')}</p>
                   </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">4. What is the Application Fee?</h3>
-              <p>The Application Fee (US$350) is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="font-bold text-[#05294E]">4. {t('howItWorks.faq.q4.question')}</h3>
+              <p>{t('howItWorks.faq.q4.answer')}</p>
                 </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">5. What is the I-20 Control Fee?</h3>
-              <p>The I-20 Control Fee (US$900) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. <strong>This fee is final and non-refundable.</strong></p>
+              <h3 className="font-bold text-[#05294E]">5. {t('howItWorks.faq.q5.question')}</h3>
+              <p>{t('howItWorks.faq.q5.answer')}</p>
                     </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
               <h3 className="font-bold text-[#05294E]">6. Are there any other fees I should be aware of?</h3>

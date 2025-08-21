@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
@@ -10,6 +11,7 @@ import SmartChat from '../components/SmartChat';
 import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
 
 const Scholarships: React.FC = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
@@ -133,7 +135,7 @@ const Scholarships: React.FC = () => {
   }, []);
 
   const levelOptions = [
-    { value: 'all', label: 'All Levels' },
+    { value: 'all', label: t('scholarships.filterBy') + ' - All Levels' },
     { value: 'graduate', label: 'Graduate' },
     { value: 'doctorate', label: 'Doctorate' },
     { value: 'undergraduate', label: 'Undergraduate' },
@@ -335,32 +337,30 @@ const Scholarships: React.FC = () => {
           <div className="text-center">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-4">
               <Award className="h-4 w-4 mr-2 text-white" />
-              <span className="text-sm font-medium text-white">Exclusive Opportunities</span>
+              <span className="text-sm font-medium text-white">{t('features.exclusiveScholarships.title')}</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
-              <span className="text-white">Scholarship</span>
-              <br />
-              <span className="text-[#D0151C]">Opportunities</span>
+              <span className="text-white">{t('scholarships.title')}</span>
             </h1>
             
             <p className="text-lg text-slate-200 max-w-3xl mx-auto leading-relaxed mb-6">
-              Discover exclusive funding opportunities crafted specifically for international students pursuing American education excellence.
+              {t('scholarships.subtitle')}
             </p>
             
             {/* Stats */}
             <div className="flex flex-wrap justify-center items-center gap-6 text-slate-300">
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
                 <DollarSign className="h-5 w-5 mr-2 text-green-400" />
-                <span className="text-sm font-medium">$50M+ Available</span>
+                <span className="text-sm font-medium">$50M+ {t('home.stats.scholarships')}</span>
               </div>
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
                 <Star className="h-5 w-5 mr-2 text-yellow-400" />
-                <span className="text-sm font-medium">95% Success Rate</span>
+                <span className="text-sm font-medium">{t('home.trustIndicators.successRate')}</span>
               </div>
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
                 <CheckCircle className="h-5 w-5 mr-2 text-blue-400" />
-                <span className="text-sm font-medium">150+ Universities</span>
+                <span className="text-sm font-medium">150+ {t('universities.title')}</span>
               </div>
             </div>
           </div>
@@ -375,7 +375,7 @@ const Scholarships: React.FC = () => {
             <Search className="h-5 w-5 text-slate-400 mr-2" aria-hidden="true" />
             <input
               type="text"
-              placeholder="Search scholarships..."
+              placeholder={t('scholarships.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-transparent outline-none border-none text-sm text-slate-900 placeholder-slate-400"
@@ -506,7 +506,7 @@ const Scholarships: React.FC = () => {
                     <div className="absolute top-4 right-4 z-10">
                       <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
                         <Star className="h-3 w-3 fill-current" />
-                        Featured
+                        {t('common.featured')}
                       </div>
                     </div>
 
@@ -541,7 +541,7 @@ const Scholarships: React.FC = () => {
                          {scholarship.is_exclusive && (
                            <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
                              <Star className="h-3 w-3" />
-                             Exclusive
+                             {t('common.exclusive')}
                            </div>
                          )}
                        </div>
@@ -805,7 +805,7 @@ const Scholarships: React.FC = () => {
                          {scholarship.is_exclusive && (
                            <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
                              <Star className="h-3 w-3" />
-                             Exclusive
+                             {t('common.exclusive')}
                            </div>
                          )}
                        </div>

@@ -1,0 +1,512 @@
+{
+  "nav": {
+    "home": "Inicio",
+    "howItWorks": "Cómo Funciona",
+    "scholarships": "Becas",
+    "forUniversities": "Para Universidades",
+    "about": "Acerca de",
+    "contact": "Contacto",
+    "faq": "FAQ",
+    "login": "Iniciar Sesión",
+    "getStarted": "Comenzar",
+    "dashboard": "Panel",
+    "viewScholarships": "Ver Becas",
+    "goToDashboard": "Ir al Panel",
+    "startSelectionProcess": "Iniciar Proceso de Selección",
+    "scholarshipsPlatform": "Plataforma de Becas"
+  },
+  "home": {
+    "hero": {
+      "title": "Tu Puerta de Entrada a las Universidades Americanas",
+      "subtitle": "Descubre becas exclusivas y desbloquea tu potencial en Estados Unidos",
+      "description": "Conéctate con universidades de primer nivel, accede a becas exclusivas y recibe apoyo personalizado durante toda tu jornada para estudiar en EE.UU.",
+      "cta": "Comienza Tu Jornada",
+      "watchVideo": "Ver Video"
+    },
+    "features": {
+      "title": "¿Por Qué Elegir MatriculaUSA?",
+      "subtitle": "Todo lo que necesitas para tener éxito en tu jornada educativa americana",
+      "smartMatching": {
+        "title": "Coincidencia Inteligente",
+        "description": "Sistema impulsado por IA encuentra las mejores universidades y becas para tu perfil"
+      },
+      "exclusiveScholarships": {
+        "title": "Becas Exclusivas",
+        "description": "Accede a becas no disponibles en ningún otro lugar, específicamente para estudiantes internacionales"
+      },
+      "personalSupport": {
+        "title": "Apoyo Personal",
+        "description": "Equipo dedicado para guiarte en cada paso del proceso de solicitud"
+      },
+      "fastProcess": {
+        "title": "Proceso Rápido",
+        "description": "Proceso de solicitud simplificado con respuestas rápidas y manejo eficiente de documentos"
+      }
+    },
+    "stats": {
+      "students": "Estudiantes Ubicados",
+      "universities": "Universidades Asociadas",
+      "scholarships": "Becas Disponibles",
+      "successRate": "Tasa de Éxito"
+    },
+    "trustIndicators": {
+      "studentsEnrolled": "estudiantes matriculados",
+      "rating": "4.8 de calificación",
+      "setupTime": "Configuración en 5 Minutos",
+      "successRate": "95% de Tasa de Éxito",
+      "secure": "100% Seguro"
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "subtitle": "Obtén respuestas a las preguntas más comunes sobre tarifas, pagos y el proceso de solicitud en MatriculaUSA"
+    },
+    "threeSteps": {
+      "title": "Tres Pasos hacia Tu Educación Americana",
+      "subtitle": "Proceso Simple",
+      "step1": {
+        "title": "Crea Tu Perfil",
+        "description": "Construye tu perfil integral de estudiante con historial académico, objetivos y preferencias para ayudarnos a encontrar la combinación perfecta."
+      },
+      "step2": {
+        "title": "Descubre Oportunidades",
+        "description": "Navega por nuestra selección curada de escuelas y oportunidades exclusivas de becas adaptadas a tu perfil e intereses."
+      },
+      "step3": {
+        "title": "Completa la Matrícula",
+        "description": "Aplica con nuestro proceso simplificado y recibe apoyo integral hasta estar matriculado exitosamente en tu institución elegida."
+      }
+    },
+    "successStories": {
+      "title": "Historias de Éxito",
+      "subtitle": "Estudiantes reales, resultados reales. Ve cómo MatriculaUSA transformó su jornada educativa hacia Estados Unidos.",
+      "testimonial1": {
+        "text": "MatriculaUSA hizo realidad mi sueño de estudiar en América. ¡Las oportunidades de beca y el apoyo fueron increíbles!",
+        "author": "Maria Silva",
+        "field": "Ciencias de la Computación"
+      },
+      "testimonial2": {
+        "text": "El proceso de matrícula fue perfecto. Desde la aplicación hasta el apoyo de visa, MatriculaUSA me guió en cada paso del camino.",
+        "author": "Carlos Rodriguez",
+        "field": "Escuela de Negocios"
+      },
+      "testimonial3": {
+        "text": "Encontré becas exclusivas que no estaban disponibles en ningún otro lugar. MatriculaUSA realmente abre puertas a oportunidades.",
+        "author": "Ana Chen",
+        "field": "Ingeniería"
+      }
+    },
+    "cta": {
+      "title": "¿Listo para Comenzar Tu Sueño Americano?",
+      "subtitle": "Únete a miles de estudiantes internacionales que han encontrado su camino hacia la educación americana a través de la plataforma integral de MatriculaUSA.",
+      "button": "Comienza Tu Jornada Hoy",
+      "learnMore": "Saber Más",
+      "features": {
+        "freeToStart": "Gratis para comenzar",
+        "noHiddenFees": "Sin tarifas ocultas",
+        "expertSupport": "Apoyo experto incluido"
+      }
+    },
+    "enrollmentConfirmed": {
+      "title": "¡Matrícula Confirmada!",
+      "university": "Harvard University"
+    }
+  },
+  "howItWorks": {
+    "title": "Cómo Funciona",
+    "subtitle": "Tu camino hacia una universidad estadounidense, paso a paso",
+    "journey": "Tu Jornada",
+    "steps": {
+      "profile": {
+        "title": "Crea Tu Perfil",
+        "description": "Completa tu información académica y personal. Nuestra IA encuentra tus mejores opciones.",
+        "items": ["Historial académico y logros", "Objetivos profesionales y preferencias", "Requisitos financieros"]
+      },
+      "selectionFee": {
+        "title": "Paga Tarifa de Selección ($600)",
+        "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable.",
+        "items": ["Acceso para explorar becas", "Iniciar proceso de solicitud", "Tarifa única"]
+      },
+      "documents": {
+        "title": "Elige Becas y Sube Documentos",
+        "description": "Elige becas y sube tus documentos. Revisión rápida.",
+        "items": ["Selecciona múltiples becas", "Subida segura de documentos", "Análisis inicial automatizado"]
+      },
+      "applicationFee": {
+        "title": "Paga Tarifa de Solicitud ($350)",
+        "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable.",
+        "items": ["Ve becas aprobadas", "Confirma elección de universidad", "Asegura tu lugar"]
+      },
+      "scholarshipFee": {
+        "title": "Paga Tarifa de Beca ($850)",
+        "description": "Obtén chat directo con tu universidad. Esta tarifa es final y no reembolsable.",
+        "items": ["Chat directo con universidad", "Envía documentos adicionales", "Compromiso final con beca"]
+      },
+      "i20Fee": {
+        "title": "Paga Tarifa de Control I-20 ($1,250)",
+        "description": "Necesario para tu visa F-1. Esta tarifa es final y no reembolsable.",
+        "items": ["Esencial para visa de estudiante F-1", "Cubre procesamiento I-20", "Ventana de pago de 10 días"]
+      }
+    },
+    "whyUs": {
+      "title": "¿Por Qué MatriculaUSA?",
+      "smartDiscovery": {
+        "title": "Descubrimiento Inteligente",
+        "description": "IA encuentra las mejores becas para ti"
+      },
+      "documentManagement": {
+        "title": "Gestión de Documentos",
+        "description": "Sube y rastrea todos tus documentos fácilmente"
+      },
+      "personalSupport": {
+        "title": "Apoyo Personal",
+        "description": "Nuestro equipo te ayuda en cada paso"
+      },
+      "successTracking": {
+        "title": "Seguimiento de Éxito",
+        "description": "Ve tu progreso y próximos pasos en tiempo real"
+      }
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "q1": {
+        "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
+        "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
+      },
+      "q2": {
+        "question": "¿Qué es la Tarifa de Proceso de Selección?",
+        "answer": "La Tarifa de Proceso de Selección (US$600) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+      },
+      "q3": {
+        "question": "¿Qué es la Tarifa de Beca?",
+        "answer": "La Tarifa de Beca (US$850) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
+      },
+      "q4": {
+        "question": "¿Qué es la Tarifa de Solicitud?",
+        "answer": "La Tarifa de Solicitud (US$350) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
+      },
+      "q5": {
+        "question": "¿Qué es la Tarifa de Control I-20?",
+        "answer": "La Tarifa de Control I-20 (US$1,250) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa. Esta tarifa es final y no reembolsable."
+      }
+    }
+  },
+  "fees": {
+    "selectionProcess": "Tarifa de Proceso de Selección",
+    "application": "Tarifa de Solicitud",
+    "scholarship": "Tarifa de Beca",
+    "i20Control": "Tarifa de Control I-20",
+    "finalNonRefundable": "Esta tarifa es final y no reembolsable"
+  },
+  "scholarships": {
+    "title": "Becas",
+    "subtitle": "Encuentra la beca perfecta para tu jornada académica",
+    "searchPlaceholder": "Buscar becas...",
+    "filterBy": "Filtrar por",
+    "amount": "Monto",
+    "type": "Tipo",
+    "deadline": "Fecha límite",
+    "apply": "Aplicar",
+    "viewDetails": "Ver Detalles",
+    "noResults": "No se encontraron becas",
+    "resultsFound": "becas encontradas"
+  },
+  "features": {
+    "whyChoose": "¿Por Qué Elegir MatriculaUSA?",
+    "subtitle": "Todo lo que necesitas para tener éxito en tu jornada educativa americana",
+    "smartMatching": {
+      "title": "Coincidencia Inteligente",
+      "description": "Sistema impulsado por IA encuentra las mejores universidades y becas para tu perfil"
+    },
+    "exclusiveScholarships": {
+      "title": "Becas Exclusivas",
+      "description": "Accede a becas no disponibles en ningún otro lugar, específicamente para estudiantes internacionales"
+    },
+    "personalSupport": {
+      "title": "Apoyo Personal",
+      "description": "Equipo dedicado para guiarte en cada paso del proceso de solicitud"
+    },
+    "fastProcess": {
+      "title": "Proceso Rápido",
+      "description": "Proceso de solicitud simplificado con respuestas rápidas y manejo eficiente de documentos"
+    }
+  },
+  "universities": {
+    "title": "Universidades",
+    "subtitle": "Explora las mejores universidades americanas",
+    "searchPlaceholder": "Buscar universidades...",
+    "location": "Ubicación",
+    "programs": "Programas",
+    "website": "Sitio web",
+    "viewProfile": "Ver Perfil",
+    "applyNow": "Aplicar Ahora"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "view": "Ver",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "close": "Cerrar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "clear": "Limpiar",
+    "refresh": "Actualizar",
+    "download": "Descargar",
+    "upload": "Subir",
+    "required": "Requerido",
+    "optional": "Opcional",
+    "yes": "Sí",
+    "no": "No",
+    "showMore": "Mostrar Más",
+    "showLess": "Mostrar Menos",
+    "readMore": "Leer Más",
+    "learnMore": "Saber Más",
+    "featured": "Destacado",
+    "exclusive": "Exclusiva",
+    "apply": "Aplicar",
+    "viewDetails": "Ver Detalles",
+    "deadline": "Fecha límite",
+    "amount": "Monto"
+  },
+  "studentDashboard": {
+    "title": "Panel del Estudiante",
+    "subtitle": "Gestiona tus solicitudes de beca",
+    "welcome": "Bienvenido de vuelta",
+    "progressBar": {
+      "title": "Esta es tu barra de progreso de tasas de solicitud. Completa cada paso para avanzar.",
+      "selectionProcessFee": "Tarifa de Proceso de Selección",
+      "applicationFee": "Tarifa de Solicitud", 
+      "scholarshipFee": "Tarifa de Beca",
+      "i20ControlFee": "Tarifa de Control I-20",
+      "completed": "¡Completado!",
+      "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
+      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.", 
+      "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación I-20 y documentos.",
+      "daysRemaining": "Tienes 10 días después de la tarifa de beca."
+    },
+    "stepByStepTour": {
+      "title": "Tour Paso a Paso",
+      "description": "Ve todo el viaje de solicitud en detalle.",
+      "button": "¿Cómo funciona?"
+    },
+    "stats": {
+      "myApplications": "Mis Solicitudes",
+      "totalSubmitted": "Total enviadas",
+      "approved": "Aprobadas", 
+      "successful": "Exitosas",
+      "pending": "Pendientes",
+      "underReview": "En revisión"
+    },
+    "quickActions": {
+      "findScholarships": "Encontrar Becas",
+      "findDescription": "Descubre nuevas oportunidades de beca",
+      "myApplications": "Mis Solicitudes",
+      "myApplicationsDescription": "Rastrea el estado de tu solicitud",
+      "updateProfile": "Actualizar Perfil",
+      "updateDescription": "Mantén tu perfil actualizado"
+    },
+    "academicSupport": {
+      "title": "Apoyo Académico",
+      "description": "Asistencia 24/7 disponible"
+    },
+    "sidebar": {
+      "overview": "Vista General",
+      "browseScholarships": "Explorar Becas", 
+      "selectedScholarships": "Becas Seleccionadas",
+      "myApplications": "Mis Solicitudes",
+      "matriculaRewards": "Recompensas Matrícula",
+      "profile": "Perfil"
+    },
+    "profileStatus": {
+      "title": "Estado del Perfil",
+      "basicInformation": "Información básica",
+      "academicDetails": "Detalles académicos", 
+      "documentsUploaded": "Documentos subidos",
+      "completeProfile": "Completa tu perfil para desbloquear más oportunidades",
+      "completeNow": "Completar ahora"
+    },
+    "successTips": {
+      "title": "Consejos de Éxito",
+      "tip1": "Aplica temprano para aumentar tus posibilidades de éxito",
+      "tip2": "Adapta tus solicitudes a cada beca",
+      "tip3": "Mantén tu perfil actualizado con tus últimos logros"
+    },
+    "recentApplications": {
+      "title": "Solicitudes Recientes",
+      "subtitle": "Rastrea tus últimas solicitudes de beca"
+    },
+    "findScholarships": {
+      "title": "Encontrar Becas",
+      "subtitle": "Descubre oportunidades adaptadas a tu perfil académico",
+      "searchPlaceholder": "Buscar becas...",
+      "allLevels": "Todos los Niveles",
+      "allFields": "Todos los Campos", 
+      "allModes": "Todos los Modos",
+      "allPermissions": "Todos los Permisos",
+      "minValue": "Valor mínimo",
+      "maxValue": "Valor máximo",
+      "deadline": "Fecha límite (días)",
+      "applyFilters": "Aplicar Filtros",
+      "scholarshipsFound": "becas encontradas"
+    },
+    "selectedScholarships": {
+      "title": "Becas Seleccionadas",
+      "welcomeMessage": "¡Bienvenido a tu selección de becas!",
+      "description": "Aquí puedes ver todas las becas que has seleccionado para el proceso de solicitud. Estos son los programas en los que estás interesado en aplicar. Sigue los pasos a continuación para completar tu solicitud e iniciar tu viaje hacia estudiar en el extranjero.",
+      "noScholarshipsSelected": "Ninguna beca seleccionada",
+      "notSelectedYet": "Aún no has seleccionado ninguna beca. Navega por nuestros programas disponibles y agrégalos a tu selección.",
+      "browseScholarships": "Explorar Becas"
+    },
+    "myApplications": {
+      "title": "Mis Solicitudes",
+      "subtitle": "Rastrea el estado de tus solicitudes de beca y próximos pasos",
+      "totalApplications": "Total de Solicitudes",
+      "approved": "Aprobadas",
+      "pending": "Pendientes",
+      "stayUpdated": "¡Mantente Actualizado!",
+      "important": "Importante:",
+      "emailNotification": "Siempre revisa tu email para notificaciones de la universidad. Actualizaciones de estado de solicitud, solicitudes de documentos y fechas límite importantes serán enviadas a tu dirección de email registrada.",
+      "steps": {
+        "step1Title": "Paso 1 — Envía tus documentos",
+        "step1Description": "Sube pasaporte, diploma de bachillerato y prueba de fondos para que la universidad pueda evaluar tu solicitud.",
+        "step2Title": "Paso 2 — Revisión de la universidad",
+        "step2Description": "Tu solicitud aparecerá como Pendiente/En Revisión hasta que la universidad apruebe tu candidatura.",
+        "step3Title": "Paso 3 — Tarifa de solicitud",
+        "step3Description": "Después de la aprobación, paga la Tarifa de Solicitud para asegurar tu lugar en la beca y proceder a la inscripción.",
+        "step4Title": "Paso 4 — Tarifa de beca",
+        "step4Description": "Una vez confirmado, paga la Tarifa de Beca para completar la inscripción y comenzar tu programa académico."
+      }
+    },
+    "matriculaRewards": {
+      "title": "Recompensas Matrícula",
+      "subtitle": "Gana créditos refiriendo amigos a MatriculaUSA",
+      "description": "Obtén beneficios exclusivos refiriendo amigos y completando hitos",
+      "searchPlaceholder": "Buscar recompensas...",
+      "filterAll": "Todas las Categorías",
+      "filterReferrals": "Referencias",
+      "filterMilestones": "Hitos",
+      "filterDiscounts": "Descuentos",
+      "earnedRewards": "Recompensas Ganadas",
+      "availableRewards": "Recompensas Disponibles",
+      "totalEarned": "Total Ganado",
+      "referralProgram": "Programa de Referencias",
+      "inviteFriends": "Invita Amigos",
+      "referralCode": "Tu Código de Referencia",
+      "shareCode": "Comparte tu código con amigos y gana recompensas",
+      "copyCode": "Copiar Código",
+      "codeCopied": "¡Código copiado!",
+      "referFriend": "Referir un Amigo",
+      "referralBenefits": "Beneficios de Referencia",
+      "friendDiscount": "Tu amigo recibe un descuento",
+      "yourReward": "Ganas recompensas cuando se registren",
+      "noRewards": "No hay recompensas disponibles",
+      "noRewardsDescription": "Completa acciones para empezar a ganar recompensas",
+      "claimReward": "Reclamar Recompensa",
+      "rewardClaimed": "Recompensa Reclamada",
+      "rewardExpired": "Expirada",
+      "points": "Puntos",
+      "discount": "Descuento",
+      "balance": "Saldo",
+      "coins": "monedas",
+      "totalReferrals": "Total de Referencias",
+      "totalEarnings": "Total de Ganancias",
+      "coin": "Moneda",
+      "yourCode": "Tu Código",
+      "copyLink": "Copiar Enlace",
+      "shareWithFriends": "Compartir con Amigos",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "spendYourCoins": "Gasta tus monedas",
+      "visitStoreDescription": "Visita nuestra tienda y canjea beneficios usando tus MatriculaCoins.",
+      "visitRewardsStore": "Visitar Tienda de Recompensas",
+      "recentReferrals": "Referencias Recientes",
+      "noReferralsYet": "No hay referencias aún",
+      "shareCodeToEarn": "Comparte tu código para empezar a ganar.",
+      "recentTransactions": "Transacciones Recientes",
+      "noTransactionsYet": "No hay transacciones aún",
+      "transactionHistory": "Tu historial de transacciones aparecerá aquí.",
+      "howItWorks": "Cómo Funciona",
+      "step1Title": "Comparte Tu Código",
+      "step1Description": "Comparte tu código de afiliado único con amigos y familiares.",
+      "step2Title": "Amigos Se Unen",
+      "step2Description": "Ellos reciben $50 de descuento en su tarifa del proceso de selección.",
+      "step3Title": "Gana Recompensas",
+      "step3Description": "Ganas 200 MatriculaCoins por cada referencia exitosa.",
+      "participatingUniversities": "Universidades Participantes",
+      "universitiesDescription": "Estas universidades aceptan MatriculaCoins para descuentos en matrícula. Si tu universidad no está listada, puede que no haya optado por participar en el programa aún.",
+      "searchUniversities": "Buscar universidades por nombre, ubicación o tipo...",
+      "importantInformation": "Información Importante",
+      "universityNotListed": "Si tu universidad no está listada arriba, significa que aún no ha optado por participar en el programa Matricula Rewards. Aún puedes ganar monedas refiriendo amigos, pero no podrás canjearlas por descuentos en la matrícula de tu universidad hasta que se una al programa. ¡Considera contactar a la oficina de admisiones de tu universidad para alentarlos a participar!",
+      "backToRewards": "Volver a Recompensas",
+      "coinsAvailable": "Matricula Coins Disponibles",
+      "rewardsStore": "Tienda de Recompensas",
+      "redeemDescription": "Canjea tus Matricula Coins por recompensas exclusivas",
+      "store": "Tienda",
+      "history": "Historial",
+      "tuitionDiscount50": "Descuento de $50 en Matrícula",
+      "tuitionDiscount100": "Descuento de $100 en Matrícula",
+      "tuitionDiscount200": "Descuento de $200 en Matrícula",
+      "get50Off": "Obtén $50 de descuento en la matrícula de tu universidad",
+      "get100Off": "Obtén $100 de descuento en la matrícula de tu universidad",
+      "get200Off": "Obtén $200 de descuento en la matrícula de tu universidad",
+      "offTuition": "de descuento en matrícula",
+      "needMoreCoins": "Necesitas {count} monedas más",
+      "helpSupport": "Ayuda y Soporte",
+      "smartAssistant": "Asistente Inteligente"
+    },
+    "footer": {
+      "company": {
+        "title": "Empresa",
+        "about": "Acerca de Nosotros",
+        "careers": "Carreras",
+        "contact": "Contacto",
+        "blog": "Blog"
+      },
+      "students": {
+        "title": "Para Estudiantes",
+        "scholarships": "Becas",
+        "universities": "Universidades",
+        "howItWorks": "Cómo Funciona",
+        "support": "Soporte"
+      },
+      "universities": {
+        "title": "Para Universidades",
+        "partners": "Conviértete en Socio",
+        "dashboard": "Panel de la Universidad",
+        "resources": "Recursos"
+      },
+      "legal": {
+        "title": "Legal",
+        "privacy": "Política de Privacidad",
+        "terms": "Términos de Servicio",
+        "cookies": "Política de Cookies"
+      },
+      "social": {
+        "title": "Síguenos",
+        "facebook": "Facebook",
+        "twitter": "Twitter",
+        "linkedin": "LinkedIn",
+        "instagram": "Instagram"
+      },
+      "newsletter": {
+        "title": "Mantente Actualizado",
+        "description": "Recibe las últimas oportunidades de becas y noticias",
+        "placeholder": "Ingresa tu email",
+        "subscribe": "Suscribirse",
+        "subscribed": "¡Gracias por suscribirte!"
+      },
+      "copyright": "© 2024 Matrícula USA. Todos los derechos reservados."
+    }
+  }
+}

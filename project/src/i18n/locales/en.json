@@ -1,0 +1,512 @@
+{
+  "nav": {
+    "home": "Home",
+    "howItWorks": "How It Works",
+    "scholarships": "Scholarships",
+    "forUniversities": "For Universities",
+    "about": "About",
+    "contact": "Contact",
+    "faq": "FAQ",
+    "login": "Login",
+    "getStarted": "Get Started",
+    "dashboard": "Dashboard",
+    "viewScholarships": "View Scholarships",
+    "goToDashboard": "Go to Dashboard",
+    "startSelectionProcess": "Start Selection Process",
+    "scholarshipsPlatform": "Scholarships Platform"
+  },
+  "home": {
+    "hero": {
+      "title": "Your Gateway to American Universities",
+      "subtitle": "Discover exclusive scholarships and unlock your potential in the United States",
+      "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey to studying in the USA.",
+      "cta": "Start Your Journey",
+      "watchVideo": "Watch Video"
+    },
+    "features": {
+      "title": "Why Choose MatriculaUSA?",
+      "subtitle": "Everything you need to succeed in your American education journey",
+      "smartMatching": {
+        "title": "Smart Matching",
+        "description": "AI-powered system finds the best universities and scholarships for your profile"
+      },
+      "exclusiveScholarships": {
+        "title": "Exclusive Scholarships",
+        "description": "Access scholarships not available anywhere else, specifically for international students"
+      },
+      "personalSupport": {
+        "title": "Personal Support",
+        "description": "Dedicated team to guide you through every step of the application process"
+      },
+      "fastProcess": {
+        "title": "Fast Process",
+        "description": "Streamlined application process with quick responses and efficient document handling"
+      }
+    },
+    "stats": {
+      "students": "Students Placed",
+      "universities": "Partner Universities",
+      "scholarships": "Scholarships Available",
+      "successRate": "Success Rate"
+    },
+    "trustIndicators": {
+      "studentsEnrolled": "students enrolled",
+      "rating": "4.8 rating",
+      "setupTime": "5 Minutes Setup",
+      "successRate": "95% Success Rate",
+      "secure": "100% Secure"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA"
+    },
+    "threeSteps": {
+      "title": "Three Steps to Your American Education",
+      "subtitle": "Simple Process",
+      "step1": {
+        "title": "Create Your Profile",
+        "description": "Build your comprehensive student profile with academic history, goals, and preferences to help us find the perfect match."
+      },
+      "step2": {
+        "title": "Discover Opportunities", 
+        "description": "Browse through our curated selection of schools and exclusive scholarship opportunities tailored to your profile and interests."
+      },
+      "step3": {
+        "title": "Complete Enrollment",
+        "description": "Apply with our streamlined process and receive comprehensive support until you're successfully enrolled in your chosen institution."
+      }
+    },
+    "successStories": {
+      "title": "Success Stories",
+      "subtitle": "Real students, real results. See how MatriculaUSA transformed their educational journey to the United States.",
+      "testimonial1": {
+        "text": "MatriculaUSA made my dream of studying in America a reality. The scholarship opportunities and support were incredible!",
+        "author": "Maria Silva",
+        "field": "Computer Science"
+      },
+      "testimonial2": {
+        "text": "The enrollment process was seamless. From application to visa support, MatriculaUSA guided me every step of the way.",
+        "author": "Carlos Rodriguez", 
+        "field": "Business School"
+      },
+      "testimonial3": {
+        "text": "I found exclusive scholarships that weren't available anywhere else. MatriculaUSA truly opens doors to opportunities.",
+        "author": "Ana Chen",
+        "field": "Engineering"
+      }
+    },
+    "cta": {
+      "title": "Ready to Begin Your American Dream?",
+      "subtitle": "Join thousands of international students who have found their path to American education through MatriculaUSA's comprehensive platform.",
+      "button": "Start Your Journey Today",
+      "learnMore": "Learn More",
+      "features": {
+        "freeToStart": "Free to get started",
+        "noHiddenFees": "No hidden fees", 
+        "expertSupport": "Expert support included"
+      }
+    },
+    "enrollmentConfirmed": {
+      "title": "Enrollment Confirmed!",
+      "university": "Harvard University"
+    }
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Your path to a U.S. university, step by step",
+    "journey": "Your Journey",
+    "steps": {
+      "profile": {
+        "title": "Create Your Profile",
+        "description": "Fill out your academic and personal info. Our AI finds your best options.",
+        "items": ["Academic history & achievements", "Career goals & preferences", "Financial requirements"]
+      },
+      "selectionFee": {
+        "title": "Pay Selection Fee ($600)",
+        "description": "Unlock all scholarships. This fee is final and non-refundable.",
+        "items": ["Access to scholarship browse", "Initiate application process", "One-time fee"]
+      },
+      "documents": {
+        "title": "Choose Scholarships & Upload Docs",
+        "description": "Pick scholarships and upload your documents. Fast review.",
+        "items": ["Select multiple scholarships", "Secure document upload", "Automated initial analysis"]
+      },
+      "applicationFee": {
+        "title": "Pay Application Fee ($350)",
+        "description": "Confirm your university. This fee is final and non-refundable.",
+        "items": ["See approved scholarships", "Confirm university choice", "Secure your spot"]
+      },
+      "scholarshipFee": {
+        "title": "Pay Scholarship Fee ($850)",
+        "description": "Get direct chat with your university. This fee is final and non-refundable.",
+        "items": ["Direct chat with university", "Submit additional documents", "Final scholarship commitment"]
+      },
+      "i20Fee": {
+        "title": "Pay I-20 Control Fee ($1,250)",
+        "description": "Needed for your F-1 visa. This fee is final and non-refundable.",
+        "items": ["Essential for F-1 student visa", "Covers I-20 processing", "10-day payment window"]
+      }
+    },
+    "whyUs": {
+      "title": "Why MatriculaUSA?",
+      "smartDiscovery": {
+        "title": "Smart Discovery",
+        "description": "AI finds the best scholarships for you"
+      },
+      "documentManagement": {
+        "title": "Document Management",
+        "description": "Upload and track all your documents easily"
+      },
+      "personalSupport": {
+        "title": "Personal Support",
+        "description": "Our team helps you at every step"
+      },
+      "successTracking": {
+        "title": "Success Tracking",
+        "description": "See your progress and next steps in real time"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": {
+        "question": "What fees or payments are required to use MatriculaUSA?",
+        "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. All fees are final and non-refundable."
+      },
+      "q2": {
+        "question": "What is the Selection Process Fee?",
+        "answer": "The Selection Process Fee (US$600) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+      },
+      "q3": {
+        "question": "What is the Scholarship Fee?",
+        "answer": "The Scholarship Fee (US$850) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
+      },
+      "q4": {
+        "question": "What is the Application Fee?",
+        "answer": "The Application Fee (US$350) is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform. This fee is final and non-refundable."
+      },
+      "q5": {
+        "question": "What is the I-20 Control Fee?",
+        "answer": "The I-20 Control Fee (US$1,250) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
+      }
+    }
+  },
+  "fees": {
+    "selectionProcess": "Selection Process Fee",
+    "application": "Application Fee", 
+    "scholarship": "Scholarship Fee",
+    "i20Control": "I-20 Control Fee",
+    "finalNonRefundable": "This fee is final and non-refundable"
+  },
+  "scholarships": {
+    "title": "Scholarships",
+    "subtitle": "Find the perfect scholarship for your academic journey",
+    "searchPlaceholder": "Search scholarships...",
+    "filterBy": "Filter by",
+    "amount": "Amount",
+    "type": "Type",
+    "deadline": "Deadline",
+    "apply": "Apply",
+    "viewDetails": "View Details",
+    "noResults": "No scholarships found",
+    "resultsFound": "scholarships found"
+  },
+  "features": {
+    "whyChoose": "Why Choose MatriculaUSA?",
+    "subtitle": "Everything you need to succeed in your American education journey",
+    "smartMatching": {
+      "title": "Smart Matching",
+      "description": "AI-powered system finds the best universities and scholarships for your profile"
+    },
+    "exclusiveScholarships": {
+      "title": "Exclusive Scholarships", 
+      "description": "Access scholarships not available anywhere else, specifically for international students"
+    },
+    "personalSupport": {
+      "title": "Personal Support",
+      "description": "Dedicated team to guide you through every step of the application process"
+    },
+    "fastProcess": {
+      "title": "Fast Process",
+      "description": "Streamlined application process with quick responses and efficient document handling"
+    }
+  },
+  "universities": {
+    "title": "Universities",
+    "subtitle": "Explore top American universities",
+    "searchPlaceholder": "Search universities...",
+    "location": "Location",
+    "programs": "Programs",
+    "website": "Website", 
+    "viewProfile": "View Profile",
+    "applyNow": "Apply Now"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "refresh": "Refresh",
+    "download": "Download",
+    "upload": "Upload",
+    "required": "Required",
+    "optional": "Optional",
+    "yes": "Yes",
+    "no": "No",
+    "showMore": "Show More",
+    "showLess": "Show Less",
+    "readMore": "Read More",
+    "learnMore": "Learn More",
+    "featured": "Featured",
+    "exclusive": "Exclusive",
+    "apply": "Apply",
+    "viewDetails": "View Details",
+    "deadline": "Deadline",
+    "amount": "Amount"
+  },
+  "studentDashboard": {
+    "title": "Student Dashboard",
+    "subtitle": "Manage your scholarship applications",
+    "welcome": "Welcome back",
+    "progressBar": {
+      "title": "This is your application fee progress bar. Complete each step to move forward.",
+      "selectionProcessFee": "Selection Process Fee",
+      "applicationFee": "Application Fee", 
+      "scholarshipFee": "Scholarship Fee",
+      "i20ControlFee": "I-20 Control Fee",
+      "completed": "Completed!",
+      "payApplicationFee": "Pay the Application Fee to apply for a specific scholarship.",
+      "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.", 
+      "payI20Fee": "Pay the I-20 Control Fee to start your I-20 and document validation process.",
+      "daysRemaining": "You have 10 days after the scholarship fee."
+    },
+    "stepByStepTour": {
+      "title": "Step-by-Step Tour",
+      "description": "See the full application journey in detail.",
+      "button": "How it works?"
+    },
+    "stats": {
+      "myApplications": "My Applications",
+      "totalSubmitted": "Total submitted",
+      "approved": "Approved", 
+      "successful": "Successful",
+      "pending": "Pending",
+      "underReview": "Under review"
+    },
+    "quickActions": {
+      "findScholarships": "Find Scholarships",
+      "findDescription": "Discover new scholarship opportunities",
+      "myApplications": "My Applications",
+      "myApplicationsDescription": "Track your application status",
+      "updateProfile": "Update Profile",
+      "updateDescription": "Keep your profile current"
+    },
+    "academicSupport": {
+      "title": "Academic Support",
+      "description": "24/7 assistance available"
+    },
+    "sidebar": {
+      "overview": "Overview",
+      "browseScholarships": "Browse Scholarships", 
+      "selectedScholarships": "Selected Scholarships",
+      "myApplications": "My Applications",
+      "matriculaRewards": "Matricula Rewards",
+      "profile": "Profile"
+    },
+    "profileStatus": {
+      "title": "Profile Status",
+      "basicInformation": "Basic information",
+      "academicDetails": "Academic details", 
+      "documentsUploaded": "Documents uploaded",
+      "completeProfile": "Complete your profile to unlock more opportunities",
+      "completeNow": "Complete now"
+    },
+    "successTips": {
+      "title": "Success Tips",
+      "tip1": "Apply early to increase your chances of success",
+      "tip2": "Tailor your applications to each scholarship",
+      "tip3": "Keep your profile updated with latest achievements"
+    },
+    "recentApplications": {
+      "title": "Recent Applications",
+      "subtitle": "Track your latest scholarship submissions"
+    },
+    "findScholarships": {
+      "title": "Find Scholarships",
+      "subtitle": "Discover opportunities tailored to your academic profile",
+      "searchPlaceholder": "Search scholarships...",
+      "allLevels": "All Levels",
+      "allFields": "All Fields", 
+      "allModes": "All Modes",
+      "allPermissions": "All Permissions",
+      "minValue": "Min value",
+      "maxValue": "Max value",
+      "deadline": "Deadline (days)",
+      "applyFilters": "Apply Filters",
+      "scholarshipsFound": "scholarships found"
+    },
+    "selectedScholarships": {
+      "title": "Selected Scholarships",
+      "welcomeMessage": "Welcome to your scholarship selection!",
+      "description": "Here you can see all the scholarships you have selected for the application process. These are the programs you are interested in applying to. Follow the steps below to complete your application and start your journey toward studying abroad.",
+      "noScholarshipsSelected": "No scholarships selected",
+      "notSelectedYet": "You haven't selected any scholarships yet. Browse our available programs and add them to your selection.",
+      "browseScholarships": "Browse Scholarships"
+    },
+    "myApplications": {
+      "title": "My Applications",
+      "subtitle": "Track the status of your scholarship applications and next steps",
+      "totalApplications": "Total Applications",
+      "approved": "Approved",
+      "pending": "Pending",
+      "stayUpdated": "Stay Updated!",
+      "important": "Important:",
+      "emailNotification": "Always check your email for notifications from the university. Application status updates, document requests, and important deadlines will be sent to your registered email address.",
+      "steps": {
+        "step1Title": "Step 1 — Submit your documents",
+        "step1Description": "Upload passport, high school diploma and proof of funds so the university can evaluate your application.",
+        "step2Title": "Step 2 — University review",
+        "step2Description": "Your application will show as Pending/Under Review until the university approves your candidacy.",
+        "step3Title": "Step 3 — Application fee",
+        "step3Description": "After approval, pay the Application Fee to secure your scholarship spot and proceed to enrollment.",
+        "step4Title": "Step 4 — Scholarship fee",
+        "step4Description": "Once confirmed, pay the Scholarship Fee to complete enrollment and begin your academic program."
+      }
+    },
+    "matriculaRewards": {
+      "title": "Matricula Rewards",
+      "subtitle": "Earn credits by referring friends to MatriculaUSA",
+      "description": "Get exclusive benefits by referring friends and completing milestones",
+      "searchPlaceholder": "Search rewards...",
+      "filterAll": "All Categories",
+      "filterReferrals": "Referrals",
+      "filterMilestones": "Milestones",
+      "filterDiscounts": "Discounts",
+      "earnedRewards": "Earned Rewards",
+      "availableRewards": "Available Rewards",
+      "totalEarned": "Total Earned",
+      "referralProgram": "Referral Program",
+      "inviteFriends": "Invite Friends",
+      "referralCode": "Your Referral Code",
+      "shareCode": "Share your code with friends and earn rewards",
+      "copyCode": "Copy Code",
+      "codeCopied": "Code copied!",
+      "referFriend": "Refer a Friend",
+      "referralBenefits": "Referral Benefits",
+      "friendDiscount": "Your friend gets a discount",
+      "yourReward": "You earn rewards when they sign up",
+      "noRewards": "No rewards available",
+      "noRewardsDescription": "Complete actions to start earning rewards",
+      "claimReward": "Claim Reward",
+      "rewardClaimed": "Reward Claimed",
+      "rewardExpired": "Expired",
+      "points": "Points",
+      "discount": "Discount",
+      "balance": "Balance",
+      "coins": "coins",
+      "totalReferrals": "Total Referrals",
+      "totalEarnings": "Total Earnings",
+      "coin": "Coin",
+      "yourCode": "Your Code",
+      "copyLink": "Copy Link",
+      "shareWithFriends": "Share with Friends",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "spendYourCoins": "Spend your coins",
+      "visitStoreDescription": "Visit our store and redeem perks using your MatriculaCoins.",
+      "visitRewardsStore": "Visit Rewards Store",
+      "recentReferrals": "Recent Referrals",
+      "noReferralsYet": "No referrals yet",
+      "shareCodeToEarn": "Share your code to start earning.",
+      "recentTransactions": "Recent Transactions",
+      "noTransactionsYet": "No transactions yet",
+      "transactionHistory": "Your transaction history will appear here.",
+      "howItWorks": "How It Works",
+      "step1Title": "Share Your Code",
+      "step1Description": "Share your unique affiliate code with friends and family.",
+      "step2Title": "Friends Join",
+      "step2Description": "They get $50 off their selection process fee.",
+      "step3Title": "Earn Rewards",
+      "step3Description": "You earn 200 MatriculaCoins for each successful referral.",
+      "participatingUniversities": "Participating Universities",
+      "universitiesDescription": "These universities accept MatriculaCoins for tuition discounts. If your university is not listed, they may not have opted to participate in the program yet.",
+      "searchUniversities": "Search universities by name, location, or type...",
+      "importantInformation": "Important Information",
+      "universityNotListed": "If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!",
+      "backToRewards": "Back to Rewards",
+      "coinsAvailable": "Matricula Coins Available",
+      "rewardsStore": "Rewards Store",
+      "redeemDescription": "Redeem your Matricula Coins for exclusive rewards",
+      "store": "Store",
+      "history": "History",
+      "tuitionDiscount50": "$50 Tuition Discount",
+      "tuitionDiscount100": "$100 Tuition Discount",
+      "tuitionDiscount200": "$200 Tuition Discount",
+      "get50Off": "Get $50 off your university tuition",
+      "get100Off": "Get $100 off your university tuition",
+      "get200Off": "Get $200 off your university tuition",
+      "offTuition": "off tuition",
+      "needMoreCoins": "Need {count} more coins",
+      "helpSupport": "Help & Support",
+      "smartAssistant": "Smart Assistant"
+    },
+    "footer": {
+      "company": {
+        "title": "Company",
+        "about": "About Us",
+        "careers": "Careers",
+        "contact": "Contact",
+        "blog": "Blog"
+      },
+      "students": {
+        "title": "For Students",
+        "scholarships": "Scholarships",
+        "universities": "Universities",
+        "howItWorks": "How It Works",
+        "support": "Support"
+      },
+      "universities": {
+        "title": "For Universities",
+        "partners": "Become a Partner",
+        "dashboard": "University Dashboard",
+        "resources": "Resources"
+      },
+      "legal": {
+        "title": "Legal",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service",
+        "cookies": "Cookie Policy"
+      },
+      "social": {
+        "title": "Follow Us",
+        "facebook": "Facebook",
+        "twitter": "Twitter",
+        "linkedin": "LinkedIn",
+        "instagram": "Instagram"
+      },
+      "newsletter": {
+        "title": "Stay Updated",
+        "description": "Get the latest scholarship opportunities and news",
+        "placeholder": "Enter your email",
+        "subscribe": "Subscribe",
+        "subscribed": "Thank you for subscribing!"
+      },
+      "copyright": "© 2024 Matrícula USA. All rights reserved."
+    }
+  }
+}

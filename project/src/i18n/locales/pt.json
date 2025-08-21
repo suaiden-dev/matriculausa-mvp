@@ -1,0 +1,512 @@
+{
+  "nav": {
+    "home": "Início",
+    "howItWorks": "Como Funciona",
+    "scholarships": "Bolsas",
+    "forUniversities": "Para Universidades",
+    "about": "Sobre",
+    "contact": "Contato",
+    "faq": "FAQ",
+    "login": "Entrar",
+    "getStarted": "Começar",
+    "dashboard": "Painel",
+    "viewScholarships": "Ver Bolsas",
+    "goToDashboard": "Ir ao Painel",
+    "startSelectionProcess": "Iniciar Processo de Seleção",
+    "scholarshipsPlatform": "Plataforma de Bolsas"
+  },
+  "home": {
+    "hero": {
+      "title": "Sua Porta de Entrada para Universidades Americanas",
+      "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
+      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada para estudar nos EUA.",
+      "cta": "Inicie Sua Jornada",
+      "watchVideo": "Assistir Vídeo"
+    },
+    "features": {
+      "title": "Por Que Escolher MatriculaUSA?",
+      "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
+      "smartMatching": {
+        "title": "Correspondência Inteligente",
+        "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
+      },
+      "exclusiveScholarships": {
+        "title": "Bolsas Exclusivas",
+        "description": "Acesse bolsas não disponíveis em nenhum outro lugar, especificamente para estudantes internacionais"
+      },
+      "personalSupport": {
+        "title": "Suporte Pessoal",
+        "description": "Equipe dedicada para te guiar em cada etapa do processo de candidatura"
+      },
+      "fastProcess": {
+        "title": "Processo Rápido",
+        "description": "Processo de candidatura simplificado com respostas rápidas e manuseio eficiente de documentos"
+      }
+    },
+    "stats": {
+      "students": "Estudantes Colocados",
+      "universities": "Universidades Parceiras",
+      "scholarships": "Bolsas Disponíveis",
+      "successRate": "Taxa de Sucesso"
+    },
+    "trustIndicators": {
+      "studentsEnrolled": "estudantes matriculados",
+      "rating": "4.8 de avaliação",
+      "setupTime": "Configuração em 5 Minutos",
+      "successRate": "95% de Taxa de Sucesso",
+      "secure": "100% Seguro"
+    },
+    "faq": {
+      "title": "Perguntas Frequentes",
+      "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA"
+    },
+    "threeSteps": {
+      "title": "Três Passos para Sua Educação Americana",
+      "subtitle": "Processo Simples",
+      "step1": {
+        "title": "Crie Seu Perfil",
+        "description": "Construa seu perfil abrangente de estudante com histórico acadêmico, objetivos e preferências para nos ajudar a encontrar a combinação perfeita."
+      },
+      "step2": {
+        "title": "Descubra Oportunidades",
+        "description": "Navegue pela nossa seleção curada de escolas e oportunidades exclusivas de bolsas adaptadas ao seu perfil e interesses."
+      },
+      "step3": {
+        "title": "Complete a Matrícula",
+        "description": "Candidate-se com nosso processo simplificado e receba suporte abrangente até estar matriculado com sucesso na instituição escolhida."
+      }
+    },
+    "successStories": {
+      "title": "Histórias de Sucesso",
+      "subtitle": "Estudantes reais, resultados reais. Veja como o MatriculaUSA transformou sua jornada educacional para os Estados Unidos.",
+      "testimonial1": {
+        "text": "O MatriculaUSA tornou meu sonho de estudar na América uma realidade. As oportunidades de bolsa e o suporte foram incríveis!",
+        "author": "Maria Silva",
+        "field": "Ciência da Computação"
+      },
+      "testimonial2": {
+        "text": "O processo de matrícula foi perfeito. Da candidatura ao suporte para visto, o MatriculaUSA me orientou em cada passo do caminho.",
+        "author": "Carlos Rodriguez",
+        "field": "Escola de Negócios"
+      },
+      "testimonial3": {
+        "text": "Encontrei bolsas exclusivas que não estavam disponíveis em nenhum outro lugar. O MatriculaUSA realmente abre portas para oportunidades.",
+        "author": "Ana Chen",
+        "field": "Engenharia"
+      }
+    },
+    "cta": {
+      "title": "Pronto para Começar Seu Sonho Americano?",
+      "subtitle": "Junte-se a milhares de estudantes internacionais que encontraram seu caminho para a educação americana através da plataforma abrangente do MatriculaUSA.",
+      "button": "Comece Sua Jornada Hoje",
+      "learnMore": "Saiba Mais",
+      "features": {
+        "freeToStart": "Gratuito para começar",
+        "noHiddenFees": "Sem taxas ocultas",
+        "expertSupport": "Suporte especializado incluído"
+      }
+    },
+    "enrollmentConfirmed": {
+      "title": "Matrícula Confirmada!",
+      "university": "Harvard University"
+    }
+  },
+  "howItWorks": {
+    "title": "Como Funciona",
+    "subtitle": "Seu caminho para uma universidade americana, passo a passo",
+    "journey": "Sua Jornada",
+    "steps": {
+      "profile": {
+        "title": "Crie Seu Perfil",
+        "description": "Preencha suas informações acadêmicas e pessoais. Nossa IA encontra suas melhores opções.",
+        "items": ["Histórico acadêmico e conquistas", "Objetivos de carreira e preferências", "Requisitos financeiros"]
+      },
+      "selectionFee": {
+        "title": "Pague Taxa de Seleção ($600)",
+        "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável.",
+        "items": ["Acesso para navegar pelas bolsas", "Iniciar processo de candidatura", "Taxa única"]
+      },
+      "documents": {
+        "title": "Escolha Bolsas e Envie Documentos",
+        "description": "Escolha bolsas e envie seus documentos. Revisão rápida.",
+        "items": ["Selecione múltiplas bolsas", "Upload seguro de documentos", "Análise inicial automatizada"]
+      },
+      "applicationFee": {
+        "title": "Pague Taxa de Candidatura ($350)",
+        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável.",
+        "items": ["Veja bolsas aprovadas", "Confirme escolha da universidade", "Garanta sua vaga"]
+      },
+      "scholarshipFee": {
+        "title": "Pague Taxa de Bolsa ($850)",
+        "description": "Obtenha chat direto com sua universidade. Esta taxa é final e não reembolsável.",
+        "items": ["Chat direto com universidade", "Envie documentos adicionais", "Compromisso final com bolsa"]
+      },
+      "i20Fee": {
+        "title": "Pague Taxa de Controle I-20 ($1,250)",
+        "description": "Necessário para seu visto F-1. Esta taxa é final e não reembolsável.",
+        "items": ["Essencial para visto de estudante F-1", "Cobre processamento I-20", "Janela de pagamento de 10 dias"]
+      }
+    },
+    "whyUs": {
+      "title": "Por Que MatriculaUSA?",
+      "smartDiscovery": {
+        "title": "Descoberta Inteligente",
+        "description": "IA encontra as melhores bolsas para você"
+      },
+      "documentManagement": {
+        "title": "Gerenciamento de Documentos",
+        "description": "Envie e acompanhe todos seus documentos facilmente"
+      },
+      "personalSupport": {
+        "title": "Suporte Pessoal",
+        "description": "Nossa equipe te ajuda em cada etapa"
+      },
+      "successTracking": {
+        "title": "Acompanhamento de Sucesso",
+        "description": "Veja seu progresso e próximos passos em tempo real"
+      }
+    },
+    "faq": {
+      "title": "Perguntas Frequentes",
+      "q1": {
+        "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+        "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q2": {
+        "question": "O que é a Taxa de Processo de Seleção?",
+        "answer": "A Taxa de Processo de Seleção (US$600) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
+      },
+      "q3": {
+        "question": "O que é a Taxa de Bolsa?",
+        "answer": "A Taxa de Bolsa (US$850) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
+      },
+      "q4": {
+        "question": "O que é a Taxa de Candidatura?",
+        "answer": "A Taxa de Candidatura (US$350) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+      },
+      "q5": {
+        "question": "O que é a Taxa de Controle I-20?",
+        "answer": "A Taxa de Controle I-20 (US$1,250) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto. Esta taxa é final e não reembolsável."
+      }
+    }
+  },
+  "fees": {
+    "selectionProcess": "Taxa de Processo de Seleção",
+    "application": "Taxa de Candidatura",
+    "scholarship": "Taxa de Bolsa",
+    "i20Control": "Taxa de Controle I-20",
+    "finalNonRefundable": "Esta taxa é final e não reembolsável"
+  },
+  "scholarships": {
+    "title": "Bolsas de Estudo",
+    "subtitle": "Encontre a bolsa perfeita para sua jornada acadêmica",
+    "searchPlaceholder": "Buscar bolsas...",
+    "filterBy": "Filtrar por",
+    "amount": "Valor",
+    "type": "Tipo",
+    "deadline": "Prazo",
+    "apply": "Candidatar-se",
+    "viewDetails": "Ver Detalhes",
+    "noResults": "Nenhuma bolsa encontrada",
+    "resultsFound": "bolsas encontradas"
+  },
+  "features": {
+    "whyChoose": "Por Que Escolher MatriculaUSA?",
+    "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
+    "smartMatching": {
+      "title": "Correspondência Inteligente",
+      "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
+    },
+    "exclusiveScholarships": {
+      "title": "Bolsas Exclusivas",
+      "description": "Acesse bolsas não disponíveis em nenhum outro lugar, especificamente para estudantes internacionais"
+    },
+    "personalSupport": {
+      "title": "Suporte Pessoal",
+      "description": "Equipe dedicada para te guiar em cada etapa do processo de candidatura"
+    },
+    "fastProcess": {
+      "title": "Processo Rápido",
+      "description": "Processo de candidatura simplificado com respostas rápidas e manuseio eficiente de documentos"
+    }
+  },
+  "universities": {
+    "title": "Universidades",
+    "subtitle": "Explore as melhores universidades americanas",
+    "searchPlaceholder": "Buscar universidades...",
+    "location": "Localização",
+    "programs": "Programas",
+    "website": "Website",
+    "viewProfile": "Ver Perfil",
+    "applyNow": "Candidatar-se Agora"
+  },
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "view": "Visualizar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "close": "Fechar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "clear": "Limpar",
+    "refresh": "Atualizar",
+    "download": "Baixar",
+    "upload": "Enviar",
+    "required": "Obrigatório",
+    "optional": "Opcional",
+    "yes": "Sim",
+    "no": "Não",
+    "showMore": "Mostrar Mais",
+    "showLess": "Mostrar Menos",
+    "readMore": "Ler Mais",
+    "learnMore": "Saiba Mais",
+    "featured": "Destaque",
+    "exclusive": "Exclusiva",
+    "apply": "Candidatar-se",
+    "viewDetails": "Ver Detalhes",
+    "deadline": "Prazo",
+    "amount": "Valor"
+  },
+  "studentDashboard": {
+    "title": "Painel do Estudante",
+    "subtitle": "Gerencie suas candidaturas de bolsa",
+    "welcome": "Bem-vindo de volta",
+    "progressBar": {
+      "title": "Esta é sua barra de progresso de taxas de candidatura. Complete cada etapa para avançar.",
+      "selectionProcessFee": "Taxa de Processo de Seleção",
+      "applicationFee": "Taxa de Candidatura", 
+      "scholarshipFee": "Taxa de Bolsa",
+      "i20ControlFee": "Taxa de Controle I-20",
+      "completed": "Completo!",
+      "payApplicationFee": "Pague a Taxa de Candidatura para se candidatar a uma bolsa específica.",
+      "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.", 
+      "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
+      "daysRemaining": "Você tem 10 dias após a taxa de bolsa."
+    },
+    "stepByStepTour": {
+      "title": "Tour Passo a Passo",
+      "description": "Veja toda a jornada de candidatura em detalhes.",
+      "button": "Como funciona?"
+    },
+    "stats": {
+      "myApplications": "Minhas Candidaturas",
+      "totalSubmitted": "Total enviadas",
+      "approved": "Aprovadas", 
+      "successful": "Bem-sucedidas",
+      "pending": "Pendentes",
+      "underReview": "Em análise"
+    },
+    "quickActions": {
+      "findScholarships": "Encontrar Bolsas",
+      "findDescription": "Descubra novas oportunidades de bolsa",
+      "myApplications": "Minhas Candidaturas",
+      "myApplicationsDescription": "Acompanhe o status de sua candidatura",
+      "updateProfile": "Atualizar Perfil",
+      "updateDescription": "Mantenha seu perfil atualizado"
+    },
+    "academicSupport": {
+      "title": "Suporte Acadêmico",
+      "description": "Assistência 24/7 disponível"
+    },
+    "sidebar": {
+      "overview": "Visão Geral",
+      "browseScholarships": "Navegar Bolsas", 
+      "selectedScholarships": "Bolsas Selecionadas",
+      "myApplications": "Minhas Candidaturas",
+      "matriculaRewards": "Recompensas Matrícula",
+      "profile": "Perfil"
+    },
+    "profileStatus": {
+      "title": "Status do Perfil",
+      "basicInformation": "Informações básicas",
+      "academicDetails": "Detalhes acadêmicos", 
+      "documentsUploaded": "Documentos enviados",
+      "completeProfile": "Complete seu perfil para desbloquear mais oportunidades",
+      "completeNow": "Completar agora"
+    },
+    "successTips": {
+      "title": "Dicas de Sucesso",
+      "tip1": "Candidate-se cedo para aumentar suas chances de sucesso",
+      "tip2": "Adapte suas candidaturas para cada bolsa",
+      "tip3": "Mantenha seu perfil atualizado com suas últimas conquistas"
+    },
+    "recentApplications": {
+      "title": "Candidaturas Recentes",
+      "subtitle": "Acompanhe suas últimas submissões de bolsa"
+    },
+    "findScholarships": {
+      "title": "Encontrar Bolsas",
+      "subtitle": "Descubra oportunidades adaptadas ao seu perfil acadêmico",
+      "searchPlaceholder": "Buscar bolsas...",
+      "allLevels": "Todos os Níveis",
+      "allFields": "Todos os Campos", 
+      "allModes": "Todos os Modos",
+      "allPermissions": "Todas as Permissões",
+      "minValue": "Valor mínimo",
+      "maxValue": "Valor máximo",
+      "deadline": "Prazo (dias)",
+      "applyFilters": "Aplicar Filtros",
+      "scholarshipsFound": "bolsas encontradas"
+    },
+    "selectedScholarships": {
+      "title": "Bolsas Selecionadas",
+      "welcomeMessage": "Bem-vindo à sua seleção de bolsas!",
+      "description": "Aqui você pode ver todas as bolsas que selecionou para o processo de candidatura. Estes são os programas nos quais você tem interesse em se candidatar. Siga os passos abaixo para completar sua candidatura e iniciar sua jornada para estudar no exterior.",
+      "noScholarshipsSelected": "Nenhuma bolsa selecionada",
+      "notSelectedYet": "Você ainda não selecionou nenhuma bolsa. Navegue pelos nossos programas disponíveis e adicione-os à sua seleção.",
+      "browseScholarships": "Navegar Bolsas"
+    },
+    "myApplications": {
+      "title": "Minhas Candidaturas",
+      "subtitle": "Acompanhe o status das suas candidaturas de bolsa e próximos passos",
+      "totalApplications": "Total de Candidaturas",
+      "approved": "Aprovadas",
+      "pending": "Pendentes",
+      "stayUpdated": "Mantenha-se Atualizado!",
+      "important": "Importante:",
+      "emailNotification": "Sempre verifique seu email para notificações da universidade. Atualizações de status da candidatura, solicitações de documentos e prazos importantes serão enviados para seu endereço de email registrado.",
+      "steps": {
+        "step1Title": "Passo 1 — Envie seus documentos",
+        "step1Description": "Envie passaporte, diploma do ensino médio e comprovante de recursos para que a universidade possa avaliar sua candidatura.",
+        "step2Title": "Passo 2 — Análise da universidade",
+        "step2Description": "Sua candidatura aparecerá como Pendente/Em Análise até que a universidade aprove sua candidatura.",
+        "step3Title": "Passo 3 — Taxa de candidatura",
+        "step3Description": "Após aprovação, pague a Taxa de Candidatura para garantir sua vaga na bolsa e prosseguir para a matrícula.",
+        "step4Title": "Passo 4 — Taxa da bolsa",
+        "step4Description": "Uma vez confirmado, pague a Taxa da Bolsa para completar a matrícula e iniciar seu programa acadêmico."
+      }
+    },
+    "matriculaRewards": {
+      "title": "Recompensas Matrícula",
+      "subtitle": "Ganhe créditos indicando amigos para a MatriculaUSA",
+      "description": "Obtenha benefícios exclusivos indicando amigos e completando marcos",
+      "searchPlaceholder": "Buscar recompensas...",
+      "filterAll": "Todas as Categorias",
+      "filterReferrals": "Indicações",
+      "filterMilestones": "Marcos",
+      "filterDiscounts": "Descontos",
+      "earnedRewards": "Recompensas Ganhas",
+      "availableRewards": "Recompensas Disponíveis",
+      "totalEarned": "Total Ganho",
+      "referralProgram": "Programa de Indicação",
+      "inviteFriends": "Convide Amigos",
+      "referralCode": "Seu Código de Indicação",
+      "shareCode": "Compartilhe seu código com amigos e ganhe recompensas",
+      "copyCode": "Copiar Código",
+      "codeCopied": "Código copiado!",
+      "referFriend": "Indicar um Amigo",
+      "referralBenefits": "Benefícios da Indicação",
+      "friendDiscount": "Seu amigo recebe um desconto",
+      "yourReward": "Você ganha recompensas quando eles se inscreverem",
+      "noRewards": "Nenhuma recompensa disponível",
+      "noRewardsDescription": "Complete ações para começar a ganhar recompensas",
+      "claimReward": "Resgatar Recompensa",
+      "rewardClaimed": "Recompensa Resgatada",
+      "rewardExpired": "Expirada",
+      "points": "Pontos",
+      "discount": "Desconto",
+      "balance": "Saldo",
+      "coins": "moedas",
+      "totalReferrals": "Total de Indicações",
+      "totalEarnings": "Total de Ganhos",
+      "coin": "Moeda",
+      "yourCode": "Seu Código",
+      "copyLink": "Copiar Link",
+      "shareWithFriends": "Compartilhar com Amigos",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "spendYourCoins": "Gaste suas moedas",
+      "visitStoreDescription": "Visite nossa loja e resgate benefícios usando suas MatriculaCoins.",
+      "visitRewardsStore": "Visitar Loja de Recompensas",
+      "recentReferrals": "Indicações Recentes",
+      "noReferralsYet": "Nenhuma indicação ainda",
+      "shareCodeToEarn": "Compartilhe seu código para começar a ganhar.",
+      "recentTransactions": "Transações Recentes",
+      "noTransactionsYet": "Nenhuma transação ainda",
+      "transactionHistory": "Seu histórico de transações aparecerá aqui.",
+      "howItWorks": "Como Funciona",
+      "step1Title": "Compartilhe Seu Código",
+      "step1Description": "Compartilhe seu código de afiliado único com amigos e familiares.",
+      "step2Title": "Amigos Se Inscrevem",
+      "step2Description": "Eles recebem $50 de desconto na taxa do processo seletivo.",
+      "step3Title": "Ganhe Recompensas",
+      "step3Description": "Você ganha 200 MatriculaCoins para cada indicação bem-sucedida.",
+      "participatingUniversities": "Universidades Participantes",
+      "universitiesDescription": "Essas universidades aceitam MatriculaCoins para descontos na mensalidade. Se sua universidade não estiver listada, ela pode não ter optado por participar do programa ainda.",
+      "searchUniversities": "Buscar universidades por nome, localização ou tipo...",
+      "importantInformation": "Informações Importantes",
+      "universityNotListed": "Se sua universidade não estiver listada acima, significa que ela ainda não optou por participar do programa Matricula Rewards. Você ainda pode ganhar moedas indicando amigos, mas não poderá resgatá-las para descontos na mensalidade da sua universidade até que ela se junte ao programa. Considere entrar em contato com o escritório de admissões da sua universidade para incentivá-los a participar!",
+      "backToRewards": "Voltar para Recompensas",
+      "coinsAvailable": "Matricula Coins Disponíveis",
+      "rewardsStore": "Loja de Recompensas",
+      "redeemDescription": "Resgate suas Matricula Coins por recompensas exclusivas",
+      "store": "Loja",
+      "history": "Histórico",
+      "tuitionDiscount50": "Desconto de $50 na Mensalidade",
+      "tuitionDiscount100": "Desconto de $100 na Mensalidade",
+      "tuitionDiscount200": "Desconto de $200 na Mensalidade",
+      "get50Off": "Receba $50 de desconto na mensalidade da sua universidade",
+      "get100Off": "Receba $100 de desconto na mensalidade da sua universidade",
+      "get200Off": "Receba $200 de desconto na mensalidade da sua universidade",
+      "offTuition": "de desconto na mensalidade",
+      "needMoreCoins": "Precisa de {count} moedas a mais",
+      "helpSupport": "Ajuda e Suporte",
+      "smartAssistant": "Assistente Inteligente"
+    },
+    "footer": {
+      "company": {
+        "title": "Empresa",
+        "about": "Sobre Nós",
+        "careers": "Carreiras",
+        "contact": "Contato",
+        "blog": "Blog"
+      },
+      "students": {
+        "title": "Para Estudantes",
+        "scholarships": "Bolsas",
+        "universities": "Universidades",
+        "howItWorks": "Como Funciona",
+        "support": "Suporte"
+      },
+      "universities": {
+        "title": "Para Universidades",
+        "partners": "Torne-se um Parceiro",
+        "dashboard": "Painel da Universidade",
+        "resources": "Recursos"
+      },
+      "legal": {
+        "title": "Legal",
+        "privacy": "Política de Privacidade",
+        "terms": "Termos de Serviço",
+        "cookies": "Política de Cookies"
+      },
+      "social": {
+        "title": "Siga-nos",
+        "facebook": "Facebook",
+        "twitter": "Twitter",
+        "linkedin": "LinkedIn",
+        "instagram": "Instagram"
+      },
+      "newsletter": {
+        "title": "Mantenha-se Atualizado",
+        "description": "Receba as últimas oportunidades de bolsa e notícias",
+        "placeholder": "Digite seu email",
+        "subscribe": "Inscrever-se",
+        "subscribed": "Obrigado por se inscrever!"
+      },
+      "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
+    }
+  }
+}

@@ -215,7 +215,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'selection_process',
-          amount: 50,
+          amount: 60000, // $600.00 em centavos
           status: student.has_paid_selection_process_fee ? 'paid' : 'pending',
           payment_date: student.has_paid_selection_process_fee ? app.created_at : undefined,
           created_at: app.created_at
@@ -232,7 +232,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'application',
-          amount: 100,
+          amount: 35000, // $350.00 em centavos
           status: student.is_application_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_application_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
@@ -249,7 +249,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'scholarship',
-          amount: 200,
+          amount: 85000, // $850.00 em centavos
           status: student.is_scholarship_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_scholarship_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
@@ -266,7 +266,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'i20_control',
-          amount: 150,
+          amount: 125000, // $1,250.00 em centavos
           status: 'pending',
           created_at: app.created_at
         });

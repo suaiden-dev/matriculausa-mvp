@@ -7,8 +7,10 @@ import { useAuth } from '../../hooks/useAuth';
 import DocumentUploadModal from '../../components/DocumentUploadModal';
 import StudentTypeModal from '../../components/StudentTypeModal';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 const CartPage: React.FC = () => {
+  const { t } = useTranslation();
   const { cart, clearCart, fetchCart, isLoading } = useCartStore();
   const navigate = useNavigate();
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -297,7 +299,7 @@ const CartPage: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
       <h1 className="text-3xl font-bold mb-4 flex items-center gap-2">
-        <GraduationCap className="h-7 w-7 text-[#05294E]" /> Selected Scholarships
+        <GraduationCap className="h-7 w-7 text-[#05294E]" /> {t('studentDashboard.selectedScholarships.title')}
       </h1>
       
       {/* Description */}
@@ -305,7 +307,7 @@ const CartPage: React.FC = () => {
         <div className="flex">
           <div className="ml-3">
             <p className="text-sm text-blue-700">
-              <strong>Welcome to your scholarship selection!</strong> Here you can see all the scholarships you have selected for the application process. These are the programs you are interested in applying to. Follow the steps below to complete your application and start your journey toward studying abroad.
+              <strong>{t('studentDashboard.selectedScholarships.welcomeMessage')}</strong> {t('studentDashboard.selectedScholarships.description')}
             </p>
           </div>
         </div>
@@ -313,13 +315,13 @@ const CartPage: React.FC = () => {
 
       {cart.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-          <h2 className="text-xl font-bold text-slate-700 mb-4">No scholarships selected</h2>
-          <p className="text-slate-600 mb-6">You haven't selected any scholarships yet. Browse our available programs and add them to your selection.</p>
+          <h2 className="text-xl font-bold text-slate-700 mb-4">{t('studentDashboard.selectedScholarships.noScholarshipsSelected')}</h2>
+          <p className="text-slate-600 mb-6">{t('studentDashboard.selectedScholarships.notSelectedYet')}</p>
           <button
             onClick={() => navigate('/student/dashboard/scholarships')}
             className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#05294E]/90 transition-all"
           >
-            Browse Scholarships
+            {t('studentDashboard.selectedScholarships.browseScholarships')}
           </button>
         </div>
       ) : (
