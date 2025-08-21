@@ -30,6 +30,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { generateUniqueInstanceName } from './WhatsAppConnection/utils/whatsappUtils';
 import { generateChatwootPassword } from '../../lib/chatwootUtils';
 import ConnectSmartChat from './WhatsAppConnection/ConnectSmartChat';
 import AIAgentKnowledgeUpload from '../../components/AIAgentKnowledgeUpload';
@@ -403,20 +404,7 @@ export default function WhatsAppConnection() {
     }
   }, [university?.name]);
 
-  const generateRandomString = useCallback((length: number): string => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-  }, []);
-
-  const generateUniqueInstanceName = useCallback((): string => {
-    const userName = user?.email?.split('@')[0] || 'user';
-    const randomSuffix = generateRandomString(10);
-    return `${userName}_${randomSuffix}`;
-  }, [user?.email, generateRandomString]);
+  // Removidas as funções locais - agora usando a implementação centralizada de whatsappUtils.ts
 
   const handleCreateConnection = async (selectedAgentId?: string | React.MouseEvent) => {
     // Se for um evento, não temos um agentId
@@ -436,7 +424,7 @@ export default function WhatsAppConnection() {
       return;
     }
 
-    const instanceName = generateUniqueInstanceName();
+    const instanceName = generateUniqueInstanceName(user?.email || 'user@example.com');
     
     setQrLoading(true);
     setQrError(null);
@@ -645,6 +633,21 @@ export default function WhatsAppConnection() {
         setQrCodeUrl(qrCodeData);
         setConnectionStatus('connecting');
         
+        // Buscar final_prompt do agente
+        let agentFinalPrompt = null;
+        const currentAgentId = selectedAgentId || agentId;
+        if (currentAgentId) {
+          const { data: agentData, error: agentError } = await supabase
+            .from('ai_configurations')
+            .select('final_prompt')
+            .eq('id', currentAgentId)
+            .single();
+          
+          if (!agentError && agentData?.final_prompt) {
+            agentFinalPrompt = agentData.final_prompt;
+          }
+        }
+
         const newConnection = {
           university_id: university.id,
           user_id: user.id,
@@ -652,6 +655,7 @@ export default function WhatsAppConnection() {
           phone_number: 'Connecting...',
           connection_status: 'connecting',
           instance_name: instanceName,
+          final_prompt: agentFinalPrompt,
         };
 
         const { data: savedConnection, error: saveError } = await supabase
@@ -916,7 +920,11 @@ export default function WhatsAppConnection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_message: testMessage,
-          conversation_id: conversationId
+          conversation_id: conversationId,
+          agent_id: agentId,
+          agent_name: agent.ai_name,
+          company_name: agent.company_name,
+          custom_prompt: agent.custom_prompt
         })
       });
 

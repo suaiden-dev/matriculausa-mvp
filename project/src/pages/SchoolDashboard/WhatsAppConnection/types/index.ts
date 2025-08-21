@@ -7,6 +7,7 @@ export interface WhatsAppConnection {
   connected_at?: string;
   disconnected_at?: string | null;
   instance_name: string;
+  final_prompt?: string;
   created_at: string;
   updated_at: string;
 }

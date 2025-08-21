@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { generateChatwootPassword } from './chatwootUtils';
+import { generateUniqueInstanceName } from '../pages/SchoolDashboard/WhatsAppConnection/utils/whatsappUtils';
 
 export interface WhatsAppConnectionData {
   user_id: string;
@@ -9,6 +10,7 @@ export interface WhatsAppConnectionData {
   connection_status: 'connecting' | 'connected' | 'disconnected' | 'error';
   phone_number?: string;
   evolution_instance_id?: string;
+  final_prompt?: string;
 }
 
 export interface ChatwootData {
@@ -18,11 +20,7 @@ export interface ChatwootData {
   chatwoot_access_token?: string;
 }
 
-export const generateUniqueInstanceName = (userName: string, userEmail: string): string => {
-  const cleanName = (userName || userEmail || 'user').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-  const randomStr = Math.random().toString(36).substring(2, 12);
-  return `${cleanName}_${randomStr}`;
-};
+// Função removida - agora usando a implementação centralizada de whatsappUtils.ts
 
 export const connectWhatsAppForAgent = async (
   user: any,
@@ -38,10 +36,7 @@ export const connectWhatsAppForAgent = async (
   try {
     console.log('🚀 [WhatsAppConnectionUtils] ===== INICIANDO CONFIGURAÇÃO CHATWOOT + WHATSAPP =====');
     
-    const instanceName = generateUniqueInstanceName(
-      user.user_metadata?.name || user.email,
-      user.email
-    );
+    const instanceName = generateUniqueInstanceName(user.email);
     
     console.log('📋 [WhatsAppConnectionUtils] Instance Name:', instanceName);
     console.log('📋 [WhatsAppConnectionUtils] Agent ID:', agentId);
@@ -204,11 +199,29 @@ export const connectWhatsAppForAgent = async (
       console.log('✅ [WhatsAppConnectionUtils] Valid QR code data detected');
       console.log('✅ [WhatsAppConnectionUtils] QR code generated successfully');
       
-      // SALVAR INSTANCE_NAME NO BANCO DE DADOS
+      // BUSCAR FINAL_PROMPT DO AGENTE E SALVAR INSTANCE_NAME NO BANCO DE DADOS
       if (user && instanceName) {
         console.log('💾 [WhatsAppConnectionUtils] Saving instance_name to database:', instanceName);
         console.log('💾 [WhatsAppConnectionUtils] User ID:', user.id);
         console.log('💾 [WhatsAppConnectionUtils] User email:', user.email);
+        
+        // Buscar o final_prompt do agente
+        let agentFinalPrompt = null;
+        if (agentId) {
+          console.log('🔍 [WhatsAppConnectionUtils] Buscando final_prompt do agente:', agentId);
+          const { data: agentData, error: agentError } = await supabase
+            .from('ai_configurations')
+            .select('final_prompt')
+            .eq('id', agentId)
+            .single();
+          
+          if (agentError) {
+            console.error('❌ [WhatsAppConnectionUtils] Erro ao buscar final_prompt:', agentError);
+          } else {
+            agentFinalPrompt = agentData?.final_prompt;
+            console.log('✅ [WhatsAppConnectionUtils] final_prompt encontrado:', !!agentFinalPrompt);
+          }
+        }
         
         const newConnection = {
           user_id: user.id,
@@ -217,6 +230,7 @@ export const connectWhatsAppForAgent = async (
           evolution_instance_id: instanceName,
           connection_status: 'connecting',
           phone_number: 'Connecting...',
+          final_prompt: agentFinalPrompt,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
