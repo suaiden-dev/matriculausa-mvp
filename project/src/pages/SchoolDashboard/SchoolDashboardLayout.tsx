@@ -30,6 +30,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
+import PaymentNotifications from '../../components/PaymentNotifications';
+import { useEnvironment } from '../../hooks/useEnvironment';
+import FeatureBlockedMessage from '../../components/FeatureBlockedMessage';
 
 interface SchoolDashboardLayoutProps {
   user: any;
@@ -47,6 +50,20 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  
+  // Hook para detectar ambiente
+  const { isProduction } = useEnvironment();
+  
+  // Rotas bloqueadas em produção
+  const blockedRoutes = [
+    '/school/dashboard/stripe-connect-setup',
+    '/school/dashboard/stripe-connect-transfers', 
+    '/school/dashboard/payment-method-config',
+    '/school/dashboard/payment-dashboard'
+  ];
+  
+  // Verificar se a rota atual está bloqueada em produção
+  const isCurrentRouteBlocked = isProduction && blockedRoutes.includes(location.pathname);
   
   // Usar Polling Inteligente em vez de Supabase Real-time
   const {
@@ -106,6 +123,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/ai-solutions')) return 'ai-solutions';
     if (path.includes('/stripe-connect/transfers')) return 'stripe-transfers';
     if (path.includes('/stripe-connect')) return 'stripe-connect';
+    if (path.includes('/payment-method-config')) return 'payment-method-config';
+    if (path.includes('/payment-dashboard')) return 'payment-dashboard';
 
     if (path.includes('/inbox')) return 'inbox';
     if (path.includes('/whatsapp')) return 'whatsapp';
@@ -150,6 +169,15 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       </div>
     );
   }
+  
+  // Se a rota estiver bloqueada em produção, mostrar mensagem de bloqueio
+  if (isCurrentRouteBlocked) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <FeatureBlockedMessage />
+      </div>
+    );
+  }
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
@@ -159,7 +187,9 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
     { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
     { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
-    { id: 'stripe-transfers', label: 'Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null },
+    { id: 'stripe-transfers', label: 'Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null, status: 'em_desenvolvimento' },
+    { id: 'payment-method-config', label: 'Payment Methods', icon: CreditCard, path: '/school/dashboard/payment-method-config', badge: null, status: 'em_desenvolvimento' },
+    { id: 'payment-dashboard', label: 'Payment Dashboard', icon: DollarSign, path: '/school/dashboard/payment-dashboard', badge: null, status: 'em_desenvolvimento' },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
     {
@@ -174,6 +204,14 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       ]
     }
   ];
+  
+  // Filtrar itens do sidebar baseado no ambiente
+  const filteredSidebarItems = sidebarItems.filter(item => {
+    if (isProduction && item.status === 'em_desenvolvimento') {
+      return false; // Não mostrar em produção
+    }
+    return true; // Mostrar em desenvolvimento
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 flex w-full overflow-x-hidden">
@@ -259,7 +297,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
-            {sidebarItems.map((item) => {
+            {filteredSidebarItems.map((item) => {
               if (item.dropdown) {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id || item.dropdown.some(sub => activeTab === sub.id);
@@ -408,6 +446,10 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'students' && 'Students'}
                   {activeTab === 'selection-process' && 'Selection Process'}
                   {activeTab === 'analytics' && 'Analytics & Reports'}
+                  {activeTab === 'stripe-connect' && 'Stripe Connect'}
+                  {activeTab === 'stripe-transfers' && 'Transfers'}
+                  {activeTab === 'payment-method-config' && 'Payment Methods'}
+                  {activeTab === 'payment-dashboard' && 'Payment Dashboard'}
                 </h1>
                 <p className="text-slate-600">
                   {activeTab === 'overview' && 'Monitor your university performance'}
@@ -416,63 +458,17 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'students' && 'Manage applicants and students'}
                   {activeTab === 'selection-process' && 'Review and approve student applications'}
                   {activeTab === 'analytics' && 'Detailed performance analysis and metrics'}
+                  {activeTab === 'stripe-connect' && 'Manage your Stripe Connect integration'}
+                  {activeTab === 'stripe-transfers' && 'View and manage payment transfers'}
+                  {activeTab === 'payment-method-config' && 'Configure payment methods'}
+                  {activeTab === 'payment-dashboard' && 'Monitor payment activities'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <div className="relative notifications-container">
-                <button
-                  onClick={() => {
-                    // Em mobile, abre modal; em desktop, abre dropdown
-                    if (window.innerWidth < 768) {
-                      setShowNotificationsModal(true);
-                    } else {
-                      setShowNotif(!showNotif);
-                    }
-                  }}
-                  className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                  title="Notifications"
-                >
-                  <Bell className="h-5 w-5 text-slate-600" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium min-w-[20px]">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Notification Dropdown - only show on desktop */}
-                {showNotif && (
-                  <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
-                    <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
-                      <span>Notifications</span>
-                      <div className="flex items-center gap-2 text-xs">
-                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
-                        <span className="text-slate-300">|</span>
-                        <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
-                      </div>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="px-4 py-6 text-sm text-slate-500">No notifications</div>
-                      ) : (
-                        notifications.map((n) => (
-                          <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${!n.read_at ? 'bg-slate-50' : ''}`} onClick={() => openNotification(n)}>
-                            <div className="text-sm font-medium text-slate-900 flex items-center justify-between">
-                              <span className="truncate pr-2">{n.title}</span>
-                              {!n.read_at && <span className="ml-2 h-2 w-2 rounded-full bg-blue-500 inline-block flex-shrink-0"></span>}
-                            </div>
-                            <div className="text-xs text-slate-600 mt-0.5 line-clamp-2">{n.message}</div>
-                            <div className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Payment Notifications */}
+              <PaymentNotifications />
 
               {/* User Menu */}
               <div className="relative">

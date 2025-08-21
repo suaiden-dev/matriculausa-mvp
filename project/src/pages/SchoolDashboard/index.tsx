@@ -23,6 +23,8 @@ import UniversityRewardsDashboard from './UniversityRewardsDashboard';
 import StripeConnectSetup from './StripeConnectSetup';
 import StripeConnectCallback from './StripeConnectCallback';
 import StripeConnectTransfers from './StripeConnectTransfers';
+import PaymentMethodConfiguration from './PaymentMethodConfiguration';
+import PaymentDashboard from './PaymentDashboard';
 
 const SkeletonLoader = () => <div className="animate-pulse h-40 bg-slate-100 rounded-xl w-full my-8" />;
 
@@ -49,6 +51,8 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="stripe-connect" element={<StripeConnectSetup />} />
             <Route path="stripe-connect/callback" element={<StripeConnectCallback />} />
             <Route path="stripe-connect/transfers" element={<StripeConnectTransfers />} />
+            <Route path="payment-method-config" element={<PaymentMethodConfiguration />} />
+            <Route path="payment-dashboard" element={<PaymentDashboard />} />
 
             <Route path="matricula-rewards" element={<UniversityRewardsDashboard />} />
             <Route path="whatsapp" element={<WhatsAppConnection />} />
