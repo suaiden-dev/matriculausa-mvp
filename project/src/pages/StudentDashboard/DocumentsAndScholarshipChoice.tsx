@@ -52,6 +52,19 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     }
   }, [userProfile?.user_id, fetchCart]);
 
+  // Carregar processType do localStorage quando componente montar
+  useEffect(() => {
+    const savedProcessType = window.localStorage.getItem('studentProcessType');
+    if (savedProcessType) {
+      console.log('Loading processType from localStorage:', savedProcessType);
+      setProcessType(savedProcessType);
+      // Se já tem processType, mostrar seção de documentos
+      if (!documentsApproved) {
+        setShowDocumentSection(true);
+      }
+    }
+  }, [documentsApproved]);
+
   // Atualizar estado quando userProfile muda
   useEffect(() => {
     setDocumentsApproved(userProfile?.documents_status === 'approved');
@@ -191,6 +204,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           // Processar aplicações, limpar carrinho E notificar universidade
           await processApplicationsAndClearCart(docUrls, true);
           
+          // Limpar dados de manual review do localStorage
+          clearManualReviewData();
+          
           setAnalyzing(false);
           setFieldErrors({});
           setDocumentsApproved(true);
@@ -211,13 +227,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           // NÃO chamar saveDocumentsForManualReview aqui
           // As aplicações só serão criadas quando o usuário completar o manual review
           
-          setAnalyzing(false);
-          setError(null);
-          setFieldErrors({
+          // Salvar dados no localStorage para manual review
+          const errorData = {
             passport: passportErr || 'Invalid document.',
             funds_proof: fundsErr || 'Invalid document.',
             diploma: degreeErr || 'Invalid document.',
-          });
+          };
+          
+          console.log('Saving to localStorage for manual review:');
+          console.log('Errors:', errorData);
+          console.log('Documents:', uploadedDocs);
+          
+          localStorage.setItem('documentAnalysisErrors', JSON.stringify(errorData));
+          localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
+          
+          setAnalyzing(false);
+          setError(null);
+          setFieldErrors(errorData);
           
           // Limpar apenas arquivos inválidos
           setFiles(prev => {
@@ -239,86 +265,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     }
   };
 
-  // Função auxiliar para salvar documentos para revisão manual (sem notificar universidade)
-  const saveDocumentsForManualReview = async (docUrls: Record<string, string>) => {
-    if (!user) return;
-    
-    try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('id, selected_scholarship_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      const scholarshipIds: string[] = [];
-      
-      // Buscar bolsas do carrinho
-      const { data: cartRows } = await supabase
-        .from('user_cart')
-        .select('scholarship_id')
-        .eq('user_id', user.id);
-      
-      if (Array.isArray(cartRows)) {
-        for (const row of cartRows) {
-          if (row?.scholarship_id && !scholarshipIds.includes(row.scholarship_id)) {
-            scholarshipIds.push(row.scholarship_id);
-          }
-        }
-      }
-      
-      if (scholarshipIds.length === 0 && profile?.selected_scholarship_id) {
-        scholarshipIds.push(profile.selected_scholarship_id);
-      }
 
-      if (profile?.id && scholarshipIds.length > 0) {
-        for (const scholarshipId of scholarshipIds) {
-          const { data: existingApp } = await supabase
-            .from('scholarship_applications')
-            .select('id')
-            .eq('student_id', profile.id)
-            .eq('scholarship_id', scholarshipId)
-            .maybeSingle();
-          
-          let applicationId: string | null = existingApp?.id || null;
-          
-          if (!applicationId) {
-            const { data: newApp } = await supabase
-              .from('scholarship_applications')
-              .insert({ 
-                student_id: profile.id, 
-                scholarship_id: scholarshipId, 
-                status: 'pending' 
-              })
-              .select('id')
-              .single();
-            applicationId = newApp?.id || null;
-          }
-          
-          if (applicationId) {
-            // Criar documentos com a estrutura correta que o SelectionProcess espera
-            const finalDocs = [
-              { type: 'passport', url: docUrls['passport'], status: 'under_review' },
-              { type: 'diploma', url: docUrls['diploma'], status: 'under_review' },
-              { type: 'funds_proof', url: docUrls['funds_proof'], status: 'under_review' },
-            ].filter(d => d.url).map(d => ({ 
-              ...d, 
-              uploaded_at: new Date().toISOString()
-            }));
-            
-            await supabase
-              .from('scholarship_applications')
-              .update({ documents: finalDocs })
-              .eq('id', applicationId);
-          }
-        }
-      }
-      
-      console.log('Documents saved for manual review - applications created with correct structure');
-      
-    } catch (error) {
-      console.error('Error saving documents for manual review:', error);
-    }
-  };
 
   // Função auxiliar para processar aplicações e limpar carrinho (com opção de notificar universidade)
   const processApplicationsAndClearCart = async (docUrls: Record<string, string>, notifyUniversity: boolean = false) => {
@@ -462,7 +409,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       if (documentsApproved) {
         navigate('/student/dashboard/application-fee');
       } else {
-        // Se não, mostra seção de upload
         setShowDocumentSection(true);
       }
     } catch (e) {
@@ -471,6 +417,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     } finally {
       setIsSavingType(false);
     }
+  };
+
+  // Função para limpar localStorage quando documents são aprovados
+  const clearManualReviewData = () => {
+    localStorage.removeItem('documentAnalysisErrors');
+    localStorage.removeItem('documentUploadedDocs');
+    console.log('Manual review data cleared from localStorage');
   };
 
   // Verificar se todos os arquivos foram selecionados
@@ -605,8 +558,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           </div>
         )}
 
-        {/* Step 2: Document Upload */}
-        {processType && !documentsApproved && (showDocumentSection || processType) && (
+
+        {processType && !documentsApproved && (
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-6 sm:mb-8">
             <div className="text-center mb-6 sm:mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
@@ -648,13 +601,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                         <p className="text-xs sm:text-sm text-slate-600 mb-3">{doc.description}</p>
                         
                         <div className="space-y-2 sm:space-y-3">
-                          <input
-                            type="file"
-                            accept="application/pdf,image/*"
-                            onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
-                            disabled={uploading || analyzing}
-                            className="w-full text-xs sm:text-sm text-slate-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer"
-                          />
+                          {/* Input de arquivo customizado */}
+                          <div className="flex items-center space-x-3">
+                            <label className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors font-medium text-sm">
+                              <Upload className="w-4 h-4 mr-2" />
+                              Escolher arquivo
+                              <input
+                                type="file"
+                                accept="application/pdf,image/*"
+                                onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
+                                disabled={uploading || analyzing}
+                                className="hidden"
+                              />
+                            </label>
+                            <span className="text-sm text-slate-500">
+                              {hasFile ? hasFile.name : 'Nenhum arquivo escolhido'}
+                            </span>
+                          </div>
                           
                           {hasFile && (
                             <div className="flex items-center text-xs sm:text-sm text-green-600 bg-green-50 p-2 rounded-lg">

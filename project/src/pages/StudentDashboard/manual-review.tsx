@@ -23,15 +23,26 @@ const ManualReview: React.FC = () => {
     try {
       const e = JSON.parse(localStorage.getItem('documentAnalysisErrors') || '{}');
       const d = JSON.parse(localStorage.getItem('documentUploadedDocs') || '[]');
+      
+      console.log('=== DEBUG: Loading from localStorage ===');
+      console.log('Errors:', e);
+      console.log('Documents:', d);
+      
       setFieldErrors(e || {});
       setPrevDocs(Array.isArray(d) ? d : []);
+      
       // If a field had error, default to not using previous file
-      setUsePrev(() => ({
+      const usePrevState = {
         passport: e?.passport ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'passport')),
         diploma: e?.diploma ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'diploma')),
         funds_proof: e?.funds_proof ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'funds_proof')),
-      }));
-    } catch {}
+      };
+      
+      console.log('usePrev state:', usePrevState);
+      setUsePrev(usePrevState);
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+    }
   }, []);
 
   // Busca a aplicação mais recente e usa seus documentos/status para pré-preencher reenvio
@@ -274,7 +285,24 @@ const ManualReview: React.FC = () => {
     }
   };
 
-  const docByType = (type: string) => prevDocs.find(d => d.type === type);
+  const docByType = (type: string) => {
+    // Buscar primeiro em prevDocs (localStorage)
+    const fromPrev = prevDocs.find(d => d.type === type);
+    if (fromPrev) {
+      console.log(`docByType(${type}): Found in prevDocs:`, fromPrev);
+      return fromPrev;
+    }
+    
+    // Buscar em appDocs (banco de dados)
+    const fromApp = appDocs.find(d => d.type === type);
+    if (fromApp) {
+      console.log(`docByType(${type}): Found in appDocs:`, fromApp);
+      return fromApp;
+    }
+    
+    console.log(`docByType(${type}): Not found in any source`);
+    return null;
+  };
   const entries = [
     { key: 'passport', label: 'Passport' },
     { key: 'diploma', label: 'High School Diploma' },
@@ -325,19 +353,10 @@ const ManualReview: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  {docByType(e.key) && (
-                    <a 
-                      className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium px-3 py-1 rounded-lg hover:bg-blue-50 transition-all duration-200" 
-                      href={docByType(e.key)!.url} 
-                      target="_blank" 
-                      rel="noreferrer"
-                    >
-                      View Current File
-                    </a>
-                  )}
                 </div>
                 
                 <div className="space-y-3">
+                  
                   {usePrev[e.key] && docByType(e.key) ? (
                     <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -352,15 +371,28 @@ const ManualReview: React.FC = () => {
                       <label className="block text-sm font-medium text-slate-700">
                         Upload replacement file:
                       </label>
-                      <input
-                        type="file"
-                        accept="application/pdf,image/*"
-                        onChange={(ev) => attachFile(e.key, ev.target.files?.[0] || null)}
-                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                      {/* Input de arquivo customizado igual ao DocumentsAndScholarshipChoice */}
+                      <div className="flex items-center space-x-3">
+                        <label className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors font-medium text-sm">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          Escolher arquivo
+                          <input
+                            type="file"
+                            accept="application/pdf,image/*"
+                            onChange={(ev) => attachFile(e.key, ev.target.files?.[0] || null)}
+                            className="hidden"
+                          />
+                        </label>
+                        <span className="text-sm text-slate-500">
+                          {files[e.key] ? files[e.key]?.name : 'Nenhum arquivo escolhido'}
+                        </span>
+                      </div>
                     </div>
                   )}
                   
+                  {/* Checkbox para usar arquivo anterior - sempre mostrar se há documento */}
                   {docByType(e.key) && (
                     <label className="inline-flex items-center gap-2 text-sm text-slate-600 cursor-pointer hover:text-slate-800 transition-colors">
                       <input
