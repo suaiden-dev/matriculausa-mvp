@@ -52,6 +52,19 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     }
   }, [userProfile?.user_id, fetchCart]);
 
+  // Carregar processType do localStorage quando componente montar
+  useEffect(() => {
+    const savedProcessType = window.localStorage.getItem('studentProcessType');
+    if (savedProcessType) {
+      console.log('Loading processType from localStorage:', savedProcessType);
+      setProcessType(savedProcessType);
+      // Se já tem processType, mostrar seção de documentos
+      if (!documentsApproved) {
+        setShowDocumentSection(true);
+      }
+    }
+  }, [documentsApproved]);
+
   // Atualizar estado quando userProfile muda
   useEffect(() => {
     setDocumentsApproved(userProfile?.documents_status === 'approved');
@@ -80,7 +93,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     try {
       if (!user) throw new Error('User not authenticated');
       
-      const uploadedDocs: { name: string; url: string; type: string; uploaded_at: string }[] = [];
+      const uploadedDocs: { name: string; url: string; type: string; uploaded_at: string; status: string }[] = [];
       const docUrls: Record<string, string> = {};
       
       for (const doc of DOCUMENT_TYPES) {
@@ -94,17 +107,14 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         
         if (storageError) throw storageError;
         
-        const file_url = storageData?.path ? 
-          supabase.storage.from('student-documents').getPublicUrl(storageData.path).data.publicUrl : null;
+        if (!storageData?.path) throw new Error('Failed to get storage path');
         
-        if (!file_url) throw new Error('Failed to get file URL');
-        
-        docUrls[doc.key] = file_url;
+        docUrls[doc.key] = storageData.path; // Salvar o caminho do storage, não a URL pública
         
         const { error: insertError } = await supabase.from('student_documents').insert({
           user_id: user.id,
           type: doc.key,
-          file_url,
+          file_url: storageData.path, // Salvar o caminho do storage
           status: 'pending',
         });
         
@@ -112,9 +122,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         
         uploadedDocs.push({ 
           name: file.name, 
-          url: file_url, 
+          url: storageData.path, // Salvar com 'url' para compatibilidade com SelectionProcess
           type: doc.key, 
-          uploaded_at: new Date().toISOString() 
+          uploaded_at: new Date().toISOString(),
+          status: 'pending'
         });
       }
 
@@ -126,9 +137,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         user_id: user.id,
         student_name: userProfile?.full_name || (user as any)?.user_metadata?.full_name || 
                      (user as any)?.user_metadata?.name || user.email || '',
-        passport_url: docUrls['passport'],
-        diploma_url: docUrls['diploma'],
-        funds_proof_url: docUrls['funds_proof'],
+        passport_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['passport']).data.publicUrl,
+        diploma_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['diploma']).data.publicUrl,
+        funds_proof_url: supabase.storage.from('student-documents').getPublicUrl(docUrls['funds_proof']).data.publicUrl,
       };
       
       const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 
@@ -180,41 +191,30 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         const allValid = passportOk && fundsOk && degreeOk;
         
         if (allValid) {
-          // Documentos aprovados - continuar processo
+          // Documentos aprovados - continuar processo completo
           await supabase
             .from('user_profiles')
             .update({
               documents: uploadedDocs,
               documents_uploaded: true,
-              documents_status: 'under_review',
+              documents_status: 'approved',
             })
             .eq('user_id', user.id);
 
-          // Processar aplicações e limpar carrinho
-          await processApplicationsAndClearCart(docUrls);
+          // Processar aplicações, limpar carrinho E notificar universidade
+          await processApplicationsAndClearCart(docUrls, true);
+          
+          // Limpar dados de manual review do localStorage
+          clearManualReviewData();
           
           setAnalyzing(false);
           setFieldErrors({});
           setDocumentsApproved(true);
           navigate('/student/dashboard/application-fee');
         } else {
-          // Documentos com erro - mostrar erros específicos
-          const nextFieldErrors: Record<string, string> = {};
-          if (!passportOk && (passportErr || respPassport !== undefined)) {
-            nextFieldErrors['passport'] = passportErr || 'Invalid document.';
-          }
-          if (!fundsOk && (fundsErr || respFunds !== undefined)) {
-            nextFieldErrors['funds_proof'] = fundsErr || 'Invalid document.';
-          }
-          if (!degreeOk && (degreeErr || respDegree !== undefined)) {
-            nextFieldErrors['diploma'] = degreeErr || 'Invalid document.';
-          }
-          
-          setAnalyzing(false);
-          setError(null);
-          setFieldErrors(nextFieldErrors);
-          
-          // Atualizar perfil mesmo com erros para revisão manual
+          // Documentos com erro - apenas salvar no perfil para revisão manual
+          // NÃO criar aplicações na universidade ainda
+          // NÃO processar carrinho ainda
           await supabase
             .from('user_profiles')
             .update({
@@ -224,14 +224,33 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             })
             .eq('user_id', user.id);
 
-          await processApplicationsAndClearCart(docUrls);
+          // NÃO chamar saveDocumentsForManualReview aqui
+          // As aplicações só serão criadas quando o usuário completar o manual review
+          
+          // Salvar dados no localStorage para manual review
+          const errorData = {
+            passport: passportErr || 'Invalid document.',
+            funds_proof: fundsErr || 'Invalid document.',
+            diploma: degreeErr || 'Invalid document.',
+          };
+          
+          console.log('Saving to localStorage for manual review:');
+          console.log('Errors:', errorData);
+          console.log('Documents:', uploadedDocs);
+          
+          localStorage.setItem('documentAnalysisErrors', JSON.stringify(errorData));
+          localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
+          
+          setAnalyzing(false);
+          setError(null);
+          setFieldErrors(errorData);
           
           // Limpar apenas arquivos inválidos
           setFiles(prev => {
             const updated = { ...prev };
-            if (!passportOk && (passportErr || respPassport !== undefined)) updated['passport'] = null;
-            if (!fundsOk && (fundsErr || respFunds !== undefined)) updated['funds_proof'] = null;
-            if (!degreeOk && (degreeErr || respDegree !== undefined)) updated['diploma'] = null;
+            if (!passportOk) updated['passport'] = null;
+            if (!fundsOk) updated['funds_proof'] = null;
+            if (!degreeOk) updated['diploma'] = null;
             return updated;
           });
         }
@@ -246,8 +265,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     }
   };
 
-  // Função auxiliar para processar aplicações e limpar carrinho
-  const processApplicationsAndClearCart = async (docUrls: Record<string, string>) => {
+
+
+  // Função auxiliar para processar aplicações e limpar carrinho (com opção de notificar universidade)
+  const processApplicationsAndClearCart = async (docUrls: Record<string, string>, notifyUniversity: boolean = false) => {
     if (!user) return;
     
     try {
@@ -330,22 +351,24 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         clearCart(user.id);
       }
 
-      // Notificar universidade
-      const { data: { session } } = await supabase.auth.getSession();
-      const notifyPayload = { 
-        user_id: user.id, 
-        tipos_documentos: ['manual_review'], 
-        scholarship_ids: scholarshipIds 
-      };
-      
-      await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${session?.access_token || ''}` 
-        },
-        body: JSON.stringify(notifyPayload),
-      });
+      // Só notificar universidade se solicitado explicitamente
+      if (notifyUniversity) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const notifyPayload = { 
+          user_id: user.id, 
+          tipos_documentos: ['manual_review'], 
+          scholarship_ids: scholarshipIds 
+        };
+        
+        await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-upload`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${session?.access_token || ''}` 
+          },
+          body: JSON.stringify(notifyPayload),
+        });
+      }
     } catch (error) {
       console.error('Error processing applications:', error);
     }
@@ -386,7 +409,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       if (documentsApproved) {
         navigate('/student/dashboard/application-fee');
       } else {
-        // Se não, mostra seção de upload
         setShowDocumentSection(true);
       }
     } catch (e) {
@@ -395,6 +417,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     } finally {
       setIsSavingType(false);
     }
+  };
+
+  // Função para limpar localStorage quando documents são aprovados
+  const clearManualReviewData = () => {
+    localStorage.removeItem('documentAnalysisErrors');
+    localStorage.removeItem('documentUploadedDocs');
+    console.log('Manual review data cleared from localStorage');
   };
 
   // Verificar se todos os arquivos foram selecionados
@@ -529,8 +558,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           </div>
         )}
 
-        {/* Step 2: Document Upload */}
-        {processType && !documentsApproved && (showDocumentSection || processType) && (
+
+        {processType && !documentsApproved && (
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-6 sm:mb-8">
             <div className="text-center mb-6 sm:mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
@@ -572,13 +601,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                         <p className="text-xs sm:text-sm text-slate-600 mb-3">{doc.description}</p>
                         
                         <div className="space-y-2 sm:space-y-3">
-                          <input
-                            type="file"
-                            accept="application/pdf,image/*"
-                            onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
-                            disabled={uploading || analyzing}
-                            className="w-full text-xs sm:text-sm text-slate-500 file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-2 sm:file:px-4 file:rounded-lg file:border-0 file:text-xs sm:file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer"
-                          />
+                          {/* Input de arquivo customizado */}
+                          <div className="flex items-center space-x-3">
+                            <label className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors font-medium text-sm">
+                              <Upload className="w-4 h-4 mr-2" />
+                              Escolher arquivo
+                              <input
+                                type="file"
+                                accept="application/pdf,image/*"
+                                onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)}
+                                disabled={uploading || analyzing}
+                                className="hidden"
+                              />
+                            </label>
+                            <span className="text-sm text-slate-500">
+                              {hasFile ? hasFile.name : 'Nenhum arquivo escolhido'}
+                            </span>
+                          </div>
                           
                           {hasFile && (
                             <div className="flex items-center text-xs sm:text-sm text-green-600 bg-green-50 p-2 rounded-lg">
@@ -590,7 +629,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                           {hasError && (
                             <div className="flex items-start text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded-lg">
                               <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-2 mt-0.5 flex-shrink-0" />
-                              <span className="break-words">{hasError}</span>
+                              <span className="flex items-center justify-center">
+                                <span className="break-words">{hasError}</span>
+                              </span>
                             </div>
                           )}
                         </div>
@@ -694,4 +735,4 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   );
 };
 
-export default DocumentsAndScholarshipChoice; 
+export default DocumentsAndScholarshipChoice;

@@ -118,54 +118,69 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
     <>
       {/* Botão de Ajuda - Dropdown para cima */}
       {!isOpen && (
-        <div
-          onClick={toggleHelp}
-          className={`fixed w-16 h-16 rounded-full bg-[#193156] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(25,49,86,0.4)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-300 group relative hover:scale-105 ${
-            isHelpExpanded ? 'rotate-180 scale-110' : ''
-          }`}
+        <div className="fixed flex items-center gap-3 z-[1000] font-['Montserrat',Arial,sans-serif]"
           style={{
             position: 'fixed',
             bottom: isStudentPage ? '100px' : '20px',
             right: '20px',
-            width: '64px',
-            height: '64px',
             zIndex: 10002,
-            background: '#193156',
-            boxShadow: '0 0 0 2.5px #f7f7f7, 0 6px 20px rgba(25,49,86,0.4)'
           }}
-          title={"Help & Support Options"}
         >
-          {/* Tooltip */}
-          {
-            !isHelpExpanded && (
-              <div className="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-3 py-1 bg-[#161d29] text-[#f7f7f7] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap border border-[#2e3f60] shadow-lg">
-                Help & Support
-                <div className="absolute top-1/2 left-full transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-[#161d29]"></div>
-              </div>
-            )
-          }
-          
-          {/* Ícone de Ajuda */}
-          <svg 
-            width="28" 
-            height="28" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-            className={`transition-transform duration-300 ${isHelpExpanded ? 'rotate-180' : ''}`}
+          {/* Texto de Suporte Acadêmico */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200 shadow-lg max-w-[200px] opacity-0 animate-fadeInRight"
+            style={{
+              animation: 'fadeInRight 0.5s ease-out 0.3s forwards'
+            }}
           >
-            {/* Círculo de fundo */}
-            <circle cx="12" cy="12" r="12" fill="#193156" />
-            
-            {/* Borda branca */}
-            <circle cx="12" cy="12" r="11" fill="none" stroke="white" strokeWidth="2" />
-            
-            {/* Interrogação branca */}
-            <path 
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" 
-              fill="white"
-            />
-          </svg>
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="h-3 w-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold text-slate-900 text-xs truncate">Academic Support</h4>
+                <p className="text-xs text-slate-500 truncate">24/7 assistance available</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Botão de Ajuda */}
+          <div
+            onClick={toggleHelp}
+            className={`w-16 h-16 rounded-full bg-[#193156] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(25,49,86,0.4)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-300 group relative hover:scale-105 ${
+              isHelpExpanded ? 'rotate-180 scale-110' : ''
+            }`}
+            style={{
+              width: '64px',
+              height: '64px',
+              background: '#193156',
+              boxShadow: '0 0 0 2.5px #f7f7f7, 0 6px 20px rgba(25,49,86,0.4)'
+            }}
+            title={"Help & Support Options"}
+          >
+            {/* Ícone de Ajuda */}
+            <svg 
+              width="28" 
+              height="28" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+              className={`transition-transform duration-300 ${isHelpExpanded ? 'rotate-180' : ''}`}
+            >
+              {/* Círculo de fundo */}
+              <circle cx="12" cy="12" r="12" fill="#193156" />
+              
+              {/* Borda branca */}
+              <circle cx="12" cy="12" r="11" fill="none" stroke="white" strokeWidth="2" />
+              
+              {/* Interrogação branca */}
+              <path 
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" 
+                fill="white"
+              />
+            </svg>
+          </div>
         </div>
       )}
 
@@ -245,7 +260,7 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
         </div>
       )}
 
-      {/* Chat Container */}
+      {/* Chat Container - Posicionamento fixo baseado na posição do botão */}
       {isOpen && (
         <>
           {/* Mobile Overlay */}
@@ -257,13 +272,15 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           ></div>
           
           <div 
-            className={`fixed inset-0 md:bottom-[20px] md:right-[100px] md:w-[400px] md:max-w-[90vw] md:inset-auto w-full h-full md:h-auto bg-[#161d29] border-[1.5px] border-[#2e3f60] md:rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.4)] z-[10000] font-['Montserrat',Arial,sans-serif] text-[13px] overflow-hidden transition-all duration-300 ease-out transform-gpu ${
+            className={`fixed inset-0 md:bottom-auto md:right-[20px] md:w-[400px] md:max-w-[90vw] md:inset-auto w-full h-full md:h-auto bg-[#161d29] border-[1.5px] border-[#2e3f60] md:rounded-2xl shadow-[0_6px_24px_rgba(0,0,0,0.4)] z-[10000] font-['Montserrat',Arial,sans-serif] text-[13px] overflow-hidden transition-all duration-300 ease-out transform-gpu ${
               isAnimating 
                 ? 'opacity-0 scale-75 md:scale-90 translate-y-4 md:translate-y-2 md:translate-x-4' 
                 : 'opacity-100 scale-100 translate-y-0 md:translate-x-0'
             }`}
             style={{
-              transformOrigin: 'bottom'
+              transformOrigin: 'bottom',
+              bottom: isStudentPage ? '100px' : '20px',
+              right: '20px'
             }}
           >
             {/* Header */}
@@ -370,6 +387,21 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           
           .smart-chat-messages::-webkit-scrollbar-thumb:hover {
             background: #51678f;
+          }
+
+          @keyframes fadeInRight {
+            from {
+              opacity: 0;
+              transform: translateX(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          .animate-fadeInRight {
+            animation: fadeInRight 0.5s ease-out forwards;
           }
         `
       }} />

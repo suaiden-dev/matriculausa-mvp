@@ -74,7 +74,8 @@ const StudentDetails: React.FC = () => {
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
   const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState(false);
 
-  // Removido: Bloqueio de scroll que estava causando problemas de navegação
+  const [fileSelectionError, setFileSelectionError] = useState<string | null>(null);
+  const [isFileSelecting, setIsFileSelecting] = useState(false);
 
   // Estados para o modal de nova solicitação de documento
   const [newDocumentRequest, setNewDocumentRequest] = useState({
@@ -97,6 +98,20 @@ const StudentDetails: React.FC = () => {
       setAcceptanceLetterUploaded(application.acceptance_letter_status === 'approved');
     }
   }, [application]);
+
+  // Limpar erros quando o arquivo for alterado
+  useEffect(() => {
+    if (acceptanceLetterFile) {
+      clearFileSelectionError();
+    }
+  }, [acceptanceLetterFile]);
+
+  // Limpar estados de arquivo quando a aba for alterada
+  useEffect(() => {
+    if (activeTab !== 'documents') {
+      setAcceptanceLetterFile(null);
+    }
+  }, [activeTab]);
 
   const fetchApplicationDetails = async () => {
     if (!applicationId) return;
@@ -576,7 +591,6 @@ const StudentDetails: React.FC = () => {
       // Recarregar os dados para mostrar o novo status
       fetchStudentDocuments();
 
-      alert('Document approved successfully! The student will be notified.');
     } catch (err: any) {
       console.error("Error approving document:", err);
       alert(`Failed to approve document: ${err.message}`);
@@ -957,12 +971,53 @@ const StudentDetails: React.FC = () => {
     }
   };
 
+  // Função para limpar erros de seleção de arquivo
+  const clearFileSelectionError = () => {
+    setFileSelectionError(null);
+  };
+
   // Função para selecionar arquivo da carta de aceite
   const handleAcceptanceLetterFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setAcceptanceLetterFile(file);
-      setAcceptanceLetterUploaded(false);
+    try {
+
+      setTimeout(() => {
+        try {
+          const file = event.target.files?.[0];
+          if (file) {
+            // Validar o arquivo
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+              setFileSelectionError('File size must be less than 10MB');
+              return;
+            }
+            
+            // Validar tipo de arquivo
+            const allowedTypes = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
+            const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+            if (!allowedTypes.includes(fileExtension)) {
+              setFileSelectionError('Please select a valid file type: PDF, DOC, DOCX, JPG, JPEG, or PNG');
+              return;
+            }
+            
+            setAcceptanceLetterFile(file);
+            setAcceptanceLetterUploaded(false);
+            setFileSelectionError(null);
+            
+            // Limpar o input para permitir selecionar o mesmo arquivo novamente
+            event.target.value = '';
+          }
+        } catch (error) {
+          console.error('Error processing file selection:', error);
+          setFileSelectionError('Error processing file. Please try again.');
+        } finally {
+          setIsFileSelecting(false);
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error selecting file:', error);
+      setFileSelectionError('Error selecting file. Please try again.');
+      setIsFileSelecting(false);
     }
   };
 
@@ -1270,7 +1325,7 @@ const StudentDetails: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-y-auto">
+    <div className="min-h-screen overflow-y-auto">   
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -1718,11 +1773,15 @@ const StudentDetails: React.FC = () => {
         {activeTab === 'documents' && (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
             <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <FileText className="w-6 h-6 mr-3" />
-                Document Management
-              </h2>
-              <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <FileText className="w-6 text-white h-6 mr-3" />
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">Document Management</h2>
+                    <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="p-6">
               {/* New Request Button */}
@@ -1954,7 +2013,7 @@ const StudentDetails: React.FC = () => {
               </div>
 
               {/* Acceptance Letter Section */}
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
@@ -2003,16 +2062,30 @@ const StudentDetails: React.FC = () => {
                             </div>
                           ) : null}
                           
-                          <label className="bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm cursor-pointer inline-block">
-                            <span>{acceptanceLetterFile ? 'Change File' : 'Choose File'}</span>
-                            <input
-                              type="file"
-                              className="sr-only"
-                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                              onChange={handleAcceptanceLetterFileSelect}
-                              disabled={uploadingAcceptanceLetter}
-                            />
-                          </label>
+                          <div className="flex flex-col items-center space-y-4">
+                            <div className="file-input-wrapper">
+                              <label className={`bg-[#05294E] hover:bg-[#041f38] text-white px-6 py-3 rounded-xl font-medium transition-colors cursor-pointer inline-flex items-center justify-center min-w-[140px] ${
+                                isFileSelecting ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}>
+                                {isFileSelecting ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                ) : (
+                                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  </svg>
+                                )}
+                                <span>{isFileSelecting ? 'Selecting...' : (acceptanceLetterFile ? 'Change File' : 'Choose File')}</span>
+                                <input
+                                  type="file"
+                                  className="sr-only"
+                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                  onChange={handleAcceptanceLetterFileSelect}
+                                  disabled={uploadingAcceptanceLetter || isFileSelecting}
+                                  key={acceptanceLetterFile ? 'change' : 'initial'} // Força re-render do input
+                                />
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

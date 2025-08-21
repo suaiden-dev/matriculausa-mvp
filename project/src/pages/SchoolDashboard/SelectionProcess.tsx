@@ -37,7 +37,7 @@ const TABS = [
 ];
 
 const SelectionProcess: React.FC = () => {
-  const { applications, university } = useUniversity();
+  const { applications, university, refreshData } = useUniversity();
   const { user } = useAuth();
   
   // States para filtros e pesquisa
@@ -140,10 +140,25 @@ const SelectionProcess: React.FC = () => {
 
   // Funções para gerenciar documentos (copiadas de StudentDetails)
   const latestDocByType = (type: string) => {
+    // Priorizar sempre studentDocs (estado local atualizado)
+    const doc = studentDocs.find((d) => d.type === type);
+    
+    if (doc) {
+      console.log(`latestDocByType(${type}): Found in studentDocs:`, doc);
+      return doc;
+    }
+    
+    // Fallback para selectedStudent.documents se não encontrar em studentDocs
     const docs = (selectedStudent as any)?.documents as any[] | undefined;
     const appDoc = Array.isArray(docs) ? docs.find((d) => d.type === type) : undefined;
-    if (appDoc) return { id: `${type}`, type, file_url: appDoc.url, status: appDoc.status || 'under_review' };
-    return studentDocs.find((d) => d.type === type);
+    
+    if (appDoc) {
+      console.log(`latestDocByType(${type}): Found in selectedStudent.documents:`, appDoc);
+      return { id: `${type}`, type, file_url: appDoc.url, status: appDoc.status || 'under_review' };
+    }
+    
+    console.log(`latestDocByType(${type}): Document not found`);
+    return undefined;
   };
 
   const updateApplicationDocStatus = async (
@@ -152,43 +167,100 @@ const SelectionProcess: React.FC = () => {
     reviewNotes?: string
   ) => {
     if (!selectedStudent) return;
-    const docs = Array.isArray((selectedStudent as any)?.documents) ? ([...(selectedStudent as any).documents] as any[]) : [];
-    const idx = docs.findIndex((d) => d.type === type);
-    if (idx >= 0) {
-      docs[idx] = { ...docs[idx], status, review_notes: reviewNotes ?? docs[idx]?.review_notes };
+    
+    try {
+      console.log(`Updating document ${type} to status: ${status}`);
+      console.log('Current studentDocs before update:', studentDocs);
+      
+      // Atualizar o estado local primeiro
+      const updatedStudentDocs = [...studentDocs];
+      const docIndex = updatedStudentDocs.findIndex((d) => d.type === type);
+      
+      if (docIndex >= 0) {
+        // Preservar todos os dados originais, apenas atualizar status
+        updatedStudentDocs[docIndex] = { 
+          ...updatedStudentDocs[docIndex], 
+          status, 
+          review_notes: reviewNotes ?? updatedStudentDocs[docIndex]?.review_notes 
+        };
+        console.log(`Updated document ${type}:`, updatedStudentDocs[docIndex]);
+      } else {
+        console.warn(`Document ${type} not found in studentDocs`);
+      }
+      
+      // Atualizar o estado local
+      setStudentDocs(updatedStudentDocs);
+      console.log('Updated studentDocs:', updatedStudentDocs);
+      
+      // NÃO atualizar o banco de dados aqui - apenas o status local
+      // O banco será atualizado quando o estudante for aprovado completamente
+      
+      console.log(`Document ${type} status updated to ${status} successfully`);
+    } catch (error) {
+      console.error('Error updating document status:', error);
+      throw error;
     }
-    await supabase.from('scholarship_applications').update({ documents: docs }).eq('id', selectedStudent.id);
-    setSelectedStudent((prev) => prev ? ({ ...prev, documents: docs } as any) : prev);
   };
 
   const approveDoc = async (type: string) => {
     if (!selectedStudent) return;
+    
+    console.log(`Attempting to approve document: ${type}`);
+    console.log('Current studentDocs:', studentDocs);
+    
     try {
       setUpdating(type);
+      
+      // Atualizar o status do documento
       await updateApplicationDocStatus(type, 'approved');
       
-      const { data: updatedApp } = await supabase
-        .from('scholarship_applications')
-        .select('documents')
-        .eq('id', selectedStudent.id)
-        .single();
-      
-      if (updatedApp?.documents) {
-        const allDocsApproved = ['passport', 'diploma', 'funds_proof']
-          .every((docType) => {
-            const doc = updatedApp.documents.find((d: any) => d.type === docType);
-            return doc && doc.status === 'approved';
-          });
-        
-        if (allDocsApproved) {
-          await supabase
-            .from('user_profiles')
-            .update({ documents_status: 'approved' })
-            .eq('user_id', selectedStudent.user_profiles.user_id);
-          
-          setSelectedStudent((prev) => prev ? ({ ...prev, documents: updatedApp.documents } as any) : prev);
+      // Buscar o estado atualizado dos documentos
+      const currentDocs = studentDocs.map(doc => {
+        if (doc.type === type) {
+          return { ...doc, status: 'approved' };
         }
+        return doc;
+      });
+      
+      console.log('Documents after approval:', currentDocs);
+      
+      // Verificar se todos os documentos foram aprovados
+      const allDocsApproved = ['passport', 'diploma', 'funds_proof']
+        .every((docType) => {
+          const doc = currentDocs.find((d) => d.type === docType);
+          return doc && doc.status === 'approved';
+        });
+      
+      console.log('All documents approved?', allDocsApproved);
+      
+      if (allDocsApproved) {
+        // Atualizar o status do perfil do usuário
+        await supabase
+          .from('user_profiles')
+          .update({ documents_status: 'approved' })
+          .eq('user_id', selectedStudent.user_profiles.user_id);
+        
+        console.log('User profile documents_status updated to approved');
+        
+        // Atualizar o selectedStudent para refletir a mudança
+        setSelectedStudent((prev) => prev ? ({ 
+          ...prev, 
+          user_profiles: {
+            ...prev.user_profiles,
+            documents_status: 'approved'
+          }
+        } as any) : prev);
+        
+        // Atualizar o contexto global para refletir as mudanças
+        console.log('Refreshing global data after all documents approved...');
+        await refreshData();
+        console.log('Global data refreshed successfully');
       }
+      
+      console.log(`Document ${type} approved successfully`);
+    } catch (error: any) {
+      console.error(`Error approving document ${type}:`, error);
+      alert(`Failed to approve document: ${error.message || 'Unknown error'}`);
     } finally {
       setUpdating(null);
     }
@@ -372,8 +444,30 @@ const SelectionProcess: React.FC = () => {
         console.error('Error sending webhook:', error);
       }
 
-      setSelectedStudent(null);
-      setActiveTab('details');
+      // Atualizar o estado local antes de fechar
+      if (selectedStudent) {
+        // Atualizar o status na aplicação local
+        const updatedStudent = {
+          ...selectedStudent,
+          status: 'approved' as const,
+          user_profiles: {
+            ...selectedStudent.user_profiles,
+            documents_status: 'approved' as const
+          }
+        };
+        setSelectedStudent(updatedStudent);
+      }
+      
+      // Atualizar o contexto global para refletir as mudanças
+      console.log('Refreshing global data...');
+      await refreshData();
+      console.log('Global data refreshed successfully');
+      
+      // Fechar o modal após um breve delay para mostrar o sucesso
+      setTimeout(() => {
+        setSelectedStudent(null);
+        setActiveTab('details');
+      }, 1000);
     } finally {
       setAcceptanceLoading(false);
     }
@@ -393,6 +487,11 @@ const SelectionProcess: React.FC = () => {
         .update({ status: 'rejected', notes: rejectStudentReason || null })
         .eq('id', selectedStudent.id);
       
+      // Atualizar o contexto global para refletir as mudanças
+      console.log('Refreshing global data after student rejection...');
+      await refreshData();
+      console.log('Global data refreshed successfully');
+      
       setSelectedStudent(null);
       setActiveTab('details');
       setShowRejectStudentModal(false);
@@ -404,7 +503,7 @@ const SelectionProcess: React.FC = () => {
 
   const allApproved = selectedStudent && ['passport', 'diploma', 'funds_proof']
     .every((k) => {
-      const d = latestDocByType(k);
+      const d = studentDocs.find(doc => doc.type === k);
       return d && d.file_url && (d.status || '').toLowerCase() === 'approved';
     });
 
@@ -463,6 +562,13 @@ const SelectionProcess: React.FC = () => {
   // Função para obter contagem de documentos analisados
   const getDocumentProgress = (app: any) => {
     const documents = app.documents || [];
+    
+    // Verificar se documents é realmente um array
+    if (!Array.isArray(documents)) {
+      console.warn('Documents is not an array:', documents);
+      return { reviewed: 0, total: 3 };
+    }
+    
     const totalDocs = 3; // passport, diploma, funds_proof
     const reviewedDocs = documents.filter((doc: any) => 
       doc.status === 'approved' || doc.status === 'changes_requested'
@@ -496,110 +602,23 @@ const SelectionProcess: React.FC = () => {
   // State para requests criados pela universidade
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
 
-  // Função para buscar documentos enviados pelo aluno
+    // Função para buscar documentos enviados pelo aluno
   const fetchStudentDocuments = async () => {
     if (!selectedStudent) return;
     
     try {
-      console.log('=== Buscando todos os uploads do aluno ===');
-      console.log('Student user_id:', selectedStudent.user_profiles.user_id);
-      
-      // Primeiro, vamos verificar a estrutura da tabela document_request_uploads
-      const { data: sampleUploads, error: sampleError } = await supabase
+      // Simplificar a busca para evitar erros 400
+      // Buscar apenas uploads básicos sem inner join complexo
+      const { data: uploads, error } = await supabase
         .from('document_request_uploads')
         .select('*')
-        .limit(5);
-      
-      if (sampleError) {
-        console.error("Error fetching sample uploads:", sampleError);
-      } else {
-        console.log('Estrutura da tabela document_request_uploads:', sampleUploads);
-      }
-      
-      // Buscar TODOS os uploads do aluno na tabela document_request_uploads
-      // Vamos tentar diferentes campos que podem identificar o usuário
-      let uploads: any[] = [];
-      let uploadsError: any = null;
-      
-      // Tentativa 1: usando uploaded_by
-      let { data: uploadsByUser, error: error1 } = await supabase
-        .from('document_request_uploads')
-        .select(`
-          *,
-          document_requests!inner(
-            id,
-            title,
-            description,
-            created_at,
-            is_global,
-            university_id,
-            scholarship_application_id
-          )
-        `)
         .eq('uploaded_by', selectedStudent.user_profiles.user_id);
       
-      if (error1) {
-        console.log('Erro ao buscar por uploaded_by:', error1);
-      } else if (uploadsByUser && uploadsByUser.length > 0) {
-        console.log('Uploads encontrados por uploaded_by:', uploadsByUser);
-        uploads = uploadsByUser;
+      if (error) {
+        console.log('Erro ao buscar uploads:', error);
+        setStudentDocuments([]);
+        return;
       }
-      
-      // Tentativa 2: usando user_id
-      if (uploads.length === 0) {
-        let { data: uploadsByUserId, error: error2 } = await supabase
-          .from('document_request_uploads')
-          .select(`
-            *,
-            document_requests!inner(
-              id,
-              title,
-              description,
-              created_at,
-              is_global,
-              university_id,
-              scholarship_application_id
-            )
-          `)
-          .eq('user_id', selectedStudent.user_profiles.user_id);
-        
-        if (error2) {
-          console.log('Erro ao buscar por user_id:', error2);
-        } else if (uploadsByUserId && uploadsByUserId.length > 0) {
-          console.log('Uploads encontrados por user_id:', uploadsByUserId);
-          uploads = uploadsByUserId;
-        }
-      }
-      
-      // Tentativa 3: buscar todos e filtrar por scholarship_application_id
-      if (uploads.length === 0) {
-        let { data: allUploads, error: error3 } = await supabase
-          .from('document_request_uploads')
-          .select(`
-            *,
-            document_requests!inner(
-              id,
-              title,
-              description,
-              created_at,
-              is_global,
-              university_id,
-              scholarship_application_id
-            )
-          `);
-        
-        if (error3) {
-          console.log('Erro ao buscar todos os uploads:', error3);
-        } else if (allUploads) {
-          // Filtrar por scholarship_application_id
-          uploads = allUploads.filter(upload => 
-            upload.document_requests?.scholarship_application_id === selectedStudent.id
-          );
-          console.log('Uploads filtrados por scholarship_application_id:', uploads);
-        }
-      }
-
-      console.log('Uploads finais encontrados:', uploads);
 
       if (!uploads || uploads.length === 0) {
         console.log('Nenhum upload encontrado para este aluno');
@@ -607,18 +626,18 @@ const SelectionProcess: React.FC = () => {
         return;
       }
 
-      // Formatar os documentos para exibição
+      // Formatar os documentos para exibição de forma simples
       const studentDocuments = uploads.map(upload => ({
         id: upload.id,
         filename: upload.file_url?.split('/').pop() || 'Document',
         file_url: upload.file_url,
         status: upload.status || 'under_review',
         uploaded_at: upload.uploaded_at || upload.created_at,
-        request_title: upload.document_requests?.title,
-        request_description: upload.document_requests?.description,
-        request_created_at: upload.document_requests?.created_at,
-        is_global: upload.document_requests?.is_global || false,
-        request_type: upload.document_requests?.is_global ? 'Global Request' : 'Individual Request'
+        request_title: 'Document Upload',
+        request_description: 'Student uploaded document',
+        request_created_at: upload.created_at,
+        is_global: false,
+        request_type: 'Individual Upload'
       }));
 
       console.log('Documentos formatados para exibição:', studentDocuments);
@@ -628,6 +647,8 @@ const SelectionProcess: React.FC = () => {
       setStudentDocuments([]);
     }
   };
+
+
 
   // Função para buscar requests criados pela universidade
   const fetchDocumentRequests = async () => {
@@ -688,7 +709,7 @@ const SelectionProcess: React.FC = () => {
     if (!doc.file_url) return;
     try {
       const { data, error } = await supabase.storage
-        .from('document-attachments')
+        .from('student-documents')
         .download(doc.file_url);
       
       if (error) {
@@ -712,26 +733,29 @@ const SelectionProcess: React.FC = () => {
 
   // Função para visualizar arquivo
   const handleViewDocument = (doc: any) => {
-    if (!doc.file_url) return;
+    // Verificar se é file_url ou url
+    const fileUrl = doc.file_url || doc.url;
+    
+    if (!fileUrl) return;
     
     // Converter a URL do storage para URL pública
     try {
-      // Se file_url é um path do storage, converter para URL pública
-      if (doc.file_url && !doc.file_url.startsWith('http')) {
+      // Se fileUrl é um path do storage, converter para URL pública
+      if (fileUrl && !fileUrl.startsWith('http')) {
         const publicUrl = supabase.storage
-          .from('document-attachments')
-          .getPublicUrl(doc.file_url)
+          .from('student-documents')
+          .getPublicUrl(fileUrl)
           .data.publicUrl;
         
         setPreviewUrl(publicUrl);
       } else {
         // Se já é uma URL completa, usar diretamente
-        setPreviewUrl(doc.file_url);
+        setPreviewUrl(fileUrl);
       }
     } catch (error) {
       console.error('Erro ao gerar URL pública:', error);
       // Fallback: tentar usar a URL original
-      setPreviewUrl(doc.file_url);
+      setPreviewUrl(fileUrl);
     }
   };
 
@@ -739,7 +763,7 @@ const SelectionProcess: React.FC = () => {
   const handleDownloadTemplate = async (templateUrl: string) => {
     try {
       const { data, error } = await supabase.storage
-        .from('document-attachments')
+        .from('student-documents')
         .download(templateUrl);
       
       if (error) {
@@ -770,7 +794,7 @@ const SelectionProcess: React.FC = () => {
       // Se file_url é um path do storage, converter para URL pública
       if (upload.file_url && !upload.file_url.startsWith('http')) {
         const publicUrl = supabase.storage
-          .from('document-attachments')
+          .from('student-documents')
           .getPublicUrl(upload.file_url)
           .data.publicUrl;
         
@@ -870,7 +894,7 @@ const SelectionProcess: React.FC = () => {
                   'Authorization': `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({
-                  user_id: selectedStudent.user_profiles.user_id,
+                  user_id: selectedStudent?.user_profiles.user_id,
                   title: 'Document approved',
                   message: `Your document ${uploadData.file_url?.split('/').pop()} was approved for request ${uploadData.document_requests?.title}.`,
                   type: 'document_approved',
@@ -1068,7 +1092,7 @@ const SelectionProcess: React.FC = () => {
       // Upload do arquivo para o storage
       const fileName = `acceptance_letters/${Date.now()}_${acceptanceLetterFile.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('document-attachments')
+        .from('student-documents')
         .upload(fileName, acceptanceLetterFile);
 
       if (uploadError) {
@@ -1320,7 +1344,7 @@ const SelectionProcess: React.FC = () => {
       // Upload do arquivo se houver
       if (newDocumentRequest.attachment) {
         const { data, error } = await supabase.storage
-          .from('document-attachments')
+          .from('student-documents')
           .upload(`individual/${Date.now()}_${newDocumentRequest.attachment.name}`, newDocumentRequest.attachment);
         
         if (error) {
@@ -1959,6 +1983,9 @@ const SelectionProcess: React.FC = () => {
                                   const d = latestDocByType(doc.key);
                                   const status = d?.status || 'not_submitted';
                                   
+                                  // Debug: verificar se o documento está sendo renderizado corretamente
+                                  console.log(`Rendering document ${doc.key}:`, d);
+                                  
                                   return (
                                     <div key={doc.key}>
                                       <div className="bg-white p-3 sm:p-4">
@@ -2016,7 +2043,10 @@ const SelectionProcess: React.FC = () => {
                                               <div className="flex gap-2">
                                                 <button
                                                   disabled={!d || updating === d.type || status === 'approved'}
-                                                  onClick={() => d && approveDoc(d.type)}
+                                                  onClick={() => {
+                                                    console.log('Approve button clicked for:', d);
+                                                    if (d) approveDoc(d.type);
+                                                  }}
                                                   className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                                                     status === 'approved' 
                                                       ? 'bg-green-600 text-white' 
