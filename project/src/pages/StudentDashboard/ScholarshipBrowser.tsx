@@ -20,6 +20,7 @@ import {
   Briefcase,
   Trash2
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../stores/applicationStore';
@@ -40,6 +41,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   scholarships,
   applications
 }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
@@ -693,8 +695,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
         <div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">Find Scholarships</h2>
-          <p className="text-sm sm:text-base text-slate-600">Discover opportunities tailored to your academic profile</p>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{t('studentDashboard.findScholarships.title')}</h2>
+          <p className="text-sm sm:text-base text-slate-600">{t('studentDashboard.findScholarships.subtitle')}</p>
         </div>
       </div>
 
@@ -721,7 +723,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search scholarships..."
+              placeholder={t('studentDashboard.findScholarships.searchPlaceholder')}
               value={searchTerm}
               aria-label="Search scholarships"
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -742,7 +744,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 title="Filter by academic level"
                 aria-label="Filter by academic level"
               >
-                <option value="all">All Levels</option>
+                <option value="all">{t('studentDashboard.findScholarships.allLevels')}</option>
                 <option value="undergraduate">Undergraduate</option>
                 <option value="graduate">Graduate</option>
                 <option value="postgraduate">Postgraduate</option>
@@ -760,7 +762,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 title="Filter by field of study"
                 aria-label="Filter by field of study"
               >
-                <option value="all">All Fields</option>
+                <option value="all">{t('studentDashboard.findScholarships.allFields')}</option>
                 <option value="stem">STEM</option>
                 <option value="business">Business</option>
                 <option value="engineering">Engineering</option>
@@ -779,7 +781,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 title="Filter by study mode"
                 aria-label="Filter by study mode"
               >
-                <option value="all">All Modes</option>
+                <option value="all">{t('studentDashboard.findScholarships.allModes')}</option>
                 <option value="online">Online</option>
                 <option value="in_person">On Campus</option>
                 <option value="hybrid">Hybrid</option>
@@ -797,7 +799,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 title="Filter by work authorization"
                 aria-label="Filter by work authorization"
               >
-                <option value="all">All Permissions</option>
+                <option value="all">{t('studentDashboard.findScholarships.allPermissions')}</option>
                 <option value="OPT">OPT</option>
                 <option value="CPT">CPT</option>
                 <option value="F1">F1</option>
@@ -813,7 +815,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 <input
                   id="min-value"
                   type="number"
-                  placeholder="Min value"
+                  placeholder={t('studentDashboard.findScholarships.minValue')}
                   value={minValue}
                   onChange={e => {
                     const value = e.target.value;
@@ -830,7 +832,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 <input
                   id="max-value"
                   type="number"
-                  placeholder="Max value"
+                  placeholder={t('studentDashboard.findScholarships.maxValue')}
                   value={maxValue}
                   onChange={e => {
                     const value = e.target.value;
@@ -850,7 +852,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               <input
                 id="deadline-days"
                 type="number"
-                placeholder="Deadline (days)"
+                placeholder={t('studentDashboard.findScholarships.deadline')}
                 value={deadlineDays}
                 onChange={e => {
                   const value = e.target.value;
@@ -898,7 +900,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             ) : (
               <>
                 <Search className="h-4 w-4" />
-                <span className="hidden sm:inline">Apply Filters ({filteredScholarships.length})</span>
+                <span className="hidden sm:inline">{t('studentDashboard.findScholarships.applyFilters')} ({filteredScholarships.length})</span>
                 <span className="sm:hidden">Apply ({filteredScholarships.length})</span>
               </>
             )}
@@ -947,7 +949,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         <div className="flex items-center justify-between text-sm text-slate-600 mt-4 pt-4 border-t border-slate-200">
           <span>
             <span className="font-medium text-blue-600">{filteredScholarships.length}</span> 
-            <span className="hidden sm:inline"> scholarships found</span>
+            <span className="hidden sm:inline"> {t('studentDashboard.findScholarships.scholarshipsFound')}</span>
             <span className="sm:hidden"> results</span>
           </span>
         </div>

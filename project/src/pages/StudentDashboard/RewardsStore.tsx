@@ -24,6 +24,7 @@ import {
   XCircle,
   Info
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { MatriculacoinCredits, MatriculacoinTransaction, TuitionDiscount, TuitionRedemption, UniversityConfirmationData } from '../../types';
@@ -55,6 +56,7 @@ interface RewardRedemption {
 }
 
 const RewardsStore: React.FC = () => {
+  const { t } = useTranslation();
   const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

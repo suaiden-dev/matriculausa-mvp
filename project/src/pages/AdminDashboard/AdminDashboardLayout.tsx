@@ -18,7 +18,9 @@ import {
   AlertTriangle,
   CheckCircle,
   CreditCard,
-  Star
+  Star,
+  ArrowRightLeft,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -50,6 +52,9 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/featured-scholarships')) return 'featured-scholarships';
     if (path.includes('/payout-requests')) return 'payout-requests';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
+    if (path.includes('/transfer-management')) return 'transfer-management';
+    if (path.includes('/transfer-settings')) return 'transfer-settings';
+    if (path.includes('/transfer-reports')) return 'transfer-reports';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -100,6 +105,9 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
+    { id: 'transfer-management', label: 'Transfer Management', icon: ArrowRightLeft, path: '/admin/dashboard/transfer-management', badge: null },
+    { id: 'transfer-settings', label: 'Transfer Settings', icon: Settings, path: '/admin/dashboard/transfer-settings', badge: null },
+    { id: 'transfer-reports', label: 'Transfer Reports', icon: FileText, path: '/admin/dashboard/transfer-reports', badge: null },
     { id: 'payout-requests', label: 'Payout Requests', icon: CreditCard, path: '/admin/dashboard/payout-requests', badge: null },
     { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
@@ -226,6 +234,9 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'universities' && 'University Management'}
                   {activeTab === 'users' && 'User Management'}
                   {activeTab === 'scholarships' && 'Scholarship Management'}
+                  {activeTab === 'transfer-management' && 'Transfer Management'}
+                  {activeTab === 'transfer-settings' && 'Transfer Settings'}
+                  {activeTab === 'transfer-reports' && 'Transfer Reports'}
                   {activeTab === 'settings' && 'System Settings'}
                 </h1>
                 <p className="text-slate-600">
@@ -233,6 +244,9 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'universities' && 'Manage university registrations and approvals'}
                   {activeTab === 'users' && 'Manage user accounts and permissions'}
                   {activeTab === 'scholarships' && 'Monitor scholarship programs and applications'}
+                  {activeTab === 'transfer-management' && 'Process and manage university payment transfers'}
+                  {activeTab === 'transfer-settings' && 'Configure automatic transfer rules and settings'}
+                  {activeTab === 'transfer-reports' && 'Financial analytics and transfer performance insights'}
                   {activeTab === 'settings' && 'Configure system settings and preferences'}
                 </p>
               </div>

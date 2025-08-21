@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
+  const { t } = useTranslation();
   // Footer links rely on global scroll-to-top in App
 
   return (
@@ -47,34 +49,34 @@ const Footer: React.FC = () => {
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-white flex items-center">
               <Zap className="h-5 w-5 mr-2 text-[#D0151C]" />
-              Platform
+              {t('footer.company.title')}
             </h3>
             <ul className="space-y-3">
-              <li><Link to="/about" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">About Us</Link></li>
-              <li><Link to="/schools" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Partner Universities</Link></li>
-              <li><Link to="/for-universities" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">For Universities</Link></li>
+              <li><Link to="/about" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.about')}</Link></li>
+              <li><Link to="/schools" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.partners')}</Link></li>
+              <li><Link to="/for-universities" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.universities.title')}</Link></li>
               <li><Link to="/scholarships" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 flex items-center">
-                Scholarships <Zap className="ml-1 h-3 w-3 text-yellow-400" />
+                {t('footer.students.scholarships')} <Zap className="ml-1 h-3 w-3 text-yellow-400" />
               </Link></li>
-              <li><Link to="/how-it-works" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">How It Works</Link></li>
+              <li><Link to="/how-it-works" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.howItWorks')}</Link></li>
             </ul>
           </div>
 
           {/* Support */}
           <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white">Support Center</h3>
+            <h3 className="text-xl font-bold text-white">{t('footer.students.support')}</h3>
             <ul className="space-y-3">
               <li><Link to="/faq" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">FAQ</Link></li>
-              <li><Link to="/contact-us" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Contact Us</Link></li>
+              <li><Link to="/contact-us" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.contact')}</Link></li>
               <li><Link to="/help-center" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Help Center</Link></li>
-              <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Privacy Policy</Link></li>
-              <li><Link to="/terms-of-service" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Terms of Service</Link></li>
+              <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.privacy')}</Link></li>
+              <li><Link to="/terms-of-service" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.terms')}</Link></li>
             </ul>
           </div>
 
           {/* Contact Info */}
           <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white">Get in Touch</h3>
+            <h3 className="text-xl font-bold text-white">{t('footer.company.contact')}</h3>
             <div className="space-y-4">
               <div className="flex items-center space-x-3 group">
                 <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
@@ -101,7 +103,7 @@ const Footer: React.FC = () => {
         <div className="border-t border-white/10 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-slate-400 text-sm">
-              © 2025 Matrícula USA. All rights reserved. | Empowering international education through technology.
+              {t('footer.copyright')}
             </p>
           </div>
         </div>

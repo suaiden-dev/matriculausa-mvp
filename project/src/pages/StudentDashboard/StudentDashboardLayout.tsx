@@ -15,6 +15,7 @@ import {
   Gift,
   Bell
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
@@ -35,6 +36,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   loading,
   children
 }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -152,19 +154,19 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 font-medium">Loading dashboard...</p>
+          <p className="text-slate-600 font-medium">{t('common.loading')}</p>
         </div>
       </div>
     );
   }
 
   const sidebarItems = [
-    { id: 'overview', label: 'Overview', icon: BarChart3, path: '/student/dashboard' },
-    { id: 'scholarships', label: 'Browse Scholarships', icon: Award, path: '/student/dashboard/scholarships' },
-    { id: 'cart', label: 'Selected Scholarships', icon: GraduationCap, path: '/student/dashboard/cart' },
-    { id: 'applications', label: 'My Applications', icon: FileText, path: '/student/dashboard/applications' },
-    { id: 'rewards', label: 'Matricula Rewards', icon: Gift, path: '/student/dashboard/rewards' },
-    { id: 'profile', label: 'Profile', icon: User, path: '/student/dashboard/profile' }
+    { id: 'overview', label: t('studentDashboard.sidebar.overview'), icon: BarChart3, path: '/student/dashboard' },
+    { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
+    { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
+    { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },
+    { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
+    { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];
 
   return (
@@ -213,14 +215,14 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-900 truncate text-sm sm:text-base">{profile?.name || user?.name}</h3>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">Student</p>
+                  <p className="text-xs sm:text-sm text-slate-500 truncate">{t('studentDashboard.title').replace(' Dashboard', '')}</p>
                 </div>
               </div>
               
               <div className="flex items-center justify-center mt-3">
                 <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                   <Star className="h-3 w-3 mr-1" />
-                  Active Student
+                  Active {t('studentDashboard.title').replace(' Dashboard', '')}
                 </span>
               </div>
             </div>
@@ -281,8 +283,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">Student Dashboard</h1>
-                <p className="text-xs sm:text-sm text-slate-500 truncate">Manage your scholarship applications</p>
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">{t('studentDashboard.title')}</h1>
+                <p className="text-xs sm:text-sm text-slate-500 truncate">{t('studentDashboard.subtitle')}</p>
               </div>
             </div>
 

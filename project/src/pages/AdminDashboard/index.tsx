@@ -16,6 +16,9 @@ import MatriculaRewardsAdmin from './MatriculaRewardsAdmin';
 import AdminPayoutRequests from './PayoutRequests';
 import FeaturedUniversitiesManagement from './FeaturedUniversitiesManagement';
 import FeaturedScholarshipsManagement from './FeaturedScholarshipsManagement';
+import AdminTransferManagement from './AdminTransferManagement';
+import AutoTransferSettings from './AutoTransferSettings';
+import TransferReports from './TransferReports';
 import { Dialog } from '@headlessui/react';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
@@ -524,6 +527,9 @@ const AdminDashboard: React.FC = () => {
         <Route path="/payout-requests" element={<AdminPayoutRequests />} />
         <Route path="/featured-universities" element={<FeaturedUniversitiesManagement />} />
         <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
+        <Route path="/transfer-management" element={<AdminTransferManagement />} />
+        <Route path="/transfer-settings" element={<AutoTransferSettings />} />
+        <Route path="/transfer-reports" element={<TransferReports />} />
       </Routes>
 
       {/* Confirmation Modal */}

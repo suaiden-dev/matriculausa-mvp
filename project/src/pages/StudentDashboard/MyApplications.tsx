@@ -12,6 +12,7 @@ import {
   ArrowRight,
   GraduationCap
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
@@ -34,6 +35,7 @@ const DOCUMENT_LABELS: Record<string, string> = {
 };
 
 const MyApplications: React.FC = () => {
+  const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
@@ -664,8 +666,8 @@ const getLevelColor = (level: any) => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 mb-1 sm:mb-2">My Applications</h2>
-            <p className="text-base sm:text-lg text-slate-600">Track the status of your scholarship applications and next steps</p>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900 mb-1 sm:mb-2">{t('studentDashboard.myApplications.title')}</h2>
+            <p className="text-base sm:text-lg text-slate-600">{t('studentDashboard.myApplications.subtitle')}</p>
           </div>
         </div>
 
@@ -676,7 +678,7 @@ const getLevelColor = (level: any) => {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">Total Applications</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.totalApplications')}</p>
               <p className="text-3xl sm:text-4xl font-bold text-slate-900">{stats.total}</p>
             </div>
             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center">
@@ -688,7 +690,7 @@ const getLevelColor = (level: any) => {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">Approved</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.approved')}</p>
               <p className="text-3xl sm:text-4xl font-bold text-green-600">{stats.approved}</p>
             </div>
             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center">
@@ -700,7 +702,7 @@ const getLevelColor = (level: any) => {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-6 sm:p-8 min-h-[120px] sm:min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-between w-full">
             <div>
-              <p className="text-sm font-semibold text-slate-500 mb-2">Pending</p>
+              <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.pending')}</p>
               <p className="text-3xl sm:text-4xl font-bold text-gray-600">{stats.pending}</p>
             </div>
             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center">
@@ -717,10 +719,9 @@ const getLevelColor = (level: any) => {
             <div className="flex items-start">
               <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">!</div>
               <div>
-                <h3 className="font-bold text-blue-900 text-sm mb-2">Stay Updated!</h3>
+                <h3 className="font-bold text-blue-900 text-sm mb-2">{t('studentDashboard.myApplications.stayUpdated')}</h3>
                 <p className="text-blue-800 text-sm leading-relaxed">
-                  <strong>Important:</strong> Always check your email for notifications from the university. 
-                  Application status updates, document requests, and important deadlines will be sent to your registered email address.
+                  <strong>{t('studentDashboard.myApplications.important')}</strong> {t('studentDashboard.myApplications.emailNotification')}
                 </p>
               </div>
             </div>
@@ -774,20 +775,20 @@ const getLevelColor = (level: any) => {
           {/* Desktop: Original layout */}
           <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 1 — Submit your documents</div>
-              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Upload passport, high school diploma and proof of funds so the university can evaluate your application.</div>
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step1Title')}</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step1Description')}</div>
             </div>
             <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 2 — University review</div>
-              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Your application will show as Pending/Under Review until the university approves your candidacy.</div>
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step2Title')}</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step2Description')}</div>
             </div>
             <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 3 — Application fee</div>
-              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">After approval, pay the Application Fee to secure your scholarship spot and proceed to enrollment.</div>
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step3Title')}</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step3Description')}</div>
             </div>
             <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">Step 4 — Scholarship fee</div>
-              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">Once confirmed, pay the Scholarship Fee to complete enrollment and begin your academic program.</div>
+              <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step4Title')}</div>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step4Description')}</div>
             </div>
           </div>
         </div>
