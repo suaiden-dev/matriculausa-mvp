@@ -1,3 +1,5 @@
+import { generateUniqueInstanceName } from '../pages/SchoolDashboard/WhatsAppConnection/utils/whatsappUtils';
+
 // Função para gerar senha única do Chatwoot
 export const generateChatwootPassword = (email: string, userId: string): string => {
   // Criar base única usando email + userId + timestamp
@@ -25,12 +27,7 @@ export const generateChatwootPassword = (email: string, userId: string): string 
   return password;
 };
 
-// Função para gerar nome único da instância
-export const generateUniqueInstanceName = (userName: string): string => {
-  const cleanName = userName.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-  const randomStr = Math.random().toString(36).substring(2, 12);
-  return `${cleanName}_${randomStr}`;
-};
+// Função removida - agora usando a implementação centralizada de whatsappUtils.ts
 
 // Função que segue o mesmo padrão do WhatsAppConnection.tsx
 export const createChatwootAndQRCodeDirect = async (
@@ -52,11 +49,9 @@ export const createChatwootAndQRCodeDirect = async (
     console.log('🚀 [ChatwootUtils] ===== INICIANDO CRIAÇÃO DIRETA (PADRÃO WHATSAPP) =====');
     console.log('📋 [ChatwootUtils] Dados recebidos:', { userId, email, name, plan, agentsCount });
 
-    // Gerar senha e nome da instância (mesmo padrão do WhatsAppConnection)
+    // Gerar senha e nome da instância (usando implementação centralizada)
     const chatwootPassword = generateChatwootPassword(email, userId);
-    const userName = name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-    const randomStr = Math.random().toString(36).substring(2, 12);
-    const instanceName = `${userName}_${randomStr}`;
+    const instanceName = generateUniqueInstanceName(email);
 
     console.log('🔐 [ChatwootUtils] Senha gerada:', chatwootPassword);
     console.log('🏷️ [ChatwootUtils] Nome da instância:', instanceName);
@@ -221,6 +216,7 @@ export const createChatwootAndQRCodeDirect = async (
       evolution_instance_id: instanceName,
       connection_status: 'connecting',
       qr_code: qrCodeData,
+      final_prompt: null, // Será atualizado quando o agente for associado
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -427,7 +423,7 @@ export const testChatwootWebhook = async (
     console.log('🧪 [ChatwootUtils] Dados:', { userId, email, name });
 
     const chatwootPassword = generateChatwootPassword(email, userId);
-    const instanceName = generateUniqueInstanceName(name);
+    const instanceName = generateUniqueInstanceName(email);
 
     console.log('🧪 [ChatwootUtils] Senha:', chatwootPassword);
     console.log('🧪 [ChatwootUtils] Instance:', instanceName);
