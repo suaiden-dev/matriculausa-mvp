@@ -23,10 +23,13 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../stores/applicationStore';
+import { useFavorites } from '../../hooks/useFavorites';
 import { supabase } from '../../lib/supabase';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 import { PreCheckoutModal } from '../../components/PreCheckoutModal';
+import FavoriteButton from '../../components/FavoriteButton';
+import FavoritesFilter from '../../components/FavoritesFilter';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -72,6 +75,10 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [appliedMinValue, setAppliedMinValue] = useState('');
   const [appliedMaxValue, setAppliedMaxValue] = useState('');
   const [appliedDeadlineDays, setAppliedDeadlineDays] = useState('');
+
+  // Estados para favoritos
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
   // Função para aplicar filtros manualmente
   const applyFilters = (e?: React.MouseEvent) => {
@@ -393,6 +400,11 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     const searchWords = appliedSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
     
     const filtered = scholarships.filter(scholarship => {
+      // Filtro de favoritos
+      if (showOnlyFavorites && !isFavorite(scholarship.id)) {
+        return false;
+      }
+      
       // Busca por palavras-chave
       const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
       const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
@@ -488,6 +500,11 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     const searchWords = (appliedSearch || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
 
   return featuredScholarships.filter(scholarship => {
+      // Filtro de favoritos - aplicar primeiro
+      if (showOnlyFavorites && !isFavorite(scholarship.id)) {
+        return false;
+      }
+
       const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
       const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
 
@@ -517,7 +534,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && fromApprovedUniversity;
     });
-  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays]);
+  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, showOnlyFavorites, isFavorite]);
 
   const handleAddToCart = (scholarship: any) => {
     if (user) {
@@ -886,6 +903,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               </>
             )}
           </button>
+
+          {/* Favorites Filter */}
+      <div className="flex justify-center">
+        <FavoritesFilter
+          showOnlyFavorites={showOnlyFavorites}
+          onToggle={() => setShowOnlyFavorites(!showOnlyFavorites)}
+          favoritesCount={favorites.size}
+          className="w-full max-w-md"
+        />
+      </div>
           
           {(appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || appliedMinValue || appliedMaxValue || appliedDeadlineDays) && (
             <button
@@ -996,6 +1023,17 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         </span>
                       </div>
                     )}
+                    
+                    {/* Favorite Button */}
+                    <div className={`absolute  z-20 ${
+                      scholarship.is_exclusive ? 'right-4 sm:right-4 top-12 ' : 'right-3 sm:right-4 top-3'
+                    }`}>
+                      <FavoriteButton
+                        isFavorite={isFavorite(scholarship.id)}
+                        onToggle={() => toggleFavorite(scholarship.id)}
+                        size="sm"
+                      />
+                    </div>
                     {/* Featured Order Badge */}
                     <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4">
                       <span className="bg-white/90 text-blue-600 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
@@ -1246,6 +1284,18 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     </span>
                   </div>
                 )}
+                
+                {/* Favorite Button */}
+                <div className={`absolute top-3 sm:top-4 z-20 ${
+                  scholarship.is_exclusive ? 'right-20 sm:right-24' : 'right-3 sm:right-4'
+                }`}>
+                  <FavoriteButton
+                    isFavorite={isFavorite(scholarship.id)}
+                    onToggle={() => toggleFavorite(scholarship.id)}
+                    size="sm"
+                    className=""
+                  />
+                </div>
               </div>
               
               {/* Card Content */}
