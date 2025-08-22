@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, X, Scroll, Gift, Target } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -11,6 +12,7 @@ interface AuthProps {
 }
 
 const Auth: React.FC<AuthProps> = ({ mode }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'student' | 'university'>('student');
   const [formData, setFormData] = useState({
     full_name: '',
@@ -202,6 +204,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     if (termsContentRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = termsContentRef.current;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
+      console.log('Terms scroll:', { scrollTop, scrollHeight, clientHeight, isAtBottom });
       setHasScrolledToBottom(isAtBottom);
     }
   };
@@ -223,10 +226,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
   // Handle terms acceptance and open privacy modal
   const handleTermsAccept = () => {
+    console.log('handleTermsAccept called, hasScrolledToBottom:', hasScrolledToBottom);
     if (hasScrolledToBottom) {
+      console.log('Opening privacy modal...');
       setShowTermsModal(false);
       setShowPrivacyModal(true);
       setHasScrolledToBottomPrivacy(false);
+    } else {
+      console.log('User has not scrolled to bottom yet');
     }
   };
 
@@ -253,7 +260,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         console.log('🔍 [AUTH] Telefone no formData:', formData.phone);
         
         if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match');
+          setError(t('authPage.messages.passwordsNotMatch'));
           setLoading(false);
           return;
         }
@@ -261,7 +268,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         // Validate allowed password characters: letters, numbers and @#$!
         const allowedPasswordRegex = /^[A-Za-z0-9@#$!]+$/;
         if (!allowedPasswordRegex.test(formData.password)) {
-          setError('Password contains invalid characters. Only letters, numbers, and @ # $ ! are allowed.');
+          setError(t('authPage.messages.invalidPasswordChars'));
           setLoading(false);
           return;
         }
@@ -272,14 +279,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             phone: formData.phone,
             length: formData.phone?.length
           });
-          setError('Please enter a valid phone number with country code');
+          setError(t('authPage.messages.invalidPhone'));
           setLoading(false);
           return;
         }
         
         // Validar aceitação dos termos
         if (!termsAccepted) {
-          setError('You must accept the Terms of Use and Privacy Policy to continue');
+          setError(t('authPage.messages.mustAcceptTerms'));
           setLoading(false);
           return;
         }
@@ -336,25 +343,25 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       }
     } catch (err: any) {
       // Enhanced error handling with specific messages
-      let errorMessage = 'Authentication failed. Please try again.';
+      let errorMessage = t('authPage.messages.authenticationFailed');
       
       if (err.message) {
         const message = err.message.toLowerCase();
         
         if (message.includes('invalid_credentials') || message.includes('invalid login credentials')) {
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          errorMessage = t('authPage.messages.invalidCredentials');
         } else if (message.includes('email_not_confirmed')) {
-          errorMessage = 'Please check your email and click the confirmation link before signing in.';
+          errorMessage = t('authPage.messages.emailNotConfirmed');
         } else if (message.includes('too_many_requests')) {
-          errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
+          errorMessage = t('authPage.messages.tooManyRequests');
         } else if (message.includes('user_not_found')) {
-          errorMessage = 'No account found with this email address. Please check your email or create a new account.';
+          errorMessage = t('authPage.messages.userNotFound');
         } else if (message.includes('weak_password')) {
-          errorMessage = 'Password is too weak. Please choose a stronger password.';
+          errorMessage = t('authPage.messages.weakPassword');
         } else if (message.includes('email_address_invalid')) {
-          errorMessage = 'Please enter a valid email address.';
+          errorMessage = t('authPage.messages.invalidEmail');
         } else if (message.includes('signup_disabled')) {
-          errorMessage = 'New registrations are currently disabled. Please contact support.';
+          errorMessage = t('authPage.messages.signupDisabled');
         } else {
           errorMessage = err.message;
         }
@@ -401,15 +408,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               />
             </div>
             <h2 className="text-4xl font-black text-slate-900 mb-4">
-              Login
+              {t('authPage.login.title')}
             </h2>
             <p className="text-slate-600 text-lg">
-              Sign in to access your dashboard and continue your educational journey
+              {t('authPage.login.subtitle')}
             </p>
             <p className="mt-4 text-sm text-slate-500">
-              Don't have an account?{' '}
+              {t('authPage.login.noAccount')}{' '}
               <Link to="/register" className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
-                Sign up here
+                {t('authPage.login.signUpHere')}
               </Link>
             </p>
           </div>
@@ -418,14 +425,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           <form className="mt-8 space-y-6 bg-slate-50 p-8 rounded-3xl shadow-lg border border-slate-200" onSubmit={handleSubmit}>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
-                <div className="font-medium text-red-800 mb-1">Login Failed</div>
+                <div className="font-medium text-red-800 mb-1">{t('authPage.login.loginFailed')}</div>
                 {error}
               </div>
             )}
 
             <div>
               <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
-                Email Address
+                {t('authPage.login.emailAddress')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -437,7 +444,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   value={formData.email || ''}
                   onChange={handleInputChange}
                   className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                  placeholder="Enter your email"
+                  placeholder={t('authPage.login.enterEmail')}
                   autoComplete="username"
                 />
               </div>
@@ -445,7 +452,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
-                Password
+                {t('authPage.login.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -457,7 +464,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   value={formData.password || ''}
                   onChange={handleInputChange}
                   className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                  placeholder="Enter your password"
+                  placeholder={t('authPage.login.enterPassword')}
                   autoComplete="current-password"
                 />
               </div>
@@ -468,7 +475,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 to="/forgot-password"
                 className="text-sm text-[#D0151C] hover:text-[#B01218] font-medium transition-colors"
               >
-                Forgot your password?
+                {t('authPage.login.forgotPassword')}
               </Link>
             </div>
 
@@ -480,10 +487,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing In...
+                  {t('authPage.login.signingIn')}
                 </div>
               ) : (
-                'Sign In'
+                t('authPage.login.signIn')
               )}
             </button>
           </form>
@@ -500,17 +507,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-slate-200">
             <div className="mb-4">
               <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Registration successful!</h2>
-              <p className="text-slate-700 text-base mb-4">
-                A verification link has been sent to your email.<br />
-                Please check your inbox (and spam/junk folder) to complete your login and access the dashboard.
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('authPage.modals.verification.title')}</h2>
+              <p className="text-slate-700 text-base mb-4" dangerouslySetInnerHTML={{ __html: t('authPage.modals.verification.description') }}>
               </p>
             </div>
             <button
               className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#02172b] transition-all duration-200"
               onClick={() => setShowVerificationModal(false)}
             >
-              Got it
+              {t('authPage.modals.verification.gotIt')}
             </button>
           </div>
         </div>
@@ -525,45 +530,45 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               className="h-16 w-auto"
             />
           </div>
-          <h1 className="text-5xl font-black text-slate-900 mb-4">
-            Create Your Account
+                    <h1 className="text-5xl font-black text-slate-900 mb-4">
+            {t('authPage.register.title')}
           </h1>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Create your account and unlock exclusive scholarship opportunities through our AI-powered platform
+            {t('authPage.register.subtitle')}
           </p>
           <p className="mt-4 text-sm text-slate-500">
-            Already have an account?{' '}
+            {t('authPage.register.hasAccount')}{' '}
             <Link to="/login" className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
-              Sign in here
+              {t('authPage.register.signInHere')}
             </Link>
-          </p>
+            </p>
         </div>
 
         {/* Tab Navigation */}
         <div className="flex justify-center mb-8">
           <div className="bg-slate-100 p-2 rounded-2xl flex space-x-2">
-            <button
-              onClick={() => handleTabChange('student')}
-              className={`flex items-center px-8 py-4 rounded-xl font-bold transition-all duration-300 ${
-                activeTab === 'student'
-                  ? 'bg-white text-[#05294E] shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <GraduationCap className="h-5 w-5 mr-2" />
-              I'm a Student
-            </button>
-            <button
-              onClick={() => handleTabChange('university')}
-              className={`flex items-center px-8 py-4 rounded-xl font-bold transition-all duration-300 ${
-                activeTab === 'university'
-                  ? 'bg-white text-[#05294E] shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Building className="h-5 w-5 mr-2" />
-              I'm a University
-            </button>
+                          <button
+                onClick={() => handleTabChange('student')}
+                className={`flex items-center px-8 py-4 rounded-xl font-bold transition-all duration-300 ${
+                  activeTab === 'student'
+                    ? 'bg-white text-[#05294E] shadow-lg'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <GraduationCap className="h-5 w-5 mr-2" />
+                {t('authPage.register.tabStudent')}
+              </button>
+              <button
+                onClick={() => handleTabChange('university')}
+                className={`flex items-center px-8 py-4 rounded-xl font-bold transition-all duration-300 ${
+                  activeTab === 'university'
+                    ? 'bg-white text-[#05294E] shadow-lg'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Building className="h-5 w-5 mr-2" />
+                {t('authPage.register.tabUniversity')}
+              </button>
           </div>
         </div>
 
@@ -571,7 +576,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         <div className="bg-slate-50 rounded-3xl p-8 shadow-lg border border-slate-200">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-6">
-              <div className="font-medium text-red-800 mb-1">Registration Failed</div>
+              <div className="font-medium text-red-800 mb-1">{t('authPage.messages.registrationFailed')}</div>
               {error}
             </div>
           )}
@@ -584,14 +589,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <GraduationCap className="h-8 w-8 text-white" />
                   </div>
-                  <h2 className="text-3xl font-black text-slate-900 mb-2">Student Registration</h2>
-                  <p className="text-slate-600">Start your journey to American education excellence</p>
+                  <h2 className="text-3xl font-black text-slate-900 mb-2">{t('authPage.register.studentRegistration')}</h2>
+                  <p className="text-slate-600">{t('authPage.register.studentSubtitle')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="full_name" className="block text-sm font-bold text-slate-900 mb-2">
-                      Full Name *
+                      {t('authPage.register.fullName')}
                     </label>
                     <div className="relative">
                       <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -603,14 +608,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Enter your full name"
+                        placeholder={t('authPage.register.enterFullName')}
                       />
                     </div>
                   </div>
 
                   <div>
                     <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
-                      Email Address *
+                      {t('authPage.register.emailAddress')}
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -622,7 +627,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.email || ''}
                         onChange={handleInputChange}
                         className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Enter your email"
+                        placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
                       />
                     </div>
@@ -630,7 +635,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                   <div>
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
-                      Phone Number *
+                      {t('authPage.register.phoneNumber')}
                     </label>
                     <div className="relative">
                       <PhoneInput
@@ -650,14 +655,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#05294E'
                         }}
                         className="phone-input-custom w-full pl-4 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Enter your phone number"
+                        placeholder={t('authPage.register.enterPhone')}
                       />
                     </div>
                   </div>
 
                   <div>
                     <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
-                      Password *
+                      {t('authPage.register.password')}
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -669,7 +674,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Create a password"
+                        placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
                     </div>
@@ -677,7 +682,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                   <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-900 mb-2">
-                      Confirm Password *
+                      {t('authPage.register.confirmPassword')}
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -689,7 +694,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Confirm your password"
+                        placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
                     </div>
@@ -700,7 +705,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="affiliateCode" className="block text-sm font-bold text-slate-900 mb-2">
                       <div className="flex items-center space-x-2">
                         <Gift className="h-4 w-4 text-[#05294E]" />
-                        <span>Friend's Referral Code (Optional)</span>
+                        <span>{t('authPage.register.referralCode.title')}</span>
                       </div>
                     </label>
                     <div className="relative">
@@ -727,7 +732,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
-                        placeholder={isReferralCodeLocked ? "Referral code applied" : "Enter friend's referral code (e.g., MATR1234)"}
+                        placeholder={isReferralCodeLocked ? t('authPage.register.referralCode.applied') : t('authPage.register.referralCode.placeholder')}
                         maxLength={8}
                       />
                       {affiliateCodeLoading && (
@@ -751,10 +756,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {affiliateCodeValid === true && (
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Valid referral code! You'll get $50 off your selection process fee.
+                            {t('authPage.register.referralCode.valid')}
                             {isReferralCodeLocked && (
                               <span className="ml-2 text-blue-600">
-                                (Applied from referral link)
+                                {t('authPage.register.referralCode.appliedFromLink')}
                               </span>
                             )}
                           </p>
@@ -762,7 +767,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {affiliateCodeValid === false && (
                           <p className="text-red-600 flex items-center">
                             <X className="h-3 w-3 mr-1" />
-                            Invalid referral code. Please check and try again.
+                            {t('authPage.register.referralCode.invalid')}
                           </p>
                         )}
                       </div>
@@ -774,7 +779,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="sellerReferralCode" className="block text-sm font-bold text-slate-900 mb-2">
                       <div className="flex items-center space-x-2">
                         <Target className="h-4 w-4 text-red-600" />
-                        <span>Seller Referral Code (Optional)</span>
+                        <span>{t('authPage.register.sellerReferralCode.title')}</span>
                       </div>
                     </label>
                     <div className="relative">
@@ -801,7 +806,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
-                        placeholder={isSellerReferralCodeLocked ? "Seller code applied" : "Enter seller referral code (e.g., SELLER_ABC123)"}
+                        placeholder={isSellerReferralCodeLocked ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.sellerReferralCode.placeholder')}
                         maxLength={20}
                       />
                       {sellerReferralCodeLoading && (
@@ -825,10 +830,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {sellerReferralCodeValid === true && (
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Valid seller code! You'll be connected to a professional seller.
+                            {t('authPage.register.sellerReferralCode.valid')}
                             {isSellerReferralCodeLocked && (
                               <span className="ml-2 text-blue-600">
-                                (Applied from referral link)
+                                {t('authPage.register.sellerReferralCode.appliedFromLink')}
                               </span>
                             )}
                           </p>
@@ -836,7 +841,81 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {sellerReferralCodeValid === false && (
                           <p className="text-red-600 flex items-center">
                             <X className="h-3 w-3 mr-1" />
-                            Invalid seller referral code. Please check and try again.
+                            {t('authPage.register.sellerReferralCode.invalid')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Seller Referral Code Field */}
+                  <div>
+                    <label htmlFor="sellerReferralCode" className="block text-sm font-bold text-slate-900 mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Target className="h-4 w-4 text-red-600" />
+                        <span>{t('authPage.register.sellerReferralCode.title')}</span>
+                      </div>
+                    </label>
+                    <div className="relative">
+                      {isSellerReferralCodeLocked ? (
+                        <Lock className="absolute left-4 top-4 h-5 w-5 text-green-500" />
+                      ) : (
+                        <Target className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      )}
+                      <input
+                        id="sellerReferralCode"
+                        name="sellerReferralCode"
+                        type="text"
+                        value={formData.sellerReferralCode || ''}
+                        onChange={handleSellerReferralCodeChange}
+                        readOnly={isSellerReferralCodeLocked}
+                        className={`w-full pl-12 pr-4 py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 ${
+                          isSellerReferralCodeLocked 
+                            ? 'bg-gray-50 cursor-not-allowed' 
+                            : ''
+                        } ${
+                          sellerReferralCodeValid === true 
+                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
+                            : sellerReferralCodeValid === false 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                        }`}
+                        placeholder={isSellerReferralCodeLocked ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.sellerReferralCode.placeholder')}
+                        maxLength={20}
+                      />
+                      {sellerReferralCodeLoading && (
+                        <div className="absolute right-4 top-4">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                        </div>
+                      )}
+                      {sellerReferralCodeValid === true && (
+                        <div className="absolute right-4 top-4">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        </div>
+                      )}
+                      {sellerReferralCodeValid === false && formData.sellerReferralCode && (
+                        <div className="absolute right-4 top-4">
+                          <X className="h-4 w-4 text-red-500" />
+                        </div>
+                      )}
+                    </div>
+                    {formData.sellerReferralCode && (
+                      <div className="mt-2 text-sm">
+                        {sellerReferralCodeValid === true && (
+                          <p className="text-green-600 flex items-center">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            {t('authPage.register.sellerReferralCode.valid')}
+                            {isSellerReferralCodeLocked && (
+                              <span className="ml-2 text-blue-600">
+                                {t('authPage.register.sellerReferralCode.appliedFromLink')}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        {sellerReferralCodeValid === false && (
+                          <p className="text-red-600 flex items-center">
+                            <X className="h-3 w-3 mr-1" />
+                            {t('authPage.register.sellerReferralCode.invalid')}
                           </p>
                         )}
                       </div>
@@ -853,14 +932,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Building className="h-8 w-8 text-white" />
                   </div>
-                  <h2 className="text-3xl font-black text-slate-900 mb-2">University Registration</h2>
-                  <p className="text-slate-600">Partner with us to reach talented international students</p>
+                  <h2 className="text-3xl font-black text-slate-900 mb-2">{t('authPage.register.universityRegistration')}</h2>
+                  <p className="text-slate-600">{t('authPage.register.universitySubtitle')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="universityName" className="block text-sm font-bold text-slate-900 mb-2">
-                      University Name *
+                      {t('authPage.register.universityName')}
                     </label>
                     <div className="relative">
                       <Building className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -872,14 +951,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.universityName || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="Enter university name"
+                        placeholder={t('authPage.register.enterUniversityName')}
                       />
                     </div>
                   </div>
 
                   <div>
                     <label htmlFor="name" className="block text-sm font-bold text-slate-900 mb-2">
-                      Contact Person Name *
+                      {t('authPage.register.contactPersonName')}
                     </label>
                     <div className="relative">
                       <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -891,14 +970,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="Your full name"
+                        placeholder={t('authPage.register.yourFullName')}
                       />
                     </div>
                   </div>
 
                   <div>
                     <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
-                      Official Email *
+                      {t('authPage.register.officialEmail')}
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -910,7 +989,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.email || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="Official university email"
+                        placeholder={t('authPage.register.officialUniversityEmail')}
                       />
                     </div>
                   </div>
@@ -918,7 +997,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                   <div>
                     <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
-                      Phone Number *
+                      {t('authPage.register.phoneNumber')}
                     </label>
                     <div className="relative">
                       <PhoneInput
@@ -940,14 +1019,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#D0151C'
                         }}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300"
-                        placeholder="Enter contact phone number"
+                        placeholder={t('authPage.register.enterContactPhone')}
                       />
                     </div>
                   </div>
 
                   <div>
                     <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
-                      Password *
+                      {t('authPage.register.password')}
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
@@ -959,7 +1038,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.password || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Create a password"
+                        placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
                     </div>
@@ -967,10 +1046,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                   <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-900 mb-2">
-                      Confirm Password *
+                      {t('authPage.register.confirmPassword')}
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
@@ -979,7 +1058,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
                         className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
-                        placeholder="Confirm your password"
+                        placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
                     </div>
@@ -1005,15 +1084,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 className="mt-1 h-4 w-4 text-[#05294E] border-slate-300 rounded focus:ring-[#05294E] focus:ring-2"
               />
               <label htmlFor="termsAccepted" className="text-sm text-slate-700 leading-relaxed cursor-pointer">
-                I have read and agree to the{' '}
+                {t('authPage.register.termsAndConditions.title')}{' '}
                 <span className="text-[#05294E] hover:text-[#041f3a] font-semibold underline">
-                  Terms of Use
+                  {t('authPage.register.termsAndConditions.termsOfUse')}
                 </span>
-                {' '}and{' '}
+                {' '}{t('authPage.register.termsAndConditions.and')}{' '}
                 <span className="text-[#05294E] hover:text-[#041f3a] font-semibold underline">
-                  Privacy Policy
+                  {t('authPage.register.termsAndConditions.privacyPolicy')}
                 </span>
-                {' '}(you will be prompted to read both documents).
+                {' '}{t('authPage.register.termsAndConditions.description')}
               </label>
             </div>
 
@@ -1030,11 +1109,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Creating Account...
+                  {t('authPage.register.creatingAccount')}
                 </div>
               ) : (
                 <div className="flex items-center">
-                  Create {activeTab === 'student' ? 'Student' : 'University'} Account
+                  {activeTab === 'student' ? t('authPage.register.createStudentAccount') : t('authPage.register.createUniversityAccount')}
                 </div>
               )}
             </button>
@@ -1046,11 +1125,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                  <h2 className="text-2xl font-bold text-slate-900">Terms of Use</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">{t('authPage.modals.terms.title')}</h2>
                   <button
                     onClick={() => setShowTermsModal(false)}
                     className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    title="Close modal"
+                    title={t('authPage.modals.terms.close')}
                   >
                     <X className="h-6 w-6 text-slate-500" />
                   </button>
@@ -1064,46 +1143,39 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 >
                   {/* Terms of Service */}
                   <section>
-                    <h3 className="text-xl font-bold text-slate-900 mb-4">Terms of Use</h3>
+                    <h3 className="text-xl font-bold text-slate-900 mb-4">{t('authPage.modals.terms.content.title')}</h3>
                     <div className="prose prose-slate max-w-none">
                       {/* 1. ACCEPTANCE OF TERMS */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">1. ACCEPTANCE OF TERMS</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.acceptance.title')}</h4>
                         <p className="text-slate-700 mb-4">
-                          By accessing and using the Matrícula USA platform, you agree to comply with and be bound by these Terms of Service. 
-                          If you do not agree to any part of these terms, you should not use our services.
+                          {t('authPage.modals.terms.content.acceptance.description')}
                         </p>
                       </div>
 
                       {/* 2. SERVICE DESCRIPTION */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">2. SERVICE DESCRIPTION</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.serviceDescription.title')}</h4>
                         <p className="text-slate-700 mb-4">
-                          Matrícula USA is a SaaS (Software as a Service) platform that offers:
+                          {t('authPage.modals.terms.content.serviceDescription.description')}
                         </p>
                         
                         <div className="space-y-4 mb-4">
                           <div className="border border-slate-200 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">2.1 Email Hub for Universities</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.serviceDescription.emailHub.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Secure integration with Gmail accounts through OAuth 2.0</li>
-                              <li>Professional interface for institutional email management</li>
-                              <li>Organized tab system (Inbox, Sent, Starred, Drafts, Spam, Trash)</li>
-                              <li>Real-time email counts</li>
-                              <li>Smart forwarding functionality</li>
-                              <li>Integrated composer for new emails</li>
-                              <li>Advanced search and filters</li>
-                              <li>Responsive interface for all devices</li>
+                              {(t('authPage.modals.terms.content.serviceDescription.emailHub.features', { returnObjects: true }) as string[]).map((feature: string, index: number) => (
+                                <li key={index}>{feature}</li>
+                              ))}
                             </ul>
                           </div>
 
                           <div className="border border-slate-200 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">2.2 Scholarship Management</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.serviceDescription.scholarshipManagement.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Creation and management of scholarships</li>
-                              <li>Student application process</li>
-                              <li>Document and application status management</li>
-                              <li>Integrated payment system</li>
+                              {(t('authPage.modals.terms.content.serviceDescription.scholarshipManagement.features', { returnObjects: true }) as string[]).map((feature: string, index: number) => (
+                                <li key={index}>{feature}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1111,24 +1183,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 3. LICENSE GRANT */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">3. LICENSE GRANT</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.licenseGrant.title')}</h4>
                         <div className="space-y-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">3.1 Limited License</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.licenseGrant.limitedLicense.title')}</h5>
                             <p className="text-slate-700">
-                              We grant you a limited, non-exclusive, non-transferable, and revocable license to access and use 
-                              the Matrícula USA platform in accordance with these Terms.
+                              {t('authPage.modals.terms.content.licenseGrant.limitedLicense.description')}
                             </p>
                           </div>
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">3.2 Restrictions</h5>
-                            <p className="text-slate-700 mb-2">You agree not to:</p>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.licenseGrant.restrictions.title')}</h5>
+                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.licenseGrant.restrictions.description')}</p>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              <li>Use the platform for illegal or unauthorized purposes</li>
-                              <li>Attempt to access unauthorized systems or data</li>
-                              <li>Interfere with platform operation</li>
-                              <li>Share access credentials</li>
-                              <li>Use the platform for spam or malicious content</li>
+                              {(t('authPage.modals.terms.content.licenseGrant.restrictions.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1136,27 +1205,26 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 4. THIRD-PARTY DEPENDENCIES */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">4. THIRD-PARTY DEPENDENCIES</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.title')}</h4>
                         <div className="space-y-4">
                           <div className="border border-slate-300 p-4 bg-slate-50 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">4.1 Google APIs</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.googleApis.title')}</h5>
                             <p className="text-slate-700 mb-2">
-                              The "Email Hub" functionality depends on Google APIs and is subject to Google's Terms of Service. 
-                              By using this functionality, you agree to comply with:
+                              {t('authPage.modals.terms.content.thirdPartyDependencies.googleApis.description')}
                             </p>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Google Terms of Service</li>
-                              <li>Google Privacy Policy</li>
-                              <li>Google API Services User Data Policy</li>
+                              {(t('authPage.modals.terms.content.thirdPartyDependencies.googleApis.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">4.2 Other Providers</h5>
-                            <p className="text-slate-700 mb-2">Our platform also uses:</p>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.otherProviders.title')}</h5>
+                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.otherProviders.description')}</p>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              <li><strong>Supabase:</strong> For data storage and authentication</li>
-                              <li><strong>Stripe:</strong> For payment processing</li>
-                              <li><strong>Vercel/Netlify:</strong> For application hosting</li>
+                              {(t('authPage.modals.terms.content.thirdPartyDependencies.otherProviders.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1164,26 +1232,24 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 5. INTELLECTUAL PROPERTY */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">5. INTELLECTUAL PROPERTY</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.intellectualProperty.title')}</h4>
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="bg-slate-50 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">5.1 Platform Ownership</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.intellectualProperty.platformOwnership.title')}</h5>
                             <p className="text-slate-700 text-sm">
-                              The Matrícula USA platform, including its code, design, features, and content, is the exclusive 
-                              property of Matrícula USA and is protected by intellectual property laws.
+                              {t('authPage.modals.terms.content.intellectualProperty.platformOwnership.description')}
                             </p>
                           </div>
                           <div className="bg-slate-50 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">5.2 Customer Data</h5>
-                            <p className="text-slate-700 text-sm mb-2">All customer data, including:</p>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.intellectualProperty.customerData.title')}</h5>
+                            <p className="text-slate-700 text-sm mb-2">{t('authPage.modals.terms.content.intellectualProperty.customerData.description')}</p>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Email content</li>
-                              <li>Personal information</li>
-                              <li>Submitted documents</li>
-                              <li>Application history</li>
+                              {(t('authPage.modals.terms.content.intellectualProperty.customerData.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                             <p className="text-slate-700 text-sm mt-2">
-                              Remains the exclusive property of the customer. Matrícula USA acts only as a processor of this data.
+                              {t('authPage.modals.terms.content.intellectualProperty.customerData.conclusion')}
                             </p>
                           </div>
                         </div>
@@ -1191,24 +1257,22 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 6. RESPONSIBILITIES */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">6. RESPONSIBILITIES</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.responsibilities.title')}</h4>
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">6.1 User Responsibilities</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.responsibilities.userResponsibilities.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Provide true and accurate information</li>
-                              <li>Maintain security of credentials</li>
-                              <li>Use the platform responsibly</li>
-                              <li>Comply with applicable laws</li>
+                              {(t('authPage.modals.terms.content.responsibilities.userResponsibilities.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">6.2 Matrícula USA Responsibilities</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.responsibilities.matriculaResponsibilities.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Maintain platform operation</li>
-                              <li>Protect user data according to our Privacy Policy</li>
-                              <li>Provide adequate technical support</li>
-                              <li>Notify about significant changes</li>
+                              {(t('authPage.modals.terms.content.responsibilities.matriculaResponsibilities.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1216,36 +1280,35 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 7. LIMITATION OF LIABILITY */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">7. LIMITATION OF LIABILITY</h4>
-                        <p className="text-slate-700 mb-2">Matrícula USA will not be liable for:</p>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.limitationOfLiability.title')}</h4>
+                        <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.limitationOfLiability.description')}</p>
                         <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                          <li>Data loss due to technical failures</li>
-                          <li>Temporary service interruptions</li>
-                          <li>Indirect or consequential damages</li>
-                          <li>Actions of third parties (Google, Stripe, etc.)</li>
+                          {(t('authPage.modals.terms.content.limitationOfLiability.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                            <li key={index}>{item}</li>
+                          ))}
                         </ul>
                       </div>
 
                       {/* 8. SUSPENSION AND TERMINATION */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">8. SUSPENSION AND TERMINATION</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.title')}</h4>
                         <div className="space-y-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">8.1 Suspension</h5>
-                            <p className="text-slate-700 mb-2">We may suspend your access if:</p>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.suspension.title')}</h5>
+                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.suspension.description')}</p>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              <li>You violate these Terms</li>
-                              <li>You use the platform abusively</li>
-                              <li>You fail to make due payments</li>
+                              {(t('authPage.modals.terms.content.suspensionAndTermination.suspension.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">8.2 Termination</h5>
-                            <p className="text-slate-700 mb-2">You may terminate your account at any time. After termination:</p>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.termination.title')}</h5>
+                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.termination.description')}</p>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              <li>Your data will be deleted according to our Privacy Policy</li>
-                              <li>Gmail integrations will be disconnected</li>
-                              <li>Platform access will be revoked</li>
+                              {(t('authPage.modals.terms.content.suspensionAndTermination.termination.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1253,27 +1316,26 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 9. MODIFICATIONS */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">9. MODIFICATIONS</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.modifications.title')}</h4>
                         <p className="text-slate-700">
-                          We reserve the right to modify these Terms at any time. Significant changes will be communicated 30 days in advance.
+                          {t('authPage.modals.terms.content.modifications.description')}
                         </p>
                       </div>
 
                       {/* 10. GOVERNING LAW */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">10. GOVERNING LAW</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.governingLaw.title')}</h4>
                         <div className="space-y-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">10.1 Jurisdiction</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.governingLaw.jurisdiction.title')}</h5>
                             <p className="text-slate-700">
-                              These Terms are governed by the laws of the State of California, United States.
+                              {t('authPage.modals.terms.content.governingLaw.jurisdiction.description')}
                             </p>
                           </div>
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">10.2 Dispute Resolution</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.governingLaw.disputeResolution.title')}</h5>
                             <p className="text-slate-700">
-                              Any disputes will be resolved in the courts of Los Angeles County, California, with express waiver of any other venue, 
-                              no matter how privileged.
+                              {t('authPage.modals.terms.content.governingLaw.disputeResolution.description')}
                             </p>
                           </div>
                         </div>
@@ -1281,33 +1343,32 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 11. ARBITRATION */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">11. ARBITRATION</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.arbitration.title')}</h4>
                         <p className="text-slate-700">
-                          Any disputes arising from these Terms will be resolved through binding arbitration in accordance with 
-                          the American Arbitration Association rules.
+                          {t('authPage.modals.terms.content.arbitration.description')}
                         </p>
                       </div>
 
                       {/* 12. GENERAL PROVISIONS */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">12. GENERAL PROVISIONS</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.title')}</h4>
                         <div className="space-y-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">12.1 Entire Agreement</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.entireAgreement.title')}</h5>
                             <p className="text-slate-700">
-                              These Terms constitute the complete agreement between the parties.
+                              {t('authPage.modals.terms.content.generalProvisions.entireAgreement.description')}
                             </p>
                           </div>
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">12.2 Waiver</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.waiver.title')}</h5>
                             <p className="text-slate-700">
-                              Failure to exercise any right does not constitute waiver.
+                              {t('authPage.modals.terms.content.generalProvisions.waiver.description')}
                             </p>
                           </div>
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">12.3 Severability</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.severability.title')}</h5>
                             <p className="text-slate-700">
-                              If any provision is found invalid, the remaining provisions will remain in effect.
+                              {t('authPage.modals.terms.content.generalProvisions.severability.description')}
                             </p>
                           </div>
                         </div>
@@ -1315,12 +1376,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 13. CONTACT */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">13. CONTACT</h4>
-                        <p className="text-slate-700 mb-2">For questions about these Terms:</p>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.contact.title')}</h4>
+                        <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.contact.description')}</p>
                         <div className="bg-blue-50 p-4 rounded-lg">
-                          <p className="text-blue-800"><strong>Email:</strong> info@matriculausa.com</p>
-                          <p className="text-blue-800"><strong>Phone:</strong> +1 (213) 676-2544</p>
-                          <p className="text-blue-800"><strong>Address:</strong> Los Angeles - CA - USA</p>
+                          <p className="text-blue-800"><strong>{t('authPage.modals.terms.content.contact.email.label')}:</strong> {t('authPage.modals.terms.content.contact.email.value')}</p>
+                          <p className="text-blue-800"><strong>{t('authPage.modals.terms.content.contact.phone.label')}:</strong> {t('authPage.modals.terms.content.contact.phone.value')}</p>
+                          <p className="text-blue-800"><strong>{t('authPage.modals.terms.content.contact.address.label')}:</strong> {t('authPage.modals.terms.content.contact.address.value')}</p>
                         </div>
                       </div>
                     </div>
@@ -1331,7 +1392,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <div className="flex items-center justify-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
                       <Scroll className="h-5 w-5 text-amber-600 mr-2" />
                       <span className="text-amber-800 font-medium">
-                        Please scroll to the bottom to continue to Privacy Policy
+                        {t('authPage.modals.terms.scrollIndicator')}
                       </span>
                     </div>
                   )}
@@ -1343,7 +1404,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     onClick={() => setShowTermsModal(false)}
                     className="px-6 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors"
                   >
-                    Cancel
+                    {t('authPage.modals.terms.cancel')}
                   </button>
                   <button
                     onClick={handleTermsAccept}
@@ -1354,7 +1415,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     }`}
                   >
-                    {hasScrolledToBottom ? 'Continue to Privacy Policy' : 'Scroll to Bottom First'}
+                    {hasScrolledToBottom ? t('authPage.modals.terms.continueToPrivacy') : t('authPage.modals.terms.scrollToBottomFirst')}
                   </button>
                 </div>
               </div>
@@ -1367,11 +1428,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                  <h2 className="text-2xl font-bold text-slate-900">Privacy Policy</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">{t('authPage.modals.privacy.title')}</h2>
                   <button
                     onClick={() => setShowPrivacyModal(false)}
                     className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    title="Close modal"
+                    title={t('authPage.modals.privacy.close')}
                   >
                     <X className="h-6 w-6 text-slate-500" />
                   </button>
@@ -1385,58 +1446,50 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 >
                   {/* Privacy Policy Content */}
                   <section>
-                    <h3 className="text-xl font-bold text-slate-900 mb-4">Privacy Policy</h3>
+                    <h3 className="text-xl font-bold text-slate-900 mb-4">{t('authPage.modals.privacy.content.title')}</h3>
                     <div className="prose prose-slate max-w-none">
                       {/* 1. INTRODUCTION */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">1. INTRODUCTION</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.introduction.title')}</h4>
                         <p className="text-slate-700 mb-4">
-                          Matrícula USA ("we", "our", "us") is committed to protecting the privacy and personal data of our users. 
-                          This Privacy Policy describes how we collect, use, store, and protect your information when you use our 
-                          Email Hub platform for universities.
+                          {t('authPage.modals.privacy.content.introduction.description')}
                         </p>
                       </div>
 
                       {/* 2. DATA COLLECTED AND ACCESSED */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">2. DATA COLLECTED AND ACCESSED</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.title')}</h4>
                         <div className="space-y-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">2.1 User Account Data</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.userAccountData.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              <li>Full name</li>
-                              <li>Email address</li>
-                              <li>Phone number</li>
-                              <li>Country of origin</li>
-                              <li>Academic profile (study level, field of interest, GPA, English proficiency)</li>
-                              <li>Payment information (through Stripe)</li>
+                              {(t('authPage.modals.privacy.content.dataCollected.userAccountData.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
 
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">2.2 Gmail Data (Email Hub)</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.gmailData.title')}</h5>
                             <p className="text-slate-700 mb-2">
-                              Based on our platform's code analysis, when you connect your Gmail account, we access the following data:
+                              {t('authPage.modals.privacy.content.dataCollected.gmailData.description')}
                             </p>
                             
                             <div className="border border-slate-200 p-4 mb-4">
-                              <h6 className="font-semibold text-slate-900 mb-2">gmail.readonly Permission:</h6>
+                              <h6 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.gmailData.readonlyPermission.title')}</h6>
                               <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                                <li>Email list (ID, threadId, sender, recipient, subject)</li>
-                                <li>Complete email content (text and HTML body)</li>
-                                <li>Email metadata (date, priority, attachments, labels)</li>
-                                <li>Email count by category (Inbox, Sent, Starred, Drafts, Spam, Trash)</li>
-                                <li>Email read status</li>
-                                <li>Thread/conversation information</li>
+                                {(t('authPage.modals.privacy.content.dataCollected.gmailData.readonlyPermission.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                  <li key={index}>{item}</li>
+                                ))}
                               </ul>
                             </div>
 
                             <div className="border border-slate-200 p-4">
-                              <h6 className="font-semibold text-slate-900 mb-2">gmail.send Permission:</h6>
+                              <h6 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.gmailData.sendPermission.title')}</h6>
                               <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                                <li>Ability to send emails through Gmail API</li>
-                                <li>Ability to forward existing emails</li>
-                                <li>Ability to reply to emails</li>
+                                {(t('authPage.modals.privacy.content.dataCollected.gmailData.sendPermission.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                  <li key={index}>{item}</li>
+                                ))}
                               </ul>
                             </div>
                           </div>
@@ -1445,26 +1498,23 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 3. HOW WE USE YOUR INFORMATION */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">3. HOW WE USE YOUR INFORMATION</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.howWeUse.title')}</h4>
                         <div className="space-y-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">3.1 Primary Email Hub Functionality</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.howWeUse.primaryEmailHub.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              <li><strong>Email Viewing:</strong> We display complete email content to facilitate institutional management</li>
-                              <li><strong>Category Organization:</strong> We organize emails into tabs (Inbox, Sent, Starred, etc.) with real-time counts</li>
-                              <li><strong>Smart Forwarding:</strong> We allow forwarding emails with complete content preserved</li>
-                              <li><strong>New Email Composition:</strong> Integrated interface for creating and sending new institutional emails</li>
-                              <li><strong>Search and Filters:</strong> Search functionality to locate specific emails</li>
+                              {(t('authPage.modals.privacy.content.howWeUse.primaryEmailHub.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index} dangerouslySetInnerHTML={{ __html: item }} />
+                              ))}
                             </ul>
                           </div>
 
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">3.2 Other Uses</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.howWeUse.otherUses.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              <li>Scholarship and application management</li>
-                              <li>Payment processing</li>
-                              <li>User communication</li>
-                              <li>Platform improvement</li>
+                              {(t('authPage.modals.privacy.content.howWeUse.otherUses.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1472,24 +1522,23 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 4. DATA SECURITY */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">4. DATA SECURITY</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSecurity.title')}</h4>
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="border border-slate-200 p-4">
-                            <h5 className="font-semibold text-slate-900 mb-2">4.1 Encryption and Storage</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSecurity.encryptionAndStorage.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li><strong>OAuth Tokens:</strong> We store Gmail access and refresh tokens encrypted using AES-GCM with PBKDF2-derived keys</li>
-                              <li><strong>Sensitive Data:</strong> All sensitive data is encrypted before storage in Supabase</li>
-                              <li><strong>Transmission:</strong> All communications are protected by HTTPS/TLS</li>
+                              {(t('authPage.modals.privacy.content.dataSecurity.encryptionAndStorage.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index} dangerouslySetInnerHTML={{ __html: item }} />
+                              ))}
                             </ul>
                           </div>
 
                           <div className="border border-slate-200 p-4">
-                            <h5 className="font-semibold text-slate-900 mb-2">4.2 Security Measures</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSecurity.securityMeasures.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Secure OAuth 2.0 authentication</li>
-                              <li>Access tokens with automatic expiration</li>
-                              <li>Automatic token renewal for expired tokens</li>
-                              <li>Detailed logs for security auditing</li>
+                              {(t('authPage.modals.privacy.content.dataSecurity.securityMeasures.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1497,56 +1546,57 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 5. GOOGLE COMPLIANCE */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">5. GOOGLE COMPLIANCE</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.googleCompliance.title')}</h4>
                         <div className="border border-slate-300 p-4 bg-slate-50 rounded-lg">
-                          <h5 className="font-semibold text-slate-900 mb-2">IMPORTANT</h5>
+                          <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.googleCompliance.important')}</h5>
                           <p className="text-slate-700 mb-2">
-                            The use and transfer of information received from Google APIs to any other app by Matrícula USA will 
-                            adhere to the <strong>Google API Services User Data Policy</strong>, including the <strong>Limited Use</strong> requirements.
+                            {t('authPage.modals.privacy.content.googleCompliance.description')}
                           </p>
                           <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                            <li>We use only necessary permissions (gmail.readonly and gmail.send)</li>
-                            <li>We do not share Gmail data with third parties</li>
-                            <li>We do not use Gmail data for advertising or profile analysis</li>
-                            <li>We respect all Google API usage policies</li>
+                            {(t('authPage.modals.privacy.content.googleCompliance.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                              <li key={index}>{item}</li>
+                            ))}
                           </ul>
                         </div>
                       </div>
 
                       {/* 6. YOUR RIGHTS */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">6. YOUR RIGHTS (CCPA/State Laws)</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.title')}</h4>
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">6.1 Access and Portability</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.accessAndPortability.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Request access to all your personal data</li>
-                              <li>Receive your data in a structured, machine-readable format</li>
+                              {(t('authPage.modals.privacy.content.yourRights.accessAndPortability.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
 
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">6.2 Correction and Update</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.correctionAndUpdate.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Correct inaccurate or incomplete personal data</li>
-                              <li>Update your profile information at any time</li>
+                              {(t('authPage.modals.privacy.content.yourRights.correctionAndUpdate.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
 
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">6.3 Deletion</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.deletion.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Request deletion of your personal data</li>
-                              <li>Disconnect your Gmail account at any time</li>
-                              <li>Delete your platform account</li>
+                              {(t('authPage.modals.privacy.content.yourRights.deletion.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
 
                           <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">6.4 Consent Withdrawal</h5>
+                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.consentWithdrawal.title')}</h5>
                             <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              <li>Withdraw consent for Gmail data usage</li>
-                              <li>Disconnect third-party integrations</li>
+                              {(t('authPage.modals.privacy.content.yourRights.consentWithdrawal.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                                <li key={index}>{item}</li>
+                              ))}
                             </ul>
                           </div>
                         </div>
@@ -1554,54 +1604,53 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
                       {/* 7. DATA RETENTION */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">7. DATA RETENTION</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataRetention.title')}</h4>
                         <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                          <li><strong>Account Data:</strong> Kept while your account is active</li>
-                          <li><strong>OAuth Tokens:</strong> Stored until you disconnect or delete your account</li>
-                          <li><strong>Security Logs:</strong> Kept for 12 months for auditing</li>
-                          <li><strong>Payment Data:</strong> Kept as required by law</li>
+                          {(t('authPage.modals.privacy.content.dataRetention.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                            <li key={index} dangerouslySetInnerHTML={{ __html: item }} />
+                          ))}
                         </ul>
                       </div>
 
                       {/* 8. DATA SHARING */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">8. DATA SHARING</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSharing.title')}</h4>
                         <p className="text-slate-700 mb-2">
-                          We do not sell, rent, or share your personal data with third parties, except:
+                          {t('authPage.modals.privacy.content.dataSharing.description')}
                         </p>
                         <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                          <li>Essential service providers (Supabase, Stripe, Google)</li>
-                          <li>When required by law</li>
-                          <li>With your explicit consent</li>
+                          {(t('authPage.modals.privacy.content.dataSharing.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
+                            <li key={index}>{item}</li>
+                          ))}
                         </ul>
                       </div>
 
                       {/* 9. CHILDREN'S PRIVACY */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">9. CHILDREN'S PRIVACY</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.childrensPrivacy.title')}</h4>
                         <p className="text-slate-700">
-                          Our services are not intended for children under 13. We do not knowingly collect personal information from children under 13.
+                          {t('authPage.modals.privacy.content.childrensPrivacy.description')}
                         </p>
                       </div>
 
                       {/* 10. INTERNATIONAL DATA TRANSFERS */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">10. INTERNATIONAL DATA TRANSFERS</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.internationalDataTransfers.title')}</h4>
                         <p className="text-slate-700">
-                          Your data may be processed in countries other than your own. We ensure appropriate safeguards are in place for such transfers.
+                          {t('authPage.modals.privacy.content.internationalDataTransfers.description')}
                         </p>
                       </div>
 
                       {/* 11. CONTACT */}
                       <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">11. CONTACT</h4>
+                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.contact.title')}</h4>
                         <p className="text-slate-700 mb-2">
-                          To exercise your rights or clarify questions about this policy:
+                          {t('authPage.modals.privacy.content.contact.description')}
                         </p>
                         <div className="border border-slate-200 p-4">
-                          <p className="text-slate-700"><strong>Email:</strong> info@matriculausa.com</p>
-                          <p className="text-slate-700"><strong>Phone:</strong> +1 (213) 676-2544</p>
-                          <p className="text-slate-700"><strong>Address:</strong> Los Angeles - CA - USA</p>
+                          <p className="text-slate-700"><strong>{t('authPage.modals.privacy.content.contact.email.label')}:</strong> {t('authPage.modals.privacy.content.contact.email.value')}</p>
+                          <p className="text-slate-700"><strong>{t('authPage.modals.privacy.content.contact.phone.label')}:</strong> {t('authPage.modals.privacy.content.contact.phone.value')}</p>
+                          <p className="text-slate-700"><strong>{t('authPage.modals.privacy.content.contact.address.label')}:</strong> {t('authPage.modals.privacy.content.contact.address.value')}</p>
                         </div>
                       </div>
                     </div>
@@ -1612,7 +1661,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <div className="flex items-center justify-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
                       <Scroll className="h-5 w-5 text-amber-600 mr-2" />
                       <span className="text-amber-800 font-medium">
-                        Please scroll to the bottom to accept the privacy policy
+                        {t('authPage.modals.privacy.scrollIndicator')}
                       </span>
                     </div>
                   )}
@@ -1624,7 +1673,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     onClick={() => setShowPrivacyModal(false)}
                     className="px-6 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors"
                   >
-                    Cancel
+                    {t('authPage.modals.privacy.cancel')}
                   </button>
                   <button
                     onClick={handlePrivacyAccept}
@@ -1635,7 +1684,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     }`}
                   >
-                    {hasScrolledToBottomPrivacy ? 'I Accept Privacy Policy' : 'Scroll to Bottom First'}
+                    {hasScrolledToBottomPrivacy ? t('authPage.modals.privacy.accept') : t('authPage.modals.privacy.scrollToBottomFirst')}
                   </button>
                 </div>
               </div>
@@ -1645,8 +1694,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           {/* Formulário de registro de estudante */}
           {showStudentVerificationNotice && (
             <div className="bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded-2xl text-sm mb-4 mt-4">
-              <div className="font-bold mb-1">Check your email!</div>
-              A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.
+              <div className="font-bold mb-1">{t('authPage.messages.checkEmail')}</div>
+              {t('authPage.messages.studentVerification')}
             </div>
           )}
         </div>

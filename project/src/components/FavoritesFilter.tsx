@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface FavoritesFilterProps {
   showOnlyFavorites: boolean;
@@ -14,6 +15,7 @@ const FavoritesFilter: React.FC<FavoritesFilterProps> = ({
   favoritesCount,
   className = ''
 }) => {
+  const { t } = useTranslation();
   return (
     <motion.button
       onClick={onToggle}
@@ -56,7 +58,7 @@ const FavoritesFilter: React.FC<FavoritesFilterProps> = ({
 
       {/* Texto */}
       <span className="font-medium">
-        {showOnlyFavorites ? 'Showing Favorites' : 'Show Favorites Only'}
+        {showOnlyFavorites ? t('studentDashboard.favorites.showingFavorites') : t('studentDashboard.favorites.showFavoritesOnly')}
       </span>
 
       {/* Contador */}

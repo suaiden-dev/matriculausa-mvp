@@ -15,7 +15,7 @@ const languages: Language[] = [
 ];
 
 interface LanguageSelectorProps {
-  variant?: 'header' | 'footer' | 'compact';
+  variant?: 'header' | 'footer' | 'compact' | 'dashboard';
   showLabel?: boolean;
 }
 
@@ -38,13 +38,15 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const buttonClasses = {
     header: "inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-colors",
     footer: "inline-flex items-center px-3 py-2 text-sm font-medium text-white hover:text-gray-200 transition-colors",
-    compact: "inline-flex items-center px-2 py-1 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+    compact: "inline-flex items-center px-2 py-1 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors",
+    dashboard: "inline-flex items-center px-3 py-2 text-sm font-medium rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors border border-slate-200 hover:border-slate-300"
   };
 
   const dropdownClasses = {
     header: "origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50",
     footer: "origin-top-right absolute right-0 bottom-full mb-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50",
-    compact: "origin-top-right absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+    compact: "origin-top-right absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50",
+    dashboard: "origin-top-right absolute right-0 mt-2 w-48 rounded-xl shadow-xl bg-white border border-slate-200 focus:outline-none z-50"
   };
 
   return (
@@ -57,11 +59,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           aria-expanded="true"
           aria-haspopup="true"
         >
-          {variant !== 'compact' && <Globe className="h-4 w-4 mr-2" />}
+          {(variant !== 'compact' && variant !== 'dashboard') && <Globe className="h-4 w-4 mr-2" />}
           <span className="flex items-center">
             <span className="mr-2">{currentLanguage.flag}</span>
             {showLabel && (
-              <span className={variant === 'compact' ? 'hidden sm:inline' : ''}>
+              <span className={variant === 'compact' ? 'hidden sm:inline' : variant === 'dashboard' ? 'hidden lg:inline' : ''}>
                 {currentLanguage.name}
               </span>
             )}

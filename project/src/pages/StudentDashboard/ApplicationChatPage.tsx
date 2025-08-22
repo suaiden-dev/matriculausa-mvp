@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
@@ -18,11 +19,6 @@ interface DocumentInfo {
   label: string;
   description: string;
 }
-const DOCUMENTS_INFO: DocumentInfo[] = [
-  { key: 'passport', label: 'Passport', description: "A valid copy of the student's passport. Used for identification and visa purposes." },
-  { key: 'diploma', label: 'High School Diploma', description: 'Proof of high school graduation. Required for university admission.' },
-  { key: 'funds_proof', label: 'Proof of Funds', description: 'A bank statement or financial document showing sufficient funds for study.' },
-];
 
 // Componente de card padrão para dashboard
 const DashboardCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
@@ -31,24 +27,10 @@ const DashboardCard: React.FC<{ children: React.ReactNode; className?: string }>
   </div>
 );
 
-// Adicionar função utilitária de download imediato (igual DocumentRequestsCard)
-const handleForceDownload = async (url: string, filename: string) => {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-  } catch (e) {
-    alert('Failed to download file.');
-  }
-};
+// Função utilitária de download imediato será movida para dentro do componente
 
 const ApplicationChatPage: React.FC = () => {
+  const { t } = useTranslation();
   const { applicationId } = useParams<{ applicationId: string }>();
   const { user, userProfile, refetchUserProfile } = useAuth();
 
@@ -162,10 +144,10 @@ const ApplicationChatPage: React.FC = () => {
       if (data.session_url) {
         window.location.href = data.session_url;
       } else {
-        setI20Error('Erro ao criar sessão de pagamento.');
+        setI20Error(t('studentDashboard.applicationChatPage.errors.paymentSessionError'));
       }
     } catch (err) {
-      setI20Error('Erro ao redirecionar para o pagamento.');
+              setI20Error(t('studentDashboard.applicationChatPage.errors.paymentRedirectError'));
     } finally {
       setI20Loading(false);
     }
@@ -176,22 +158,46 @@ const ApplicationChatPage: React.FC = () => {
     return <div className="text-center text-gray-500 py-10">Authenticating...</div>;
   }
 
+  // Array de informações dos documentos
+  const DOCUMENTS_INFO: DocumentInfo[] = [
+    { key: 'passport', label: t('studentDashboard.applicationChatPage.documentTypes.passport.label'), description: t('studentDashboard.applicationChatPage.documentTypes.passport.description') },
+    { key: 'diploma', label: t('studentDashboard.applicationChatPage.documentTypes.diploma.label'), description: t('studentDashboard.applicationChatPage.documentTypes.diploma.description') },
+    { key: 'funds_proof', label: t('studentDashboard.applicationChatPage.documentTypes.funds_proof.label'), description: t('studentDashboard.applicationChatPage.documentTypes.funds_proof.description') },
+  ];
+
+  // Função utilitária de download imediato
+  const handleForceDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+    } catch (e) {
+      alert(t('studentDashboard.applicationChatPage.errors.downloadFailed'));
+    }
+  };
+
   // Montar as abas dinamicamente com ícones distintos
   const tabs = [
-    { id: 'welcome', label: 'Welcome', icon: Home },
-    { id: 'details', label: 'Details', icon: Info },
+    { id: 'welcome', label: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
+    { id: 'details', label: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
     ...(applicationDetails && applicationDetails.status === 'enrolled' ? [
-      { id: 'i20', label: 'I-20 Control Fee', icon: FileCheck }
+      { id: 'i20', label: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck }
     ] : []),
     
-    { id: 'documents', label: 'Documents', icon: FolderOpen },
+    { id: 'documents', label: t('studentDashboard.applicationChatPage.tabs.documents'), icon: FolderOpen },
   ];
 
   return (
     <div className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
       <div className="w-full max-w-7xl mx-auto space-y-8 flex-1 flex flex-col h-full">
         <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-          Student Application Details
+          {t('studentDashboard.applicationChatPage.title')}
         </h2>
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto flex-nowrap scrollbar-hide" role="tablist">
@@ -229,28 +235,28 @@ const ApplicationChatPage: React.FC = () => {
               </div>
               <div className="flex-1">
                 <h1 className="text-xl md:text-2xl font-bold text-[#05294E] mb-1">
-                  Welcome, {applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student'}
+                  {t('studentDashboard.applicationChatPage.welcome.welcomeMessage', { firstName: applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student' })}
                 </h1>
                 <div className="text-base text-slate-700">
-                  Your application to <span className="font-semibold text-blue-700">{applicationDetails.scholarships?.universities?.name || 'your university'}</span> is in progress.
+                  {t('studentDashboard.applicationChatPage.welcome.applicationInProgress', { universityName: applicationDetails.scholarships?.universities?.name || 'your university' })}
                 </div>
                 {applicationDetails.scholarships?.title && (
                   <div className="text-xs text-slate-600 mt-1">
-                    Scholarship: <span className="font-semibold">{applicationDetails.scholarships.title}</span>
+                    {t('studentDashboard.applicationChatPage.welcome.scholarship')} <span className="font-semibold">{applicationDetails.scholarships.title}</span>
                   </div>
                 )}
               </div>
             </div>
             {/* Next Steps - Guia prático */}
             <div className="px-8 py-8 bg-white flex flex-col gap-6 items-center">
-              <h2 className="text-2xl font-extrabold text-[#05294E] mb-2 text-center tracking-tight">How to Proceed</h2>
+              <h2 className="text-2xl font-extrabold text-[#05294E] mb-2 text-center tracking-tight">{t('studentDashboard.applicationChatPage.welcome.howToProceed')}</h2>
               {/* Passo 1: Document Requests */}
               <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
                 <FileText className="w-10 h-10 text-blue-600 flex-shrink-0" />
                 <div className="flex-1">
-                  <div className="font-bold text-blue-900 text-lg mb-1">Check Document Requests</div>
-                  <div className="text-base text-slate-700 mb-2">Now that you’ve reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.</div>
-                  <button onClick={() => setActiveTab('documents')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">Go to Document Requests</button>
+                  <div className="font-bold text-blue-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.documentRequests.title')}</div>
+                  <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.documentRequests.description')}</div>
+                  <button onClick={() => setActiveTab('documents')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.documentRequests.button')}</button>
                 </div>
               </div>
 
@@ -258,9 +264,9 @@ const ApplicationChatPage: React.FC = () => {
               <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
                 <UserCircle className="w-10 h-10 text-blue-600 flex-shrink-0" />
                 <div className="flex-1">
-                  <div className="font-bold text-blue-900 text-lg mb-1">View Application Details</div>
-                  <div className="text-base text-slate-700 mb-2">See all your scholarship information, uploaded documents, and your current status (waiting for acceptance letter, enrolled, etc). Stay up to date with your process at any time.</div>
-                  <button onClick={() => setActiveTab('details')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">View Application Details</button>
+                  <div className="font-bold text-blue-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.title')}</div>
+                  <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.description')}</div>
+                  <button onClick={() => setActiveTab('details')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.button')}</button>
                 </div>
               </div>
               {/* Passo 4: I-20 Control Fee (só se liberado) */}
@@ -268,9 +274,9 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="w-full bg-blue-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
                   <Award className="w-10 h-10 text-blue-600 flex-shrink-0" />
                   <div className="flex-1">
-                    <div className="font-bold text-blue-900 text-lg mb-1">Pay I-20 Control Fee</div>
-                    <div className="text-base text-slate-700 mb-2">After receiving your acceptance letter, you will be able to pay the I-20 Control Fee. This fee is required for the issuance of your I-20 document, essential for your F-1 visa. You have 10 days to pay after it is released.</div>
-                    <button onClick={() => setActiveTab('i20')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">Pay I-20 Control Fee</button>
+                    <div className="font-bold text-blue-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.i20ControlFee.title')}</div>
+                    <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.i20ControlFee.description')}</div>
+                    <button onClick={() => setActiveTab('i20')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.i20ControlFee.button')}</button>
                   </div>
                 </div>
               )}
@@ -285,29 +291,29 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <UserCircle className="w-6 h-6 mr-3" />
-                    Student Information
+                    {t('studentDashboard.applicationChatPage.details.studentInformation.title')}
                   </h2>
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Personal Information */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Personal Details</h3>
+                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.personalDetails')}</h3>
                       <div className="space-y-3">
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Full Name</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.fullName')}</span>
                           <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.full_name || 'N/A'}</span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Email</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.email')}</span>
                           <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.email || 'N/A'}</span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Phone</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.phone')}</span>
                           <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.phone || 'N/A'}</span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Country</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.country')}</span>
                           <span className="font-medium text-slate-900">{applicationDetails.user_profiles?.country || 'N/A'}</span>
                         </div>
                       </div>
@@ -315,25 +321,25 @@ const ApplicationChatPage: React.FC = () => {
 
                     {/* Academic Information */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Academic Profile</h3>
+                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.academicProfile')}</h3>
                       <div className="space-y-3">
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Student Type</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</span>
                           <span className="font-medium text-slate-900">
-                            {applicationDetails.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                             applicationDetails.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                             applicationDetails.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
+                            {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
+                             applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
+                             applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
                              applicationDetails.student_process_type || 'N/A'}
                           </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Application Date</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</span>
                           <span className="font-medium text-slate-900">
                             {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Last Updated</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.lastUpdated')}</span>
                           <span className="font-medium text-slate-900">
                             {new Date(applicationDetails.updated_at || Date.now()).toLocaleDateString()}
                           </span>
@@ -343,26 +349,26 @@ const ApplicationChatPage: React.FC = () => {
 
                     {/* Application & Status */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Application Status</h3>
+                      <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationStatus')}</h3>
                       <div className="space-y-3">
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Current Status</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.currentStatus')}</span>
                           <div className="mt-1">
                             {applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved' ? (
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
                                 <CheckCircle className="w-4 h-4 mr-1" />
-                                Enrolled
+                                {t('studentDashboard.applicationChatPage.details.studentInformation.enrolled')}
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-700">
                                 <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
-                                Waiting for acceptance letter
+                                {t('studentDashboard.applicationChatPage.details.studentInformation.waitingForAcceptanceLetter')}
                               </span>
                             )}
                           </div>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm text-slate-600">Documents Status</span>
+                          <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.studentInformation.documentsStatus')}</span>
                           <span className="font-medium text-slate-900">
                             {DOCUMENTS_INFO.filter(doc => {
                               let docData = Array.isArray(applicationDetails.documents)
@@ -372,7 +378,7 @@ const ApplicationChatPage: React.FC = () => {
                                 docData = applicationDetails.user_profiles.documents.find((d: any) => d.type === doc.key);
                               }
                               return docData?.status === 'approved';
-                            }).length} / {DOCUMENTS_INFO.length} approved
+                            }).length} / {DOCUMENTS_INFO.length} {t('studentDashboard.applicationChatPage.details.studentInformation.approved')}
                           </span>
                         </div>
                       </div>
@@ -386,7 +392,7 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <Building className="w-6 h-6 mr-3" />
-                    University Information
+                    {t('studentDashboard.applicationChatPage.details.universityInformation.title')}
                   </h2>
                 </div>
                 <div className="p-6">
@@ -394,14 +400,14 @@ const ApplicationChatPage: React.FC = () => {
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <div className="text-sm text-slate-600">University Name</div>
+                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.universityName')}</div>
                         <div className="font-semibold text-slate-900">{applicationDetails.scholarships?.universities?.name || 'N/A'}</div>
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <div className="text-sm text-slate-600">Location</div>
+                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.location')}</div>
                         <div className="font-semibold text-slate-900">
                           {applicationDetails.scholarships?.universities?.address?.city || 'N/A'}, {applicationDetails.scholarships?.universities?.address?.country || 'N/A'}
                         </div>
@@ -410,11 +416,11 @@ const ApplicationChatPage: React.FC = () => {
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <div className="text-sm text-slate-600">Contact Information</div>
+                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.contactInformation')}</div>
                         <div className="space-y-1">
                           {applicationDetails.scholarships?.universities?.website && (
                             <div className="text-sm">
-                              <span className="text-slate-600">Website: </span>
+                                                              <span className="text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.website')} </span>
                               <a href={applicationDetails.scholarships.universities.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
                                 {applicationDetails.scholarships.universities.website}
                               </a>
@@ -422,7 +428,7 @@ const ApplicationChatPage: React.FC = () => {
                           )}
                           {(applicationDetails.scholarships?.universities?.contact?.email || applicationDetails.scholarships?.universities?.contact?.admissionsEmail) && (
                             <div className="text-sm">
-                              <span className="text-slate-600">Email: </span>
+                                                              <span className="text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.email')} </span>
                               <span className="font-medium text-slate-900">
                                 {applicationDetails.scholarships.universities.contact?.email || applicationDetails.scholarships.universities.contact?.admissionsEmail}
                               </span>
@@ -430,7 +436,7 @@ const ApplicationChatPage: React.FC = () => {
                           )}
                           {applicationDetails.scholarships?.universities?.contact?.phone && (
                             <div className="text-sm">
-                              <span className="text-slate-600">Phone: </span>
+                                                              <span className="text-slate-600">{t('studentDashboard.applicationChatPage.details.universityInformation.phone')} </span>
                               <span className="font-medium text-slate-900">{applicationDetails.scholarships.universities.contact.phone}</span>
                             </div>
                           )}
@@ -446,7 +452,7 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <Award className="w-6 h-6 mr-3" />
-                    Scholarship Details
+                    {t('studentDashboard.applicationChatPage.details.scholarshipDetails.title')}
                   </h2>
                 </div>
                 <div className="p-6">
@@ -454,7 +460,7 @@ const ApplicationChatPage: React.FC = () => {
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <div className="text-sm text-slate-600">Scholarship Name</div>
+                        <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</div>
                         <div className="font-semibold text-slate-900">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</div>
                       </div>
                     </div>
@@ -462,7 +468,7 @@ const ApplicationChatPage: React.FC = () => {
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                         <div className="flex-1">
-                          <div className="text-sm text-slate-600">Course</div>
+                          <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</div>
                           <div className="font-semibold text-slate-900">{applicationDetails.scholarships.course}</div>
                         </div>
                       </div>
@@ -471,7 +477,7 @@ const ApplicationChatPage: React.FC = () => {
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                         <div className="flex-1">
-                          <div className="text-sm text-slate-600">Description</div>
+                          <div className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</div>
                           <div className="font-medium text-slate-900">{applicationDetails.scholarships.description}</div>
                         </div>
                       </div>
@@ -485,7 +491,7 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <FileText className="w-6 h-6 mr-3" />
-                    Student Documents
+                    {t('studentDashboard.applicationChatPage.details.studentDocuments.title')}
                   </h2>
                 </div>
                 <div className="p-6">
@@ -509,31 +515,31 @@ const ApplicationChatPage: React.FC = () => {
                                   {status === 'approved' && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                                       <CheckCircle className="w-3 h-3 mr-1" />
-                                      Approved
+                                      {t('studentDashboard.applicationChatPage.status.approved')}
                                     </span>
                                   )}
                                   {status === 'changes_requested' && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                                      Changes Requested
+                                      {t('studentDashboard.applicationChatPage.status.changesRequested')}
                                     </span>
                                   )}
                                   {status === 'under_review' && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                      Under Review
+                                      {t('studentDashboard.applicationChatPage.status.underReview')}
                                     </span>
                                   )}
                                   {status === 'not_submitted' && (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                      Not Submitted
+                                      {t('studentDashboard.applicationChatPage.status.notSubmitted')}
                                     </span>
                                   )}
                                 </div>
                               </div>
                               <p className="text-sm text-slate-600 mb-3">{doc.description}</p>
                               {docData && (
-                                <div className="text-xs text-slate-500 mb-3">
-                                  Uploaded: {new Date(docData.uploaded_at).toLocaleDateString()}
-                                </div>
+                                                              <div className="text-xs text-slate-500 mb-3">
+                                {t('studentDashboard.applicationChatPage.details.studentDocuments.uploaded')} {new Date(docData.uploaded_at).toLocaleDateString()}
+                              </div>
                               )}
                               <div className="flex gap-2">
                                 {docData ? (
@@ -542,7 +548,7 @@ const ApplicationChatPage: React.FC = () => {
                                       className="px-3 py-1 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] text-sm font-medium transition-colors"
                                       onClick={() => setPreviewUrl(docData.url)}
                                     >
-                                      View Document
+                                      {t('studentDashboard.applicationChatPage.details.studentDocuments.viewDocument')}
                                     </button>
                                     <button
                                       className="px-3 py-1 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 text-sm font-medium transition-colors"
@@ -551,11 +557,11 @@ const ApplicationChatPage: React.FC = () => {
                                         await handleForceDownload(docData.url, docData.url.split('/').pop() || 'document.pdf');
                                       }}
                                     >
-                                      Download
+                                      {t('studentDashboard.applicationChatPage.details.studentDocuments.download')}
                                     </button>
                                   </>
                                 ) : (
-                                  <span className="text-sm text-red-500 font-medium">Document not uploaded</span>
+                                  <span className="text-sm text-red-500 font-medium">{t('studentDashboard.applicationChatPage.details.studentDocuments.documentNotUploaded')}</span>
                                 )}
                               </div>
                             </div>
@@ -573,11 +579,11 @@ const ApplicationChatPage: React.FC = () => {
               {/* Quick Stats Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Application Summary</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('studentDashboard.applicationChatPage.details.applicationSummary')}</h3>
                 </div>
                 <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Submitted</span>
+                    <span className="text-sm text-slate-600">{t('studentDashboard.applicationChatPage.details.submitted')}</span>
                     <span className="text-sm text-slate-900">
                       {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
                     </span>
@@ -589,14 +595,14 @@ const ApplicationChatPage: React.FC = () => {
               {/* Recent Activity Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('studentDashboard.applicationChatPage.details.recentActivity')}</h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-3">
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-slate-900">Application submitted</div>
+                        <div className="text-sm font-medium text-slate-900">{t('studentDashboard.applicationChatPage.details.applicationSubmitted')}</div>
                         <div className="text-xs text-slate-600">{new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}</div>
                       </div>
                     </div>
@@ -604,7 +610,7 @@ const ApplicationChatPage: React.FC = () => {
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                         <div className="flex-1">
-                          <div className="text-sm font-medium text-slate-900">Application updated</div>
+                          <div className="text-sm font-medium text-slate-900">{t('studentDashboard.applicationChatPage.details.applicationUpdated')}</div>
                           <div className="text-xs text-slate-600">{new Date(applicationDetails.updated_at || Date.now()).toLocaleDateString()}</div>
                         </div>
                       </div>
@@ -616,12 +622,12 @@ const ApplicationChatPage: React.FC = () => {
               {/* Quick Actions Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('studentDashboard.applicationChatPage.details.quickActions')}</h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-3">
                                          {[
-                       { label: 'Manage Documents', tab: 'documents', icon: FileText },
+                       { label: t('studentDashboard.applicationChatPage.details.manageDocuments'), tab: 'documents', icon: FileText },
                       ...(applicationDetails.status === 'enrolled' ? [{ label: 'I-20 Control Fee', tab: 'i20', icon: Award }] : [])
                     ].map((action) => (
                       <button
@@ -641,15 +647,16 @@ const ApplicationChatPage: React.FC = () => {
         )}
         {activeTab === 'i20' && applicationDetails && applicationDetails.status === 'enrolled' && (
           <DashboardCard>
-            <h3 className="text-xl font-bold text-[#05294E] mb-4">I-20 Control Fee</h3>
+            <h3 className="text-xl font-bold text-[#05294E] mb-4">{t('studentDashboard.applicationChatPage.i20ControlFee.title')}</h3>
             
             {!hasPaid ? (
               <>
-                <div className="mb-3 text-sm text-slate-700">
-                  The <strong>I-20 Control Fee</strong> is a mandatory fee required for the issuance and management of your I-20 document, which is essential for the F-1 student visa process in the United States. <br />
-                  <span className="font-semibold">You have up to <span className="text-blue-700">10 days</span> after paying your Scholarship Fee to pay the I-20 Control Fee.</span> The timer below shows exactly how much time you have left to complete this payment. <br />
-                  Paying this fee ensures that your I-20 will be processed and sent correctly by the university. If you have any questions about this process, please contact support.
-                </div>
+                <div className="mb-3 text-sm text-slate-700" dangerouslySetInnerHTML={{
+                  __html: t('studentDashboard.applicationChatPage.i20ControlFee.description') + '<br />' +
+                          '<span class="font-semibold">' + t('studentDashboard.applicationChatPage.i20ControlFee.deadlineInfo') + '</span> ' +
+                          t('studentDashboard.applicationChatPage.i20ControlFee.timerInfo') + '<br />' +
+                          t('studentDashboard.applicationChatPage.i20ControlFee.paymentInfo')
+                }} />
                 {/* Cronômetro e botão lado a lado (invertidos) */}
                 <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-2 w-full mt-4">
                   <div className="flex-1 flex items-center justify-center">
@@ -658,14 +665,14 @@ const ApplicationChatPage: React.FC = () => {
                       onClick={handlePayI20}
                       disabled={i20Loading}
                       style={{height: '44px'}}>
-                      {i20Loading ? 'Processing...' : 'Pay I-20 Control Fee'}
+                      {i20Loading ? t('studentDashboard.applicationChatPage.i20ControlFee.processing') : t('studentDashboard.applicationChatPage.i20ControlFee.payButton')}
                     </button>
                   </div>
                   {scholarshipFeeDeadline && (
                     <div className={`flex-1 min-w-[140px] max-w-xs p-3 rounded-xl shadow-md text-center border ${i20Countdown === 'Expired' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}
                          style={{height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                       {i20Countdown === 'Expired' ? (
-                        <span className="text-red-600 font-bold text-sm md:text-base">The deadline to pay the I-20 Control Fee has expired!</span>
+                        <span className="text-red-600 font-bold text-sm md:text-base">{t('studentDashboard.applicationChatPage.i20ControlFee.deadlineExpired')}</span>
                       ) : (
                         <span className="font-mono text-base md:text-lg text-[#05294E] tracking-widest">
                           {i20Countdown}
@@ -675,7 +682,7 @@ const ApplicationChatPage: React.FC = () => {
                   )}
                 </div>
                 {dueDate && (
-                  <span className="text-xs text-slate-600">Due date: {new Date(dueDate).toLocaleDateString()}</span>
+                  <span className="text-xs text-slate-600">{t('studentDashboard.applicationChatPage.i20ControlFee.dueDate')} {new Date(dueDate).toLocaleDateString()}</span>
                 )}
                 {i20Error && <div className="text-center text-red-500 py-2">{i20Error}</div>}
               </>
@@ -686,28 +693,27 @@ const ApplicationChatPage: React.FC = () => {
                     <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <h4 className="text-lg font-bold text-green-800">I-20 Control Fee Paid Successfully!</h4>
+                    <h4 className="text-lg font-bold text-green-800">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.title')}</h4>
                   </div>
                   <p className="text-green-700 mb-3">
-                    Your I-20 Control Fee payment has been processed successfully. Your I-20 document will now be prepared and sent to you by the university.
+                    {t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.description')}
                   </p>
-                  <div className="text-sm text-green-600">
-                    <strong>Next steps:</strong>
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      <li>Wait for the university to process your I-20 document</li>
-                      <li>You will receive your I-20 document via email</li>
-                      <li>Use the I-20 to apply for your F-1 student visa</li>
-                      <li>Contact the university if you have any questions about the process</li>
-                    </ul>
+                                      <div className="text-sm text-green-600">
+                      <strong>{t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextSteps')}</strong>
+                                          <ul className="list-disc list-inside mt-2 space-y-1">
+                        {(t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextStepsList', { returnObjects: true }) as string[]).map((step, index) => (
+                          <li key={index}>{step}</li>
+                        ))}
+                      </ul>
                   </div>
                 </div>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <h5 className="font-semibold text-blue-900 mb-2">Payment Information</h5>
+                  <h5 className="font-semibold text-blue-900 mb-2">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentInformation')}</h5>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <div><strong>Amount Paid:</strong> $900</div>
-                    <div><strong>Payment Date:</strong> {paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
-                    <div><strong>Status:</strong> <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Completed</span></div>
+                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.amountPaid')}</strong> $900</div>
+                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.paymentDate')}</strong> {paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
+                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.status')}</strong> <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t('studentDashboard.applicationChatPage.i20ControlFee.completed')}</span></div>
                   </div>
                 </div>
               </>
@@ -718,13 +724,13 @@ const ApplicationChatPage: React.FC = () => {
         {activeTab === 'documents' && applicationDetails && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Document Management
-              </h2>
-              <p className="text-slate-200 text-sm mt-1">Request and manage student documents</p>
+                              <h2 className="text-xl font-semibold text-white flex items-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {t('studentDashboard.applicationChatPage.documents.title')}
+                </h2>
+                <p className="text-slate-200 text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
             </div>
             <div className="p-6">
               <DocumentRequestsCard 

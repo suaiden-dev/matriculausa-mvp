@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-
-const options = [
-  { value: 'initial', label: 'Initial (I am outside the US and need an F-1 student visa)' },
-  { value: 'transfer', label: 'Transfer (I am already in the US with an F-1 visa and want to transfer schools)' },
-  { value: 'change_of_status', label: 'Change of Status (I am in the US with another visa and want to change to student)' },
-];
+import { useTranslation } from 'react-i18next';
 
 interface StudentTypeModalProps {
   onConfirm: (type: string) => void;
@@ -12,12 +7,19 @@ interface StudentTypeModalProps {
 }
 
 const StudentTypeModal: React.FC<StudentTypeModalProps> = ({ onConfirm, onClose }) => {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<string | null>(null);
+
+  const options = [
+    { value: 'initial', label: t('studentDashboard.studentTypeModal.initial') },
+    { value: 'transfer', label: t('studentDashboard.studentTypeModal.transfer') },
+    { value: 'change_of_status', label: t('studentDashboard.studentTypeModal.changeOfStatus') },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
-        <h2 className="text-xl font-bold mb-4 text-center">What type of student are you?</h2>
+        <h2 className="text-xl font-bold mb-4 text-center">{t('studentDashboard.studentTypeModal.title')}</h2>
         <div className="space-y-3 mb-6">
           {options.map(opt => (
             <label key={opt.value} className="flex items-center">
@@ -34,13 +36,13 @@ const StudentTypeModal: React.FC<StudentTypeModalProps> = ({ onConfirm, onClose 
           ))}
         </div>
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded bg-gray-200">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 rounded bg-gray-200">{t('studentDashboard.studentTypeModal.cancel')}</button>
           <button
             onClick={() => selected && onConfirm(selected)}
             className="px-4 py-2 rounded bg-blue-600 text-white"
             disabled={!selected}
           >
-            Confirm
+            {t('studentDashboard.studentTypeModal.confirm')}
           </button>
         </div>
       </div>

@@ -58,7 +58,54 @@
     },
     "faq": {
       "title": "Perguntas Frequentes",
-      "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA"
+      "mainTitle": "Tudo o que Você Precisa Saber",
+      "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA",
+      "questions": {
+        "q1": {
+          "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+          "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
+        },
+        "q2": {
+          "question": "O que é a Taxa de Processo de Seleção?",
+          "answer": "A Taxa de Processo de Seleção (US$350) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+        },
+        "q3": {
+          "question": "O que é a Taxa de Bolsa?",
+          "answer": "A Taxa de Bolsa (US$550) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
+        },
+        "q4": {
+          "question": "O que é a Taxa de Candidatura?",
+          "answer": "A Taxa de Candidatura (US$350) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+        },
+        "q5": {
+          "question": "O que é a Taxa de Controle I-20?",
+          "answer": "A Taxa de Controle I-20 (US$900) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
+        },
+        "q6": {
+          "question": "Existem outras taxas que devo conhecer?",
+          "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas sempre serão comunicadas diretamente pela universidade ou por nós antecipadamente."
+        },
+        "q7": {
+          "question": "Como posso pagar essas taxas?",
+          "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação para cada transação."
+        },
+        "q8": {
+          "question": "Minhas informações de pagamento estão seguras?",
+          "answer": "Sim. Todos os pagamentos são processados pelo Stripe, um líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações são criptografadas para sua proteção."
+        },
+        "q9": {
+          "question": "Posso obter reembolso?",
+          "answer": "Você tem direito a reembolso total das taxas pagas se sua candidatura não for bem-sucedida ou você não for aprovado para uma bolsa. No entanto, se você desistir do processo ou mudar de ideia após iniciar a candidatura, as taxas pagas não são reembolsáveis, pois o processamento e suporte já terão começado."
+        },
+        "q10": {
+          "question": "Preciso pagar todas as taxas de uma vez?",
+          "answer": "Não. As taxas são compras separadas e são pagas em etapas conforme você progride no processo. Você paga a Taxa de Processo de Seleção primeiro, depois a Taxa de Bolsa (se aplicável), seguida pela Taxa de Candidatura, e finalmente a Taxa de Controle I-20. Todas são obrigatórias para o fluxo completo, mas não precisam ser pagas simultaneamente."
+        },
+        "q11": {
+          "question": "Com quem posso entrar em contato se tiver dúvidas sobre taxas ou pagamentos?",
+          "answer": "Nossa equipe de suporte está disponível via chat ou email a qualquer momento para responder a qualquer dúvida sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudá-lo a cada passo do caminho!"
+        }
+      }
     },
     "threeSteps": {
       "title": "Três Passos para Sua Educação Americana",
@@ -210,6 +257,693 @@
     "noResults": "Nenhuma bolsa encontrada",
     "resultsFound": "bolsas encontradas"
   },
+  "scholarshipsPage": {
+    "featuredSection": {
+      "title": "Bolsas em Destaque",
+      "subtitle": "Destaques Semanais",
+      "description": "Bolsas selecionadas por nossos especialistas para você"
+    },
+    "allScholarships": {
+      "title": "Todas as Bolsas",
+      "description": "Explore todas as oportunidades de bolsa disponíveis para estudantes internacionais"
+    },
+    "filters": {
+      "min": "Mín",
+      "max": "Máx",
+      "allLevels": "Todos os Níveis",
+      "allFields": "Todos os Campos",
+      "allModes": "Todos os Modos",
+      "allPermissions": "Todas as Permissões",
+      "stem": "STEM",
+      "business": "Negócios",
+      "engineering": "Engenharia",
+      "anyField": "Qualquer Campo",
+      "online": "Online",
+      "onCampus": "No Campus",
+      "hybrid": "Híbrido",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "F1",
+      "loading": "Carregando...",
+      "scholarshipsFound": "bolsas encontradas",
+      "levels": {
+        "all": "Todos os Níveis",
+        "graduate": "Pós-Graduação",
+        "doctorate": "Doutorado",
+        "undergraduate": "Graduação"
+      },
+      "deliveryModes": {
+        "online": "Online",
+        "onCampus": "No Campus",
+        "hybrid": "Híbrido",
+        "mixed": "Misto"
+      }
+    },
+    "scholarshipCard": {
+      "university": "Universidade:",
+      "studyMode": "Modo de Estudo",
+      "workAuthorization": "Autorização de Trabalho",
+      "financialOverview": "Visão Geral Financeira",
+      "originalPrice": "Preço Original",
+      "withScholarship": "Com Bolsa",
+      "perCredit": "Por Crédito",
+      "scholarshipDiscount": "Desconto da Bolsa",
+      "applicationFee": "Taxa de Candidatura",
+      "customFee": "Taxa personalizada pela universidade",
+      "standardFee": "Taxa padrão de candidatura",
+      "expired": "Expirada",
+      "days": "dias",
+      "details": "Detalhes",
+      "applyNow": "Candidatar-se Agora"
+    },
+    "noResults": {
+      "title": "Nenhuma bolsa encontrada",
+      "description": "Tente ajustar seus critérios de busca para descobrir mais oportunidades",
+      "clearFilters": "Limpar Filtros"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Próximo",
+      "page": "Página",
+      "of": "de"
+    },
+    "callToAction": {
+      "readyToStart": "Pronto para Começar?",
+      "readyToTransform": "Pronto para Transformar",
+      "title": "Pronto para Transformar Seu Futuro?",
+      "description": "Junte-se a milhares de estudantes internacionais que conquistaram seus sonhos educacionais através de nossas oportunidades exclusivas de bolsa.",
+      "getStartedToday": "Comece Hoje",
+      "learnMore": "Saiba Mais"
+    },
+    "modal": {
+      "exclusiveScholarship": "Bolsa Exclusiva",
+      "anyField": "Qualquer Campo",
+      "universityHidden": "Universidade Oculta - Desbloqueie com o Processo de Seleção",
+      "universityInfoAvailable": "Informações da Universidade Disponíveis",
+      "financialBreakdown": "Detalhamento Financeiro",
+      "originalAnnualCost": "Custo Anual Original",
+      "withScholarship": "Com Bolsa",
+      "annualSavings": "Economia Anual",
+      "costPerCredit": "Custo por Crédito",
+      "totalCredits": "Total de Créditos",
+      "coverage": "Cobertura",
+      "programInformation": "Informações do Programa",
+      "academicLevel": "Nível Acadêmico",
+      "notSpecified": "Não especificado",
+      "studyMode": "Modo de Estudo",
+      "onlineLearning": "Aprendizado Online",
+      "onCampus": "No Campus",
+      "hybridMode": "Modo Híbrido",
+      "programDuration": "Duração do Programa",
+      "language": "Idioma",
+      "workAuthorization": "Autorização de Trabalho",
+      "programDescription": "Descrição do Programa",
+      "applicationDeadline": "Prazo de Candidatura",
+      "daysLeft": "dias restantes",
+      "deadline": "Prazo:",
+      "universityInformation": "Informações da Universidade",
+      "universityNameAvailable": "Nome da Universidade Disponível",
+      "ranking": "Classificação:",
+      "universityDetailsLocked": "🔒 Detalhes da universidade disponíveis após pagamento do Processo de Seleção.",
+      "requirements": "Requisitos",
+      "additionalBenefits": "Benefícios Adicionais"
+    }
+  },
+  "universitiesPage": {
+    "header": {
+      "partnerUniversities": "Universidades Parceiras",
+      "title": "Universidades Americanas",
+      "subtitle": "Descubra instituições de classe mundial oferecendo educação excepcional e oportunidades de bolsa."
+    },
+    "search": {
+      "placeholder": "Buscar universidades...",
+      "allTypes": "Todos os Tipos",
+      "private": "Privada",
+      "public": "Pública",
+      "allStates": "Todos os Estados",
+      "universitiesCount": "universidades",
+      "featured": "em destaque"
+    },
+    "featured": {
+      "title": "Universidades em Destaque",
+      "subtitle": "Destaques Semanais",
+      "description": "Descubra as universidades selecionadas por nossos especialistas para você",
+      "featured": "Destaque",
+      "more": "mais"
+    },
+    "card": {
+      "learnMore": "Saiba Mais"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Próximo",
+      "page": "Página",
+      "of": "de"
+    },
+    "noResults": {
+      "title": "Nenhuma universidade encontrada",
+      "description": "Tente ajustar seus critérios de busca"
+    },
+    "callToAction": {
+      "title": "Pronto para Se Candidatar à Sua",
+      "titleHighlight": "Universidade dos Sonhos?",
+      "description": "Comece sua jornada com nossa plataforma com IA e desbloqueie oportunidades exclusivas de bolsa.",
+      "findScholarships": "Encontrar Bolsas",
+      "learnMore": "Saiba Mais"
+    }
+  },
+  "universityDetailPage": {
+    "loading": "Carregando detalhes da universidade...",
+    "notFound": {
+      "title": "Universidade não encontrada",
+      "backLink": "Voltar para Universidades"
+    },
+    "editProfile": {
+      "editButton": "Editar Perfil",
+      "saveButton": "Salvar",
+      "cancelButton": "Cancelar",
+      "uploadingBanner": "Enviando...",
+      "changeBanner": "Alterar Banner",
+      "yourUniversity": "Sua Universidade",
+      "successMessage": "Perfil atualizado com sucesso!",
+      "errorMessage": "Falha ao atualizar perfil. Tente novamente."
+    },
+    "placeholders": {
+      "universityName": "Nome da Universidade",
+      "location": "Localização",
+      "description": "Descreva sua universidade...",
+      "addNewProgram": "Adicionar novo programa",
+      "street": "Rua",
+      "city": "Cidade",
+      "state": "Estado",
+      "zipCode": "CEP",
+      "country": "País",
+      "website": "https://universidade.edu.br"
+    },
+    "sections": {
+      "about": "Sobre",
+      "academicPrograms": "Programas Acadêmicos",
+      "contactInformation": "Informações de Contato",
+      "address": "Endereço",
+      "website": "Site",
+      "scholarshipOpportunities": "Oportunidades de Bolsa"
+    },
+    "contact": {
+      "phone": "Telefone",
+      "email": "Email",
+      "admissionsEmail": "Email de Admissões",
+      "fax": "Fax"
+    },
+    "buttons": {
+      "add": "Adicionar",
+      "remove": "Remover",
+      "visitWebsite": "Visitar Site Oficial",
+      "viewScholarships": "Ver Bolsas"
+    },
+    "messages": {
+      "noProgramsListed": "Nenhum programa listado",
+      "noWebsiteProvided": "Nenhum site fornecido",
+      "scholarshipDescription": "Descubra bolsas exclusivas disponíveis na",
+      "uploadError": "Falha ao enviar imagem. Tente novamente."
+    }
+  },
+  "authPage": {
+    "login": {
+      "title": "Login",
+      "subtitle": "Entre para acessar seu painel e continuar sua jornada educacional",
+      "noAccount": "Não tem uma conta?",
+      "signUpHere": "Cadastre-se aqui",
+      "emailAddress": "Endereço de Email",
+      "password": "Senha",
+      "enterEmail": "Digite seu email",
+      "enterPassword": "Digite sua senha",
+      "forgotPassword": "Esqueceu sua senha?",
+      "signingIn": "Entrando...",
+      "signIn": "Entrar",
+      "loginFailed": "Falha no Login"
+    },
+    "register": {
+      "title": "Criar Sua Conta",
+      "subtitle": "Crie sua conta e desbloqueie oportunidades exclusivas de bolsa através de nossa plataforma com IA",
+      "hasAccount": "Já tem uma conta?",
+      "signInHere": "Entre aqui",
+      "tabStudent": "Sou um Estudante",
+      "tabUniversity": "Sou uma Universidade",
+      "studentRegistration": "Registro de Estudante",
+      "universityRegistration": "Registro de Universidade",
+      "studentSubtitle": "Comece sua jornada para a excelência educacional americana",
+      "universitySubtitle": "Parceiro conosco para alcançar estudantes internacionais talentosos",
+      "fullName": "Nome Completo *",
+      "emailAddress": "Endereço de Email *",
+      "phoneNumber": "Número de Telefone *",
+      "password": "Senha *",
+      "confirmPassword": "Confirmar Senha *",
+      "enterFullName": "Digite seu nome completo",
+      "enterEmail": "Digite seu email",
+      "enterPhone": "Digite seu número de telefone",
+      "createPassword": "Crie uma senha",
+      "confirmYourPassword": "Confirme sua senha",
+      "contactPersonName": "Nome da Pessoa de Contato *",
+      "universityName": "Nome da Universidade *",
+      "officialEmail": "Email Oficial *",
+      "enterUniversityName": "Digite o nome da universidade",
+      "yourFullName": "Seu nome completo",
+      "officialUniversityEmail": "Email oficial da universidade",
+      "enterContactPhone": "Digite o telefone de contato",
+      "referralCode": {
+        "title": "Código de Referência do Amigo (Opcional)",
+        "placeholder": "Digite o código de referência do amigo (ex: MATR1234)",
+        "applied": "Código de referência aplicado",
+        "valid": "Código de referência válido! Você receberá $50 de desconto na taxa do processo de seleção.",
+        "appliedFromLink": "(Aplicado do link de referência)",
+        "invalid": "Código de referência inválido. Verifique e tente novamente."
+      },
+      "sellerReferralCode": {
+        "title": "Código de Referência do Vendedor (Opcional)",
+        "placeholder": "Digite o código de referência do vendedor (ex: SELLER_ABC123)",
+        "applied": "Código de vendedor aplicado",
+        "valid": "Código de vendedor válido! Você será conectado a um vendedor profissional.",
+        "appliedFromLink": "(Aplicado do link de referência)",
+        "invalid": "Código de referência do vendedor inválido. Verifique e tente novamente."
+      },
+      "termsAndConditions": {
+        "title": "Li e concordo com os",
+        "termsOfUse": "Termos de Uso",
+        "and": "e",
+        "privacyPolicy": "Política de Privacidade",
+        "description": "(você será solicitado a ler ambos os documentos)."
+      },
+      "createAccount": "Criar Conta",
+      "creatingAccount": "Criando Conta...",
+      "createStudentAccount": "Criar Conta de Estudante",
+      "createUniversityAccount": "Criar Conta de Universidade"
+    },
+    "modals": {
+      "verification": {
+        "title": "Registro bem-sucedido!",
+        "description": "Um link de verificação foi enviado para seu email.<br />Verifique sua caixa de entrada (e pasta de spam/lixo eletrônico) para completar seu login e acessar o painel.",
+        "gotIt": "Entendi"
+      },
+      "terms": {
+        "title": "Termos de Uso",
+        "close": "Fechar modal",
+        "cancel": "Cancelar",
+        "continueToPrivacy": "Continuar para Política de Privacidade",
+        "scrollToBottomFirst": "Role para o Final Primeiro",
+        "scrollIndicator": "Por favor, role para o final para continuar para a Política de Privacidade",
+        "content": {
+          "title": "Termos de Uso",
+          "acceptance": {
+            "title": "1. ACEITAÇÃO DOS TERMOS",
+            "description": "Ao acessar e usar a plataforma Matrícula USA, você concorda em cumprir e estar vinculado a estes Termos de Serviço. Se você não concordar com qualquer parte destes termos, não deve usar nossos serviços."
+          },
+          "serviceDescription": {
+            "title": "2. DESCRIÇÃO DO SERVIÇO",
+            "description": "Matrícula USA é uma plataforma SaaS (Software as a Service) que oferece:",
+            "emailHub": {
+              "title": "2.1 Email Hub para Universidades",
+              "features": [
+                "Integração segura com contas Gmail através do OAuth 2.0",
+                "Interface profissional para gerenciamento de email institucional",
+                "Sistema organizado de abas (Caixa de Entrada, Enviados, Favoritos, Rascunhos, Spam, Lixeira)",
+                "Contagens de email em tempo real",
+                "Funcionalidade de encaminhamento inteligente",
+                "Compositor integrado para novos emails",
+                "Busca avançada e filtros",
+                "Interface responsiva para todos os dispositivos"
+              ]
+            },
+            "scholarshipManagement": {
+              "title": "2.2 Gerenciamento de Bolsas",
+              "features": [
+                "Criação e gerenciamento de bolsas",
+                "Processo de aplicação de estudantes",
+                "Gerenciamento de documentos e status de aplicação",
+                "Sistema de pagamento integrado"
+              ]
+            }
+          },
+          "licenseGrant": {
+            "title": "3. CONCESSÃO DE LICENÇA",
+            "limitedLicense": {
+              "title": "3.1 Licença Limitada",
+              "description": "Concedemos a você uma licença limitada, não exclusiva, não transferível e revogável para acessar e usar a plataforma Matrícula USA de acordo com estes Termos."
+            },
+            "restrictions": {
+              "title": "3.2 Restrições",
+              "description": "Você concorda em não:",
+              "items": [
+                "Usar a plataforma para propósitos ilegais ou não autorizados",
+                "Tentar acessar sistemas ou dados não autorizados",
+                "Interferir na operação da plataforma",
+                "Compartilhar credenciais de acesso",
+                "Usar a plataforma para spam ou conteúdo malicioso"
+              ]
+            }
+          },
+          "thirdPartyDependencies": {
+            "title": "4. DEPENDÊNCIAS DE TERCEIROS",
+            "googleApis": {
+              "title": "4.1 APIs do Google",
+              "description": "A funcionalidade \"Email Hub\" depende das APIs do Google e está sujeita aos Termos de Serviço do Google. Ao usar esta funcionalidade, você concorda em cumprir:",
+              "items": [
+                "Termos de Serviço do Google",
+                "Política de Privacidade do Google",
+                "Política de Dados do Usuário dos Serviços de API do Google"
+              ]
+            },
+            "otherProviders": {
+              "title": "4.2 Outros Provedores",
+              "description": "Nossa plataforma também usa:",
+              "items": [
+                "Supabase: Para armazenamento de dados e autenticação",
+                "Stripe: Para processamento de pagamentos",
+                "Vercel/Netlify: Para hospedagem da aplicação"
+              ]
+            }
+          },
+          "intellectualProperty": {
+            "title": "5. PROPRIEDADE INTELECTUAL",
+            "platformOwnership": {
+              "title": "5.1 Propriedade da Plataforma",
+              "description": "A plataforma Matrícula USA, incluindo seu código, design, recursos e conteúdo, é propriedade exclusiva da Matrícula USA e é protegida pelas leis de propriedade intelectual."
+            },
+            "customerData": {
+              "title": "5.2 Dados do Cliente",
+              "description": "Todos os dados do cliente, incluindo:",
+              "items": [
+                "Conteúdo de email",
+                "Informações pessoais",
+                "Documentos enviados",
+                "Histórico de aplicações"
+              ],
+              "note": "Permanecem propriedade exclusiva do cliente. Matrícula USA atua apenas como processador destes dados.",
+              "conclusion": "É importante ressaltar que, embora os dados sejam de propriedade do cliente, a Matrícula USA mantém o direito de processar e analisar esses dados para fornecer os serviços contratados, sempre em conformidade com nossa Política de Privacidade e as leis de proteção de dados aplicáveis."
+            }
+          },
+          "responsibilities": {
+            "title": "6. RESPONSABILIDADES",
+            "userResponsibilities": {
+              "title": "6.1 Responsabilidades do Usuário",
+              "items": [
+                "Fornecer informações verdadeiras e precisas",
+                "Manter a segurança das credenciais",
+                "Usar a plataforma responsavelmente",
+                "Cumprir as leis aplicáveis"
+              ]
+            },
+            "matriculaResponsibilities": {
+              "title": "6.2 Responsabilidades da Matrícula USA",
+              "items": [
+                "Manter a operação da plataforma",
+                "Proteger os dados do usuário de acordo com nossa Política de Privacidade",
+                "Fornecer suporte técnico adequado",
+                "Notificar sobre mudanças significativas"
+              ]
+            }
+          },
+          "limitationOfLiability": {
+            "title": "7. LIMITAÇÃO DE RESPONSABILIDADE",
+            "description": "Matrícula USA não será responsável por:",
+            "items": [
+              "Perda de dados devido a falhas técnicas",
+              "Interrupções temporárias de serviço",
+              "Danos indiretos ou consequenciais",
+              "Ações de terceiros (Google, Stripe, etc.)"
+            ]
+          },
+          "suspensionAndTermination": {
+            "title": "8. SUSPENSÃO E TERMINAÇÃO",
+            "suspension": {
+              "title": "8.1 Suspensão",
+              "description": "Podemos suspender seu acesso se:",
+              "items": [
+                "Você violar estes Termos",
+                "Você usar a plataforma de forma abusiva",
+                "Você não fizer os pagamentos devidos"
+              ]
+            },
+            "termination": {
+              "title": "8.2 Terminação",
+              "description": "Você pode encerrar sua conta a qualquer momento. Após a terminação:",
+              "items": [
+                "Seus dados serão excluídos de acordo com nossa Política de Privacidade",
+                "Integrações do Gmail serão desconectadas",
+                "O acesso à plataforma será revogado"
+              ]
+            }
+          },
+          "modifications": {
+            "title": "9. MODIFICAÇÕES",
+            "description": "Reservamo-nos o direito de modificar estes Termos a qualquer momento. Mudanças significativas serão comunicadas com 30 dias de antecedência."
+          },
+          "governingLaw": {
+            "title": "10. LEI APLICÁVEL",
+            "jurisdiction": {
+              "title": "10.1 Jurisdição",
+              "description": "Estes Termos são regidos pelas leis do Estado da Califórnia, Estados Unidos."
+            },
+            "disputeResolution": {
+              "title": "10.2 Resolução de Disputas",
+              "description": "Qualquer disputa será resolvida nos tribunais do Condado de Los Angeles, Califórnia, com renúncia expressa de qualquer outro foro, não importa quão privilegiado."
+            }
+          },
+          "arbitration": {
+            "title": "11. ARBITRAGEM",
+            "description": "Qualquer disputa decorrente destes Termos será resolvida através de arbitragem obrigatória de acordo com as regras da American Arbitration Association."
+          },
+          "generalProvisions": {
+            "title": "12. DISPOSIÇÕES GERAIS",
+            "entireAgreement": {
+              "title": "12.1 Acordo Completo",
+              "description": "Estes Termos constituem o acordo completo entre as partes."
+            },
+            "waiver": {
+              "title": "12.2 Renúncia",
+              "description": "A falha em exercer qualquer direito não constitui renúncia."
+            },
+            "severability": {
+              "title": "12.3 Divisibilidade",
+              "description": "Se qualquer disposição for considerada inválida, as disposições restantes permanecerão em vigor."
+            }
+          },
+          "contact": {
+            "title": "13. CONTATO",
+            "description": "Para perguntas sobre estes Termos:",
+            "email": {
+              "label": "Email",
+              "value": "info@matriculausa.com"
+            },
+            "phone": {
+              "label": "Telefone",
+              "value": "+1 (213) 676-2544"
+            },
+            "address": {
+              "label": "Endereço",
+              "value": "Los Angeles - CA - USA"
+            }
+          }
+        }
+      },
+      "privacy": {
+        "title": "Política de Privacidade",
+        "close": "Fechar modal",
+        "cancel": "Cancelar",
+        "accept": "Aceito a Política de Privacidade",
+        "scrollToBottomFirst": "Role para o Final Primeiro",
+        "scrollIndicator": "Por favor, role para o final para aceitar a política de privacidade",
+        "content": {
+          "title": "Política de Privacidade",
+          "introduction": {
+            "title": "1. INTRODUÇÃO",
+            "description": "Matrícula USA (\"nós\", \"nosso\", \"nos\") está comprometida em proteger a privacidade e dados pessoais de nossos usuários. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações quando você usa nossa plataforma Email Hub para universidades."
+          },
+          "dataCollected": {
+            "title": "2. DADOS COLETADOS E ACESSADOS",
+            "userAccountData": {
+              "title": "2.1 Dados da Conta do Usuário",
+              "items": [
+                "Nome completo",
+                "Endereço de email",
+                "Número de telefone",
+                "País de origem",
+                "Perfil acadêmico (nível de estudo, área de interesse, GPA, proficiência em inglês)",
+                "Informações de pagamento (através do Stripe)"
+              ]
+            },
+            "gmailData": {
+              "title": "2.2 Dados do Gmail (Email Hub)",
+              "description": "Com base na análise do código de nossa plataforma, quando você conecta sua conta Gmail, acessamos os seguintes dados:",
+              "readonlyPermission": {
+                "title": "Permissão gmail.readonly:",
+                "items": [
+                  "Lista de emails (ID, threadId, remetente, destinatário, assunto)",
+                  "Conteúdo completo do email (corpo em texto e HTML)",
+                  "Metadados do email (data, prioridade, anexos, rótulos)",
+                  "Contagem de emails por categoria (Caixa de Entrada, Enviados, Favoritos, Rascunhos, Spam, Lixeira)",
+                  "Status de leitura do email",
+                  "Informações de thread/conversa"
+                ]
+              },
+              "sendPermission": {
+                "title": "Permissão gmail.send:",
+                "items": [
+                  "Capacidade de enviar emails através da API do Gmail",
+                  "Capacidade de encaminhar emails existentes",
+                  "Capacidade de responder a emails"
+                ]
+              }
+            }
+          },
+          "howWeUse": {
+            "title": "3. COMO USAMOS SUAS INFORMAÇÕES",
+            "primaryEmailHub": {
+              "title": "3.1 Funcionalidade Principal do Email Hub",
+              "items": [
+                "Visualização de Email: Exibimos o conteúdo completo do email para facilitar o gerenciamento institucional",
+                "Organização por Categoria: Organizamos emails em abas (Caixa de Entrada, Enviados, Favoritos, etc.) com contagens em tempo real",
+                "Encaminhamento Inteligente: Permitimos encaminhar emails com conteúdo completo preservado",
+                "Composição de Novos Emails: Interface integrada para criar e enviar novos emails institucionais",
+                "Busca e Filtros: Funcionalidade de busca para localizar emails específicos"
+              ]
+            },
+            "otherUses": {
+              "title": "3.2 Outros Usos",
+              "items": [
+                "Gerenciamento de bolsas e aplicações",
+                "Processamento de pagamentos",
+                "Comunicação com usuários",
+                "Melhoria da plataforma"
+              ]
+            }
+          },
+          "dataSecurity": {
+            "title": "4. SEGURANÇA DOS DADOS",
+            "encryptionAndStorage": {
+              "title": "4.1 Criptografia e Armazenamento",
+              "items": [
+                "Tokens OAuth: Armazenamos tokens de acesso e atualização do Gmail criptografados usando AES-GCM com chaves derivadas de PBKDF2",
+                "Dados Sensíveis: Todos os dados sensíveis são criptografados antes do armazenamento no Supabase",
+                "Transmissão: Todas as comunicações são protegidas por HTTPS/TLS"
+              ]
+            },
+            "securityMeasures": {
+              "title": "4.2 Medidas de Segurança",
+              "items": [
+                "Autenticação OAuth 2.0 segura",
+                "Tokens de acesso com expiração automática",
+                "Renovação automática de tokens expirados",
+                "Logs detalhados para auditoria de segurança"
+              ]
+            }
+          },
+          "googleCompliance": {
+            "title": "5. CONFORMIDADE COM O GOOGLE",
+            "important": "IMPORTANTE",
+            "description": "O uso e transferência de informações recebidas das APIs do Google para qualquer outro aplicativo pela Matrícula USA aderirá à Política de Dados do Usuário dos Serviços de API do Google, incluindo os requisitos de Uso Limitado.",
+            "items": [
+              "Usamos apenas permissões necessárias (gmail.readonly e gmail.send)",
+              "Não compartilhamos dados do Gmail com terceiros",
+              "Não usamos dados do Gmail para publicidade ou análise de perfil",
+              "Respeitamos todas as políticas de uso da API do Google"
+            ]
+          },
+          "yourRights": {
+            "title": "6. SEUS DIREITOS (CCPA/Leis Estaduais)",
+            "accessAndPortability": {
+              "title": "6.1 Acesso e Portabilidade",
+              "items": [
+                "Solicitar acesso a todos os seus dados pessoais",
+                "Receber seus dados em formato estruturado e legível por máquina"
+              ]
+            },
+            "correctionAndUpdate": {
+              "title": "6.2 Correção e Atualização",
+              "items": [
+                "Corrigir dados pessoais imprecisos ou incompletos",
+                "Atualizar suas informações de perfil a qualquer momento"
+              ]
+            },
+            "deletion": {
+              "title": "6.3 Exclusão",
+              "items": [
+                "Solicitar exclusão de seus dados pessoais",
+                "Desconectar sua conta Gmail a qualquer momento",
+                "Excluir sua conta da plataforma"
+              ]
+            },
+            "consentWithdrawal": {
+              "title": "6.4 Retirada de Consentimento",
+              "items": [
+                "Retirar consentimento para uso de dados do Gmail",
+                "Desconectar integrações de terceiros"
+              ]
+            }
+          },
+          "dataRetention": {
+            "title": "7. RETENÇÃO DE DADOS",
+            "items": [
+              "Dados da Conta: Mantidos enquanto sua conta estiver ativa",
+              "Tokens OAuth: Armazenados até você desconectar ou excluir sua conta",
+              "Logs de Segurança: Mantidos por 12 meses para auditoria",
+              "Dados de Pagamento: Mantidos conforme exigido por lei"
+            ]
+          },
+          "dataSharing": {
+            "title": "8. COMPARTILHAMENTO DE DADOS",
+            "description": "Não vendemos, alugamos ou compartilhamos seus dados pessoais com terceiros, exceto:",
+            "items": [
+              "Provedores de serviços essenciais (Supabase, Stripe, Google)",
+              "Quando exigido por lei",
+              "Com seu consentimento explícito"
+            ]
+          },
+          "childrensPrivacy": {
+            "title": "9. PRIVACIDADE DE CRIANÇAS",
+            "description": "Nossos serviços não são destinados a crianças menores de 13 anos. Não coletamos intencionalmente informações pessoais de crianças menores de 13 anos."
+          },
+          "internationalDataTransfers": {
+            "title": "10. TRANSFERÊNCIAS INTERNACIONAIS DE DADOS",
+            "description": "Seus dados podem ser processados em países diferentes do seu. Garantimos que salvaguardas apropriadas estejam em vigor para tais transferências."
+          },
+          "contact": {
+            "title": "11. CONTATO",
+            "description": "Para exercer seus direitos ou esclarecer dúvidas sobre esta política:",
+            "email": {
+              "label": "Email",
+              "value": "info@matriculausa.com"
+            },
+            "phone": {
+              "label": "Telefone",
+              "value": "+1 (213) 676-2544"
+            },
+            "address": {
+              "label": "Endereço",
+              "value": "Los Angeles - CA - USA"
+            }
+          }
+        }
+      }
+    }
+  },
+
+    "messages": {
+      "checkEmail": "Verifique seu email!",
+      "studentVerification": "Um link de confirmação foi enviado para seu email. Verifique sua caixa de entrada (e pasta de spam) para ativar sua conta.",
+      "passwordsNotMatch": "As senhas não coincidem",
+      "invalidPasswordChars": "A senha contém caracteres inválidos. Apenas letras, números e @ # $ ! são permitidos.",
+      "invalidPhone": "Por favor, digite um número de telefone válido com código do país",
+      "mustAcceptTerms": "Você deve aceitar os Termos de Uso e Política de Privacidade para continuar",
+      "authenticationFailed": "Falha na autenticação. Tente novamente.",
+      "invalidCredentials": "Email ou senha inválidos. Verifique suas credenciais e tente novamente.",
+      "emailNotConfirmed": "Verifique seu email e clique no link de confirmação antes de fazer login.",
+      "tooManyRequests": "Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.",
+      "userNotFound": "Nenhuma conta encontrada com este endereço de email. Verifique seu email ou crie uma nova conta.",
+      "weakPassword": "A senha é muito fraca. Escolha uma senha mais forte.",
+      "invalidEmail": "Digite um endereço de email válido.",
+      "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
+      "registrationFailed": "Falha no Registro"
+    },
   "features": {
     "whyChoose": "Por Que Escolher MatriculaUSA?",
     "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
@@ -355,7 +1089,84 @@
       "maxValue": "Valor máximo",
       "deadline": "Prazo (dias)",
       "applyFilters": "Aplicar Filtros",
-      "scholarshipsFound": "bolsas encontradas"
+      "scholarshipsFound": "bolsas encontradas",
+      "filters": {
+        "applying": "Aplicando...",
+        "loading": "Carregando...",
+        "applied": "Aplicado!",
+        "clearAllFilters": "Limpar Todos os Filtros",
+        "clear": "Limpar",
+        "active": "ativo",
+        "academicLevel": "Nível Acadêmico",
+        "fieldOfStudy": "Área de Estudo",
+        "studyMode": "Modo de Estudo",
+        "workAuthorization": "Autorização de Trabalho",
+        "minValue": "Valor Mín",
+        "maxValue": "Valor Máx",
+        "deadlineDays": "Prazo (dias)",
+        "undergraduate": "Graduação",
+        "graduate": "Pós-graduação",
+        "postgraduate": "Pós-graduação",
+        "stem": "STEM",
+        "business": "Negócios",
+        "engineering": "Engenharia",
+        "anyField": "Qualquer Área",
+        "online": "Online",
+        "inPerson": "Presencial",
+        "hybrid": "Híbrido",
+        "opt": "OPT",
+        "cpt": "CPT",
+        "f1": "F1",
+        "h1b": "H1B",
+        "l1": "L1",
+        "search": "Busca:",
+        "level": "Nível:",
+        "field": "Área:",
+        "mode": "Modo:",
+        "work": "Trabalho:",
+        "min": "Mín:",
+        "max": "Máx:",
+        "deadline": "Prazo:",
+        "days": "dias"
+      },
+      "featuredScholarships": {
+        "title": "Bolsas em Destaque",
+        "subtitle": "Essas bolsas são exibidas em destaque e podem ter benefícios especiais",
+        "featured": "Destaque",
+        "loading": "Carregando bolsas em destaque...",
+        "noFeatured": "Nenhuma Bolsa em Destaque",
+        "checkBackLater": "Verifique mais tarde por oportunidades destacadas"
+      },
+      "scholarshipCard": {
+        "featured": "Destaque",
+        "exclusive": "Exclusiva",
+        "university": "Universidade:",
+        "studyMode": "Modo de Estudo",
+        "workAuthorization": "Autorização de Trabalho",
+        "financialOverview": "Visão Geral Financeira",
+        "originalPrice": "Preço Original:",
+        "withScholarship": "Com Bolsa:",
+        "perCredit": "Por Crédito:",
+        "level": "Nível",
+        "deadline": "Prazo",
+        "daysLeft": "dias restantes",
+        "showDetails": "Mostrar Detalhes",
+        "show": "Mostrar",
+        "view": "Ver",
+        "details": "Detalhes",
+        "alreadyApplied": "Já Candidatou",
+        "deselect": "Desmarcar",
+        "selectScholarship": "Selecionar Bolsa",
+        "checking": "Verificando...",
+        "onCampus": "No Campus",
+        "mixed": "Misto",
+        "more": "mais"
+      },
+      "noResults": {
+        "title": "Nenhuma bolsa encontrada",
+        "description": "Tente ajustar seus critérios de busca ou limpar filtros para descobrir mais oportunidades.",
+        "clearAllFilters": "Limpar Todos os Filtros"
+      }
     },
     "selectedScholarships": {
       "title": "Bolsas Selecionadas",
@@ -465,48 +1276,689 @@
       "helpSupport": "Ajuda e Suporte",
       "smartAssistant": "Assistente Inteligente"
     },
-    "footer": {
-      "company": {
-        "title": "Empresa",
-        "about": "Sobre Nós",
-        "careers": "Carreiras",
-        "contact": "Contato",
-        "blog": "Blog"
+    "favorites": {
+      "showFavoritesOnly": "Mostrar Apenas Favoritos",
+      "showingFavorites": "Mostrando Favoritos",
+      "favoritesCount": "favoritos"
+    },
+    "cartPage": {
+      "title": "Bolsas Selecionadas",
+      "welcomeMessage": "Bem-vindo ao seu carrinho de bolsas!",
+      "description": "Aqui você pode gerenciar suas bolsas selecionadas e prosseguir com o processo de aplicação.",
+      "noScholarshipsSelected": "Nenhuma bolsa selecionada",
+      "notSelectedYet": "Você ainda não selecionou nenhuma bolsa para aplicar.",
+      "browseScholarships": "Procurar Bolsas",
+      "documentsApproved": "Documentos Aprovados! Pronto para prosseguir com o pagamento.",
+      "congratulations": "Parabéns! Seus documentos foram aprovados.",
+      "autoSelected": "Sua bolsa foi automaticamente selecionada para pagamento.",
+      "selectOneScholarship": "Por favor, selecione uma bolsa abaixo para prosseguir com o pagamento da taxa de aplicação.",
+      "selected": "Selecionada",
+      "select": "Selecionar",
+      "readyToApply": "Pronto para Aplicar!",
+      "completeApplication": "Complete sua aplicação com a taxa única",
+      "applicationFee": "Taxa de Aplicação",
+      "customFeeSet": "Taxa personalizada definida pela universidade",
+      "securePayment": "✓ Pagamento seguro • ✓ Confirmação instantânea • ✓ Política de reembolso completa",
+      "payApplicationFee": "Pagar Taxa de Aplicação",
+      "nextStep": "Próximo Passo",
+      "processing": "Processando...",
+      "clearCart": "Limpar Carrinho"
+    },
+    "studentTypeModal": {
+      "title": "Que tipo de estudante você é?",
+      "initial": "Inicial (Estou fora dos EUA e preciso de um visto de estudante F-1)",
+      "transfer": "Transferência (Já estou nos EUA com visto F-1 e quero transferir escolas)",
+      "changeOfStatus": "Mudança de Status (Estou nos EUA com outro visto e quero mudar para estudante)",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar"
+    },
+    "documentsAndScholarshipChoice": {
+      "title": "Configuração do Processo de Aplicação",
+      "subtitle": "Complete seu processo de aplicação de estudante selecionando seu status e fazendo upload dos documentos necessários",
+      "step1Title": "Qual é seu status atual nos EUA?",
+      "step1Description": "Por favor, selecione seu status atual de imigração para nos ajudar a fornecer a melhor orientação para seu processo de aplicação.",
+      "firstTimeF1": "Primeira Aplicação de Visto F-1",
+      "firstTimeF1Description": "Estou fora dos EUA e preciso de um visto de estudante F-1 para estudar na América.",
+      "schoolTransfer": "Transferência de Escola",
+      "schoolTransferDescription": "Já estou nos EUA com visto de estudante F-1 e quero transferir escolas.",
+      "statusChange": "Mudança de Status",
+      "statusChangeDescription": "Já estou nos EUA com outro visto (ex: turista) e quero mudar meu status para estudante.",
+      "continueToDocuments": "Continuar para Documentos",
+      "saving": "Salvando...",
+      "step2Title": "Fazer Upload dos Documentos Necessários",
+      "step2Description": "Por favor, faça upload dos seguintes documentos para prosseguir com seu processo de aplicação.",
+      "step2Note": "Todos os arquivos devem estar claros e legíveis. Cada campo aceita apenas um arquivo.",
+      "passport": "Passaporte",
+      "passportDescription": "Documento de passaporte válido",
+      "diploma": "Diploma do Ensino Médio",
+      "diplomaDescription": "Diploma oficial do ensino médio ou certificado",
+      "fundsProof": "Comprovante de Fundos",
+      "fundsProofDescription": "Extrato bancário ou documentação financeira",
+      "chooseFile": "Escolher arquivo",
+      "noFileChosen": "Nenhum arquivo escolhido",
+      "continueToManualReview": "Continuar para Revisão Manual",
+      "uploadDocuments": "Fazer Upload e Analisar Documentos",
+      "uploadingDocuments": "Fazendo Upload dos Documentos...",
+      "analyzingDocuments": "Analisando Documentos...",
+      "documentsApprovedTitle": "Documentos Aprovados! ✅",
+      "documentsApprovedDescription": "Excelente! Seus documentos foram aprovados e você está pronto para prosseguir com o pagamento da taxa de aplicação.",
+      "proceedToPayment": "Prosseguir para Pagamento",
+      "analyzingOverlayTitle": "Analisando seus documentos...",
+      "analyzingOverlayDescription": "Isso pode levar até 40 segundos. Por favor, não feche esta janela."
+    },
+    "manualReview": {
+      "title": "Revisão Manual de Documentos",
+      "subtitle": "Alguns de seus documentos precisam de verificação manual pela universidade. Você pode reanexar os arquivos problemáticos abaixo ou confirmar que todas as informações estão precisas para prosseguir com a revisão manual.",
+      "reviewDocumentsTitle": "Revise Seus Documentos",
+      "reviewDocumentsDescription": "Por favor, revise cada documento abaixo e faça as correções necessárias",
+      "passport": "Passaporte",
+      "diploma": "Diploma do Ensino Médio",
+      "fundsProof": "Comprovante de Fundos",
+      "universityRequestedChanges": "A universidade solicitou alterações para este documento",
+      "usingCurrentFile": "Usando arquivo atual:",
+      "uploadReplacementFile": "Fazer upload de arquivo de substituição:",
+      "chooseFile": "Escolher arquivo",
+      "noFileChosen": "Nenhum arquivo escolhido",
+      "useCurrentFile": "Usar arquivo atual (desmarque para fazer upload de um novo)",
+      "declarationOfAccuracy": "Declaração de Precisão:",
+      "declarationText": "Confirmo que todas as informações e documentos fornecidos são precisos e verdadeiros para o melhor do meu conhecimento. Entendo que fornecer informações falsas pode resultar na rejeição da minha aplicação.",
+      "cancel": "Cancelar",
+      "submitForManualReview": "Enviar para Revisão Manual",
+      "submitting": "Enviando...",
+      "errorMessage": "Mensagem de Erro"
+    },
+    "myApplications": {
+      "title": "Minhas Aplicações",
+      "subtitle": "Acompanhe o progresso de todas as suas aplicações para bolsas de estudo",
+      "totalApplications": "Total de Aplicações",
+      "approved": "Aprovadas",
+      "pending": "Pendentes",
+      "stayUpdated": "Mantenha-se Atualizado",
+      "important": "Importante:",
+      "emailNotification": "Você receberá notificações por email sobre o status da sua aplicação. Verifique sua caixa de entrada regularmente.",
+      "steps": {
+        "step1Title": "Enviar Documentos",
+        "step1Description": "Faça upload do passaporte, diploma e comprovante de fundos",
+        "step2Title": "Revisão da Universidade",
+        "step2Description": "A aplicação aparece como Pendente até ser aprovada",
+        "step3Title": "Pagar Taxa de Aplicação",
+        "step3Description": "Garanta sua vaga na bolsa aprovada",
+        "step4Title": "Pagar Taxa da Bolsa",
+        "step4Description": "Complete a matrícula e comece seu programa"
       },
-      "students": {
-        "title": "Para Estudantes",
-        "scholarships": "Bolsas",
-        "universities": "Universidades",
-        "howItWorks": "Como Funciona",
-        "support": "Suporte"
+      "noApplications": {
+        "title": "Nenhuma aplicação ainda",
+        "description": "Comece a se candidatar a bolsas para acompanhar seu progresso aqui. Vamos ajudá-lo a encontrar as melhores oportunidades que correspondam ao seu perfil.",
+        "findScholarships": "Encontrar Bolsas",
+        "applyEasily": "Candidatar-se Facilmente",
+        "trackProgress": "Acompanhar Progresso",
+        "browseOpportunities": "Navegue por centenas de oportunidades",
+        "simpleProcess": "Processo de candidatura simples com orientação",
+        "monitorRealTime": "Monitore suas candidaturas em tempo real"
       },
-      "universities": {
-        "title": "Para Universidades",
-        "partners": "Torne-se um Parceiro",
-        "dashboard": "Painel da Universidade",
-        "resources": "Recursos"
+      "sections": {
+        "approvedByUniversity": "Aprovadas pela Universidade",
+        "pendingAndInProgress": "Pendentes e em Andamento",
+        "approved": "aprovadas",
+        "applications": "aplicações"
       },
-      "legal": {
-        "title": "Legal",
-        "privacy": "Política de Privacidade",
-        "terms": "Termos de Serviço",
-        "cookies": "Política de Cookies"
+      "importantNotice": {
+        "title": "Importante:",
+        "description": "Você pode escolher apenas uma bolsa. Depois de pagar a Taxa de Aplicação por uma bolsa, outras opções serão desabilitadas."
       },
-      "social": {
-        "title": "Siga-nos",
-        "facebook": "Facebook",
-        "twitter": "Twitter",
-        "linkedin": "LinkedIn",
-        "instagram": "Instagram"
+      "paymentStatus": {
+        "title": "Status do Pagamento",
+        "applicationFee": "Taxa de Aplicação",
+        "scholarshipFee": "Taxa da Bolsa",
+        "paid": "Pago",
+        "payApplicationFee": "Pagar Taxa de Aplicação",
+        "payScholarshipFee": "Pagar Taxa da Bolsa",
+        "uploading": "Fazendo upload...",
+        "uploadDocument": "Fazer Upload do Documento",
+        "selected": "Selecionado:"
       },
-      "newsletter": {
-        "title": "Mantenha-se Atualizado",
-        "description": "Receba as últimas oportunidades de bolsa e notícias",
-        "placeholder": "Digite seu email",
-        "subscribe": "Inscrever-se",
-        "subscribed": "Obrigado por se inscrever!"
+      "documents": {
+        "checklist": "Lista de Verificação de Documentos",
+        "passport": "Passaporte",
+        "highSchoolDiploma": "Diploma do Ensino Médio",
+        "proofOfFunds": "Comprovante de Fundos",
+        "status": {
+          "approved": "Aprovado",
+          "changesNeeded": "Alterações Necessárias",
+          "underReview": "Em Revisão",
+          "pending": "Pendente"
+        },
+        "review": "Revisão:",
+        "sendNew": "Enviar Novo",
+        "universityAdditionalRequests": "Solicitações Adicionais da Universidade"
       },
-      "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
+      "applicationDetails": {
+        "viewDetails": "Ver Detalhes da Aplicação"
+      },
+      "confirmationModal": {
+        "title": "Confirme Sua Seleção de Bolsa",
+        "importantDecision": "Decisão Importante",
+        "description": "Ao prosseguir com este pagamento, você está tornando esta sua escolha final de bolsa. Esta ação não pode ser desfeita.",
+        "willRemoveOthers": "Isso removerá {count} outra aplicação aprovada:",
+        "willRemoveOthersPlural": "Isso removerá {count} outras aplicações aprovadas:",
+        "letMeThink": "Deixe-me pensar sobre isso",
+        "secureMyScholarship": "Sim, Garantir Minha Bolsa"
+      },
+      "loading": "Carregando suas aplicações...",
+      "error": "Erro: {message}",
+      "statusDescriptions": {
+        "documentsApprovedByUniversity": {
+          "title": "Documentos Aprovados pela Universidade",
+          "description": "Ótimas notícias! Sua aplicação foi aprovada, mas alguns documentos ainda precisam de atenção.",
+          "nextSteps": [
+            "Complete qualquer upload de documento pendente",
+            "Pague a taxa de aplicação para garantir sua vaga",
+            "Prepare-se para a próxima fase da matrícula"
+          ]
+        },
+        "applicationApprovedPaymentRequired": {
+          "title": "Aplicação Aprovada - Pagamento Necessário",
+          "description": "Parabéns! Sua aplicação foi totalmente aprovada. O próximo passo é pagar a taxa de aplicação.",
+          "nextSteps": [
+            "Pague a taxa de aplicação para garantir sua bolsa",
+            "Complete o processo de matrícula",
+            "Prepare-se para sua jornada acadêmica"
+          ]
+        },
+        "applicationFeePaidScholarshipFeeRequired": {
+          "title": "Taxa de Aplicação Paga - Taxa da Bolsa Necessária",
+          "description": "Excelente! Sua taxa de aplicação foi confirmada. Agora pague a taxa da bolsa para finalizar sua matrícula.",
+          "nextSteps": [
+            "Pague a taxa da bolsa para completar a matrícula",
+            "Receba a confirmação final",
+            "Comece seu programa acadêmico"
+          ]
+        },
+        "fullyEnrolled": {
+          "title": "Totalmente Matriculado!",
+          "description": "Perfeito! Você completou com sucesso todos os requisitos e está oficialmente matriculado.",
+          "nextSteps": [
+            "Acesse seu portal do estudante",
+            "Revise o cronograma de aulas",
+            "Conecte-se com orientadores acadêmicos"
+          ]
+        },
+        "applicationNotSelected": {
+          "title": "Aplicação Não Selecionada",
+          "description": "Infelizmente, sua aplicação não foi selecionada para esta oportunidade de bolsa.",
+          "nextSteps": [
+            "Revise outras bolsas disponíveis",
+            "Considere melhorar sua aplicação",
+            "Aplique para programas diferentes"
+          ]
+        },
+        "applicationUnderReview": {
+          "title": "Aplicação em Revisão",
+          "description": "Sua aplicação está sendo avaliada pela universidade. Este processo geralmente leva 2-4 semanas.",
+          "nextSteps": [
+            "Aguarde a decisão da universidade",
+            "Monitore seu email para notificações importantes",
+            "Verifique o status da aplicação regularmente",
+            "Seja paciente durante o processo de revisão"
+          ]
+        },
+        "applicationFeeConfirmed": {
+          "title": "Taxa de Aplicação Confirmada",
+          "description": "Sua taxa de aplicação foi recebida e confirmada. Você agora é elegível para a bolsa.",
+          "nextSteps": [
+            "Pague a taxa da bolsa para completar a matrícula",
+            "Envie quaisquer documentos restantes",
+            "Prepare-se para o início do seu programa"
+          ]
+        },
+        "documentsUnderUniversityReview": {
+          "title": "Documentos em Revisão pela Universidade",
+          "description": "Sua aplicação foi enviada com todos os documentos necessários. A universidade está atualmente revisando seus materiais.",
+          "nextSteps": [
+            "Aguarde a revisão dos documentos pela universidade",
+            "Monitore seu email para notificações",
+            "Verifique o status da aplicação regularmente"
+          ]
+        },
+        "applicationSubmitted": {
+          "title": "Aplicação Enviada",
+          "description": "Sua aplicação foi enviada com sucesso e está aguardando revisão inicial.",
+          "nextSteps": [
+            "Aguarde a revisão dos documentos",
+            "Monitore o status da aplicação",
+            "Prepare-se para os próximos passos"
+          ]
+        }
+      },
+      "statusLabels": {
+        "approvedByUniversity": "APROVADA PELA UNIVERSIDADE",
+        "notSelectedForScholarship": "NÃO SELECIONADA PARA A BOLSA"
+      },
+      "nextSteps": "Próximos Passos:",
+      "scholarshipDetails": {
+        "annualScholarshipValue": "Valor Anual da Bolsa",
+        "applicationDate": "Data da Aplicação",
+        "annualValue": "Valor anual",
+        "appliedOn": "Aplicado em"
+      },
+      "rejectedApplication": {
+        "reason": "Motivo:"
+      }
+    },
+    "applicationChatPage": {
+      "title": "Detalhes da Aplicação do Estudante",
+      "tabs": {
+        "welcome": "Bem-vindo",
+        "details": "Detalhes",
+        "i20": "Taxa de Controle I-20",
+        "documents": "Documentos"
+      },
+      "welcome": {
+        "welcomeMessage": "Bem-vindo, {{firstName}}",
+        "applicationInProgress": "Sua aplicação para {{universityName}} está em andamento.",
+        "scholarship": "Bolsa:",
+        "howToProceed": "Como Proceder",
+        "documentRequests": {
+          "title": "Verificar Solicitações de Documentos",
+          "description": "Agora que você chegou a esta etapa, deve revisar e fazer upload dos documentos solicitados pela sua universidade para continuar seu processo. Após isso, a escola poderá analisar sua aplicação e enviar sua carta de aceitação.",
+          "button": "Ir para Solicitações de Documentos"
+        },
+        "applicationDetails": {
+          "title": "Ver Detalhes da Aplicação",
+          "description": "Veja todas as informações da sua bolsa, documentos enviados e seu status atual (aguardando carta de aceitação, matriculado, etc). Mantenha-se atualizado com seu processo a qualquer momento.",
+          "button": "Ver Detalhes da Aplicação"
+        },
+        "i20ControlFee": {
+          "title": "Pagar Taxa de Controle I-20",
+          "description": "Após receber sua carta de aceitação, você poderá pagar a Taxa de Controle I-20. Esta taxa é necessária para a emissão do seu documento I-20, essencial para seu visto F-1. Você tem 10 dias para pagar após ser liberada.",
+          "button": "Pagar Taxa de Controle I-20"
+        }
+      },
+      "details": {
+        "studentInformation": {
+          "title": "Informações do Estudante",
+          "personalDetails": "Detalhes Pessoais",
+          "academicProfile": "Perfil Acadêmico",
+          "applicationStatus": "Status da Aplicação",
+          "fullName": "Nome Completo",
+          "email": "Email",
+          "phone": "Telefone",
+          "country": "País",
+          "studentType": "Tipo de Estudante",
+          "initialF1VisaRequired": "Inicial - Visto F-1 Necessário",
+          "transferCurrentF1Student": "Transferência - Estudante F-1 Atual",
+          "changeOfStatusFromOtherVisa": "Mudança de Status - De Outro Visto",
+          "applicationDate": "Data da Aplicação",
+          "lastUpdated": "Última Atualização",
+          "currentStatus": "Status Atual",
+          "enrolled": "Matriculado",
+          "waitingForAcceptanceLetter": "Aguardando carta de aceitação",
+          "documentsStatus": "Status dos Documentos",
+          "approved": "aprovados"
+        },
+        "universityInformation": {
+          "title": "Informações da Universidade",
+          "universityName": "Nome da Universidade",
+          "location": "Localização",
+          "contactInformation": "Informações de Contato",
+          "website": "Website:",
+          "email": "Email:",
+          "phone": "Telefone:"
+        },
+        "scholarshipDetails": {
+          "title": "Detalhes da Bolsa",
+          "scholarshipName": "Nome da Bolsa",
+          "course": "Curso",
+          "description": "Descrição"
+        },
+        "studentDocuments": {
+          "title": "Documentos do Estudante",
+          "uploaded": "Enviado:",
+          "viewDocument": "Ver Documento",
+          "download": "Download",
+          "documentNotUploaded": "Documento não enviado"
+        },
+        "applicationSummary": "Resumo da Aplicação",
+        "submitted": "Enviada",
+        "recentActivity": "Atividade Recente",
+        "applicationSubmitted": "Aplicação enviada",
+        "applicationUpdated": "Aplicação atualizada",
+        "quickActions": "Ações Rápidas",
+        "manageDocuments": "Gerenciar Documentos"
+      },
+      "i20ControlFee": {
+        "title": "Taxa de Controle I-20",
+        "description": "A <strong>Taxa de Controle I-20</strong> é uma taxa obrigatória necessária para a emissão e gestão do seu documento I-20, que é essencial para o processo de visto de estudante F-1 nos Estados Unidos.",
+        "deadlineInfo": "Você tem até <span class=\"text-blue-700\">10 dias</span> após pagar sua Taxa da Bolsa para pagar a Taxa de Controle I-20.",
+        "timerInfo": "O cronômetro abaixo mostra exatamente quanto tempo você tem para completar este pagamento.",
+        "paymentInfo": "Pagar esta taxa garante que seu I-20 será processado e enviado corretamente pela universidade. Se você tiver dúvidas sobre este processo, entre em contato com o suporte.",
+        "payButton": "Pagar Taxa de Controle I-20",
+        "processing": "Processando...",
+        "dueDate": "Data de vencimento:",
+        "deadlineExpired": "O prazo para pagar a Taxa de Controle I-20 expirou!",
+        "paymentSuccess": {
+          "title": "Taxa de Controle I-20 Paga com Sucesso!",
+          "description": "Seu pagamento da Taxa de Controle I-20 foi processado com sucesso. Seu documento I-20 agora será preparado e enviado para você pela universidade.",
+          "nextSteps": "Próximos passos:",
+          "nextStepsList": [
+            "Aguarde a universidade processar seu documento I-20",
+            "Você receberá seu documento I-20 por email",
+            "Use o I-20 para solicitar seu visto de estudante F-1",
+            "Entre em contato com a universidade se tiver dúvidas sobre o processo"
+          ]
+        },
+        "paymentInformation": "Informações do Pagamento",
+        "amountPaid": "Valor Pago:",
+        "paymentDate": "Data do Pagamento:",
+        "status": "Status:",
+        "completed": "Concluído"
+      },
+      "documents": {
+        "title": "Gerenciamento de Documentos",
+        "subtitle": "Solicitar e gerenciar documentos do estudante"
+      },
+      "documentTypes": {
+        "passport": {
+          "label": "Passaporte",
+          "description": "Uma cópia válida do passaporte do estudante. Usado para identificação e fins de visto."
+        },
+        "diploma": {
+          "label": "Diploma do Ensino Médio",
+          "description": "Comprovante de conclusão do ensino médio. Necessário para admissão na universidade."
+        },
+        "funds_proof": {
+          "label": "Comprovante de Fundos",
+          "description": "Um extrato bancário ou documento financeiro mostrando fundos suficientes para estudo."
+        }
+      },
+      "status": {
+        "approved": "Aprovado",
+        "changesRequested": "Alterações Solicitadas",
+        "underReview": "Em Revisão",
+        "notSubmitted": "Não Enviado"
+      },
+      "errors": {
+        "downloadFailed": "Falha ao baixar arquivo.",
+        "paymentSessionError": "Erro ao criar sessão de pagamento.",
+        "paymentRedirectError": "Erro ao redirecionar para o pagamento."
+      }
+    },
+    "documentRequests": {
+      "status": {
+        "downloading": "Baixando...",
+        "opening": "Abrindo...",
+        "uploading": "Enviando...",
+        "waitingForUniversity": "Aguardando universidade"
+      },
+      "actions": {
+        "downloadAcceptanceLetter": "Baixar Carta de Aceitação",
+        "view": "Visualizar",
+        "uploadTransferForm": "Enviar Formulário de Transferência",
+        "upload": "Enviar",
+        "downloadTransferForm": "Baixar Formulário de Transferência",
+        "uploadTransferFormTitle": "Enviar formulário de transferência",
+        "selectTransferFormTitle": "Selecionar formulário de transferência",
+        "sendTransferFormTitle": "Enviar formulário de transferência"
+      },
+      "messages": {
+        "noTransferForm": "Nenhum formulário de transferência enviado ainda.",
+        "failedToUploadAttachment": "Falha ao enviar anexo:",
+        "failedToUploadAcceptanceLetter": "Falha ao enviar carta de aceitação:",
+        "failedToCreateRequest": "Falha ao criar solicitação:",
+        "unexpectedError": "Erro inesperado:",
+        "unexpectedErrorWhileApproving": "Erro inesperado ao aprovar:",
+        "unexpectedErrorWhileRejecting": "Erro inesperado ao rejeitar:",
+        "errorUploadingFile": "Erro ao fazer upload do arquivo:",
+        "errorUploading": "Erro ao fazer upload:",
+        "userNotAuthenticated": "Usuário não autenticado. Faça login novamente."
+      },
+      "forms": {
+        "newDocumentRequest": "Nova Solicitação de Documento",
+        "newIndividualDocumentRequest": "Nova Solicitação Individual de Documento",
+        "title": "Título",
+        "titleRequired": "Título *",
+        "description": "Descrição",
+        "dueDate": "Data de vencimento",
+        "attachment": "Anexo",
+        "enterDocumentTitle": "Digite o título do documento",
+        "enterDocumentDescription": "Digite a descrição do documento",
+        "describeDocumentOptional": "Descreva o documento ou instruções (opcional)",
+        "selectFile": "Selecionar arquivo",
+        "changeFile": "Alterar arquivo",
+        "chooseFile": "Escolher arquivo",
+        "cancel": "Cancelar",
+        "createRequest": "Criar Solicitação",
+        "creating": "Criando...",
+        "transferFormDescriptionSchool": "Envie o formulário de transferência para este estudante. Visível apenas para estudantes de transferência.",
+        "transferFormDescriptionStudent": "Sua universidade enviará seu formulário de transferência aqui. Baixe-o quando disponível.",
+        "transferForm": "Formulário de Transferência",
+        "studentUploads": "Uploads do estudante:",
+        "yourUploads": "Seus uploads:",
+        "uploading": "Enviando...",
+        "upload": "Enviar",
+        "uploadNewFile": "Enviar novo arquivo",
+        "failedToDownloadFile": "Falha ao baixar arquivo.",
+        "failedToApproveDocument": "Falha ao aprovar o documento:",
+        "failedToRejectDocument": "Falha ao rejeitar o documento:",
+        "errorDownloadingDocument": "Erro ao baixar documento. Tente novamente.",
+        "errorViewingDocument": "Erro ao visualizar documento. Tente novamente.",
+        "acceptanceLetter": "Carta de Aceitação",
+        "acceptanceLetterReceived": "Carta de Aceitação Recebida! 🎉",
+        "downloadTransferForm": "Baixar Formulário de Transferência",
+        "view": "Visualizar",
+        "enrolledMessage": "Você foi matriculado! Verifique seu painel para os próximos passos.",
+        "noFilesUploadedYet": "Nenhum arquivo enviado ainda.",
+        "noTransferFormUploadedYet": "Nenhum formulário de transferência enviado ainda.",
+        "newDocumentRequest": "Nova Solicitação de Documento",
+        "newIndividualDocumentRequest": "Nova Solicitação Individual de Documento",
+        "acceptanceLetterInstructions": "A universidade enviará sua carta de aceitação aqui quando estiver pronta. Uma vez enviada, você será automaticamente matriculado."
+      },
+      "modals": {
+        "provideJustification": "Fornecer uma justificativa",
+        "rejectionExplanation": "Explique o motivo da rejeição deste documento. O aluno verá esta mensagem.",
+        "rejectionExplanationPlaceholder": "Ex.: O documento está cortado. Envie novamente em PDF com todas as páginas.",
+        "confirm": "Confirmar"
+      }
     }
+  },
+  "profileManagement": {
+    "title": "Perfil do Estudante",
+    "subtitle": "Gerencie seu perfil acadêmico e preferências",
+    "editProfile": "Editar Perfil",
+    "profileCompleteness": {
+      "title": "Completude do Perfil",
+      "subtitle": "Complete seu perfil para desbloquear mais oportunidades de bolsas",
+      "complete": "Completo",
+      "improveMatching": "Complete seu perfil para melhorar a correspondência de bolsas"
+    },
+    "form": {
+      "editProfile": "Editar Perfil",
+      "saving": "Salvando...",
+      "saveChanges": "Salvar Alterações",
+      "cancel": "Cancelar",
+      "fullName": "Nome Completo",
+      "phoneNumber": "Número de Telefone",
+      "country": "País",
+      "fieldOfInterest": "Área de Interesse",
+      "academicLevel": "Nível Acadêmico",
+      "gpa": "GPA",
+      "englishProficiency": "Proficiência em Inglês",
+      "placeholders": {
+        "enterFullName": "Digite seu nome completo",
+        "phoneExample": "Ex: +55 11 99999-8888",
+        "yourCountry": "Seu país",
+        "selectField": "Selecione sua área",
+        "selectLevel": "Selecione o nível",
+        "selectProficiency": "Selecione a proficiência"
+      },
+      "fields": {
+        "engineering": "Engenharia",
+        "business": "Negócios",
+        "computerScience": "Ciência da Computação",
+        "medicine": "Medicina",
+        "law": "Direito",
+        "arts": "Artes e Humanidades",
+        "sciences": "Ciências Naturais",
+        "other": "Outro",
+        "highSchool": "Ensino Médio",
+        "undergraduate": "Graduação",
+        "graduate": "Pós-graduação",
+        "doctorate": "Doutorado",
+        "beginner": "Iniciante",
+        "intermediate": "Intermediário",
+        "advanced": "Avançado",
+        "native": "Nativo",
+        "toefl": "Certificado TOEFL",
+        "ielts": "Certificado IELTS"
+      }
+    },
+    "sections": {
+      "personalInformation": "Informações Pessoais",
+      "academicInformation": "Informações Acadêmicas",
+      "accountInformation": "Informações da Conta"
+    },
+    "labels": {
+      "fullName": "Nome Completo",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "country": "País",
+      "fieldOfInterest": "Área de Interesse",
+      "academicLevel": "Nível Acadêmico",
+      "gpa": "GPA",
+      "englishProficiency": "Proficiência em Inglês",
+      "memberSince": "Membro desde",
+      "profileCompleteness": "Completude do Perfil"
+    },
+    "status": {
+      "activeStudent": "Estudante Ativo",
+      "verified": "Verificado",
+      "notProvided": "Não informado",
+      "studentName": "Nome do Estudante",
+      "unknown": "Desconhecido"
+    },
+    "messages": {
+      "profileUpdated": "Perfil atualizado com sucesso!",
+      "uploadError": "Falha ao fazer upload do avatar. Tente novamente.",
+      "saveError": "Falha ao salvar alterações do perfil. Tente novamente.",
+      "invalidImageFile": "Por favor, selecione um arquivo de imagem",
+      "fileTooLarge": "O arquivo deve ter menos de 5MB",
+      "imageUrlError": "Não foi possível obter a URL da imagem",
+      "avatarUpdateError": "Falha ao atualizar avatar",
+      "changeProfilePicture": "Alterar foto do perfil"
+    },
+    "tips": {
+      "completeProfile": "Complete Seu Perfil",
+      "description": "Um perfil completo nos ajuda a combinar você com as oportunidades de bolsas mais relevantes. Considere adicionar as informações em falta para melhorar suas chances de encontrar as bolsas perfeitas.",
+      "addPhoneNumber": "Adicionar número de telefone",
+      "addCountry": "Adicionar país",
+      "addFieldOfInterest": "Adicionar área de interesse",
+      "addAcademicLevel": "Adicionar nível acadêmico",
+      "addGpa": "Adicionar GPA",
+      "addEnglishProficiency": "Adicionar proficiência em inglês"
+    }
+  },
+  "matriculaRewards": {
+    "title": "Matricula Rewards",
+    "subtitle": "Ganhe créditos indicando amigos para o MatriculaUSA",
+    "balance": "Saldo",
+    "coins": "moedas",
+    "totalReferrals": "Total de Indicações",
+    "totalEarnings": "Total Ganho",
+    "yourReferralCode": "Seu Código de Indicação",
+    "yourCode": "Seu Código",
+    "copyLink": "Copiar Link",
+    "linkCopied": "Link Copiado",
+    "shareWithFriends": "Compartilhar com Amigos",
+    "facebook": "Facebook",
+    "twitter": "Twitter",
+    "linkedin": "LinkedIn",
+    "whatsapp": "WhatsApp",
+    "email": "E-mail",
+    "spendYourCoins": "Gaste Suas Moedas",
+    "visitStoreDescription": "Visite nossa loja de recompensas para trocar suas moedas por descontos na mensalidade",
+    "visitRewardsStore": "Visitar Loja de Recompensas",
+    "recentReferrals": "Indicações Recentes",
+    "recentTransactions": "Transações Recentes",
+    "noReferralsYet": "Nenhuma indicação ainda",
+    "shareCodeToEarn": "Compartilhe seu código para começar a ganhar moedas",
+    "noTransactionsYet": "Nenhuma transação ainda",
+    "transactionHistory": "Seu histórico de transações aparecerá aqui",
+    "howItWorks": "Como Funciona",
+    "step1Title": "Compartilhe seu código",
+    "step1Description": "Compartilhe seu código de indicação único com amigos e familiares",
+    "step2Title": "Eles se inscrevem",
+    "step2Description": "Quando eles usam seu código para se inscrever, você ganha moedas",
+    "step3Title": "Resgate suas recompensas",
+    "step3Description": "Use suas moedas para obter descontos na mensalidade em universidades participantes",
+    "participatingUniversities": "Universidades Participantes",
+    "universitiesDescription": "Estas universidades aceitam moedas Matricula como desconto na mensalidade. Clique em uma universidade para ver mais detalhes.",
+    "loadingUniversities": "Carregando universidades...",
+    "noParticipatingUniversities": "Nenhuma universidade participante ainda",
+    "universitiesNotParticipating": "As universidades precisam optar pelo programa Matricula Rewards para aceitar moedas como desconto na mensalidade.",
+    "importantInformation": "Informação Importante",
+    "importantInfoText": "Se sua universidade não estiver listada acima, significa que ela ainda não optou por participar do programa Matricula Rewards. Você ainda pode ganhar moedas indicando amigos, mas não poderá resgatá-las para descontos na mensalidade em sua universidade até que ela participe do programa. Considere entrar em contato com o escritório de admissões de sua universidade para incentivá-los a participar!",
+    "searchUniversities": "Pesquisar universidades por nome, localização ou tipo...",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "showingResults": "Mostrando {start} a {end} de {total} universidades",
+    "referralNumber": "Indicação #{id}",
+    "earned": "Ganhou",
+    "spent": "Gastou",
+    "pending": "Pendente",
+    "balanceAfter": "Saldo: {amount}",
+    "tryAgain": "Tentar Novamente",
+    "errorLoadingData": "Erro ao carregar dados",
+    "loading": "Carregando {title}..."
+  },
+  "footer": {
+    "company": {
+      "title": "Empresa",
+      "about": "Sobre Nós",
+      "careers": "Carreiras",
+      "contact": "Contato",
+      "blog": "Blog",
+      "description": "MatriculaUSA é a plataforma líder para estudantes internacionais que querem estudar nos Estados Unidos. Tornamos todo o processo de candidatura, matrícula e bolsas mais fácil nas universidades americanas, oferecendo tecnologia, suporte especializado e oportunidades exclusivas para transformar seu sonho internacional em realidade."
+    },
+    "students": {
+      "title": "Para Estudantes",
+      "scholarships": "Bolsas",
+      "universities": "Universidades",
+      "howItWorks": "Como Funciona",
+      "support": "Suporte",
+      "faq": "Perguntas Frequentes",
+      "helpCenter": "Central de Ajuda"
+    },
+    "universities": {
+      "title": "Para Universidades",
+      "partners": "Torne-se um Parceiro",
+      "dashboard": "Painel da Universidade",
+      "resources": "Recursos"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Política de Privacidade",
+      "terms": "Termos de Serviço",
+      "cookies": "Política de Cookies"
+    },
+    "contact": {
+      "email": "info@matriculausa.com",
+      "phone": "+1 (213) 676-2544",
+      "address": "Los Angeles - CA - USA."
+    },
+    "social": {
+      "title": "Siga-nos",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram"
+    },
+    "newsletter": {
+      "title": "Mantenha-se Atualizado",
+      "description": "Receba as últimas oportunidades de bolsa e notícias",
+      "placeholder": "Digite seu email",
+      "subscribe": "Inscrever-se",
+      "subscribed": "Obrigado por se inscrever!"
+    },
+    "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
   }
 }

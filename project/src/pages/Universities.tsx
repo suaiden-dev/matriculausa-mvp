@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Search, Filter, MapPin, Sparkles, Building, GraduationCap, ChevronRight, Globe, ArrowRight, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
@@ -10,7 +11,7 @@ import { slugify } from '../utils/slugify';
 const PAGE_SIZE = 20;
 
 const Universities: React.FC = () => {
-
+  const { t } = useTranslation();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -163,17 +164,15 @@ const Universities: React.FC = () => {
           <div className="text-center">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1 mb-6">
               <Sparkles className="h-3 w-3 mr-2 text-white" />
-              <span className="text-xs font-medium text-white">Partner Universities</span>
+              <span className="text-xs font-medium text-white">{t('universitiesPage.header.partnerUniversities')}</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">
-              <span className="text-white">American</span>
-              <br />
-              <span className="text-[#D0151C]">Universities</span>
+              <span className="text-white">{t('universitiesPage.header.title')}</span>
             </h1>
             
             <p className="text-lg text-slate-200 max-w-2xl mx-auto">
-              Discover world-class institutions offering exceptional education and scholarship opportunities.
+              {t('universitiesPage.header.subtitle')}
             </p>
           </div>
         </div>
@@ -188,7 +187,7 @@ const Universities: React.FC = () => {
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search universities..."
+                placeholder={t('universitiesPage.search.placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
@@ -202,9 +201,9 @@ const Universities: React.FC = () => {
               className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
               title="Filtrar por tipo de universidade"
             >
-              <option value="all">All Types</option>
-              <option value="Private">Private</option>
-              <option value="Public">Public</option>
+              <option value="all">{t('universitiesPage.search.allTypes')}</option>
+              <option value="Private">{t('universitiesPage.search.private')}</option>
+              <option value="Public">{t('universitiesPage.search.public')}</option>
             </select>
 
             {/* Location Filter */}
@@ -217,7 +216,7 @@ const Universities: React.FC = () => {
               className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
               title="Filtrar por estado da universidade"
             >
-              <option value="all">All States</option>
+              <option value="all">{t('universitiesPage.search.allStates')}</option>
               {states.map((state: string) => (
                 <option key={state} value={state}>{state}</option>
               ))}
@@ -226,10 +225,10 @@ const Universities: React.FC = () => {
             {/* Results Count */}
             <div className="flex items-center justify-center bg-white border border-slate-300 rounded-xl px-3 py-3">
               <span className="text-sm text-slate-600">
-                <span className="font-semibold text-[#05294E]">{filteredSchools.length}</span> universities
+                <span className="font-semibold text-[#05294E]">{filteredSchools.length}</span> {t('universitiesPage.search.universitiesCount')}
                 {featuredUniversities.length > 0 && (
                   <span className="text-sm text-slate-500 ml-2">
-                    + {featuredUniversities.length} featured
+                    + {featuredUniversities.length} {t('universitiesPage.search.featured')}
                   </span>
                 )}
               </span>
@@ -243,13 +242,13 @@ const Universities: React.FC = () => {
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-4">
                 <Star className="h-4 w-4 mr-2 text-[#05294E]" />
-                <span className="text-sm font-bold text-[#05294E]">Featured Universities</span>
+                <span className="text-sm font-bold text-[#05294E]">{t('universitiesPage.featured.title')}</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">Weekly</span> Highlights
+                <span className="text-[#05294E]">{t('universitiesPage.featured.subtitle')}</span>
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Discover the universities selected by our experts for you
+                {t('universitiesPage.featured.description')}
               </p>
             </div>
             
@@ -260,7 +259,7 @@ const Universities: React.FC = () => {
                   <div className="absolute top-4 right-4 z-10">
                     <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center">
                       <Star className="h-3 w-3 mr-1 fill-current" />
-                      Featured
+                      {t('universitiesPage.featured.featured')}
                     </div>
                   </div>
                   
@@ -306,7 +305,7 @@ const Universities: React.FC = () => {
                         ))}
                         {school.programs && school.programs.length > 3 && (
                           <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
-                            +{school.programs.length - 3} more
+                            +{school.programs.length - 3} {t('universitiesPage.featured.more')}
                           </span>
                         )}
                       </div>
@@ -318,7 +317,7 @@ const Universities: React.FC = () => {
                         to={`/schools/${slugify(school.name)}`}
                         className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
                       >
-                        Learn More
+                        {t('universitiesPage.card.learnMore')}
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Link>
                     </div>
@@ -375,11 +374,11 @@ const Universities: React.FC = () => {
                         {program}
                       </span>
                     ))}
-                    {school.programs && school.programs.length > 3 && (
-                      <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
-                        +{school.programs.length - 3} more
-                      </span>
-                    )}
+                                            {school.programs && school.programs.length > 3 && (
+                          <span className="bg-[#05294E]/10 text-[#05294E] px-2 py-1 rounded-lg text-xs font-medium">
+                            +{school.programs.length - 3} {t('universitiesPage.featured.more')}
+                          </span>
+                        )}
                   </div>
                 </div>
 
@@ -389,7 +388,7 @@ const Universities: React.FC = () => {
                     to={`/schools/${slugify(school.name)}`}
                     className="w-full bg-gradient-to-r from-[#05294E] to-slate-700 text-white py-3 px-4 rounded-2xl hover:from-[#05294E]/90 hover:to-slate-600 transition-all duration-300 font-bold text-sm flex items-center justify-center group-hover:shadow-xl transform group-hover:scale-105"
                   >
-                    Learn More
+                    {t('universitiesPage.card.learnMore')}
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
@@ -405,15 +404,15 @@ const Universities: React.FC = () => {
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0 || loading}
           >
-            Previous
+            {t('universitiesPage.pagination.previous')}
           </button>
-          <span className="text-slate-600 font-medium">Page {page + 1} of {Math.max(1, totalPages)}</span>
+          <span className="text-slate-600 font-medium">{t('universitiesPage.pagination.page')} {page + 1} {t('universitiesPage.pagination.of')} {Math.max(1, totalPages)}</span>
           <button
             className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1 || loading}
           >
-            Next
+            {t('universitiesPage.pagination.next')}
           </button>
         </div>
 
@@ -422,31 +421,31 @@ const Universities: React.FC = () => {
             <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <GraduationCap className="h-10 w-10 text-slate-400" />
             </div>
-            <h3 className="text-xl font-bold text-slate-600 mb-2">No universities found</h3>
-            <p className="text-slate-500">Try adjusting your search criteria</p>
+            <h3 className="text-xl font-bold text-slate-600 mb-2">{t('universitiesPage.noResults.title')}</h3>
+            <p className="text-slate-500">{t('universitiesPage.noResults.description')}</p>
           </div>
         )}
 
         {/* Call to Action */}
         <div className="mt-12 bg-[#05294E] rounded-2xl p-8 text-white text-center">
           <h2 className="text-2xl font-bold mb-3">
-            Ready to Apply to Your <span className="text-[#D0151C]">Dream University?</span>
+            {t('universitiesPage.callToAction.title')} <span className="text-[#D0151C]">{t('universitiesPage.callToAction.titleHighlight')}</span>
           </h2>
           <p className="text-sm text-slate-200 mb-6 max-w-2xl mx-auto">
-            Start your journey with our AI-powered platform and unlock exclusive scholarship opportunities.
+            {t('universitiesPage.callToAction.description')}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link 
               to="/scholarships"
               className="bg-[#D0151C] text-white px-6 py-2 rounded-lg hover:bg-[#B01218] transition-all duration-300 text-sm font-medium"
             >
-              Find Scholarships
+              {t('universitiesPage.callToAction.findScholarships')}
             </Link>
             <Link 
               to="/how-it-works"
               className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-2 rounded-lg hover:bg-white/20 transition-all duration-300 text-sm font-medium"
             >
-              Learn More
+              {t('universitiesPage.callToAction.learnMore')}
             </Link>
           </div>
         </div>

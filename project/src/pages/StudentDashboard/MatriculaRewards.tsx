@@ -108,7 +108,7 @@ const MatriculaRewards: React.FC = () => {
       setError(null);
       
       if (!user?.id) {
-        setError('User not authenticated');
+        setError(t('matriculaRewards.errorLoadingData'));
         return;
       }
 
@@ -137,7 +137,7 @@ const MatriculaRewards: React.FC = () => {
         
         if (createError) {
           console.error('Erro ao criar código de afiliado:', createError);
-          setError('Failed to create affiliate code');
+          setError(t('matriculaRewards.errorLoadingData'));
         } else {
           // Recarrega o código criado
           const { data: reloadedCode } = await supabase
@@ -226,7 +226,7 @@ const MatriculaRewards: React.FC = () => {
 
     } catch (error) {
       console.error('Erro ao carregar dados de afiliado:', error);
-      setError('Failed to load affiliate data');
+      setError(t('matriculaRewards.errorLoadingData'));
     } finally {
       setLoading(false);
     }
@@ -248,7 +248,7 @@ const MatriculaRewards: React.FC = () => {
 
   const shareToSocialMedia = async (platform: string, url: string, text: string) => {
     const shareData = {
-      title: 'Join MatriculaUSA with my referral code!',
+      title: t('matriculaRewards.title'),
       text: text,
       url: url
     };
@@ -268,7 +268,7 @@ const MatriculaRewards: React.FC = () => {
           window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
           break;
         case 'email':
-          window.open(`mailto:?subject=Join MatriculaUSA with my referral code!&body=${encodeURIComponent(text + '\n\n' + url)}`, '_blank');
+          window.open(`mailto:?subject=${encodeURIComponent(t('matriculaRewards.title'))}&body=${encodeURIComponent(text + '\n\n' + url)}`, '_blank');
           break;
         default:
           if (navigator.share) {
@@ -335,7 +335,7 @@ const MatriculaRewards: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 font-medium">Loading {t('studentDashboard.matriculaRewards.title')}...</p>
+          <p className="text-slate-600 font-medium">{t('matriculaRewards.loading', { title: t('matriculaRewards.title') })}</p>
         </div>
       </div>
     );
@@ -346,11 +346,11 @@ const MatriculaRewards: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <Card className="w-full max-w-lg">
           <CardHeader>
-            <CardTitle>{t('studentDashboard.matriculaRewards.title')}</CardTitle>
+            <CardTitle>{t('matriculaRewards.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
-              <AlertTitle>Error loading data</AlertTitle>
+              <AlertTitle>{t('matriculaRewards.errorLoadingData')}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
             <Separator className="my-4" />
@@ -358,7 +358,7 @@ const MatriculaRewards: React.FC = () => {
               onClick={loadAffiliateData}
               className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
             >
-              Try Again
+              {t('matriculaRewards.tryAgain')}
             </button>
           </CardContent>
         </Card>
@@ -382,25 +382,25 @@ const MatriculaRewards: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10" />
           <div className="relative z-10 grid gap-6 p-6 md:grid-cols-3 md:items-center">
             <div className="md:col-span-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Matricula Rewards</h1>
-              <p className="text-slate-600 mt-1">Earn credits by referring friends to MatriculaUSA</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('matriculaRewards.title')}</h1>
+              <p className="text-slate-600 mt-1">{t('matriculaRewards.subtitle')}</p>
               <div className="mt-4 inline-flex items-baseline gap-2 rounded-xl bg-slate-100 px-4 py-2">
-                <span className="text-sm font-medium text-slate-600">Balance</span>
+                <span className="text-sm font-medium text-slate-600">{t('matriculaRewards.balance')}</span>
                 <span className="text-3xl font-extrabold text-slate-900">{formatCoins(credits?.balance || 0)}</span>
-                <span className="text-sm text-slate-500">coins</span>
+                <span className="text-sm text-slate-500">{t('matriculaRewards.coins')}</span>
               </div>
               {/* Stats */}
               <div className="mt-4 grid grid-cols-2 gap-4 max-w-md">
                 <Card className="p-4 gap-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Total Referrals</span>
+                    <span className="text-sm text-slate-600">{t('matriculaRewards.totalReferrals')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><Users className="h-4 w-4"/></span>
                   </div>
                   <div className="mt-2 text-2xl font-bold text-slate-900">{stats?.totalReferrals || 0}</div>
                 </Card>
                 <Card className="p-4 gap-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Total Earnings</span>
+                    <span className="text-sm text-slate-600">{t('matriculaRewards.totalEarnings')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><TrendingUp className="h-4 w-4"/></span>
                   </div>
                   <div className="mt-2 text-2xl font-bold text-slate-900">{formatCoins(stats?.totalEarnings || 0)}</div>
@@ -409,7 +409,7 @@ const MatriculaRewards: React.FC = () => {
             </div>
             <div className="md:col-span-1 flex items-center justify-center">
               <div className="h-28 w-28 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg ring-4 ring-white/60 flex items-center justify-center">
-                <img src="/favicon-branco.png" className="h-14 w-14 object-contain" alt="Coin" />
+                <img src="/favicon-branco.png" className="h-14 w-14 object-contain" alt={t('matriculaRewards.coins')} />
               </div>
             </div>
           </div>
@@ -419,7 +419,7 @@ const MatriculaRewards: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 p-0">
             <CardHeader className="pb-0">
-              <CardTitle className="text-lg">Your Referral Code</CardTitle>
+              <CardTitle className="text-lg">{t('matriculaRewards.yourReferralCode')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 pb-6">
             {affiliateCode && (
@@ -430,7 +430,7 @@ const MatriculaRewards: React.FC = () => {
                       <Gift className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500">Your Code</p>
+                      <p className="text-xs text-slate-500">{t('matriculaRewards.yourCode')}</p>
                       <p className="text-2xl font-bold tracking-wide text-slate-900">{affiliateCode.code}</p>
                     </div>
                   </div>
@@ -439,52 +439,52 @@ const MatriculaRewards: React.FC = () => {
                     className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
                   >
                     {copied ? <CheckCircle className="h-4 w-4"/> : <Copy className="h-4 w-4"/>}
-                    {copied ? 'Link Copied' : 'Copy Link'}
+                    {copied ? t('matriculaRewards.linkCopied') : t('matriculaRewards.copyLink')}
                   </button>
                 </div>
 
                 <div>
-                  <p className="mb-2 text-sm font-medium text-slate-700">Share with Friends</p>
+                  <p className="mb-2 text-sm font-medium text-slate-700">{t('matriculaRewards.shareWithFriends')}</p>
                   <div className="flex flex-wrap gap-3">
                     <button
-                      aria-label="Share on Facebook"
-                      onClick={() => shareToSocialMedia('facebook', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      aria-label={t('matriculaRewards.facebook')}
+                      onClick={() => shareToSocialMedia('facebook', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
                       className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-3 py-2 text-white hover:brightness-95"
                     >
                       <FacebookLogo />
-                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.facebook')}</span>
+                      <span className="hidden sm:inline">{t('matriculaRewards.facebook')}</span>
                     </button>
                     <button
-                      aria-label="Share on Twitter"
-                      onClick={() => shareToSocialMedia('twitter', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      aria-label={t('matriculaRewards.twitter')}
+                      onClick={() => shareToSocialMedia('twitter', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
                       className="inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2] px-3 py-2 text-white hover:brightness-95"
                     >
                       <TwitterLogo />
-                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.twitter')}</span>
+                      <span className="hidden sm:inline">{t('matriculaRewards.twitter')}</span>
                     </button>
                     <button
-                      aria-label="Share on LinkedIn"
-                      onClick={() => shareToSocialMedia('linkedin', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      aria-label={t('matriculaRewards.linkedin')}
+                      onClick={() => shareToSocialMedia('linkedin', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
                       className="inline-flex items-center gap-2 rounded-xl bg-[#0A66C2] px-3 py-2 text-white hover:brightness-95"
                     >
                       <LinkedInLogo />
-                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.linkedin')}</span>
+                      <span className="hidden sm:inline">{t('matriculaRewards.linkedin')}</span>
                     </button>
                     <button
-                      aria-label="Share on WhatsApp"
-                      onClick={() => shareToSocialMedia('whatsapp', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      aria-label={t('matriculaRewards.whatsapp')}
+                      onClick={() => shareToSocialMedia('whatsapp', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
                       className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-3 py-2 text-white hover:brightness-95"
                     >
                       <WhatsAppIcon width={16} height={16} className="text-white" />
-                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.whatsapp')}</span>
+                      <span className="hidden sm:inline">{t('matriculaRewards.whatsapp')}</span>
                     </button>
                     <button
-                      aria-label="Share via Email"
-                      onClick={() => shareToSocialMedia('email', getShareUrl(affiliateCode.code), `Join MatriculaUSA with my referral code ${affiliateCode.code}! Get 50 off your selection process fee.`)}
+                      aria-label={t('matriculaRewards.email')}
+                      onClick={() => shareToSocialMedia('email', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
                       className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-3 py-2 text-white hover:brightness-95"
                     >
                       <Mail className="h-4 w-4" />
-                      <span className="hidden sm:inline">{t('studentDashboard.matriculaRewards.email')}</span>
+                      <span className="hidden sm:inline">{t('matriculaRewards.email')}</span>
                     </button>
                   </div>
                 </div>
@@ -495,11 +495,11 @@ const MatriculaRewards: React.FC = () => {
 
           {/* CTA Store */}
           <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white shadow-md">
-            <h3 className="text-lg font-semibold">{t('studentDashboard.matriculaRewards.spendYourCoins')}</h3>
-            <p className="text-blue-100 mt-1">{t('studentDashboard.matriculaRewards.visitStoreDescription')}</p>
+            <h3 className="text-lg font-semibold">{t('matriculaRewards.spendYourCoins')}</h3>
+            <p className="text-blue-100 mt-1">{t('matriculaRewards.visitStoreDescription')}</p>
             <Link to="/student/dashboard/rewards/store" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 ring-1 ring-white/20 hover:bg-white/20">
               <Gift className="h-4 w-4"/>
-              {t('studentDashboard.matriculaRewards.visitRewardsStore')}
+              {t('matriculaRewards.visitRewardsStore')}
               <ArrowUpRight className="h-4 w-4"/>
             </Link>
           </div>
@@ -508,7 +508,7 @@ const MatriculaRewards: React.FC = () => {
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.recentReferrals')}</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.recentReferrals')}</h2>
             {referrals.length ? (
               <ul className="space-y-3">
                 {referrals.slice(0,5).map(referral => (
@@ -516,26 +516,26 @@ const MatriculaRewards: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600"><Users className="h-4 w-4"/></span>
                       <div>
-                        <p className="font-medium text-slate-900">Referral #{referral.id.slice(0,8)}</p>
+                        <p className="font-medium text-slate-900">{t('matriculaRewards.referralNumber', { id: referral.id.slice(0,8) })}</p>
                         <p className="text-xs text-slate-500">{formatDate(referral.created_at)}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-green-600">+{formatCoins(referral.credits_earned)}</p>
-                      <p className="text-xs text-slate-500">{referral.status}</p>
+                      <p className="text-xs text-slate-500">{referral.status === 'completed' ? t('matriculaRewards.earned') : referral.status === 'cancelled' ? t('matriculaRewards.spent') : t('matriculaRewards.pending')}</p>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
               <Alert className="py-4">
-                <AlertTitle>{t('studentDashboard.matriculaRewards.noReferralsYet')}</AlertTitle>
-                <AlertDescription>{t('studentDashboard.matriculaRewards.shareCodeToEarn')}</AlertDescription>
+                <AlertTitle>{t('matriculaRewards.noReferralsYet')}</AlertTitle>
+                <AlertDescription>{t('matriculaRewards.shareCodeToEarn')}</AlertDescription>
               </Alert>
             )}
           </Card>
           <Card className="p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.recentTransactions')}</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.recentTransactions')}</h2>
             {transactions.length ? (
               <ul className="space-y-3">
                 {transactions.slice(0,5).map(tx => (
@@ -545,21 +545,21 @@ const MatriculaRewards: React.FC = () => {
                         {tx.type==='earned'?<TrendingUp className="h-4 w-4"/>:tx.type==='spent'?<DollarSign className="h-4 w-4"/>:<Clock className="h-4 w-4"/>}
                       </span>
                       <div>
-                        <p className="font-medium text-slate-900">{tx.description || tx.type}</p>
+                        <p className="font-medium text-slate-900">{tx.description || (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))}</p>
                         <p className="text-xs text-slate-500">{formatDate(tx.created_at)}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className={`${tx.type==='earned'?'text-green-600':tx.type==='spent'?'text-red-600':'text-yellow-600'} font-semibold`}>{tx.type==='earned'?'+':tx.type==='spent'?'-':''}{formatCoins(tx.amount)}</p>
-                      <p className="text-xs text-slate-500">Balance: {formatCoins(tx.balance_after)}</p>
+                      <p className="text-xs text-slate-500">{t('matriculaRewards.balanceAfter', { amount: formatCoins(tx.balance_after) })}</p>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
               <Alert className="py-4">
-                <AlertTitle>{t('studentDashboard.matriculaRewards.noTransactionsYet')}</AlertTitle>
-                <AlertDescription>{t('studentDashboard.matriculaRewards.transactionHistory')}</AlertDescription>
+                <AlertTitle>{t('matriculaRewards.noTransactionsYet')}</AlertTitle>
+                <AlertDescription>{t('matriculaRewards.transactionHistory')}</AlertDescription>
               </Alert>
             )}
           </Card>
@@ -567,31 +567,31 @@ const MatriculaRewards: React.FC = () => {
 
         {/* How it works */}
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.howItWorks')}</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.howItWorks')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">1</div>
-              <h3 className="font-semibold text-slate-900">{t('studentDashboard.matriculaRewards.step1Title')}</h3>
-              <p className="text-sm text-slate-600 mt-1">{t('studentDashboard.matriculaRewards.step1Description')}</p>
+              <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step1Title')}</h3>
+              <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step1Description')}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">2</div>
-              <h3 className="font-semibold text-slate-900">{t('studentDashboard.matriculaRewards.step2Title')}</h3>
-              <p className="text-sm text-slate-600 mt-1">{t('studentDashboard.matriculaRewards.step2Description')}</p>
+              <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step2Title')}</h3>
+              <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step2Description')}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600">3</div>
-              <h3 className="font-semibold text-slate-900">{t('studentDashboard.matriculaRewards.step3Title')}</h3>
-              <p className="text-sm text-slate-600 mt-1">{t('studentDashboard.matriculaRewards.step3Description')}</p>
+              <h3 className="font-semibold text-slate-900">{t('matriculaRewards.step3Title')}</h3>
+              <p className="text-sm text-slate-600 mt-1">{t('matriculaRewards.step3Description')}</p>
             </div>
           </div>
         </Card>
 
         {/* Participating Universities */}
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('studentDashboard.matriculaRewards.participatingUniversities')}</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.participatingUniversities')}</h2>
           <p className="text-slate-600 mb-6">
-            {t('studentDashboard.matriculaRewards.universitiesDescription')}
+            {t('matriculaRewards.universitiesDescription')}
           </p>
           
           {/* Search Component */}
@@ -604,7 +604,7 @@ const MatriculaRewards: React.FC = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search universities by name, location, or type..."
+                placeholder={t('matriculaRewards.searchUniversities')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md"
@@ -625,7 +625,7 @@ const MatriculaRewards: React.FC = () => {
           {universitiesLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-slate-600">Loading universities...</span>
+              <span className="ml-2 text-slate-600">{t('matriculaRewards.loadingUniversities')}</span>
             </div>
           ) : filteredUniversities.length > 0 ? (
             <>
@@ -668,7 +668,7 @@ const MatriculaRewards: React.FC = () => {
                     disabled={currentPage === 1}
                     className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Previous
+                    {t('matriculaRewards.previous')}
                   </button>
                   
                   <div className="flex items-center space-x-1">
@@ -692,7 +692,7 @@ const MatriculaRewards: React.FC = () => {
                     disabled={currentPage === Math.ceil(filteredUniversities.length / universitiesPerPage)}
                     className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {t('matriculaRewards.next')}
                   </button>
                 </div>
               )}
@@ -700,7 +700,11 @@ const MatriculaRewards: React.FC = () => {
               {/* Page Info */}
               {filteredUniversities.length > universitiesPerPage && (
                 <div className="text-center text-sm text-slate-500 mt-2">
-                  Showing {((currentPage - 1) * universitiesPerPage) + 1} to {Math.min(currentPage * universitiesPerPage, filteredUniversities.length)} of {filteredUniversities.length} universities
+                  {t('matriculaRewards.showingResults', { 
+                  start: ((currentPage - 1) * universitiesPerPage) + 1, 
+                  end: Math.min(currentPage * universitiesPerPage, filteredUniversities.length), 
+                  total: filteredUniversities.length 
+                })}
                 </div>
               )}
             </>
@@ -709,9 +713,9 @@ const MatriculaRewards: React.FC = () => {
               <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 mb-4">
                 <GraduationCap className="h-8 w-8 text-slate-500" />
               </div>
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No participating universities yet</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">{t('matriculaRewards.noParticipatingUniversities')}</h3>
               <p className="text-slate-600">
-                Universities need to opt-in to the Matricula Rewards program to accept coins for tuition discounts.
+                {t('matriculaRewards.universitiesNotParticipating')}
               </p>
             </div>
           )}
@@ -723,11 +727,9 @@ const MatriculaRewards: React.FC = () => {
                   <CheckCircle className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-blue-900 mb-1">Important Information</h4>
+                  <h4 className="font-medium text-blue-900 mb-1">{t('matriculaRewards.importantInformation')}</h4>
                   <p className="text-sm text-blue-800">
-                    If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. 
-                    You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university 
-                    until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!
+                    {t('matriculaRewards.importantInfoText')}
                   </p>
                 </div>
               </div>

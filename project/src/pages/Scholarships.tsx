@@ -135,10 +135,10 @@ const Scholarships: React.FC = () => {
   }, []);
 
   const levelOptions = [
-    { value: 'all', label: t('scholarships.filterBy') + ' - All Levels' },
-    { value: 'graduate', label: 'Graduate' },
-    { value: 'doctorate', label: 'Doctorate' },
-    { value: 'undergraduate', label: 'Undergraduate' },
+    { value: 'all', label: t('scholarshipsPage.filters.levels.all') },
+    { value: 'graduate', label: t('scholarshipsPage.filters.levels.graduate') },
+    { value: 'doctorate', label: t('scholarshipsPage.filters.levels.doctorate') },
+    { value: 'undergraduate', label: t('scholarshipsPage.filters.levels.undergraduate') },
   ];
 
   const { isAuthenticated, userProfile, refetchUserProfile } = useAuth();
@@ -269,13 +269,13 @@ const Scholarships: React.FC = () => {
   const getDeliveryModeLabel = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
-        return 'Online';
+        return t('scholarshipsPage.filters.deliveryModes.online');
       case 'in_person':
-        return 'On Campus';
+        return t('scholarshipsPage.filters.deliveryModes.onCampus');
       case 'hybrid':
-        return 'Hybrid';
+        return t('scholarshipsPage.filters.deliveryModes.hybrid');
       default:
-        return 'Mixed';
+        return t('scholarshipsPage.filters.deliveryModes.mixed');
     }
   };
 
@@ -379,14 +379,14 @@ const Scholarships: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-transparent outline-none border-none text-sm text-slate-900 placeholder-slate-400"
-              aria-label="Search scholarships"
+              aria-label={t('scholarships.searchPlaceholder')}
               disabled={loading}
             />
           </div>
 
           {/* Price Range Filter */}
           <div className="flex items-center gap-2 min-w-[260px]">
-            <label htmlFor="min-price" className="text-xs text-slate-500">Min</label>
+            <label htmlFor="min-price" className="text-xs text-slate-500">{t('scholarshipsPage.filters.min')}</label>
             <input
               id="min-price"
               type="number"
@@ -396,11 +396,11 @@ const Scholarships: React.FC = () => {
               onChange={e => setMinPrice(Number(e.target.value))}
               className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
               placeholder="$0"
-              aria-label="Minimum scholarship value"
+              aria-label={t('scholarshipsPage.filters.min') + ' scholarship value'}
               disabled={loading}
             />
             <span className="text-xs text-slate-400">-</span>
-            <label htmlFor="max-price" className="text-xs text-slate-500">Max</label>
+            <label htmlFor="max-price" className="text-xs text-slate-500">{t('scholarshipsPage.filters.max')}</label>
             <input
               id="max-price"
               type="number"
@@ -410,7 +410,7 @@ const Scholarships: React.FC = () => {
               onChange={e => setMaxPrice(Number(e.target.value))}
               className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
               placeholder={formatAmount(maxScholarshipValue)}
-              aria-label="Maximum scholarship value"
+              aria-label={t('scholarshipsPage.filters.max') + ' scholarship value'}
               disabled={loading}
             />
           </div>
@@ -421,7 +421,7 @@ const Scholarships: React.FC = () => {
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-              aria-label="Level"
+              aria-label={t('scholarshipsPage.filters.allLevels')}
               disabled={loading}
             >
               {levelOptions.map(option => (
@@ -432,45 +432,45 @@ const Scholarships: React.FC = () => {
               value={selectedField}
               onChange={(e) => setSelectedField(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-              aria-label="Field"
+              aria-label={t('scholarshipsPage.filters.allFields')}
               disabled={loading}
             >
-              <option value="all">All Fields</option>
-              <option value="stem">STEM</option>
-              <option value="business">Business</option>
-              <option value="engineering">Engineering</option>
-              <option value="any">Any Field</option>
+              <option value="all">{t('scholarshipsPage.filters.allFields')}</option>
+              <option value="stem">{t('scholarshipsPage.filters.stem')}</option>
+              <option value="business">{t('scholarshipsPage.filters.business')}</option>
+              <option value="engineering">{t('scholarshipsPage.filters.engineering')}</option>
+              <option value="any">{t('scholarshipsPage.filters.anyField')}</option>
             </select>
-            <select
-              value={selectedDeliveryMode}
-              onChange={(e) => setSelectedDeliveryMode(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-              aria-label="Study Mode"
-              disabled={loading}
-            >
-              <option value="all">All Modes</option>
-              <option value="online">Online</option>
-              <option value="in_person">On Campus</option>
-              <option value="hybrid">Hybrid</option>
+                          <select
+                value={selectedDeliveryMode}
+                onChange={(e) => setSelectedDeliveryMode(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+                aria-label={t('scholarshipsPage.scholarshipCard.studyMode')}
+                disabled={loading}
+              >
+              <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
+              <option value="online">{t('scholarshipsPage.filters.online')}</option>
+              <option value="in_person">{t('scholarshipsPage.filters.onCampus')}</option>
+              <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
             </select>
-            <select
-              value={selectedWorkPermission}
-              onChange={(e) => setSelectedWorkPermission(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-              aria-label="Work Authorization"
-              disabled={loading}
-            >
-              <option value="all">All Permissions</option>
-              <option value="OPT">OPT</option>
-              <option value="CPT">CPT</option>
-              <option value="F1">F1</option>
+                          <select
+                value={selectedWorkPermission}
+                onChange={(e) => setSelectedWorkPermission(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+                aria-label={t('scholarshipsPage.scholarshipCard.workAuthorization')}
+                disabled={loading}
+              >
+              <option value="all">{t('scholarshipsPage.filters.allPermissions')}</option>
+              <option value="OPT">{t('scholarshipsPage.filters.opt')}</option>
+              <option value="CPT">{t('scholarshipsPage.filters.cpt')}</option>
+              <option value="F1">{t('scholarshipsPage.filters.f1')}</option>
             </select>
           </div>
 
           {/* Results Count */}
           <div className="flex items-center justify-end flex-1 min-w-[120px]">
             <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium">
-              {loading ? 'Loading...' : `${filteredScholarships.length} scholarships found`}
+              {loading ? t('scholarshipsPage.filters.loading') : `${filteredScholarships.length} ${t('scholarshipsPage.filters.scholarshipsFound')}`}
             </span>
           </div>
         </div>
@@ -481,13 +481,13 @@ const Scholarships: React.FC = () => {
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-6 py-2 mb-4">
                 <Star className="h-4 w-4 mr-2 fill-current" />
-                <span className="text-sm font-bold">Featured Scholarships</span>
+                <span className="text-sm font-bold">{t('scholarshipsPage.featuredSection.title')}</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-                <span className="text-[#05294E]">Weekly</span> Highlights
+                <span className="text-[#05294E]">{t('scholarshipsPage.featuredSection.subtitle')}</span>
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Scholarships selected by our experts for you
+                {t('scholarshipsPage.featuredSection.description')}
               </p>
             </div>
             
@@ -559,20 +559,20 @@ const Scholarships: React.FC = () => {
                         <div className="flex flex-wrap items-center gap-2 mb-3">
                           <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
                             <GraduationCap className="h-3 w-3 flex-shrink-0" />
-                            <span className="hidden sm:inline">{scholarship.field_of_study || 'Any Field'}</span>
-                            <span className="sm:hidden">{(scholarship.field_of_study || 'Any').slice(0, 4)}</span>
+                            <span className="hidden sm:inline">{scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}</span>
+                            <span className="sm:hidden">{(scholarship.field_of_study || t('scholarshipsPage.filters.anyField')).slice(0, 4)}</span>
                           </span>
                           <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 flex items-center gap-1">
                             {getLevelIcon(scholarship.level || 'undergraduate')}
-                            <span className="hidden sm:inline">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
-                            <span className="sm:hidden">{(levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate').slice(0, 5)}</span>
+                            <span className="hidden sm:inline">{levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')}</span>
+                            <span className="sm:hidden">{(levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')).slice(0, 5)}</span>
                           </span>
                         </div>
                         
                         {/* University Info */}
                         <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
-                          <span className="text-xs font-semibold mr-2 text-slate-500">University:</span>
+                          <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
                           <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
                             {isAuthenticated && userProfile?.has_paid_selection_process_fee
                               ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
@@ -587,7 +587,7 @@ const Scholarships: React.FC = () => {
                             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                               <div className="flex items-center">
                                 {getDeliveryModeIcon(scholarship.delivery_mode)}
-                                <span className="text-xs font-medium text-slate-600 ml-2">Study Mode</span>
+                                <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.studyMode')}</span>
                               </div>
                               <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
                                 {getDeliveryModeLabel(scholarship.delivery_mode)}
@@ -600,7 +600,7 @@ const Scholarships: React.FC = () => {
                             <div className="p-3 bg-white rounded-lg border border-slate-200">
                               <div className="flex items-center mb-2">
                                 <Briefcase className="h-3 w-3 text-emerald-600" />
-                                <span className="text-xs font-medium text-slate-600 ml-2">Work Authorization</span>
+                                <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.workAuthorization')}</span>
                               </div>
                               <div className="flex flex-wrap gap-1">
                                 {scholarship.work_permissions.map((permission, index) => (
@@ -622,24 +622,24 @@ const Scholarships: React.FC = () => {
                         <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
                           <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-green-600" />
-                            Financial Overview
+                            {t('scholarshipsPage.scholarshipCard.financialOverview')}
                           </h4>
                           
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-slate-600">Original Price</span>
+                              <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
                               <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
                                 ${formatAmount(originalValue)}
                               </span>
                             </div>
                             {savingsPercentage > 0 && (
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">With Scholarship</span>
+                                <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
                                 <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
                               </div>
                             )}
                             <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-                              <span>Per Credit</span>
+                              <span>{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
                               <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
                             </div>
                             
@@ -647,7 +647,7 @@ const Scholarships: React.FC = () => {
                             {savingsPercentage > 0 && (
                               <div className="pt-3 border-t border-slate-200">
                                 <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                  <span>Scholarship Discount</span>
+                                  <span>{t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}</span>
                                   <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
                                 </div>
                               </div>
@@ -667,7 +667,7 @@ const Scholarships: React.FC = () => {
                           aria-label={`View details for ${scholarship.title} scholarship`}
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                          <span>Details</span>
+                          <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
                         </button>
                         
                         {/* Apply Now Button - Maior */}
@@ -679,7 +679,7 @@ const Scholarships: React.FC = () => {
                           >
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                            <span className="relative z-10">Apply Now</span>
+                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                           </button>
                         ) : (
                           <button
@@ -695,7 +695,7 @@ const Scholarships: React.FC = () => {
                           >
                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                            <span className="relative z-10">Apply Now</span>
+                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                             <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
                           </button>
                         )}
@@ -712,10 +712,10 @@ const Scholarships: React.FC = () => {
          <div className="mb-12">
            <div className="text-center mb-8">
              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-               <span className="text-[#05294E]">All</span> Scholarships
+               <span className="text-[#05294E]">{t('scholarshipsPage.allScholarships.title')}</span>
              </h2>
              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-               Explore all available scholarship opportunities for international students
+               {t('scholarshipsPage.allScholarships.description')}
              </p>
            </div>
            
@@ -745,8 +745,8 @@ const Scholarships: React.FC = () => {
                  <div className="bg-gradient-to-br from-slate-100 to-slate-200 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
                    <Award className="h-16 w-16 text-slate-400" />
                  </div>
-                 <h3 className="text-3xl font-bold text-slate-600 mb-4">No scholarships found</h3>
-                 <p className="text-slate-500 text-lg mb-8">Try adjusting your search criteria to discover more opportunities</p>
+                 <h3 className="text-3xl font-bold text-slate-600 mb-4">{t('scholarshipsPage.noResults.title')}</h3>
+                 <p className="text-slate-500 text-lg mb-8">{t('scholarshipsPage.noResults.description')}</p>
                  <button 
                    onClick={() => {
                      setSearchTerm('');
@@ -760,7 +760,7 @@ const Scholarships: React.FC = () => {
                    }}
                    className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"
                  >
-                   Clear Filters
+                   {t('scholarshipsPage.noResults.clearFilters')}
                  </button>
                </div>
              ) : (
@@ -812,10 +812,10 @@ const Scholarships: React.FC = () => {
 
                        {/* Deadline Badge - Top Left */}
                        <div className="absolute top-4 left-4">
-                         <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                           <Clock className="h-3 w-3" />
-                           {daysLeft <= 0 ? 'Expired' : `${daysLeft} days`}
-                         </div>
+                                                    <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                             <Clock className="h-3 w-3" />
+                             {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
+                           </div>
                        </div>
                      </div>
                      
@@ -844,7 +844,7 @@ const Scholarships: React.FC = () => {
                          {/* University Info */}
                          <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                            <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
-                           <span className="text-xs font-semibold mr-2 text-slate-500">University:</span>
+                           <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
                            <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
                              {isAuthenticated && userProfile?.has_paid_selection_process_fee
                                ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
@@ -858,7 +858,7 @@ const Scholarships: React.FC = () => {
                              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                                <div className="flex items-center">
                                  {getDeliveryModeIcon(scholarship.delivery_mode)}
-                                 <span className="text-xs font-medium text-slate-600 ml-2">Study Mode</span>
+                                 <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.studyMode')}</span>
                                </div>
                                <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
                                  {getDeliveryModeLabel(scholarship.delivery_mode)}
@@ -871,7 +871,7 @@ const Scholarships: React.FC = () => {
                              <div className="p-3 bg-white rounded-lg border border-slate-200">
                                <div className="flex items-center mb-2">
                                  <Briefcase className="h-3 w-3 text-emerald-600" />
-                                 <span className="text-xs font-medium text-slate-600 ml-2">Work Authorization</span>
+                                 <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.workAuthorization')}</span>
                                </div>
                                <div className="flex flex-wrap gap-1">
                                  {scholarship.work_permissions.map((permission, index) => (
@@ -893,26 +893,26 @@ const Scholarships: React.FC = () => {
                          <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                              <DollarSign className="h-4 w-4 text-green-600" />
-                             Financial Overview
+                             {t('scholarshipsPage.scholarshipCard.financialOverview')}
                            </h4>
                            
 
                            
                            <div className="space-y-2">
                              <div className="flex items-center justify-between text-sm">
-                               <span className="text-slate-600">Original Price</span>
+                               <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
                                <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
                                  ${formatAmount(originalValue)}
                                </span>
                              </div>
                              {savingsPercentage > 0 && (
                                <div className="flex items-center justify-between text-sm">
-                                 <span className="text-slate-600">With Scholarship</span>
+                                 <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
                                  <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
                                </div>
                              )}
                              <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-                               <span>Per Credit</span>
+                               <span>{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
                                <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
                              </div>
                              
@@ -920,8 +920,8 @@ const Scholarships: React.FC = () => {
                              {savingsPercentage > 0 && (
                                <div className="pt-3 border-t border-slate-200">
                                  <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                   <span>Scholarship Discount</span>
-                                   <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
+                                   <span>{t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}</span>
+                                   <span className="font-semibold text-green-700">{savingsPercentage}% OFF</span>
                                  </div>
                                </div>
                              )}
@@ -929,15 +929,15 @@ const Scholarships: React.FC = () => {
                              {/* Application Fee Information */}
                              <div className="pt-3 border-t border-slate-200">
                                <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                 <span>Application Fee</span>
+                                 <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
                                  <span className="font-semibold text-purple-600">
                                    ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
                                  </span>
                                </div>
                                <div className="text-xs text-slate-400 text-center">
                                  {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
-                                   'Custom fee set by university' : 
-                                   'Standard application fee'
+                                   t('scholarshipsPage.scholarshipCard.customFee') : 
+                                   t('scholarshipsPage.scholarshipCard.standardFee')
                                  }
                                </div>
                              </div>
@@ -958,7 +958,7 @@ const Scholarships: React.FC = () => {
                            aria-label={`View details for ${scholarship.title} scholarship`}
                          >
                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                           <span>Details</span>
+                           <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
                          </button>
                          
                          {/* Apply Now Button - Maior */}
@@ -970,7 +970,7 @@ const Scholarships: React.FC = () => {
                            >
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                             <span className="relative z-10">Apply Now</span>
+                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                            </button>
                          ) : (
                            <button
@@ -986,7 +986,7 @@ const Scholarships: React.FC = () => {
                            >
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                             <span className="relative z-10">Apply Now</span>
+                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                              <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
                            </button>
                          )}
@@ -1017,21 +1017,21 @@ const Scholarships: React.FC = () => {
           <div className="relative">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-6">
               <Sparkles className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Ready to Start?</span>
+              <span className="text-sm font-medium">{t('scholarshipsPage.callToAction.readyToStart')}</span>
             </div>
             
             <h2 className="text-4xl md:text-5xl font-black mb-6 leading-tight">
-              Ready to <span className="text-[#D0151C]">Transform</span> Your Future?
+              {t('scholarshipsPage.callToAction.title')}
             </h2>
             <p className="text-xl text-slate-200 mb-10 max-w-3xl mx-auto leading-relaxed">
-              Join thousands of international students who have secured their educational dreams through our exclusive scholarship opportunities.
+              {t('scholarshipsPage.callToAction.description')}
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <button 
                 onClick={() => navigate('/register')}
                 className="bg-[#D0151C] text-white px-10 py-5 rounded-2xl hover:bg-[#B01218] transition-all duration-300 font-bold text-lg shadow-2xl transform hover:scale-105 flex items-center justify-center"
               >
-                Get Started Today
+                {t('scholarshipsPage.callToAction.getStartedToday')}
                 <ArrowRight className="ml-3 h-5 w-5" />
               </button>
               <button 
@@ -1039,7 +1039,7 @@ const Scholarships: React.FC = () => {
                 className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-10 py-5 rounded-2xl hover:bg-white/20 transition-all duration-300 font-bold text-lg flex items-center justify-center"
               >
                 <Award className="mr-3 h-5 w-5" />
-                Learn More
+                {t('scholarshipsPage.callToAction.learnMore')}
               </button>
             </div>
           </div>
@@ -1052,17 +1052,17 @@ const Scholarships: React.FC = () => {
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
           >
-            Previous
+            {t('scholarshipsPage.pagination.previous')}
           </button>
           <span className="text-slate-600 font-medium">
-            Page {page + 1} of {Math.ceil(totalCount / PAGE_SIZE) || 1}
+            {t('scholarshipsPage.pagination.page')} {page + 1} {t('scholarshipsPage.pagination.of')} {Math.ceil(totalCount / PAGE_SIZE) || 1}
           </span>
           <button
             className="px-4 py-2 rounded bg-[#05294E] text-white font-semibold disabled:opacity-50"
             onClick={() => setPage((p) => p + 1)}
             disabled={(page + 1) * PAGE_SIZE >= totalCount}
           >
-            Next
+            {t('scholarshipsPage.pagination.next')}
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 const Footer: React.FC = () => {
   const { t } = useTranslation();
+  
   // Footer links rely on global scroll-to-top in App
 
   return (
@@ -26,20 +27,20 @@ const Footer: React.FC = () => {
               />
             </div>
             <p className="text-slate-300 leading-relaxed">
-              MatriculaUSA is the leading platform for international students who want to study in the United States. We make the entire application, enrollment, and scholarship process easier at American universities, offering technology, expert support, and exclusive opportunities to turn your international dream into reality.
+              {t('footer.company.description')}
             </p>
             
             <div className="flex space-x-4">
-              <a href="https://facebook.com/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://facebook.com/matriculausa" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Facebook className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
-              <a href="https://twitter.com/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://twitter.com/matriculausa" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Twitter className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
               <a href="https://www.instagram.com/matriculausa?igsh=MWJram91MGhxMXloOQ==" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Instagram className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
-              <a href="https://linkedin.com/company/SEU_USUARIO" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
+              <a href="https://linkedin.com/company/matriculausa" target="_blank" rel="noopener noreferrer" className="bg-white/10 backdrop-blur-sm p-3 rounded-xl hover:bg-white/20 transition-all duration-300 group">
                 <Linkedin className="h-5 w-5 text-slate-300 group-hover:text-white" />
               </a>
             </div>
@@ -66,9 +67,9 @@ const Footer: React.FC = () => {
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-white">{t('footer.students.support')}</h3>
             <ul className="space-y-3">
-              <li><Link to="/faq" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">FAQ</Link></li>
+              <li><Link to="/faq" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.faq')}</Link></li>
               <li><Link to="/contact-us" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.contact')}</Link></li>
-              <li><Link to="/help-center" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">Help Center</Link></li>
+              <li><Link to="/help-center" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.helpCenter')}</Link></li>
               <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.privacy')}</Link></li>
               <li><Link to="/terms-of-service" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.terms')}</Link></li>
             </ul>
@@ -82,19 +83,19 @@ const Footer: React.FC = () => {
                 <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
                   <Mail className="h-5 w-5 text-[#D0151C]" />
                 </div>
-                <span className="text-slate-300">info@matriculausa.com</span>
+                <span className="text-slate-300">{t('footer.contact.email')}</span>
               </div>
               <div className="flex items-center space-x-3 group">
                 <div className="bg-green-600/20 p-2 rounded-lg group-hover:bg-green-600/30 transition-colors">
                   <Phone className="h-5 w-5 text-green-400" />
                 </div>
-                <span className="text-slate-300">+1 (213) 676-2544</span>
+                <span className="text-slate-300">{t('footer.contact.phone')}</span>
               </div>
               <div className="flex items-center space-x-3 group">
                 <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
                   <MapPin className="h-5 w-5 text-[#D0151C]" />
                 </div>
-                <span className="text-slate-300">Los Angeles - CA - USA.</span>
+                <span className="text-slate-300">{t('footer.contact.address')}</span>
               </div>
             </div>
           </div>

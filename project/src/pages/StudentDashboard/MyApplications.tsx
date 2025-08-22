@@ -27,17 +27,19 @@ type ApplicationWithScholarship = Application & {
   scholarships: Scholarship | null;
 };
 
-// Labels amigáveis para os documentos principais
-const DOCUMENT_LABELS: Record<string, string> = {
-  passport: 'Passport',
-  diploma: 'High School Diploma',
-  funds_proof: 'Proof of Funds',
-};
+// Labels amigáveis para os documentos principais - será definido dentro do componente
 
 const MyApplications: React.FC = () => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
+  
+  // Labels amigáveis para os documentos principais
+  const DOCUMENT_LABELS: Record<string, string> = {
+    passport: t('studentDashboard.myApplications.documents.passport'),
+    diploma: t('studentDashboard.myApplications.documents.highSchoolDiploma'),
+    funds_proof: t('studentDashboard.myApplications.documents.proofOfFunds'),
+  };
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -258,8 +260,8 @@ const MyApplications: React.FC = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    if (status === 'approved') return 'APPROVED BY THE UNIVERSITY';
-    if (status === 'rejected') return 'NOT SELECTED FOR THE SCHOLARSHIP';
+    if (status === 'approved') return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
+    if (status === 'rejected') return t('studentDashboard.myApplications.statusLabels.notSelectedForScholarship');
     return status.replace('_', ' ').toUpperCase();
   };
 
@@ -277,9 +279,9 @@ const MyApplications: React.FC = () => {
       case 'approved':
         if (hasPendingDocuments) {
           return {
-            title: 'Documents Approved by University',
-            description: 'Great news! Your application has been approved, but some documents still need attention.',
-            nextSteps: ['Complete any pending document uploads', 'Pay the application fee to secure your spot', 'Prepare for the next phase of enrollment'],
+            title: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.description'),
+            nextSteps: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.nextSteps', { returnObjects: true }) as string[],
             icon: '📋',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
@@ -287,9 +289,9 @@ const MyApplications: React.FC = () => {
           };
         } else if (!applicationFeePaid) {
           return {
-            title: 'Application Approved - Payment Required',
-            description: 'Congratulations! Your application has been fully approved. The next step is to pay the application fee.',
-            nextSteps: ['Pay the application fee to secure your scholarship', 'Complete enrollment process', 'Prepare for your academic journey'],
+            title: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.description'),
+            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.nextSteps', { returnObjects: true }) as string[],
             icon: '💳',
             color: 'text-green-700',
             bgColor: 'bg-green-50',
@@ -297,9 +299,9 @@ const MyApplications: React.FC = () => {
           };
         } else if (!scholarshipFeePaid) {
           return {
-            title: 'Application Fee Paid - Scholarship Fee Required',
-            description: 'Excellent! Your application fee has been confirmed. Now pay the scholarship fee to finalize your enrollment.',
-            nextSteps: ['Pay the scholarship fee to complete enrollment', 'Receive final confirmation', 'Begin your academic program'],
+            title: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.description'),
+            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.nextSteps', { returnObjects: true }) as string[],
             icon: '🎓',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
@@ -307,9 +309,9 @@ const MyApplications: React.FC = () => {
           };
         } else {
           return {
-            title: 'Fully Enrolled!',
-            description: 'Perfect! You have successfully completed all requirements and are officially enrolled.',
-            nextSteps: ['Access your student portal', 'Review class schedule', 'Connect with academic advisors'],
+            title: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.description'),
+            nextSteps: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.nextSteps', { returnObjects: true }) as string[],
             icon: '🎉',
             color: 'text-emerald-700',
             bgColor: 'bg-emerald-50',
@@ -319,9 +321,9 @@ const MyApplications: React.FC = () => {
       
       case 'rejected':
         return {
-          title: 'Application Not Selected',
-          description: 'Unfortunately, your application was not selected for this scholarship opportunity.',
-          nextSteps: ['Review other available scholarships', 'Consider improving your application', 'Apply for different programs'],
+          title: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.title'),
+          description: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.description'),
+          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.nextSteps', { returnObjects: true }) as string[],
           icon: '📝',
           color: 'text-red-700',
           bgColor: 'bg-red-50',
@@ -330,9 +332,9 @@ const MyApplications: React.FC = () => {
       
       case 'under_review':
         return {
-          title: 'Application Under Review',
-          description: 'Your application is currently being evaluated by the university. This process typically takes 2-4 weeks.',
-          nextSteps: ['Wait for university decision', 'Monitor your email for important notifications', 'Check application status regularly', 'Be patient during the review process'],
+          title: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.title'),
+          description: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.description'),
+          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.nextSteps', { returnObjects: true }) as string[],
           icon: '🔍',
           color: 'text-amber-700',
           bgColor: 'bg-amber-50',
@@ -341,9 +343,9 @@ const MyApplications: React.FC = () => {
       
       case 'pending_scholarship_fee':
         return {
-          title: 'Application Fee Confirmed',
-          description: 'Your application fee has been received and confirmed. You are now eligible for the scholarship.',
-          nextSteps: ['Pay the scholarship fee to complete enrollment', 'Submit any remaining documents', 'Prepare for your program start'],
+          title: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.title'),
+          description: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.description'),
+          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.nextSteps', { returnObjects: true }) as string[],
           icon: '✅',
           color: 'text-blue-700',
           bgColor: 'bg-blue-50',
@@ -354,9 +356,9 @@ const MyApplications: React.FC = () => {
       default:
         if (hasPendingDocuments) {
           return {
-            title: 'Documents Under University Review',
-            description: 'Your application has been submitted with all required documents. The university is currently reviewing your materials.',
-            nextSteps: ['Wait for university document review', 'Monitor your email for notifications', 'Check application status regularly'],
+            title: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.description'),
+            nextSteps: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.nextSteps', { returnObjects: true }) as string[],
             icon: '📋',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
@@ -364,9 +366,9 @@ const MyApplications: React.FC = () => {
           };
         } else {
           return {
-            title: 'Application Submitted',
-            description: 'Your application has been successfully submitted and is awaiting initial review.',
-            nextSteps: ['Wait for document review', 'Monitor application status', 'Prepare for next steps'],
+            title: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.description'),
+            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.nextSteps', { returnObjects: true }) as string[],
             icon: '📤',
             color: 'text-slate-700',
             bgColor: 'bg-slate-50',
@@ -529,7 +531,7 @@ const MyApplications: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 font-medium">Carregando suas aplicações...</p>
+          <p className="text-slate-600 font-medium">{t('studentDashboard.myApplications.loading')}</p>
         </div>
       </div>
     );
@@ -551,7 +553,7 @@ const getLevelColor = (level: any) => {
 };
 
   if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
+    return <div className="text-red-500">{t('studentDashboard.myApplications.error', { message: error })}</div>;
   }
 
   // Function to handle application fee payment confirmation
@@ -590,7 +592,7 @@ const getLevelColor = (level: any) => {
                 
                 <div className="mt-3 text-center sm:mt-0 sm:text-left flex-1">
                   <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Confirm Your Scholarship Selection
+                    {t('studentDashboard.myApplications.confirmationModal.title')}
                   </h3>
                   <div className="space-y-4">
                     
@@ -600,15 +602,17 @@ const getLevelColor = (level: any) => {
                       <div className="flex items-start relative">
                         <AlertCircle className="h-5 w-5 absolute text-amber-600 mt-0.5 flex-shrink-0" />
                         <div>
-                          <h4 className="text-center font-bold text-amber-900 mb-2">Important Decision</h4>
+                          <h4 className="text-center font-bold text-amber-900 mb-2">{t('studentDashboard.myApplications.confirmationModal.importantDecision')}</h4>
                           <p className="text-amber-800 text-sm leading-relaxed mb-3">
-                            By proceeding with this payment, you're making this your <strong>final scholarship choice</strong>. 
-                            This action cannot be undone.
+                            {t('studentDashboard.myApplications.confirmationModal.description')}
                           </p>
                           {otherApprovedApps.length > 0 && (
                             <div className="bg-white rounded-xl p-3 border border-amber-200">
                               <p className="text-amber-800 text-sm font-semibold mb-2">
-                                This will remove {otherApprovedApps.length} other approved application{otherApprovedApps.length > 1 ? 's' : ''}:
+                                {otherApprovedApps.length === 1 
+                                  ? t('studentDashboard.myApplications.confirmationModal.willRemoveOthers', { count: otherApprovedApps.length })
+                                  : t('studentDashboard.myApplications.confirmationModal.willRemoveOthersPlural', { count: otherApprovedApps.length })
+                                }:
                               </p>
                               <ul className="text-amber-700 text-xs space-y-1">
                                 {otherApprovedApps.map(app => (
@@ -632,7 +636,7 @@ const getLevelColor = (level: any) => {
                   productId="applicationFee"
                   feeType="application_fee"
                   paymentType="application_fee"
-                  buttonText={`Yes, Secure My Scholarship ($${pendingApplication.scholarships?.application_fee_amount ? 
+                  buttonText={`${t('studentDashboard.myApplications.confirmationModal.secureMyScholarship')} ($${pendingApplication.scholarships?.application_fee_amount ? 
                     Number(pendingApplication.scholarships.application_fee_amount).toFixed(2) : 
                     '350.00'
                   })`}
@@ -642,18 +646,13 @@ const getLevelColor = (level: any) => {
                   disabled={false}
                   scholarshipsIds={[pendingApplication.scholarship_id]}
                   metadata={{ application_id: pendingApplication.id, selected_scholarship_id: pendingApplication.scholarship_id }}
-                  scholarshipData={pendingApplication.scholarships ? {
-                    title: pendingApplication.scholarships.title || '',
-                    universityName: pendingApplication.scholarships.universities?.name || 'Unknown University',
-                    applicationFeeAmount: pendingApplication.scholarships.application_fee_amount || 350.00
-                  } : undefined}
                 />
                 <button
                   type="button"
                   className="w-full sm:w-auto bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
                   onClick={handleCancelPayment}
                 >
-                  Let me think about it
+                  {t('studentDashboard.myApplications.confirmationModal.letMeThink')}
                 </button>
               </div>
             </div>
@@ -733,7 +732,7 @@ const getLevelColor = (level: any) => {
               <summary className="flex items-center justify-between cursor-pointer p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
                 <div className="flex items-center">
                   <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">4</div>
-                  <span className="font-bold text-slate-900">Application Process Steps</span>
+                  <span className="font-bold text-slate-900">{t('studentDashboard.myApplications.steps.step1Title')} Process Steps</span>
                 </div>
                 <svg className="w-5 h-5 text-blue-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -743,29 +742,29 @@ const getLevelColor = (level: any) => {
                 <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
                   <div>
-                    <div className="font-semibold text-slate-900 text-sm mb-1">Submit Documents</div>
-                    <div className="text-xs text-slate-600">Upload passport, diploma and proof of funds</div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step1Title')}</div>
+                    <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step1Description')}</div>
                   </div>
                 </div>
                 <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
                   <div>
-                    <div className="font-semibold text-slate-900 text-sm mb-1">University Review</div>
-                    <div className="text-xs text-slate-600">Application shows as Pending until approved</div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step2Title')}</div>
+                    <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step2Description')}</div>
                   </div>
                 </div>
                 <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
                   <div>
-                    <div className="font-semibold text-slate-900 text-sm mb-1">Pay Application Fee</div>
-                    <div className="text-xs text-slate-600">Secure your approved scholarship spot</div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step3Title')}</div>
+                    <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step3Description')}</div>
                   </div>
                 </div>
                 <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">4</div>
                   <div>
-                    <div className="font-semibold text-slate-900 text-sm mb-1">Pay Scholarship Fee</div>
-                    <div className="text-xs text-slate-600">Complete enrollment and start your program</div>
+                    <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step4Title')}</div>
+                    <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step4Description')}</div>
                   </div>
                 </div>
               </div>
@@ -798,26 +797,26 @@ const getLevelColor = (level: any) => {
           <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center mx-auto mb-6 sm:mb-8">
             <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600" />
           </div>
-          <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">No applications yet</h3>
+          <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 sm:mb-4">{t('studentDashboard.myApplications.noApplications.title')}</h3>
           <p className="text-slate-500 mb-6 sm:mb-8 max-w-lg mx-auto text-base sm:text-lg leading-relaxed px-4">
-            Start applying for scholarships to track your progress here. We'll help you find the best opportunities that match your profile.
+            {t('studentDashboard.myApplications.noApplications.description')}
           </p>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 max-w-4xl mx-auto">
             <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200">
               <Award className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2 sm:mb-3" />
-              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">Find Scholarships</h4>
-              <p className="text-xs sm:text-sm text-slate-600">Browse through hundreds of opportunities</p>
+              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">{t('studentDashboard.myApplications.noApplications.findScholarships')}</h4>
+              <p className="text-xs sm:text-sm text-slate-600">{t('studentDashboard.myApplications.noApplications.browseOpportunities')}</p>
             </div>
             <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200">
               <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-2 sm:mb-3" />
-              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">Apply Easily</h4>
-              <p className="text-xs sm:text-sm text-slate-600">Simple application process with guidance</p>
+              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">{t('studentDashboard.myApplications.noApplications.applyEasily')}</h4>
+              <p className="text-xs sm:text-sm text-slate-600">{t('studentDashboard.myApplications.noApplications.simpleProcess')}</p>
             </div>
             <div className="p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-slate-200 sm:col-span-2 lg:col-span-1">
               <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-2 sm:mb-3" />
-              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">Track Progress</h4>
-              <p className="text-xs sm:text-sm text-slate-600">Monitor your applications in real-time</p>
+              <h4 className="font-bold text-slate-900 mb-1 sm:mb-2 text-sm sm:text-base">{t('studentDashboard.myApplications.noApplications.trackProgress')}</h4>
+              <p className="text-xs sm:text-sm text-slate-600">{t('studentDashboard.myApplications.noApplications.monitorRealTime')}</p>
             </div>
           </div>
           
@@ -825,7 +824,7 @@ const getLevelColor = (level: any) => {
             to="/student/dashboard/scholarships"
             className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center text-sm sm:text-base"
           >
-            Find Scholarships
+            {t('studentDashboard.myApplications.noApplications.findScholarships')}
             <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
         </div>
@@ -842,14 +841,14 @@ const getLevelColor = (level: any) => {
               return (
                 <section>
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-slate-900">Approved by the University</h3>
-                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} approved</span>
+                    <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.approvedByUniversity')}</h3>
+                    <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} {t('studentDashboard.myApplications.sections.approved')}</span>
                   </div>
                   <div className="mb-6 rounded-xl bg-blue-50 border border-blue-200 p-5 text-sm text-blue-800">
                     <div className="flex items-start">
                       <AlertCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
                       <div>
-                        <span className="font-semibold">Important:</span> You can choose only one scholarship. After you pay the Application Fee for a scholarship, other options will be disabled.
+                        <span className="font-semibold">{t('studentDashboard.myApplications.importantNotice.title')}</span> {t('studentDashboard.myApplications.importantNotice.description')}
                       </div>
                     </div>
                   </div>
@@ -918,7 +917,7 @@ const getLevelColor = (level: any) => {
                     {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
                       <div className="mt-4">
                         <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
-                          Next Steps:
+                          {t('studentDashboard.myApplications.nextSteps')}
                         </h4>
                         <ul className="space-y-2">
                           {statusInfo.nextSteps.map((step, index) => (
@@ -940,7 +939,7 @@ const getLevelColor = (level: any) => {
                           <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-gray-600 mb-1 font-medium">Annual Scholarship Value</p>
+                          <p className="text-xs text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.annualScholarshipValue')}</p>
                           <p className="font-bold text-base sm:text-lg text-green-700 truncate">
                             {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
                           </p>
@@ -952,7 +951,7 @@ const getLevelColor = (level: any) => {
                           <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-gray-600 mb-1 font-medium">Application Date</p>
+                          <p className="text-xs text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.applicationDate')}</p>
                           <p className="font-semibold text-gray-900 text-xs sm:text-sm">
                             {new Date(application.applied_at).toLocaleDateString('en-US', {
                               year: 'numeric',
@@ -967,11 +966,11 @@ const getLevelColor = (level: any) => {
   
                   {/* Payment Status Section */}
                   <div className="mb-6">
-                    <h3 className="font-bold text-gray-900 mb-4 text-base">Payment Status</h3>
+                    <h3 className="font-bold text-gray-900 mb-4 text-base">{t('studentDashboard.myApplications.paymentStatus.title')}</h3>
                     <div className="space-y-3">
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-semibold text-gray-900 text-sm">Application Fee</span>
+                          <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
                             ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
                           </span>
@@ -979,7 +978,7 @@ const getLevelColor = (level: any) => {
                         {applicationFeePaid ? (
                           <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Paid
+                            {t('studentDashboard.myApplications.paymentStatus.paid')}
                           </div>
                         ) : (
                           <button
@@ -987,27 +986,27 @@ const getLevelColor = (level: any) => {
                             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
                             disabled={hasSelectedScholarship && !scholarshipFeePaid}
                           >
-                            Pay Application Fee
+                            {t('studentDashboard.myApplications.paymentStatus.payApplicationFee')}
                           </button>
                         )}
                       </div>
   
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-semibold text-gray-900 text-sm">Scholarship Fee</span>
+                          <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
                           <span className="text-base font-bold text-gray-700">$550</span>
                         </div>
                         {scholarshipFeePaid ? (
                           <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Paid
+                            {t('studentDashboard.myApplications.paymentStatus.paid')}
                           </div>
                         ) : (
                           <StripeCheckout
                             productId="scholarshipFee"
                             feeType="scholarship_fee"
                             paymentType="scholarship_fee"
-                            buttonText="Pay Scholarship Fee"
+                            buttonText={t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
                             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm"
                             successUrl={`${window.location?.origin || ''}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                             cancelUrl={`${window.location?.origin || ''}/student/dashboard/scholarship-fee-error`}
@@ -1024,7 +1023,7 @@ const getLevelColor = (level: any) => {
                         <div className="flex items-start">
                           <AlertCircle className="h-4 w-4 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
                           <p className="text-xs text-amber-800 leading-relaxed">
-                            You have already selected another scholarship. Payments for additional scholarships are currently disabled.
+                            {t('studentDashboard.myApplications.importantNotice.description')}
                           </p>
                         </div>
                       </div>
@@ -1039,7 +1038,7 @@ const getLevelColor = (level: any) => {
                         className="inline-flex items-center justify-center w-full px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 text-sm"
                       >
                         <GraduationCap className="h-4 w-4 mr-2" />
-                        View Application Details
+                        {t('studentDashboard.myApplications.applicationDetails.viewDetails')}
                       </Link>
                     </div>
                   )}
@@ -1059,8 +1058,8 @@ const getLevelColor = (level: any) => {
               return (
                 <section>
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-slate-900">Pending and In Progress</h3>
-                    <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} applications</span>
+                    <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.pendingAndInProgress')}</h3>
+                    <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} {t('studentDashboard.myApplications.sections.applications')}</span>
                   </div>
                   <div className="sm:grid flex justify-center sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
                     scrollbarWidth: 'none', 
@@ -1124,9 +1123,9 @@ const getLevelColor = (level: any) => {
                               {/* Next Steps */}
                               {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
                                 <div className="mt-4">
-                                  <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
-                                    Next Steps:
-                                  </h4>
+                                                            <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
+                            {t('studentDashboard.myApplications.nextSteps')}
+                          </h4>
                                   <ul className="space-y-2">
                                     {statusInfo.nextSteps.map((step, index) => (
                                       <li key={index} className="flex items-start text-xs text-slate-700">
@@ -1148,7 +1147,7 @@ const getLevelColor = (level: any) => {
                                     <span className="font-semibold text-green-700 text-base">
                                       {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
                                     </span>
-                                    <p className="text-slate-600 text-xs">Annual value</p>
+                                    <p className="text-slate-600 text-xs">{t('studentDashboard.myApplications.scholarshipDetails.annualValue')}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center">
@@ -1157,7 +1156,7 @@ const getLevelColor = (level: any) => {
                                     <span className="font-semibold text-slate-700">
                                       {new Date(application.applied_at).toLocaleDateString()}
                                     </span>
-                                    <p className="text-slate-600 text-xs">Applied on</p>
+                                    <p className="text-slate-600 text-xs">{t('studentDashboard.myApplications.scholarshipDetails.appliedOn')}</p>
                                   </div>
                                 </div>
                               </div>
@@ -1169,7 +1168,7 @@ const getLevelColor = (level: any) => {
                                 <div className="flex items-start">
                                   <XCircle className="h-4 w-4 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
                                   <div>
-                                    <strong className="block mb-1">Reason:</strong> 
+                                                                         <strong className="block mb-1">{t('studentDashboard.myApplications.rejectedApplication.reason')}</strong> 
                                     {(application as any).notes}
                                   </div>
                                 </div>
@@ -1183,9 +1182,9 @@ const getLevelColor = (level: any) => {
                               
                               // Create a complete document list with status
                               const allDocuments = [
-                                { type: 'passport', label: 'Passport' },
-                                { type: 'diploma', label: 'High School Diploma' },
-                                { type: 'funds_proof', label: 'Proof of Funds' }
+                                { type: 'passport', label: t('studentDashboard.myApplications.documents.passport') },
+                                { type: 'diploma', label: t('studentDashboard.myApplications.documents.highSchoolDiploma') },
+                                { type: 'funds_proof', label: t('studentDashboard.myApplications.documents.proofOfFunds') }
                               ].map(docTemplate => {
                                 const docData = docs.find(d => d.type === docTemplate.type);
                                 return {
@@ -1205,7 +1204,7 @@ const getLevelColor = (level: any) => {
                                   >
                                     <h4 className="text-sm font-bold text-slate-900 flex items-center">
                                       <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                                      Documents Checklist
+                                      {t('studentDashboard.myApplications.documents.checklist')}
                                     </h4>
                                     <svg 
                                       className={`w-4 h-4 text-slate-500 transition-transform ${openChecklists[application.id] ? 'rotate-180' : ''}`} 
@@ -1271,7 +1270,7 @@ const getLevelColor = (level: any) => {
                                                            ? 'bg-amber-50 text-amber-700 border-amber-200'
                                                            : 'bg-slate-50 text-slate-600 border-slate-200'
                                                      }`}>
-                                                       {isApproved ? 'Approved' : isRejected ? 'Changes Needed' : isUnderReview ? 'Under Review' : 'Pending'}
+                                                       {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : isUnderReview ? t('studentDashboard.myApplications.documents.status.underReview') : t('studentDashboard.myApplications.documents.status.pending')}
                                                      </span>
                                                    </div>
                                                    
@@ -1279,7 +1278,7 @@ const getLevelColor = (level: any) => {
                                                    {doc.review_notes && isRejected && (
                                                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
                                                        <p className="text-xs text-red-700">
-                                                         <strong>Review:</strong> {doc.review_notes}
+                                                         <strong>{t('studentDashboard.myApplications.documents.review')}</strong> {doc.review_notes}
                                                        </p>
                                                      </div>
                                                    )}
@@ -1288,7 +1287,7 @@ const getLevelColor = (level: any) => {
                                                    {isRejected && (
                                                      <div className="mt-3 space-y-2">
                                                        <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 w-full block text-center text-xs hover:shadow-md">
-                                                         <span>Send New {doc.label}</span>
+                                                         <span>{t('studentDashboard.myApplications.documents.sendNew')} {doc.label}</span>
                                                          <input
                                                            type="file"
                                                            className="sr-only"
@@ -1298,7 +1297,7 @@ const getLevelColor = (level: any) => {
                                                        </label>
                                                        {selectedFiles[docKey(application.id, doc.type)] && (
                                                          <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2">
-                                                           <span className="font-medium">Selected:</span> {selectedFiles[docKey(application.id, doc.type)]?.name}
+                                                           <span className="font-medium">{t('studentDashboard.myApplications.paymentStatus.selected')}</span> {selectedFiles[docKey(application.id, doc.type)]?.name}
                                                          </div>
                                                        )}
                                                        <button
@@ -1309,9 +1308,9 @@ const getLevelColor = (level: any) => {
                                                          {uploading[docKey(application.id, doc.type)] ? (
                                                            <div className="flex items-center justify-center">
                                                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                                                             Uploading...
+                                                             {t('studentDashboard.myApplications.paymentStatus.uploading')}
                                                            </div>
-                                                         ) : 'Upload Document'}
+                                                         ) : t('studentDashboard.myApplications.paymentStatus.uploadDocument')}
                                                        </button>
                                                      </div>
                                                    )}
@@ -1327,7 +1326,7 @@ const getLevelColor = (level: any) => {
                                          <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
                                            <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
                                              <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                             University Additional Requests
+                                             {t('studentDashboard.myApplications.documents.universityAdditionalRequests')}
                                            </h5>
                                            <div className="space-y-2">
                                              {reqUploads.map((req, idx) => {
@@ -1364,12 +1363,12 @@ const getLevelColor = (level: any) => {
                                                            ? 'bg-red-100 text-red-700'
                                                            : 'bg-amber-100 text-amber-700'
                                                      }`}>
-                                                       {isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Under Review'}
+                                                       {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : t('studentDashboard.myApplications.documents.status.underReview')}
                                                      </span>
                                                    </div>
                                                    {req.review_notes && isRejected && (
                                                      <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                                                       <strong>Note:</strong> {req.review_notes}
+                                                       <strong>{t('studentDashboard.myApplications.documents.review')}</strong> {req.review_notes}
                                                      </div>
                                                    )}
                                                  </div>
