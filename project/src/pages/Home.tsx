@@ -45,7 +45,7 @@ const Home: React.FC = () => {
     }
   }, [universities]);
   const { isAuthenticated, user, userProfile } = useAuth();
-  // Removido hasPaidProcess e subscriptionLoading pois não são utilizados
+  const { hasPaidProcess } = useSubscription();
 
   // Função para determinar o dashboard conforme a role (igual Header)
   const getDashboardPath = () => {
@@ -54,6 +54,7 @@ const Home: React.FC = () => {
       case 'student': return '/student/dashboard';
       case 'school': return '/school/dashboard';
       case 'admin': return '/admin/dashboard';
+      case 'affiliate_admin': return '/affiliate-admin/dashboard';
       default: return '/';
     }
   };

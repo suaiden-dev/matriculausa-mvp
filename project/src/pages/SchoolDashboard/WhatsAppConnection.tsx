@@ -25,6 +25,7 @@ import {
   Send,
   Wifi,
 } from 'lucide-react';
+import { FaWhatsapp } from 'react-icons/fa';
 
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
@@ -406,7 +407,163 @@ export default function WhatsAppConnection() {
 
   // Removidas as funções locais - agora usando a implementação centralizada de whatsappUtils.ts
 
+  // Função helper para verificar se um agent tem conexão ativa
+  const getAgentConnection = (agentId: string) => {
+    return connections.find(conn => 
+      conn.ai_configuration_id === agentId && 
+      conn.connection_status === 'connected'
+    );
+  };
+
+  // Função helper para verificar se um agent tem conexão desconectada (instância existe)
+  const getAgentDisconnectedConnection = (agentId: string) => {
+    return connections.find(conn => 
+      conn.ai_configuration_id === agentId && 
+      conn.connection_status === 'disconnected'
+    );
+  };
+
+  // Função para disconnect de um agent específico
+  const handleAgentDisconnect = async (agentId: string) => {
+    const connection = getAgentConnection(agentId);
+    if (connection) {
+      setActionLoading(connection.id);
+      try {
+        // Primeiro, chamar o webhook de disconnect
+        try {
+          const webhookPayload = {
+            instance_name: connection.instance_name,
+            connection_id: connection.id,
+            agent_id: agentId,
+            university_id: university?.id,
+            user_id: user?.id,
+            timestamp: new Date().toISOString()
+          };
+
+          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/Disconnect-Matricula', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(webhookPayload),
+          });
+
+          if (!webhookResponse.ok) {
+            console.warn(`Webhook disconnect warning: ${webhookResponse.status} - ${await webhookResponse.text()}`);
+            // Continua mesmo se o webhook falhar
+          } else {
+            console.log('✅ Webhook disconnect chamado com sucesso');
+          }
+        } catch (webhookError) {
+          console.warn('Erro no webhook de disconnect, continuando...', webhookError);
+          // Continua mesmo se o webhook falhar
+        }
+
+        // Atualizar o status no banco de dados
+        const { error } = await supabase
+          .from('whatsapp_connections')
+          .update({ 
+            connection_status: 'disconnected', 
+            disconnected_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connection.id);
+
+        if (error) throw error;
+        fetchConnections();
+      } catch (error) {
+        console.error('Error disconnecting agent:', error);
+      } finally {
+        setActionLoading(null);
+      }
+    }
+  };
+
+  // Função para reconnect de um agent específico
+  const handleAgentReconnect = async (agentId: string) => {
+    const connection = getAgentDisconnectedConnection(agentId);
+    if (connection) {
+      setActionLoading(connection.id);
+      setQrLoading(true);
+      setQrError(null);
+      setShowQrModal(true);
+      setCurrentInstanceName(connection.instance_name);
+      
+      try {
+        const webhookPayload = {
+          instance_name: connection.instance_name,
+          connection_id: connection.id,
+          agent_id: agentId,
+          university_id: university?.id,
+          user_id: user?.id,
+          timestamp: new Date().toISOString()
+        };
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/qrcode_atualizado', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookPayload),
+        });
+
+        if (!webhookResponse.ok) {
+          const errorText = await webhookResponse.text();
+          throw new Error(`Webhook error: ${webhookResponse.status} - ${errorText}`);
+        }
+
+        // Verificar o content type da resposta
+        const contentType = webhookResponse.headers.get('content-type');
+        let qrCodeData;
+        
+        if (contentType && contentType.includes('application/json')) {
+          const result = await webhookResponse.json();
+          console.log('✅ Webhook qrcode_atualizado chamado com sucesso');
+          qrCodeData = result.qrcode || result.qr_code || result.qrCodeBase64 || result.base64;
+        } else {
+          // Se não for JSON, assumimos que é o QR code direto em base64
+          qrCodeData = await webhookResponse.text();
+        }
+        if (qrCodeData) {
+          setQrCodeUrl(qrCodeData);
+          
+          // Atualizar status para connecting
+          await supabase
+            .from('whatsapp_connections')
+            .update({ 
+              connection_status: 'connecting',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', connection.id);
+            
+          fetchConnections();
+        } else {
+          throw new Error('QR Code não encontrado na resposta do webhook');
+        }
+      } catch (error) {
+        console.error('Error reconnecting agent:', error);
+        setQrError(error instanceof Error ? error.message : 'Erro desconhecido');
+        handleCloseModal(connection);
+      } finally {
+        setActionLoading(null);
+        setQrLoading(false);
+      }
+    }
+  };
+
   const handleCreateConnection = async (selectedAgentId?: string | React.MouseEvent) => {
+    // Se não há selectedAgentId ou se é um evento (click sem ID), apenas redireciona
+    if (!selectedAgentId || (selectedAgentId && typeof selectedAgentId !== 'string')) {
+      setActiveTab('agents');
+      return;
+    }
+    
+    // Se há um agentId específico, executa a funcionalidade completa
+    return handleCreateConnectionOld(selectedAgentId);
+  };
+
+  // Função auxiliar para quando realmente quiser criar conexão (mantida para referência)
+  const handleCreateConnectionOld = async (selectedAgentId?: string | React.MouseEvent) => {
     // Se for um evento, não temos um agentId
     if (selectedAgentId && typeof selectedAgentId !== 'string') {
       selectedAgentId = undefined;
@@ -418,6 +575,7 @@ export default function WhatsAppConnection() {
       setActiveTab('agents');
       return;
     }
+    
     
     if (!university || !user) {
       console.error('University or user information not available');
@@ -727,10 +885,38 @@ export default function WhatsAppConnection() {
   }, []);
 
   const confirmDisconnect = async () => {
-    if (!disconnectConnectionId) return;
+    if (!disconnectConnectionId || !disconnectInstanceName) return;
     
     setActionLoading(disconnectConnectionId);
     try {
+      // Primeiro, chamar o webhook de disconnect
+      try {
+        const webhookPayload = {
+          instance_name: disconnectInstanceName,
+          connection_id: disconnectConnectionId,
+          university_id: university?.id,
+          user_id: user?.id,
+          timestamp: new Date().toISOString()
+        };
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/Disconnect-Matricula', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookPayload),
+        });
+
+        if (!webhookResponse.ok) {
+          console.warn(`Webhook disconnect warning: ${webhookResponse.status} - ${await webhookResponse.text()}`);
+        } else {
+          console.log('✅ Webhook disconnect chamado com sucesso');
+        }
+      } catch (webhookError) {
+        console.warn('Erro no webhook de disconnect, continuando...', webhookError);
+      }
+
+      // Atualizar o status no banco de dados
       const { error } = await supabase
         .from('whatsapp_connections')
         .update({ 
@@ -757,10 +943,38 @@ export default function WhatsAppConnection() {
   }, []);
 
   const confirmDelete = async () => {
-    if (!deleteConnectionId) return;
+    if (!deleteConnectionId || !deleteInstanceName) return;
     
     setActionLoading(deleteConnectionId);
     try {
+      // Primeiro, chamar o webhook de exclusão de instância
+      try {
+        const webhookPayload = {
+          instance_name: deleteInstanceName,
+          connection_id: deleteConnectionId,
+          university_id: university?.id,
+          user_id: user?.id,
+          timestamp: new Date().toISOString()
+        };
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/Excluir-Instancia-Matricula', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookPayload),
+        });
+
+        if (!webhookResponse.ok) {
+          console.warn(`Webhook delete warning: ${webhookResponse.status} - ${await webhookResponse.text()}`);
+        } else {
+          console.log('✅ Webhook Excluir-Instancia-Matricula chamado com sucesso');
+        }
+      } catch (webhookError) {
+        console.warn('Erro no webhook de exclusão, continuando...', webhookError);
+      }
+
+      // Deletar do banco de dados
       const { error } = await supabase
         .from('whatsapp_connections')
         .delete()
@@ -799,11 +1013,15 @@ export default function WhatsAppConnection() {
 
       const qrPayload = {
         instance_name: instanceName,
+        connection_id: id,
+        university_id: university?.id,
+        user_id: user?.id,
+        timestamp: new Date().toISOString(),
         // Incluir account_id se existir
         ...(chatwootAccount?.chatwoot_account_id && { account_id: chatwootAccount.chatwoot_account_id })
       };
 
-      const response = await fetch('https://nwh.suaiden.com/webhook/gerar_qr_code_whastapp_matriculausa', {
+      const response = await fetch('https://nwh.suaiden.com/webhook/qrcode_atualizado', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(qrPayload),
@@ -879,7 +1097,7 @@ export default function WhatsAppConnection() {
     return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Waiting for scan</span>;
   };
 
-  const handleCloseModal = useCallback(() => {
+  const handleCloseModal = useCallback(async (selectedConnection?: any) => {
     setShowQrModal(false);
     setQrCodeUrl(null);
     setConnectionStatus(null);
@@ -888,7 +1106,26 @@ export default function WhatsAppConnection() {
     if (countdownRef.current) clearInterval(countdownRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (validationIntervalRef.current) clearInterval(validationIntervalRef.current);
-  }, []);
+
+    // Restaurar o status anterior no banco de dados se estiver em 'connecting'
+    const connectionToUpdate = selectedConnection || connections?.find(c => c.connection_status === 'connecting');
+    if (connectionToUpdate) {
+      try {
+        await supabase
+          .from('whatsapp_connections')
+          .update({ 
+            connection_status: 'disconnected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connectionToUpdate.id);
+        
+        // Atualizar a lista de conexões
+        fetchConnections();
+      } catch (error) {
+        console.error('Error restoring connection status:', error);
+      }
+    }
+  }, [connections, fetchConnections]);
 
   const handleTestAgent = async (agentId: string) => {
     if (!testMessage.trim()) {
@@ -2004,13 +2241,29 @@ Mantenha sempre o seguinte tom nas interações:
       let state: string | null = null;
       
       try {
+        console.log('Raw response text:', responseText); // Debug log para ver a resposta exata
+        
         const json = JSON.parse(responseText);
-        let data = (json && Array.isArray(json.data)) ? json.data[0] : json;
+        console.log('Webhook response (raw):', json);
+        
+        // Se for um array, pega o primeiro item
+        const data = Array.isArray(json) ? json[0] : json;
+        console.log('Webhook response (parsed):', data);
+        
         state = data?.state;
+        const phone_number = data?.phone_number;
+        
+        console.log('Extracted data:', { state, phone_number });
+        return { state, phone_number };
       } catch (e) {
-        if (responseText.toLowerCase().includes('open')) state = 'open';
+        console.error('Error parsing webhook response:', e);
+        // Se não conseguir fazer o parse e a string contiver 'open'
+        if (typeof responseText === 'string' && responseText.toLowerCase().includes('open')) {
+          console.log('Falling back to simple string response');
+          state = 'open';
+        }
+        return { state };
       }
-      return { state };
     } catch (error) {
       console.error('Error validating WhatsApp connection:', error);
       return null;
@@ -2037,14 +2290,43 @@ Mantenha sempre o seguinte tom nas interações:
         if (validationResult?.state === 'open') {
           setConnectionStatus('connected');
           
-          await supabase
+          console.log('Full validation result:', validationResult); // Debug log mais detalhado
+          
+          const updateData: {
+            connection_status: string;
+            connected_at: string;
+            updated_at: string;
+            phone_number?: string;
+          } = {
+            connection_status: 'connected',
+            connected_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
+          // Verifica explicitamente se phone_number existe e não é undefined/null
+          if (validationResult?.phone_number) {
+            console.log('Adding phone number to update:', validationResult.phone_number); // Debug log
+            updateData.phone_number = validationResult.phone_number;
+          } else {
+            console.log('No phone number found in validation result'); // Debug log
+          }
+
+          console.log('Final update data:', updateData); // Debug log
+
+          const { error } = await supabase
             .from('whatsapp_connections')
-            .update({
-              connection_status: 'connected',
-              connected_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('instance_name', currentInstanceName);
+            
+          if (error) {
+            console.error('Error updating connection:', error); // Debug log do erro
+          } else {
+            console.log('Connection updated successfully'); // Debug log do sucesso
+          }
+
+          if (error) {
+            console.error('Error updating connection:', error); // Debug log
+          }
 
           // Close modal and clean up
           setShowQrModal(false);
@@ -2349,7 +2631,7 @@ Mantenha sempre o seguinte tom nas interações:
               </div>
             ) : viewMode === 'grid' ? (
               // Grid View
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
                 {agents.map((agent) => (
                   <div key={agent.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 hover:-translate-y-1">
                     {/* Header */}
@@ -2381,7 +2663,7 @@ Mantenha sempre o seguinte tom nas interações:
 
                     {/* Barra de Ações Horizontal e Rolável */}
                     <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                      <div className="actions-container horizontal-scroll-fade bg-white">
+                      <div className="flex flex-nowrap gap-1 justify-center bg-white">
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
@@ -2390,28 +2672,52 @@ Mantenha sempre o seguinte tom nas interações:
                             setChatHistory([]);
                             setCurrentTestConversationId(`conv_${Date.now()}`);
                           }}
-                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#05294E] bg-[#05294E]/10 border border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/20 hover:border-[#05294E]/30 transition-colors"
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-[#05294E] bg-white border-2 border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/5 hover:border-[#05294E]/40 hover:shadow-md hover:shadow-[#05294E]/10 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                         >
                           <Bot className="h-4 w-4" />
                           Test
                         </button>
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            setActiveTab('whatsapp');
-                            handleCreateConnection(agent.id);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#D0151C] bg-[#D0151C]/10 border border-[#D0151C]/20 rounded-lg hover:bg-[#D0151C]/20 hover:border-[#D0151C]/30 transition-colors"
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          Connect
-                        </button>
+                        {getAgentConnection(agent.id) ? (
+                          <button
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              handleAgentDisconnect(agent.id);
+                            }}
+                            className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-orange-700 bg-white border-2 border-orange-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 hover:shadow-md hover:shadow-orange-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                          >
+                            <WifiOff className="h-4 w-4" />
+                            Disconnect
+                          </button>
+                        ) : getAgentDisconnectedConnection(agent.id) ? (
+                          <button
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              handleAgentReconnect(agent.id);
+                            }}
+                            className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-blue-700 bg-white border-2 border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:shadow-md hover:shadow-blue-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            Reconnect
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              setActiveTab('whatsapp');
+                              handleCreateConnection(agent.id);
+                            }}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-green-700 bg-white border-2 border-green-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:shadow-md hover:shadow-green-100 transition-all duration-200 transform hover:-translate-y-0.5"
+                          >
+                            <FaWhatsapp className="h-4 w-4" />
+                            Connect
+                          </button>
+                        )}
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
                             handleEmbedAgent(agent);
                           }}
-                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                         >
                           <ExternalLink className="h-4 w-4" />
                           Embed
@@ -2421,7 +2727,7 @@ Mantenha sempre o seguinte tom nas interações:
                             e.preventDefault();
                             handleEditAgent(agent);
                           }}
-                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                         >
                           <Edit className="h-4 w-4" />
                           Edit
@@ -2431,7 +2737,7 @@ Mantenha sempre o seguinte tom nas interações:
                             e.preventDefault();
                             handleDeleteAgent(agent.id);
                           }}
-                          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-red-700 bg-white border-2 border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 hover:shadow-md hover:shadow-red-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                         >
                           <Trash2 className="h-4 w-4" />
                           Delete
@@ -2471,7 +2777,7 @@ Mantenha sempre o seguinte tom nas interações:
                     </div>
 
                     {/* Barra de Ações Horizontal e Rolável */}
-                    <div className="actions-container horizontal-scroll-fade bg-white">
+                                         <div className="flex flex-nowrap gap-1 justify-start bg-white">
                       <button
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
@@ -2480,28 +2786,52 @@ Mantenha sempre o seguinte tom nas interações:
                           setChatHistory([]);
                           setCurrentTestConversationId(`conv_${Date.now()}`);
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#05294E] bg-[#05294E]/10 border border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/20 hover:border-[#05294E]/30 transition-colors"
+                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-[#05294E] bg-white border-2 border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/5 hover:border-[#05294E]/40 hover:shadow-md hover:shadow-[#05294E]/10 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                       >
                         <Bot className="h-4 w-4" />
                         Test
                       </button>
-                      <button
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          setActiveTab('whatsapp');
-                          handleCreateConnection(agent.id);
-                        }}
-                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-[#D0151C] bg-[#D0151C]/10 border border-[#D0151C]/20 rounded-lg hover:bg-[#D0151C]/20 hover:border-[#D0151C]/30 transition-colors"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        Connect
-                      </button>
+                      {getAgentConnection(agent.id) ? (
+                        <button
+                          onClick={(e: React.MouseEvent) => {
+                            e.preventDefault();
+                            handleAgentDisconnect(agent.id);
+                          }}
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-orange-700 bg-white border-2 border-orange-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 hover:shadow-md hover:shadow-orange-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                        >
+                          <WifiOff className="h-4 w-4" />
+                          Disconnect
+                        </button>
+                      ) : getAgentDisconnectedConnection(agent.id) ? (
+                        <button
+                          onClick={(e: React.MouseEvent) => {
+                            e.preventDefault();
+                            handleAgentReconnect(agent.id);
+                          }}
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-blue-700 bg-white border-2 border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:shadow-md hover:shadow-blue-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Reconnect
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e: React.MouseEvent) => {
+                            e.preventDefault();
+                            setActiveTab('whatsapp');
+                            handleCreateConnection(agent.id);
+                          }}
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-green-700 bg-white border-2 border-green-200 rounded-lg hover:bg-green-50 hover:border-green-300 hover:shadow-md hover:shadow-green-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                        >
+                          <FaWhatsapp className="h-4 w-4" />
+                          Connect
+                        </button>
+                      )}
                       <button
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           handleEmbedAgent(agent);
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                       >
                         <ExternalLink className="h-4 w-4" />
                         Embed
@@ -2511,7 +2841,7 @@ Mantenha sempre o seguinte tom nas interações:
                           e.preventDefault();
                           handleEditAgent(agent);
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 hover:border-gray-300 transition-colors"
+                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                       >
                         <Edit className="h-4 w-4" />
                         Edit
@@ -2521,7 +2851,7 @@ Mantenha sempre o seguinte tom nas interações:
                           e.preventDefault();
                           handleDeleteAgent(agent.id);
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-colors"
+                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-red-700 bg-white border-2 border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 hover:shadow-md hover:shadow-red-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
                       >
                         <Trash2 className="h-4 w-4" />
                         Delete
@@ -2882,10 +3212,10 @@ Mantenha sempre o seguinte tom nas interações:
                     <p className="text-yellow-700 text-sm mb-3">
                       You need to create AI agents first before connecting WhatsApp. AI agents will handle conversations with your students automatically.
                     </p>
-                    <button
-                      onClick={() => setActiveTab('agents')}
-                      className="bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors text-sm"
-                    >
+                                          <button
+                        onClick={() => setActiveTab('agents')}
+                        className="bg-[#05294E] hover:bg-[#05294E]/90 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-lg hover:shadow-[#05294E]/20 transform hover:-translate-y-0.5 text-sm"
+                      >
                       <Bot className="h-4 w-4" />
                       Create Your First AI Agent
                     </button>
@@ -2923,7 +3253,7 @@ Mantenha sempre o seguinte tom nas interações:
                       <button
                         onClick={() => handleDisconnect(connection.id, connection.instance_name)}
                         disabled={actionLoading === connection.id}
-                        className="text-[#D0151C] hover:text-[#D0151C]/80 hover:bg-[#D0151C]/10 px-3 py-1 rounded-lg border border-[#D0151C]/20 text-sm font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-1 rounded-lg border border-orange-200 text-sm font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
                       >
                         <WifiOff className="h-4 w-4" />
                         {actionLoading === connection.id ? "..." : "Disconnect"}
@@ -3012,7 +3342,7 @@ Mantenha sempre o seguinte tom nas interações:
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900">Connect WhatsApp</h3>
               <button 
-                onClick={handleCloseModal} 
+                onClick={() => handleCloseModal(connections?.find(c => c.instance_name === currentInstanceName))} 
                 className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Close modal"
               >
@@ -3059,7 +3389,7 @@ Mantenha sempre o seguinte tom nas interações:
                   {qrLoading ? "Generating..." : "Refresh QR Code"}
                 </button>
                 <button 
-                  onClick={handleCloseModal} 
+                  onClick={() => handleCloseModal(connections?.find(c => c.instance_name === currentInstanceName))} 
                   className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
                 >
                   Cancel
@@ -3091,7 +3421,7 @@ Mantenha sempre o seguinte tom nas interações:
               </button>
               <button
                 onClick={confirmDelete}
-                className="flex-1 px-4 py-3 bg-[#D0151C] text-white rounded-xl hover:bg-[#D0151C]/90 font-medium transition-colors text-sm sm:text-base"
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium transition-colors text-sm sm:text-base"
               >
                 Delete
               </button>
@@ -3104,8 +3434,8 @@ Mantenha sempre o seguinte tom nas interações:
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
             <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-[#D0151C]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <WifiOff className="h-6 w-6 text-[#D0151C]" />
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <WifiOff className="h-6 w-6 text-orange-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Disconnect WhatsApp</h3>
               <p className="text-gray-600">
@@ -3121,7 +3451,7 @@ Mantenha sempre o seguinte tom nas interações:
               </button>
               <button
                 onClick={confirmDisconnect}
-                className="flex-1 px-4 py-3 bg-[#D0151C] text-white rounded-xl hover:bg-[#D0151C]/90 font-medium transition-colors"
+                className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 font-medium transition-colors"
               >
                 Disconnect
               </button>
@@ -3347,7 +3677,7 @@ Mantenha sempre o seguinte tom nas interações:
                     setShowSuccessModal(false);
                     setActiveTab('whatsapp');
                   }}
-                  className="w-full bg-[#D0151C] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#D0151C]/90 transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-green-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <MessageSquare className="h-5 w-5" />
                   Connect to WhatsApp

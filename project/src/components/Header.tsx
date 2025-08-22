@@ -70,6 +70,7 @@ const Header: React.FC = () => {
       case 'student': return '/student/dashboard';
       case 'school': return '/school/dashboard';
       case 'admin': return '/admin/dashboard';
+      case 'affiliate_admin': return '/affiliate-admin/dashboard';
       default: return '/';
     }
   };
@@ -80,6 +81,7 @@ const Header: React.FC = () => {
       case 'student': return 'Student Dashboard';
       case 'school': return 'School Dashboard';
       case 'admin': return 'Admin Dashboard';
+      case 'affiliate_admin': return 'Affiliate Admin Dashboard';
       default: return 'Dashboard';
     }
   };
@@ -89,6 +91,7 @@ const Header: React.FC = () => {
       case 'admin': return 'bg-purple-600';
       case 'school': return 'bg-green-600';
       case 'student': return 'bg-[#05294E]';
+      case 'affiliate_admin': return 'bg-orange-600';
       default: return 'bg-[#05294E]';
     }
   };

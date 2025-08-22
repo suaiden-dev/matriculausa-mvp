@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useUniversity } from '../../../context/UniversityContext';
-import { useSearchParams } from 'react-router-dom';
 import { Brain } from 'lucide-react';
 
 import { useWhatsAppConnection } from './hooks/useWhatsAppConnection';
@@ -16,8 +15,6 @@ import { DisconnectDialog } from './components/ConfirmationDialogs/DisconnectDia
 export default function WhatsAppConnection() {
   const { user } = useAuth();
   const { university } = useUniversity();
-  const [searchParams] = useSearchParams();
-  const agentId = searchParams.get('agentId');
   
   const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp'>('agents');
   
@@ -38,14 +35,12 @@ export default function WhatsAppConnection() {
     loading,
     actionLoading,
     fetchConnections,
-    createConnection,
     disconnectConnection,
     deleteConnection
   } = useWhatsAppConnection(university, user);
 
   const {
     qrCodeUrl,
-    setQrCodeUrl,
     qrLoading,
     setQrLoading,
     qrError,
@@ -66,24 +61,9 @@ export default function WhatsAppConnection() {
   );
 
   // Handlers
-  const handleCreateConnection = async () => {
-    try {
-      setQrLoading(true);
-      setQrError(null);
-      setShowQrModal(true);
-      setCurrentConnectionId('new');
-
-      const result = await createConnection(agentId || undefined);
-      
-      setCurrentInstanceName(result.instanceName);
-      setQrCodeUrl(result.qrCodeData);
-    } catch (error) {
-      console.error('Error creating connection:', error);
-      setQrError(error instanceof Error ? error.message : 'Unknown error');
-      setShowQrModal(false);
-    } finally {
-      setQrLoading(false);
-    }
+  const handleCreateConnection = () => {
+    // Apenas redireciona para a aba AI Agents
+    setActiveTab('agents');
   };
 
   const handleReconnect = async (id: string, instanceName: string) => {

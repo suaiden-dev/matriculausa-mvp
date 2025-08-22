@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'student' | 'school' | 'admin';
+  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
   avatar?: string;
   hasPaidProcess?: boolean;
 }
@@ -223,6 +223,39 @@ export interface AIConfiguration {
   has_tested: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+// Novo Sistema de Afiliados - Administradores e Vendedores
+export interface AffiliateAdmin {
+  id: string;
+  user_id: string;
+  created_by_admin_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Seller {
+  id: string;
+  affiliate_admin_id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  territory?: string;
+  referral_code: string;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AffiliateAdminStats {
+  total_sellers: number;
+  active_sellers: number;
+  total_students: number;
+  total_applications: number;
+  approved_applications: number;
+  total_payments: number;
 }
 
 // Sistema de Afiliados - Matricula Rewards
