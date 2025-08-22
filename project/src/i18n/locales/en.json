@@ -518,6 +518,14 @@
         "appliedFromLink": "(Applied from referral link)",
         "invalid": "Invalid referral code. Please check and try again."
       },
+      "sellerReferralCode": {
+        "title": "Seller Referral Code (Optional)",
+        "placeholder": "Enter seller referral code (e.g., SELLER_ABC123)",
+        "applied": "Seller code applied",
+        "valid": "Valid seller code! You'll be connected to a professional seller.",
+        "appliedFromLink": "(Applied from referral link)",
+        "invalid": "Invalid seller referral code. Please check and try again."
+      },
       "termsAndConditions": {
         "title": "I have read and agree to the",
         "termsOfUse": "Terms of Use",

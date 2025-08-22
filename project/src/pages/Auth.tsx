@@ -779,7 +779,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="sellerReferralCode" className="block text-sm font-bold text-slate-900 mb-2">
                       <div className="flex items-center space-x-2">
                         <Target className="h-4 w-4 text-red-600" />
-                        <span>Seller Referral Code (Optional)</span>
+                        <span>{t('authPage.register.sellerReferralCode.title')}</span>
                       </div>
                     </label>
                     <div className="relative">
@@ -806,7 +806,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
-                        placeholder={isSellerReferralCodeLocked ? "Seller code applied" : "Enter seller referral code (e.g., SELLER_ABC123)"}
+                        placeholder={isSellerReferralCodeLocked ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.sellerReferralCode.placeholder')}
                         maxLength={20}
                       />
                       {sellerReferralCodeLoading && (
@@ -830,10 +830,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {sellerReferralCodeValid === true && (
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Valid seller code! You'll be connected to a professional seller.
+                            {t('authPage.register.sellerReferralCode.valid')}
                             {isSellerReferralCodeLocked && (
                               <span className="ml-2 text-blue-600">
-                                (Applied from referral link)
+                                {t('authPage.register.sellerReferralCode.appliedFromLink')}
                               </span>
                             )}
                           </p>
@@ -841,7 +841,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {sellerReferralCodeValid === false && (
                           <p className="text-red-600 flex items-center">
                             <X className="h-3 w-3 mr-1" />
-                            Invalid seller referral code. Please check and try again.
+                            {t('authPage.register.sellerReferralCode.invalid')}
                           </p>
                         )}
                       </div>
@@ -853,7 +853,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     <label htmlFor="sellerReferralCode" className="block text-sm font-bold text-slate-900 mb-2">
                       <div className="flex items-center space-x-2">
                         <Target className="h-4 w-4 text-red-600" />
-                        <span>Seller Referral Code (Optional)</span>
+                        <span>{t('authPage.register.sellerReferralCode.title')}</span>
                       </div>
                     </label>
                     <div className="relative">
@@ -880,7 +880,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
-                        placeholder={isSellerReferralCodeLocked ? "Seller code applied" : "Enter seller referral code (e.g., SELLER_ABC123)"}
+                        placeholder={isSellerReferralCodeLocked ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.sellerReferralCode.placeholder')}
                         maxLength={20}
                       />
                       {sellerReferralCodeLoading && (
@@ -904,10 +904,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {sellerReferralCodeValid === true && (
                           <p className="text-green-600 flex items-center">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            Valid seller code! You'll be connected to a professional seller.
+                            {t('authPage.register.sellerReferralCode.valid')}
                             {isSellerReferralCodeLocked && (
                               <span className="ml-2 text-blue-600">
-                                (Applied from referral link)
+                                {t('authPage.register.sellerReferralCode.appliedFromLink')}
                               </span>
                             )}
                           </p>
@@ -915,7 +915,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {sellerReferralCodeValid === false && (
                           <p className="text-red-600 flex items-center">
                             <X className="h-3 w-3 mr-1" />
-                            Invalid seller referral code. Please check and try again.
+                            {t('authPage.register.sellerReferralCode.invalid')}
                           </p>
                         )}
                       </div>

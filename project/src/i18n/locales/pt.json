@@ -518,6 +518,14 @@
         "appliedFromLink": "(Aplicado do link de referência)",
         "invalid": "Código de referência inválido. Verifique e tente novamente."
       },
+      "sellerReferralCode": {
+        "title": "Código de Referência do Vendedor (Opcional)",
+        "placeholder": "Digite o código de referência do vendedor (ex: SELLER_ABC123)",
+        "applied": "Código de vendedor aplicado",
+        "valid": "Código de vendedor válido! Você será conectado a um vendedor profissional.",
+        "appliedFromLink": "(Aplicado do link de referência)",
+        "invalid": "Código de referência do vendedor inválido. Verifique e tente novamente."
+      },
       "termsAndConditions": {
         "title": "Li e concordo com os",
         "termsOfUse": "Termos de Uso",
