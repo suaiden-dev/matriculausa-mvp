@@ -58,7 +58,54 @@
     },
     "faq": {
       "title": "Frequently Asked Questions",
-      "subtitle": "Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA"
+      "mainTitle": "Everything You Need to Know",
+      "subtitle": "Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA",
+      "questions": {
+        "q1": {
+          "question": "What fees or payments are required to use MatriculaUSA?",
+          "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment."
+        },
+        "q2": {
+          "question": "What is the Selection Process Fee?",
+          "answer": "The Selection Process Fee (US$350) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+        },
+        "q3": {
+          "question": "What is the Scholarship Fee?",
+          "answer": "The Scholarship Fee (US$550) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+        },
+        "q4": {
+          "question": "What is the Application Fee?",
+          "answer": "The Application Fee (US$350) is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform."
+        },
+        "q5": {
+          "question": "What is the I-20 Control Fee?",
+          "answer": "The I-20 Control Fee (US$900) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+        },
+        "q6": {
+          "question": "Are there any other fees I should be aware of?",
+          "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance."
+        },
+        "q7": {
+          "question": "How can I pay these fees?",
+          "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction."
+        },
+        "q8": {
+          "question": "Is my payment information secure?",
+          "answer": "Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
+        },
+        "q9": {
+          "question": "Can I get a refund?",
+          "answer": "You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun."
+        },
+        "q10": {
+          "question": "Do I have to pay all fees at once?",
+          "answer": "No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the Application Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously."
+        },
+        "q11": {
+          "question": "Who can I contact if I have questions about fees or payments?",
+          "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
+        }
+      }
     },
     "threeSteps": {
       "title": "Three Steps to Your American Education",
@@ -464,49 +511,57 @@
       "needMoreCoins": "Need {count} more coins",
       "helpSupport": "Help & Support",
       "smartAssistant": "Smart Assistant"
-    },
-    "footer": {
-      "company": {
-        "title": "Company",
-        "about": "About Us",
-        "careers": "Careers",
-        "contact": "Contact",
-        "blog": "Blog"
-      },
-      "students": {
-        "title": "For Students",
-        "scholarships": "Scholarships",
-        "universities": "Universities",
-        "howItWorks": "How It Works",
-        "support": "Support"
-      },
-      "universities": {
-        "title": "For Universities",
-        "partners": "Become a Partner",
-        "dashboard": "University Dashboard",
-        "resources": "Resources"
-      },
-      "legal": {
-        "title": "Legal",
-        "privacy": "Privacy Policy",
-        "terms": "Terms of Service",
-        "cookies": "Cookie Policy"
-      },
-      "social": {
-        "title": "Follow Us",
-        "facebook": "Facebook",
-        "twitter": "Twitter",
-        "linkedin": "LinkedIn",
-        "instagram": "Instagram"
-      },
-      "newsletter": {
-        "title": "Stay Updated",
-        "description": "Get the latest scholarship opportunities and news",
-        "placeholder": "Enter your email",
-        "subscribe": "Subscribe",
-        "subscribed": "Thank you for subscribing!"
-      },
-      "copyright": "© 2024 Matrícula USA. All rights reserved."
     }
+  },
+  "footer": {
+    "company": {
+      "title": "Company",
+      "about": "About Us",
+      "careers": "Careers",
+      "contact": "Contact",
+      "blog": "Blog",
+      "description": "MatriculaUSA is the leading platform for international students who want to study in the United States. We make the entire application, enrollment, and scholarship process easier at American universities, offering technology, expert support, and exclusive opportunities to turn your international dream into reality."
+    },
+    "students": {
+      "title": "For Students",
+      "scholarships": "Scholarships",
+      "universities": "Universities",
+      "howItWorks": "How It Works",
+      "support": "Support",
+      "faq": "FAQ",
+      "helpCenter": "Help Center"
+    },
+    "universities": {
+      "title": "For Universities",
+      "partners": "Become a Partner",
+      "dashboard": "University Dashboard",
+      "resources": "Resources"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "cookies": "Cookie Policy"
+    },
+    "contact": {
+      "email": "info@matriculausa.com",
+      "phone": "+1 (213) 676-2544",
+      "address": "Los Angeles - CA - USA."
+    },
+    "social": {
+      "title": "Follow Us",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram"
+    },
+    "newsletter": {
+      "title": "Stay Updated",
+      "description": "Get the latest scholarship opportunities and news",
+      "placeholder": "Enter your email",
+      "subscribe": "Subscribe",
+      "subscribed": "Thank you for subscribing!"
+    },
+    "copyright": "© 2024 Matrícula USA. All rights reserved."
   }
 }

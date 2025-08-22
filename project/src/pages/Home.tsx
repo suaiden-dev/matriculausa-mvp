@@ -5,14 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
-import { useSubscription } from '../hooks/useSubscription';
+// Removido useSubscription pois não é utilizado
 import { supabase } from '../lib/supabase';
-import SmartChat from '../components/SmartChat';
+// Removido SmartChat pois não é utilizado
 import { slugify } from '../utils/slugify';
 
 const Home: React.FC = () => {
   const { t } = useTranslation();
-  const { universities, loading: universitiesLoading } = useUniversities();
+  const { universities } = useUniversities();
   
   // Buscar universidades em destaque
   const [featuredSchools, setFeaturedSchools] = useState<any[]>([]);
@@ -45,7 +45,7 @@ const Home: React.FC = () => {
     }
   }, [universities]);
   const { isAuthenticated, user, userProfile } = useAuth();
-  const { hasPaidProcess, loading: subscriptionLoading } = useSubscription();
+  // Removido hasPaidProcess e subscriptionLoading pois não são utilizados
 
   // Função para determinar o dashboard conforme a role (igual Header)
   const getDashboardPath = () => {
@@ -521,13 +521,13 @@ const Home: React.FC = () => {
           <div className="text-center mb-16">
             <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-6">
               <BookOpen className="h-4 w-4 mr-2 text-[#05294E]" />
-              <span className="text-sm font-bold text-slate-700">Frequently Asked Questions</span>
+              <span className="text-sm font-bold text-slate-700">{t('home.faq.title')}</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-              Everything You Need to <span className="text-[#05294E]">Know</span>
+              {t('home.faq.mainTitle')}
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA.
+              {t('home.faq.subtitle')}
             </p>
           </div>
           <div className="space-y-6">
@@ -536,10 +536,10 @@ const Home: React.FC = () => {
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <span className="text-white font-bold text-sm">1</span>
                 </div>
-                What fees or payments are required to use MatriculaUSA?
+                {t('home.faq.questions.q1.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment.
+                {t('home.faq.questions.q1.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -547,10 +547,10 @@ const Home: React.FC = () => {
                 <div className="bg-[#D0151C] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <DollarSign className="h-4 w-4 text-white" />
                 </div>
-                What is the Selection Process Fee?
+                {t('home.faq.questions.q2.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                The Selection Process Fee (US$350) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.
+                {t('home.faq.questions.q2.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -558,10 +558,10 @@ const Home: React.FC = () => {
                 <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <Award className="h-4 w-4 text-white" />
                 </div>
-                What is the Scholarship Fee?
+                {t('home.faq.questions.q3.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                The Scholarship Fee (US$550) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications.
+                {t('home.faq.questions.q3.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -569,10 +569,10 @@ const Home: React.FC = () => {
                 <div className="bg-yellow-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <CheckCircle className="h-4 w-4 text-white" />
                 </div>
-                What is the Application Fee?
+                {t('home.faq.questions.q4.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                The Application Fee (US$350) is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.
+                {t('home.faq.questions.q4.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -580,10 +580,10 @@ const Home: React.FC = () => {
                 <div className="bg-purple-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <CreditCard className="h-4 w-4 text-white" />
                 </div>
-                What is the I-20 Control Fee?
+                {t('home.faq.questions.q5.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                The I-20 Control Fee (US$900) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents.
+                {t('home.faq.questions.q5.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -591,10 +591,10 @@ const Home: React.FC = () => {
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <Shield className="h-4 w-4 text-white" />
                 </div>
-                Are there any other fees I should be aware of?
+                {t('home.faq.questions.q6.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance.
+                {t('home.faq.questions.q6.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -602,10 +602,10 @@ const Home: React.FC = () => {
                 <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <CreditCard className="h-4 w-4 text-white" />
                 </div>
-                How can I pay these fees?
+                {t('home.faq.questions.q7.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction.
+                {t('home.faq.questions.q7.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -613,10 +613,10 @@ const Home: React.FC = () => {
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <Shield className="h-4 w-4 text-white" />
                 </div>
-                Is my payment information secure?
+                {t('home.faq.questions.q8.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection.
+                {t('home.faq.questions.q8.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -624,10 +624,10 @@ const Home: React.FC = () => {
                 <div className="bg-yellow-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <CheckCircle className="h-4 w-4 text-white" />
                 </div>
-                Can I get a refund?
+                {t('home.faq.questions.q9.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun.
+                {t('home.faq.questions.q9.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -635,10 +635,10 @@ const Home: React.FC = () => {
                 <div className="bg-green-600 w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <DollarSign className="h-4 w-4 text-white" />
                 </div>
-                Do I have to pay all fees at once?
+                {t('home.faq.questions.q10.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the Application Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously.
+                {t('home.faq.questions.q10.answer')}
               </p>
             </div>
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -646,10 +646,10 @@ const Home: React.FC = () => {
                 <div className="bg-[#05294E] w-8 h-8 rounded-xl flex items-center justify-center mr-3">
                   <Users className="h-4 w-4 text-white" />
                 </div>
-                Who can I contact if I have questions about fees or payments?
+                {t('home.faq.questions.q11.question')}
               </h3>
               <p className="text-slate-600 leading-relaxed pl-11">
-                Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!
+                {t('home.faq.questions.q11.answer')}
               </p>
             </div>
           </div>

@@ -58,7 +58,54 @@
     },
     "faq": {
       "title": "Preguntas Frecuentes",
-      "subtitle": "Obtén respuestas a las preguntas más comunes sobre tarifas, pagos y el proceso de solicitud en MatriculaUSA"
+      "mainTitle": "Todo lo que Necesitas Saber",
+      "subtitle": "Obtén respuestas a las preguntas más comunes sobre tarifas, pagos y el proceso de solicitud en MatriculaUSA",
+      "questions": {
+        "q1": {
+          "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
+          "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago."
+        },
+        "q2": {
+          "question": "¿Qué es la Tarifa de Proceso de Selección?",
+          "answer": "La Tarifa de Proceso de Selección (US$350) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+        },
+        "q3": {
+          "question": "¿Qué es la Tarifa de Beca?",
+          "answer": "La Tarifa de Beca (US$550) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca."
+        },
+        "q4": {
+          "question": "¿Qué es la Tarifa de Solicitud?",
+          "answer": "La Tarifa de Solicitud (US$350) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma."
+        },
+        "q5": {
+          "question": "¿Qué es la Tarifa de Control I-20?",
+          "answer": "La Tarifa de Control I-20 (US$900) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa."
+        },
+        "q6": {
+          "question": "¿Hay otras tarifas que deba conocer?",
+          "answer": "Todas las tarifas obligatorias para tu proceso de solicitud y matrícula están listadas en tu panel antes de cualquier pago. Algunas universidades pueden tener tarifas adicionales (ej: depósitos de vivienda, tarifas de orientación), pero estas siempre serán comunicadas directamente por la universidad o por nosotros con anticipación."
+        },
+        "q7": {
+          "question": "¿Cómo puedo pagar estas tarifas?",
+          "answer": "Puedes pagar todas las tarifas directamente a través de la plataforma MatriculaUSA usando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura a través de Stripe, y recibirás una confirmación por cada transacción."
+        },
+        "q8": {
+          "question": "¿Está segura mi información de pago?",
+          "answer": "Sí. Todos los pagos son procesados por Stripe, un líder global en seguridad de pagos. MatriculaUSA no almacena los detalles de tu tarjeta, y todas las transacciones están encriptadas para tu protección."
+        },
+        "q9": {
+          "question": "¿Puedo obtener un reembolso?",
+          "answer": "Tienes derecho a un reembolso completo de las tarifas pagadas si tu solicitud no es exitosa o no eres aprobado para una beca. Sin embargo, si te retiras del proceso o cambias de opinión después de iniciar la solicitud, las tarifas pagadas no son reembolsables, ya que el procesamiento y apoyo ya habrán comenzado."
+        },
+        "q10": {
+          "question": "¿Tengo que pagar todas las tarifas de una vez?",
+          "answer": "No. Las tarifas son compras separadas y se pagan en etapas a medida que progresas en el proceso. Pagas la Tarifa de Proceso de Selección primero, luego la Tarifa de Beca (si aplica), seguida por la Tarifa de Solicitud, y finalmente la Tarifa de Control I-20. Todas son obligatorias para el flujo completo, pero no necesitan ser pagadas simultáneamente."
+        },
+        "q11": {
+          "question": "¿Con quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
+          "answer": "Nuestro equipo de soporte está disponible a través de chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso del camino!"
+        }
+      }
     },
     "threeSteps": {
       "title": "Tres Pasos hacia Tu Educación Americana",
@@ -464,49 +511,57 @@
       "needMoreCoins": "Necesitas {count} monedas más",
       "helpSupport": "Ayuda y Soporte",
       "smartAssistant": "Asistente Inteligente"
-    },
-    "footer": {
-      "company": {
-        "title": "Empresa",
-        "about": "Acerca de Nosotros",
-        "careers": "Carreras",
-        "contact": "Contacto",
-        "blog": "Blog"
-      },
-      "students": {
-        "title": "Para Estudiantes",
-        "scholarships": "Becas",
-        "universities": "Universidades",
-        "howItWorks": "Cómo Funciona",
-        "support": "Soporte"
-      },
-      "universities": {
-        "title": "Para Universidades",
-        "partners": "Conviértete en Socio",
-        "dashboard": "Panel de la Universidad",
-        "resources": "Recursos"
-      },
-      "legal": {
-        "title": "Legal",
-        "privacy": "Política de Privacidad",
-        "terms": "Términos de Servicio",
-        "cookies": "Política de Cookies"
-      },
-      "social": {
-        "title": "Síguenos",
-        "facebook": "Facebook",
-        "twitter": "Twitter",
-        "linkedin": "LinkedIn",
-        "instagram": "Instagram"
-      },
-      "newsletter": {
-        "title": "Mantente Actualizado",
-        "description": "Recibe las últimas oportunidades de becas y noticias",
-        "placeholder": "Ingresa tu email",
-        "subscribe": "Suscribirse",
-        "subscribed": "¡Gracias por suscribirte!"
-      },
-      "copyright": "© 2024 Matrícula USA. Todos los derechos reservados."
     }
+  },
+  "footer": {
+    "company": {
+      "title": "Empresa",
+      "about": "Acerca de Nosotros",
+      "careers": "Carreras",
+      "contact": "Contacto",
+      "blog": "Blog",
+      "description": "MatriculaUSA es la plataforma líder para estudiantes internacionales que quieren estudiar en los Estados Unidos. Hacemos que todo el proceso de solicitud, matrícula y becas sea más fácil en las universidades estadounidenses, ofreciendo tecnología, apoyo experto y oportunidades exclusivas para convertir tu sueño internacional en realidad."
+    },
+    "students": {
+      "title": "Para Estudiantes",
+      "scholarships": "Becas",
+      "universities": "Universidades",
+      "howItWorks": "Cómo Funciona",
+      "support": "Soporte",
+      "faq": "Preguntas Frecuentes",
+      "helpCenter": "Centro de Ayuda"
+    },
+    "universities": {
+      "title": "Para Universidades",
+      "partners": "Conviértete en Socio",
+      "dashboard": "Panel de la Universidad",
+      "resources": "Recursos"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio",
+      "cookies": "Política de Cookies"
+    },
+    "contact": {
+      "email": "info@matriculausa.com",
+      "phone": "+1 (213) 676-2544",
+      "address": "Los Angeles - CA - USA."
+    },
+    "social": {
+      "title": "Síguenos",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram"
+    },
+    "newsletter": {
+      "title": "Mantente Actualizado",
+      "description": "Recibe las últimas oportunidades de becas y noticias",
+      "placeholder": "Ingresa tu email",
+      "subscribe": "Suscribirse",
+      "subscribed": "¡Gracias por suscribirte!"
+    },
+    "copyright": "© 2024 Matrícula USA. Todos los derechos reservados."
   }
 }

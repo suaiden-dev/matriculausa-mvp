@@ -58,7 +58,54 @@
     },
     "faq": {
       "title": "Perguntas Frequentes",
-      "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA"
+      "mainTitle": "Tudo o que Você Precisa Saber",
+      "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA",
+      "questions": {
+        "q1": {
+          "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+          "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
+        },
+        "q2": {
+          "question": "O que é a Taxa de Processo de Seleção?",
+          "answer": "A Taxa de Processo de Seleção (US$350) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+        },
+        "q3": {
+          "question": "O que é a Taxa de Bolsa?",
+          "answer": "A Taxa de Bolsa (US$550) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
+        },
+        "q4": {
+          "question": "O que é a Taxa de Candidatura?",
+          "answer": "A Taxa de Candidatura (US$350) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+        },
+        "q5": {
+          "question": "O que é a Taxa de Controle I-20?",
+          "answer": "A Taxa de Controle I-20 (US$900) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
+        },
+        "q6": {
+          "question": "Existem outras taxas que devo conhecer?",
+          "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas sempre serão comunicadas diretamente pela universidade ou por nós antecipadamente."
+        },
+        "q7": {
+          "question": "Como posso pagar essas taxas?",
+          "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação para cada transação."
+        },
+        "q8": {
+          "question": "Minhas informações de pagamento estão seguras?",
+          "answer": "Sim. Todos os pagamentos são processados pelo Stripe, um líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações são criptografadas para sua proteção."
+        },
+        "q9": {
+          "question": "Posso obter reembolso?",
+          "answer": "Você tem direito a reembolso total das taxas pagas se sua candidatura não for bem-sucedida ou você não for aprovado para uma bolsa. No entanto, se você desistir do processo ou mudar de ideia após iniciar a candidatura, as taxas pagas não são reembolsáveis, pois o processamento e suporte já terão começado."
+        },
+        "q10": {
+          "question": "Preciso pagar todas as taxas de uma vez?",
+          "answer": "Não. As taxas são compras separadas e são pagas em etapas conforme você progride no processo. Você paga a Taxa de Processo de Seleção primeiro, depois a Taxa de Bolsa (se aplicável), seguida pela Taxa de Candidatura, e finalmente a Taxa de Controle I-20. Todas são obrigatórias para o fluxo completo, mas não precisam ser pagas simultaneamente."
+        },
+        "q11": {
+          "question": "Com quem posso entrar em contato se tiver dúvidas sobre taxas ou pagamentos?",
+          "answer": "Nossa equipe de suporte está disponível via chat ou email a qualquer momento para responder a qualquer dúvida sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudá-lo a cada passo do caminho!"
+        }
+      }
     },
     "threeSteps": {
       "title": "Três Passos para Sua Educação Americana",
@@ -464,49 +511,57 @@
       "needMoreCoins": "Precisa de {count} moedas a mais",
       "helpSupport": "Ajuda e Suporte",
       "smartAssistant": "Assistente Inteligente"
-    },
-    "footer": {
-      "company": {
-        "title": "Empresa",
-        "about": "Sobre Nós",
-        "careers": "Carreiras",
-        "contact": "Contato",
-        "blog": "Blog"
-      },
-      "students": {
-        "title": "Para Estudantes",
-        "scholarships": "Bolsas",
-        "universities": "Universidades",
-        "howItWorks": "Como Funciona",
-        "support": "Suporte"
-      },
-      "universities": {
-        "title": "Para Universidades",
-        "partners": "Torne-se um Parceiro",
-        "dashboard": "Painel da Universidade",
-        "resources": "Recursos"
-      },
-      "legal": {
-        "title": "Legal",
-        "privacy": "Política de Privacidade",
-        "terms": "Termos de Serviço",
-        "cookies": "Política de Cookies"
-      },
-      "social": {
-        "title": "Siga-nos",
-        "facebook": "Facebook",
-        "twitter": "Twitter",
-        "linkedin": "LinkedIn",
-        "instagram": "Instagram"
-      },
-      "newsletter": {
-        "title": "Mantenha-se Atualizado",
-        "description": "Receba as últimas oportunidades de bolsa e notícias",
-        "placeholder": "Digite seu email",
-        "subscribe": "Inscrever-se",
-        "subscribed": "Obrigado por se inscrever!"
-      },
-      "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
     }
+  },
+  "footer": {
+    "company": {
+      "title": "Empresa",
+      "about": "Sobre Nós",
+      "careers": "Carreiras",
+      "contact": "Contato",
+      "blog": "Blog",
+      "description": "MatriculaUSA é a plataforma líder para estudantes internacionais que querem estudar nos Estados Unidos. Tornamos todo o processo de candidatura, matrícula e bolsas mais fácil nas universidades americanas, oferecendo tecnologia, suporte especializado e oportunidades exclusivas para transformar seu sonho internacional em realidade."
+    },
+    "students": {
+      "title": "Para Estudantes",
+      "scholarships": "Bolsas",
+      "universities": "Universidades",
+      "howItWorks": "Como Funciona",
+      "support": "Suporte",
+      "faq": "Perguntas Frequentes",
+      "helpCenter": "Central de Ajuda"
+    },
+    "universities": {
+      "title": "Para Universidades",
+      "partners": "Torne-se um Parceiro",
+      "dashboard": "Painel da Universidade",
+      "resources": "Recursos"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Política de Privacidade",
+      "terms": "Termos de Serviço",
+      "cookies": "Política de Cookies"
+    },
+    "contact": {
+      "email": "info@matriculausa.com",
+      "phone": "+1 (213) 676-2544",
+      "address": "Los Angeles - CA - USA."
+    },
+    "social": {
+      "title": "Siga-nos",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram"
+    },
+    "newsletter": {
+      "title": "Mantenha-se Atualizado",
+      "description": "Receba as últimas oportunidades de bolsa e notícias",
+      "placeholder": "Digite seu email",
+      "subscribe": "Inscrever-se",
+      "subscribed": "Obrigado por se inscrever!"
+    },
+    "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
   }
 }
