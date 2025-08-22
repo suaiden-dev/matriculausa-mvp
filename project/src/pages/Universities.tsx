@@ -7,28 +7,33 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SmartChat from '../components/SmartChat';
 import { slugify } from '../utils/slugify';
+import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
+import { useAuth } from '../hooks/useAuth';
 
 const PAGE_SIZE = 20;
 
 const Universities: React.FC = () => {
   const { t } = useTranslation();
+  const { isAuthenticated, userProfile, loading } = useAuth();
   
+  // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [realUniversities, setRealUniversities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoadingUniversities, setIsLoadingUniversities] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searching, setSearching] = useState(false);
   const [allUniversities, setAllUniversities] = useState<any[]>([]);
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
-
+  
+  // TODOS OS useEffect DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   useEffect(() => {
     const fetchUniversities = async () => {
       if (!hasLoadedData || searchTerm.trim() !== '' || selectedLocation !== 'all') {
-        setLoading(true);
+        setIsLoadingUniversities(true);
       }
       // Se estiver pesquisando, buscar todas as universidades que correspondem ao termo
       if (searchTerm.trim() !== '') {
@@ -51,7 +56,7 @@ const Universities: React.FC = () => {
           setRealUniversities([]);
           setTotalCount(0);
         }
-        setLoading(false);
+        setIsLoadingUniversities(false);
         setSearching(false);
         return;
       }
@@ -76,7 +81,7 @@ const Universities: React.FC = () => {
         setRealUniversities([]);
         setTotalCount(0);
       }
-      setLoading(false);
+      setIsLoadingUniversities(false);
       setHasLoadedData(true);
     };
     fetchUniversities();
@@ -125,6 +130,37 @@ const Universities: React.FC = () => {
 
     fetchFeaturedUniversities();
   }, []);
+  
+  // Debug logs para verificar os valores
+  console.log('Universities - Debug Info:', {
+    loading,
+    isAuthenticated,
+    userProfile,
+    hasPaidFee: userProfile?.has_paid_selection_process_fee,
+    shouldShowBlocker: isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee,
+    userProfileKeys: userProfile ? Object.keys(userProfile) : 'No profile'
+  });
+  
+  // Se ainda está carregando, mostrar loading ou nada
+  if (loading) {
+    console.log('Universities - Still loading, showing loading state');
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#05294E] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Check if user needs to pay selection process fee
+  if (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee)) {
+    console.log('Universities - Showing PaymentRequiredBlocker');
+    return <PaymentRequiredBlocker pageType="universities" />;
+  }
+  
+  console.log('Universities - Showing normal page content');
 
   // Get unique states for filter a partir de allUniversities
   const states = Array.from(new Set(allUniversities.map(school => {
@@ -157,9 +193,9 @@ const Universities: React.FC = () => {
   return (
     <>
       <Header />
-    <div className="bg-white min-h-screen">
-      {/* Header */}
-      <section className="bg-[#05294E] text-white py-16">
+      <div className="bg-white min-h-screen">
+        {/* Header */}
+        <section className="bg-[#05294E] text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1 mb-6">
@@ -330,7 +366,7 @@ const Universities: React.FC = () => {
 
         {/* Universities Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
+          {isLoadingUniversities ? (
             skeletonArray.map((_, idx) => (
               <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-80" />
             ))
@@ -402,7 +438,7 @@ const Universities: React.FC = () => {
           <button
             className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0 || loading}
+                            disabled={page === 0 || isLoadingUniversities}
           >
             {t('universitiesPage.pagination.previous')}
           </button>
@@ -410,7 +446,7 @@ const Universities: React.FC = () => {
           <button
             className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1 || loading}
+                            disabled={page >= totalPages - 1 || isLoadingUniversities}
           >
             {t('universitiesPage.pagination.next')}
           </button>

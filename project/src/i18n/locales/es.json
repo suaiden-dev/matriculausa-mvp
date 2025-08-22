@@ -15,6 +15,25 @@
     "startSelectionProcess": "Iniciar Proceso de Selección",
     "scholarshipsPlatform": "Plataforma de Becas"
   },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Becas Bloqueadas",
+      "description": "Para acceder a nuestra colección exclusiva de becas, necesitas completar el proceso de selección inicial. Este es el primer paso de tu jornada para estudiar en Estados Unidos."
+    },
+    "universities": {
+      "title": "Universidades Bloqueadas",
+      "description": "Para explorar nuestras universidades asociadas y sus programas, necesitas completar el proceso de selección inicial. Este es el primer paso de tu jornada para estudiar en Estados Unidos."
+    },
+    "default": {
+      "title": "Contenido Bloqueado",
+      "description": "Para acceder a este contenido, necesitas completar el proceso de selección inicial. Este es el primer paso de tu jornada para estudiar en Estados Unidos."
+    },
+    "selectionProcessFee": "Tarifa de Proceso de Selección",
+    "completeApplicationJourney": "Completa tu jornada de solicitud",
+    "goToDashboardAndPayFee": "Ir al Panel y Pagar Tarifa",
+    "learnHowItWorks": "Aprender Cómo Funciona",
+    "contentLockedMessage": "Este contenido está bloqueado hasta que se complete el pago"
+  },
   "home": {
     "hero": {
       "title": "Tu Puerta de Entrada a las Universidades Americanas",
@@ -22,6 +41,12 @@
       "description": "Conéctate con universidades de primer nivel, accede a becas exclusivas y recibe apoyo personalizado durante toda tu jornada para estudiar en EE.UU.",
       "cta": "Comienza Tu Jornada",
       "watchVideo": "Ver Video"
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universidades Bloqueadas",
+      "lockedDescription": "Completa el proceso de selección para desbloquear información detallada de las universidades",
+      "goToDashboard": "Ir al Panel",
+      "loginToView": "Iniciar Sesión para Ver"
     },
     "features": {
       "title": "¿Por Qué Elegir MatriculaUSA?",
@@ -591,14 +616,7 @@
             },
             "restrictions": {
               "title": "3.2 Restricciones",
-              "description": "Usted acepta no:",
-              "items": [
-                "Usar la plataforma para propósitos ilegales o no autorizados",
-                "Intentar acceder a sistemas o datos no autorizados",
-                "Interferir en la operación de la plataforma",
-                "Compartir credenciales de acceso",
-                "Usar la plataforma para spam o contenido malicioso"
-              ]
+              "description": "Usted acepta no:"
             }
           },
           "thirdPartyDependencies": {
@@ -685,12 +703,7 @@
             },
             "termination": {
               "title": "8.2 Terminación",
-              "description": "Usted puede terminar su cuenta en cualquier momento. Después de la terminación:",
-              "items": [
-                "Sus datos serán eliminados de acuerdo con nuestra Política de Privacidad",
-                "Las integraciones de Gmail serán desconectadas",
-                "El acceso a la plataforma será revocado"
-              ]
+              "description": "Usted puede terminar su cuenta en cualquier momento. Después de la terminación:"
             }
           },
           "modifications": {
@@ -1060,8 +1073,7 @@
         "paymentRedirectError": "Error al redirigir al pago."
       }
     }
-  }
-},
+  },
     "messages": {
       "checkEmail": "¡Verifica tu email!",
       "studentVerification": "Se ha enviado un enlace de confirmación a tu email. Verifica tu bandeja de entrada (y carpeta de spam) para activar tu cuenta.",
@@ -2094,4 +2106,4 @@
     },
     "copyright": "© 2024 Matrícula USA. Todos los derechos reservados."
   }
-}
+}}

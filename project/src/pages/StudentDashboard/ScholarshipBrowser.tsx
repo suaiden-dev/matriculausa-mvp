@@ -30,6 +30,7 @@ import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 import { PreCheckoutModal } from '../../components/PreCheckoutModal';
 import FavoriteButton from '../../components/FavoriteButton';
 import FavoritesFilter from '../../components/FavoritesFilter';
+import PaymentRequiredBlocker from '../../components/PaymentRequiredBlocker';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -300,6 +301,11 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       // Aqui você pode também refazer o fetch das applications, se necessário
     }
   }, [userProfile?.has_paid_selection_process_fee, refetchUserProfile]);
+
+  // Check if user needs to pay selection process fee
+  if (userProfile && !userProfile.has_paid_selection_process_fee) {
+    return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
+  }
 
   const formatAmount = (amount: any) => {
     if (typeof amount === 'string') return amount;

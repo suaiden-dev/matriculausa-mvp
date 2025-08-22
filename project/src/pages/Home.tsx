@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Heart, Brain, Rocket, Clock, CreditCard, MapPin } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Heart, Brain, Rocket, Clock, CreditCard, MapPin, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
@@ -12,6 +12,7 @@ import { slugify } from '../utils/slugify';
 
 const Home: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { universities } = useUniversities();
   
   // Buscar universidades em destaque
@@ -215,13 +216,46 @@ const Home: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {featuredSchools.map((school) => (
-              <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px]">
+              <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
+                {/* Overlay de blur quando não autenticado ou não pagou */}
+                {(!isAuthenticated || (user?.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee)) && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
+                    <div className="text-center p-6">
+                      <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Lock className="h-8 w-8 text-[#05294E]" />
+                      </div>
+                      <h4 className="text-lg font-bold text-slate-900 mb-2">
+                        {t('home.featuredUniversities.lockedTitle')}
+                      </h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        {t('home.featuredUniversities.lockedDescription')}
+                      </p>
+                      <button
+                        onClick={() => {
+                          if (isAuthenticated) {
+                            navigate('/student/dashboard');
+                          } else {
+                            navigate('/login');
+                          }
+                        }}
+                        className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                      >
+                        {isAuthenticated ? t('home.featuredUniversities.goToDashboard') : t('home.featuredUniversities.loginToView')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* University Image */}
                 <div className="relative h-48 overflow-hidden flex-shrink-0">
                   <img
                     src={school.image || school.logo_url || '/university-placeholder.png'}
                     alt={`${school.name} campus`}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ${
+                      (!isAuthenticated || (user?.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee)) 
+                        ? 'blur-lg' 
+                        : ''
+                    }`}
                   />
                   
                   {/* Ranking Badge */}
@@ -236,19 +270,31 @@ const Home: React.FC = () => {
 
                 {/* University Info */}
                 <div className="flex flex-col flex-1 p-6">
-                  <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                  <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors ${
+                    (!isAuthenticated || (user?.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee)) 
+                      ? 'blur-sm' 
+                      : ''
+                  }`}>
                     {school.name}
                   </h3>
                   
                   {/* Location */}
-                  <div className="flex items-center text-slate-600 mb-4">
+                  <div className={`flex items-center text-slate-600 mb-4 ${
+                    (!isAuthenticated || (user?.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee)) 
+                      ? 'blur-sm' 
+                      : ''
+                  }`}>
                     <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
                     <span className="text-sm">{school.location}</span>
                   </div>
 
                   {/* Programs Preview */}
                   <div className="mb-6 flex-1">
-                    <div className="flex flex-wrap gap-2">
+                    <div className={`flex flex-wrap gap-2 ${
+                      (!isAuthenticated || (user?.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee)) 
+                        ? 'blur-sm' 
+                        : ''
+                    }`}>
                       {school.programs && school.programs.length > 0 ? (
                         <>
                           {school.programs.slice(0, 3).map((program: string, index: number) => (

@@ -15,6 +15,25 @@
     "startSelectionProcess": "Iniciar Processo de Seleção",
     "scholarshipsPlatform": "Plataforma de Bolsas"
   },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Bolsas de Estudo Bloqueadas",
+      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+    },
+    "universities": {
+      "title": "Universidades Bloqueadas",
+      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+    },
+    "default": {
+      "title": "Conteúdo Bloqueado",
+      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+    },
+    "selectionProcessFee": "Taxa de Processo de Seleção",
+    "completeApplicationJourney": "Complete sua jornada de candidatura",
+    "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
+    "learnHowItWorks": "Aprender Como Funciona",
+    "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
+  },
   "home": {
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
@@ -22,6 +41,12 @@
       "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada para estudar nos EUA.",
       "cta": "Inicie Sua Jornada",
       "watchVideo": "Assistir Vídeo"
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universidades Bloqueadas",
+      "lockedDescription": "Complete o processo de seleção para desbloquear informações detalhadas das universidades",
+      "goToDashboard": "Ir ao Painel",
+      "loginToView": "Fazer Login para Ver"
     },
     "features": {
       "title": "Por Que Escolher MatriculaUSA?",

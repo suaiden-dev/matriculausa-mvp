@@ -15,6 +15,25 @@
     "startSelectionProcess": "Start Selection Process",
     "scholarshipsPlatform": "Scholarships Platform"
   },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Scholarships Locked",
+      "description": "To access our exclusive collection of scholarships, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "universities": {
+      "title": "Universities Locked",
+      "description": "To explore our partner universities and their programs, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "default": {
+      "title": "Content Locked",
+      "description": "To access this content, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "selectionProcessFee": "Selection Process Fee",
+    "completeApplicationJourney": "Complete your application journey",
+    "goToDashboardAndPayFee": "Go to Dashboard & Pay Fee",
+    "learnHowItWorks": "Learn How It Works",
+    "contentLockedMessage": "This content is locked until payment is completed"
+  },
   "home": {
     "hero": {
       "title": "Your Gateway to American Universities",
@@ -22,6 +41,12 @@
       "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey to studying in the USA.",
       "cta": "Start Your Journey",
       "watchVideo": "Watch Video"
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universities Locked",
+      "lockedDescription": "Complete the selection process to unlock detailed university information",
+      "goToDashboard": "Go to Dashboard",
+      "loginToView": "Login to View"
     },
     "features": {
       "title": "Why Choose MatriculaUSA?",
