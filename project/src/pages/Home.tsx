@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
-// Removido useSubscription pois não é utilizado
+import { useSubscription } from '../hooks/useSubscription';
 import { supabase } from '../lib/supabase';
 // Removido SmartChat pois não é utilizado
 import { slugify } from '../utils/slugify';
