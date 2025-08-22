@@ -71,13 +71,31 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       
       // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
+        console.log('🔀 [AUTHREDIRECT] Usuário na página de login/auth');
+        console.log('🔀 [AUTHREDIRECT] User role:', user.role);
+        console.log('🔀 [AUTHREDIRECT] Current path:', currentPath);
+        
         // Redirecionamento baseado no role
         if (user.role === 'admin') {
+          console.log('🔀 [AUTHREDIRECT] Redirecionando admin para /admin/dashboard');
           navigate('/admin/dashboard', { replace: true });
           return;
         }
         
+        if (user.role === 'affiliate_admin') {
+          console.log('🔀 [AUTHREDIRECT] Redirecionando affiliate_admin para /affiliate-admin/dashboard');
+          navigate('/affiliate-admin/dashboard', { replace: true });
+          return;
+        }
+        
+        if (user.role === 'seller') {
+          console.log('🔀 [AUTHREDIRECT] Redirecionando seller para /seller/dashboard');
+          navigate('/seller/dashboard', { replace: true });
+          return;
+        }
+        
         if (user.role === 'student') {
+          console.log('🔀 [AUTHREDIRECT] Redirecionando student para /student/dashboard');
           navigate('/student/dashboard', { replace: true });
           return;
         }
@@ -112,24 +130,45 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
           setCheckingUniversity(false);
           return;
         }
+        
+        // Fallback para roles não reconhecidos ou casos inesperados
+        console.log('⚠️ [AUTHREDIRECT] Role não reconhecido ou fallback necessário:', user.role);
+        console.log('⚠️ [AUTHREDIRECT] Redirecionando para home');
+        navigate('/', { replace: true });
+        return;
       }
 
       // PROTEÇÃO DE ROTAS - verificar se usuário está tentando acessar área restrita
       // Se usuário é school, verificar apenas se está tentando acessar áreas restritas de outros roles
-      if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin'))) {
+      if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
         navigate('/school/dashboard', { replace: true });
         return;
       }
 
       // Se usuário é student e está tentando acessar áreas restritas de outros roles
-      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin'))) {
+      if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
         navigate('/student/dashboard', { replace: true });
         return;
       }
       
       // Se usuário é admin e está tentando acessar áreas restritas de outros roles
-      if (user.role === 'admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/'))) {
+      if (user.role === 'admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
+        console.log('🔀 [AUTHREDIRECT] Admin tentando acessar área restrita, redirecionando');
         navigate('/admin/dashboard', { replace: true });
+        return;
+      }
+      
+      // Se usuário é affiliate_admin e está tentando acessar áreas restritas de outros roles
+      if (user.role === 'affiliate_admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/dashboard'))) {
+        console.log('🔀 [AUTHREDIRECT] Affiliate admin tentando acessar área restrita, redirecionando');
+        navigate('/affiliate-admin/dashboard', { replace: true });
+        return;
+      }
+      
+      // Se usuário é seller e está tentando acessar áreas restritas de outros roles
+      if (user.role === 'seller' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
+        console.log('🔀 [AUTHREDIRECT] Seller tentando acessar área restrita, redirecionando');
+        navigate('/seller/dashboard', { replace: true });
         return;
       }
 

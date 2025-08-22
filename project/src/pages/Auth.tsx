@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, X, Scroll, Gift } from 'lucide-react';
+import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, X, Scroll, Gift, Target } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
@@ -27,8 +27,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     position: '',
     website: '',
     location: '',
-    // Affiliate code field
-    affiliateCode: ''
+    // Referral code fields - now separated
+    affiliateCode: '', // Matricula Rewards (student-to-student)
+    sellerReferralCode: '' // Seller referral (seller-to-student)
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,6 +43,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [affiliateCodeValid, setAffiliateCodeValid] = useState<boolean | null>(null);
   const [affiliateCodeLoading, setAffiliateCodeLoading] = useState(false);
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
+  // Seller referral code validation states
+  const [sellerReferralCodeValid, setSellerReferralCodeValid] = useState<boolean | null>(null);
+  const [sellerReferralCodeLoading, setSellerReferralCodeLoading] = useState(false);
+  const [isSellerReferralCodeLocked, setIsSellerReferralCodeLocked] = useState(false);
   const termsContentRef = useRef<HTMLDivElement>(null);
   const privacyContentRef = useRef<HTMLDivElement>(null);
   
@@ -58,17 +63,41 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Capture affiliate code from localStorage (captura global já feita no App.tsx)
+  // Load referral codes from localStorage
   useEffect(() => {
-    if (mode === 'register') {
-      const savedCode = localStorage.getItem('pending_referral_code');
-      if (savedCode) {
-        setFormData(prev => ({ ...prev, affiliateCode: savedCode }));
-        validateAffiliateCode(savedCode);
-        setIsReferralCodeLocked(true); // Bloqueia edição
+    if (mode === 'register' && activeTab === 'student') {
+      console.log('[AUTH] Carregando códigos de referência do localStorage...');
+      
+      // Load Matricula Rewards code
+      const pendingReferralCode = localStorage.getItem('pending_referral_code');
+      if (pendingReferralCode) {
+        console.log('[AUTH] Código de Matricula Rewards encontrado:', pendingReferralCode);
+        setFormData(prev => ({ ...prev, affiliateCode: pendingReferralCode }));
+        setIsReferralCodeLocked(true);
+        validateAffiliateCode(pendingReferralCode);
+        // IMPORTANTE: Limpar o campo de seller se este for um código de Matricula Rewards
+        setFormData(prev => ({ ...prev, sellerReferralCode: '' }));
+        setIsSellerReferralCodeLocked(false);
       }
+
+      // Load seller referral code
+      const pendingSellerCode = localStorage.getItem('pending_seller_referral_code');
+      if (pendingSellerCode) {
+        console.log('[AUTH] Código de Seller encontrado:', pendingSellerCode);
+        setFormData(prev => ({ ...prev, sellerReferralCode: pendingSellerCode }));
+        setIsSellerReferralCodeLocked(true);
+        validateSellerReferralCode(pendingSellerCode);
+        // IMPORTANTE: Limpar o campo de Matricula Rewards se este for um código de Seller
+        setFormData(prev => ({ ...prev, affiliateCode: '' }));
+        setIsReferralCodeLocked(false);
+      }
+      
+      console.log('[AUTH] Estado final dos campos:', {
+        affiliateCode: pendingReferralCode,
+        sellerReferralCode: pendingSellerCode
+      });
     }
-  }, [mode]);
+  }, [mode, activeTab]);
 
   // Validate affiliate code
   const validateAffiliateCode = async (code: string) => {
@@ -79,6 +108,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
     setAffiliateCodeLoading(true);
     try {
+      console.log('[AUTH] Validando código de afiliado:', code);
       const { data, error } = await supabase
         .from('affiliate_codes')
         .select('code, is_active')
@@ -86,15 +116,60 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         .eq('is_active', true)
         .single();
 
-      if (error || !data) {
+      console.log('[AUTH] Resultado da validação de afiliado:', { data, error });
+
+      if (error) {
+        console.error('[AUTH] Erro na validação de afiliado:', error);
         setAffiliateCodeValid(false);
-      } else {
+      } else if (data) {
+        console.log('[AUTH] Código de afiliado válido:', data);
         setAffiliateCodeValid(true);
+      } else {
+        console.log('[AUTH] Código de afiliado não encontrado');
+        setAffiliateCodeValid(false);
       }
     } catch (error) {
+      console.error('[AUTH] Exceção na validação de afiliado:', error);
       setAffiliateCodeValid(false);
     } finally {
       setAffiliateCodeLoading(false);
+    }
+  };
+
+  // Validate seller referral code
+  const validateSellerReferralCode = async (code: string) => {
+    if (!code || code.length < 4) {
+      setSellerReferralCodeValid(false);
+      return;
+    }
+
+    setSellerReferralCodeLoading(true);
+    try {
+      console.log('[AUTH] Validando código de seller:', code);
+      const { data, error } = await supabase
+        .from('sellers')
+        .select('referral_code, is_active')
+        .eq('referral_code', code)
+        .eq('is_active', true)
+        .single();
+
+      console.log('[AUTH] Resultado da validação de seller:', { data, error });
+
+      if (error) {
+        console.error('[AUTH] Erro na validação de seller:', error);
+        setSellerReferralCodeValid(false);
+      } else if (data) {
+        console.log('[AUTH] Código de seller válido:', data);
+        setSellerReferralCodeValid(true);
+      } else {
+        console.log('[AUTH] Código de seller não encontrado');
+        setSellerReferralCodeValid(false);
+      }
+    } catch (error) {
+      console.error('[AUTH] Exceção na validação de seller:', error);
+      setSellerReferralCodeValid(false);
+    } finally {
+      setSellerReferralCodeLoading(false);
     }
   };
 
@@ -107,6 +182,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       validateAffiliateCode(code);
     } else {
       setAffiliateCodeValid(null);
+    }
+  };
+
+  // Handle seller referral code change
+  const handleSellerReferralCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const code = e.target.value.toUpperCase();
+    setFormData(prev => ({ ...prev, sellerReferralCode: code }));
+    
+    if (code.length >= 4) {
+      validateSellerReferralCode(code);
+    } else {
+      setSellerReferralCodeValid(null);
     }
   };
 
@@ -213,7 +300,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           // Add phone for student
           ...(activeTab === 'student' && {
             phone: formData.phone || '',
-            affiliate_code: formData.affiliateCode || null // Add affiliate code to user data
+            affiliate_code: formData.affiliateCode || null, // Matricula Rewards code
+            seller_referral_code: formData.sellerReferralCode || null // Seller referral code
           })
         };
 
@@ -226,8 +314,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
         await register(formData.email, formData.password, userData);
 
-        // Limpar código de referência do localStorage após registro bem-sucedido
+        // Limpar códigos de referência do localStorage após registro bem-sucedido
         localStorage.removeItem('pending_referral_code');
+        localStorage.removeItem('pending_seller_referral_code');
 
         // Se for registro de universidade, mostra modal e retorna
         if (activeTab === 'university') {
@@ -532,8 +621,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
+                        className="appearance-none relative block w-full pl-12 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300"
                         placeholder="Enter your email"
+                        autoComplete="username"
                       />
                     </div>
                   </div>
@@ -673,6 +763,80 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           <p className="text-red-600 flex items-center">
                             <X className="h-3 w-3 mr-1" />
                             Invalid referral code. Please check and try again.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Seller Referral Code Field */}
+                  <div>
+                    <label htmlFor="sellerReferralCode" className="block text-sm font-bold text-slate-900 mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Target className="h-4 w-4 text-red-600" />
+                        <span>Seller Referral Code (Optional)</span>
+                      </div>
+                    </label>
+                    <div className="relative">
+                      {isSellerReferralCodeLocked ? (
+                        <Lock className="absolute left-4 top-4 h-5 w-5 text-green-500" />
+                      ) : (
+                        <Target className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      )}
+                      <input
+                        id="sellerReferralCode"
+                        name="sellerReferralCode"
+                        type="text"
+                        value={formData.sellerReferralCode || ''}
+                        onChange={handleSellerReferralCodeChange}
+                        readOnly={isSellerReferralCodeLocked}
+                        className={`w-full pl-12 pr-4 py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 ${
+                          isSellerReferralCodeLocked 
+                            ? 'bg-gray-50 cursor-not-allowed' 
+                            : ''
+                        } ${
+                          sellerReferralCodeValid === true 
+                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
+                            : sellerReferralCodeValid === false 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                        }`}
+                        placeholder={isSellerReferralCodeLocked ? "Seller code applied" : "Enter seller referral code (e.g., SELLER_ABC123)"}
+                        maxLength={20}
+                      />
+                      {sellerReferralCodeLoading && (
+                        <div className="absolute right-4 top-4">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                        </div>
+                      )}
+                      {sellerReferralCodeValid === true && (
+                        <div className="absolute right-4 top-4">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        </div>
+                      )}
+                      {sellerReferralCodeValid === false && formData.sellerReferralCode && (
+                        <div className="absolute right-4 top-4">
+                          <X className="h-4 w-4 text-red-500" />
+                        </div>
+                      )}
+                    </div>
+                    {formData.sellerReferralCode && (
+                      <div className="mt-2 text-sm">
+                        {sellerReferralCodeValid === true && (
+                          <p className="text-green-600 flex items-center">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Valid seller code! You'll be connected to a professional seller.
+                            {isSellerReferralCodeLocked && (
+                              <span className="ml-2 text-blue-600">
+                                (Applied from referral link)
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        {sellerReferralCodeValid === false && (
+                          <p className="text-red-600 flex items-center">
+                            <X className="h-3 w-3 mr-1" />
+                            Invalid seller referral code. Please check and try again.
                           </p>
                         )}
                       </div>

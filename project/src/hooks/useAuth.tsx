@@ -7,7 +7,7 @@ interface User {
   avatar_url: string | null;
   email: string;
   name?: string;
-  role: 'student' | 'school' | 'admin';
+  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
   university_id?: string;
   hasPaidProcess?: boolean;
   university_image?: string;
@@ -31,7 +31,7 @@ export interface UserProfile {
   is_application_fee_paid: boolean;
   has_paid_selection_process_fee: boolean;
   is_admin: boolean; // legado: mantido por compatibilidade
-  role?: 'student' | 'school' | 'admin';
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
   university_id?: string | null;
@@ -42,6 +42,9 @@ export interface UserProfile {
   has_paid_college_enrollment_fee?: boolean;
   // Campo para avatar
   avatar_url?: string | null;
+  // Referral codes
+  affiliate_code?: string | null; // Matricula Rewards code
+  seller_referral_code?: string | null; // Seller referral code
   // ... outras colunas se existirem
 }
 
@@ -51,8 +54,8 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => Promise<void>;
-  switchRole: (newRole: 'student' | 'school' | 'admin') => void;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }) => Promise<void>;
+  switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => void;
   isAuthenticated: boolean;
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -133,6 +136,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasPaidProcess: currentProfile?.has_paid_selection_process_fee,
         university_image: (sessionUser as any).university_image || null,
       };
+      console.log('🔧 [USEAUTH] Usuario construído:', builtUser);
+      console.log('🔧 [USEAUTH] Role final:', role);
+      console.log('🔧 [USEAUTH] Profile role:', currentProfile?.role);
+      console.log('🔧 [USEAUTH] Metadata role:', sessionUser?.user_metadata?.role);
       return builtUser;
     };
 
@@ -156,17 +163,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             .from('user_profiles')
             .select('*')
             .eq('user_id', session.user.id)
-            .single();
+            .maybeSingle();
           if (error) {
-            if (error.code === 'PGRST116') {
-              // Perfil não encontrado - isso é normal
-            } else {
-              console.log("Error fetching user profile:", error);
+            console.log("🔍 [USEAUTH] Erro ao buscar perfil via tabela:", error);
+            // Para erros de permissão, tentar usar função RPC
+            if (error.code === '403' || error.code === '406') {
+              console.log('🔍 [USEAUTH] Tentando buscar perfil via RPC...');
+              try {
+                const { data: rpcData, error: rpcError } = await supabase.rpc('get_current_user_profile');
+                if (rpcError) {
+                  console.log('🔍 [USEAUTH] Erro ao buscar via RPC:', rpcError);
+                  profile = null;
+                } else {
+                  profile = rpcData?.[0] || null;
+                  console.log('🔍 [USEAUTH] Perfil encontrado via RPC:', profile);
+                }
+              } catch (rpcErr) {
+                console.log('🔍 [USEAUTH] Erro geral na RPC:', rpcErr);
+                profile = null;
+              }
             }
+          } else {
+            profile = data || null;
           }
-          profile = data || null;
         } catch (error) {
-          console.log("Error fetching user profile:", error);
+          console.log("🔍 [USEAUTH] Erro geral ao buscar perfil:", error);
+          profile = null;
         }
         if (!profile) {
           try {
@@ -208,7 +230,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               full_name: fullName,
               phone: phone,
               status: 'active',
-              role: desiredRoleFromMetadata
+              role: desiredRoleFromMetadata,
+              // Include referral codes if provided
+              affiliate_code: session.user.user_metadata?.affiliate_code || null,
+              seller_referral_code: session.user.user_metadata?.seller_referral_code || null
             };
             
             console.log('🔍 [USEAUTH] profileData que será inserido:', profileData);
@@ -354,8 +379,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         // Garantir que o campo role do perfil esteja alinhado com o metadata e com dados de universidade
         try {
-          const metadataRole = session.user.user_metadata?.role as 'student' | 'school' | 'admin' | undefined;
-          let finalRole: 'student' | 'school' | 'admin' | undefined = profile?.role || metadataRole;
+          const metadataRole = session.user.user_metadata?.role as 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | undefined;
+          let finalRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' | undefined = profile?.role || metadataRole;
 
           if (!finalRole || (finalRole === 'student' && metadataRole === 'school')) {
             // Se tiver universidade vinculada, forçar role 'school'
@@ -452,7 +477,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const getDefaultRole = (email: string): 'student' | 'school' | 'admin' => {
+  const getDefaultRole = (email: string): 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' => {
     // Admin emails can be hardcoded or checked against a list
     const adminEmails = ['admin@matriculausa.com', 'admin@example.com'];
     if (adminEmails.includes(email.toLowerCase())) {
@@ -461,19 +486,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return 'student';
   };
 
-  const switchRole = (newRole: 'student' | 'school' | 'admin') => {
-    if (user) {
-      const updatedUser = { ...user, role: newRole };
-      setUser(updatedUser);
-      
-      // Update user metadata in Supabase
-      supabase.auth.updateUser({
-        data: { role: newRole }
-      }).catch(error => {
-        console.error('Error updating user role:', error);
-      });
-    }
-  };
+
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -503,8 +516,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('pending_full_name');
       localStorage.removeItem('pending_phone');
       localStorage.removeItem('pending_affiliate_code');
-      
-      // Limpar dados do Supabase local
+      localStorage.removeItem('pending_seller_referral_code');
       localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
       sessionStorage.clear();
       
@@ -538,27 +550,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school'; [key: string]: any }) => {
+  // Função para registrar usuário
+  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }) => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
-    console.log('🔍 [USEAUTH] Telefone no userData:', userData.phone);
     
     // Garantir que full_name não seja undefined
     if (!userData.full_name || userData.full_name.trim() === '') {
       throw new Error('Nome completo é obrigatório');
     }
     
-    console.log('💾 [USEAUTH] Salvando no localStorage:');
-    console.log('💾 [USEAUTH] - pending_full_name:', userData.full_name);
-    console.log('💾 [USEAUTH] - pending_phone:', userData.phone || '');
-    
+    // Salvar dados no localStorage para uso posterior
     localStorage.setItem('pending_full_name', userData.full_name);
-    localStorage.setItem('pending_phone', userData.phone || '');
-    
-    // Salvar código de afiliado se existir
-    if (userData.affiliate_code) {
-      localStorage.setItem('pending_affiliate_code', userData.affiliate_code);
-      console.log('💾 [USEAUTH] - pending_affiliate_code:', userData.affiliate_code);
+    if (userData.phone) {
+      localStorage.setItem('pending_phone', userData.phone);
     }
     
     // Filtrar valores undefined/null do userData
@@ -566,35 +571,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       Object.entries(userData).filter(([/*k*/ _k, value]) => value !== undefined && value !== null)
     );
     
-    console.log('🔍 [USEAUTH] cleanUserData:', cleanUserData);
-    console.log('🔍 [USEAUTH] Telefone no cleanUserData:', cleanUserData.phone);
-    
-    // Validate password server-side as well to enforce allowed characters
-    // Only letters, numbers and @ # $ ! are allowed
-    const allowedPasswordRegex = /^[A-Za-z0-9@#$!]+$/;
-    if (!allowedPasswordRegex.test(password)) {
-      throw new Error('Password contains invalid characters. Only letters, numbers, and @ # $ ! are allowed.');
-    }
-
     const signUpData = {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
     };
     
-    console.log('🔍 [USEAUTH] signUpData que será enviado:', signUpData);
-    console.log('🔍 [USEAUTH] Telefone no signUpData:', (signUpData as any).phone);
-    
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();
-
-    // Pré-checagem de e-mail existente via RPC (evita disparar signUp e receber email de confirmação duplicado)
-    {
-      const { data: exists, error: rpcError } = await supabase.rpc('email_exists', { in_email: normalizedEmail });
-      if (!rpcError && exists) {
-        throw new Error('This email address is already registered. Log in or use "Forgot my password."');
-      }
-      // Se a RPC falhar, seguimos para o signUp e deixamos o tratamento de erro abaixo
-    }
 
     const { error, data } = await supabase.auth.signUp({
       email: normalizedEmail,
@@ -604,68 +587,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     });
 
-    // Se o registro foi bem-sucedido e há código de afiliado, processar cupom automaticamente
-    if (!error && data.user && userData.affiliate_code) {
-      console.log('🎯 [USEAUTH] Processando cupom de desconto automaticamente...');
-      console.log('🎯 [USEAUTH] User ID:', data.user.id);
-      console.log('🎯 [USEAUTH] Affiliate Code:', userData.affiliate_code);
-      console.log('🎯 [USEAUTH] User Data completo:', userData);
-
-      try {
-        console.log('🎯 [USEAUTH] Chamando Edge Function process-registration-coupon...');
-        const response = await supabase.functions.invoke('process-registration-coupon', {
-          body: {
-            user_id: data.user.id,
-            affiliate_code: userData.affiliate_code
-          }
-        });
-        console.log('🎯 [USEAUTH] Status da resposta:', response?.error ? 'error' : 'success');
-        console.log('🎯 [USEAUTH] Resposta da Edge Function:', response);
-      } catch (couponError: any) {
-        console.error('❌ [USEAUTH] Erro ao chamar função de cupom:', couponError);
-        console.error('❌ [USEAUTH] Tipo do erro:', typeof couponError);
-        console.error('❌ [USEAUTH] Mensagem do erro:', (couponError as any)?.message ?? String(couponError));
-      }
-    } else {
-      console.log('⚠️ [USEAUTH] Não processando cupom automático:');
-      console.log('⚠️ [USEAUTH] - Error:', error as any);
-      console.log('⚠️ [USEAUTH] - Data user:', data?.user);
-      console.log('⚠️ [USEAUTH] - Affiliate code:', userData.affiliate_code);
-    }
-
     if (error) {
       console.log('❌ [USEAUTH] Erro no signUp:', error);
-      // Trata e-mail já existente de forma amigável
-      const status = (error as any)?.status;
-      const message = (error as any)?.message?.toLowerCase?.() || '';
-      const isDuplicate =
-        status === 400 || status === 409 || status === 422 ||
-        message.includes('already registered') ||
-        message.includes('already exists') ||
-        message.includes('user already') ||
-        message.includes('duplicate') ||
-        message.includes('email rate limit') ||
-        (message.includes('email') && message.includes('sent'));
-
-      if (isDuplicate) {
-        throw new Error('This email address is already registered. Log in or use "Forgot my password."');
-      }
-
       throw error;
     }
     
     console.log('✅ [USEAUTH] SignUp bem-sucedido');
     console.log('🔍 [USEAUTH] data.user:', data?.user);
-    console.log('🔍 [USEAUTH] data.user.user_metadata:', data?.user?.user_metadata);
+  };
+
+  // Função para trocar role do usuário (apenas para desenvolvimento/admin)
+  const switchRole = (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => {
+    if (!user || !userProfile) return;
     
-    // O user_profile será criado naturalmente quando o usuário fizer login
-    // Salvar dados no localStorage para uso posterior
-    if (data?.user) {
-      console.log('✅ [USEAUTH] Usuário registrado com sucesso');
-    } else {
-      console.log('⚠️ [USEAUTH] Usuário criado, mas precisa confirmar o e-mail');
-    }
-    // Registration redirection will be handled in the Auth component
+    // Atualizar estado local temporariamente
+    setUser(prev => prev ? { ...prev, role: newRole } : null);
+    setUserProfile(prev => prev ? { ...prev, role: newRole } : null);
   };
 
   // Função para refetch manual do perfil do usuário
