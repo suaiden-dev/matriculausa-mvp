@@ -15,6 +15,25 @@
     "startSelectionProcess": "Iniciar Processo de Seleção",
     "scholarshipsPlatform": "Plataforma de Bolsas"
   },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Bolsas de Estudo Bloqueadas",
+      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+    },
+    "universities": {
+      "title": "Universidades Bloqueadas",
+      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+    },
+    "default": {
+      "title": "Conteúdo Bloqueado",
+      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+    },
+    "selectionProcessFee": "Taxa de Processo de Seleção",
+    "completeApplicationJourney": "Complete sua jornada de candidatura",
+    "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
+    "learnHowItWorks": "Aprender Como Funciona",
+    "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
+  },
   "home": {
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
@@ -22,6 +41,12 @@
       "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada para estudar nos EUA.",
       "cta": "Inicie Sua Jornada",
       "watchVideo": "Assistir Vídeo"
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universidades Bloqueadas",
+      "lockedDescription": "Complete o processo de seleção para desbloquear informações detalhadas das universidades",
+      "goToDashboard": "Ir ao Painel",
+      "loginToView": "Fazer Login para Ver"
     },
     "features": {
       "title": "Por Que Escolher MatriculaUSA?",
@@ -67,19 +92,19 @@
         },
         "q2": {
           "question": "O que é a Taxa de Processo de Seleção?",
-          "answer": "A Taxa de Processo de Seleção (US$350) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+          "answer": "A Taxa de Processo de Seleção (US$600) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         "q3": {
           "question": "O que é a Taxa de Bolsa?",
-          "answer": "A Taxa de Bolsa (US$550) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
+          "answer": "A Taxa de Bolsa (US$350) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
         },
         "q4": {
           "question": "O que é a Taxa de Candidatura?",
-          "answer": "A Taxa de Candidatura (US$350) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+          "answer": "A Taxa de Candidatura (US$850) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
         },
         "q5": {
           "question": "O que é a Taxa de Controle I-20?",
-          "answer": "A Taxa de Controle I-20 (US$900) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
+          "answer": "A Taxa de Controle I-20 (US$1,250) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
         },
         "q6": {
           "question": "Existem outras taxas que devo conhecer?",
@@ -225,11 +250,11 @@
       },
       "q3": {
         "question": "O que é a Taxa de Bolsa?",
-        "answer": "A Taxa de Bolsa (US$850) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Bolsa (US$350) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
       },
       "q4": {
         "question": "O que é a Taxa de Candidatura?",
-        "answer": "A Taxa de Candidatura (US$350) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Candidatura (US$850) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
       },
       "q5": {
         "question": "O que é a Taxa de Controle I-20?",

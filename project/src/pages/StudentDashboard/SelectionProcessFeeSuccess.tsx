@@ -83,7 +83,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
         <h1 className="text-3xl font-bold text-green-700 mb-2">Selection Process Fee Payment Successful!</h1>
         <p className="text-slate-700 mb-6 text-center">
-          Your payment of <span className="font-bold">$350</span> was processed successfully.<br/>
+          Your payment of <span className="font-bold">$600</span> was processed successfully.<br/>
           You now have access to all scholarships and can apply freely.
         </p>
         <button

@@ -9,15 +9,25 @@ import { supabase } from '../lib/supabase';
 
 import SmartChat from '../components/SmartChat';
 import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
+import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
+  const { isAuthenticated, userProfile, loading } = useAuth();
+  
+  // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
-  const [selectedDeliveryMode, setSelectedDeliveryMode] = useState('all');
-  const [selectedWorkPermission, setSelectedWorkPermission] = useState('all');
-  const { scholarships, loading, error } = useScholarships();
+  const [selectedStudyMode, setSelectedStudyMode] = useState('all');
+  const [selectedWorkAuth, setSelectedWorkAuth] = useState('all');
+  const [minValue, setMinValue] = useState('');
+  const [maxValue, setMaxValue] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedScholarship, setSelectedScholarship] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const { scholarships, loading: scholarshipsLoading, error } = useScholarships();
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
   const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
   // Approved universities ids cache
@@ -25,7 +35,6 @@ const Scholarships: React.FC = () => {
 
   // Estados para o modal de detalhes
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Get min and max scholarship values from data
   const scholarshipValues = scholarships.map((s: Scholarship) => s.amount).filter(val => val && val > 0);
@@ -46,13 +55,13 @@ const Scholarships: React.FC = () => {
       searchTerm,
       selectedLevel,
       selectedField,
-      selectedDeliveryMode,
-      selectedWorkPermission,
+      selectedStudyMode,
+      selectedWorkAuth,
       minPrice,
       maxPrice
     };
     localStorage.setItem('scholarshipsPageFilters', JSON.stringify(filters));
-  }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, minPrice, maxPrice]);
+  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
 
   // Restaurar filtros do localStorage ao carregar
   useEffect(() => {
@@ -63,8 +72,8 @@ const Scholarships: React.FC = () => {
         if (filters.searchTerm) setSearchTerm(filters.searchTerm);
         if (filters.selectedLevel) setSelectedLevel(filters.selectedLevel);
         if (filters.selectedField) setSelectedField(filters.selectedField);
-        if (filters.selectedDeliveryMode) setSelectedDeliveryMode(filters.selectedDeliveryMode);
-        if (filters.selectedWorkPermission) setSelectedWorkPermission(filters.selectedWorkPermission);
+        if (filters.selectedStudyMode) setSelectedStudyMode(filters.selectedStudyMode);
+        if (filters.selectedWorkAuth) setSelectedWorkAuth(filters.selectedWorkAuth);
         if (filters.minPrice !== undefined) setMinPrice(filters.minPrice);
         // maxPrice será definido pelo useEffect do maxScholarshipValue
       } catch (error) {
@@ -141,8 +150,26 @@ const Scholarships: React.FC = () => {
     { value: 'undergraduate', label: t('scholarshipsPage.filters.levels.undergraduate') },
   ];
 
-  const { isAuthenticated, userProfile, refetchUserProfile } = useAuth();
+  const { refetchUserProfile } = useAuth();
   const navigate = useNavigate();
+  
+  // Debug logs para verificar os valores
+  console.log('Scholarships - Debug Info:', {
+    loading,
+    isAuthenticated,
+    userProfile,
+    hasPaidFee: userProfile?.has_paid_selection_process_fee,
+    shouldShowBlocker: isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee,
+    userProfileKeys: userProfile ? Object.keys(userProfile) : 'No profile'
+  });
+  
+  // Check if user needs to pay selection process fee
+  if (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee)) {
+    console.log('Scholarships - Showing PaymentRequiredBlocker');
+    return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
+  }
+  
+  console.log('Scholarships - Showing normal page content');
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
     // Exclude featured scholarships from the general list to avoid duplication
@@ -160,8 +187,8 @@ const Scholarships: React.FC = () => {
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
-    const matchesDeliveryMode = selectedDeliveryMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedDeliveryMode);
-    const matchesWorkPermission = selectedWorkPermission === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkPermission));
+    const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
+    const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
     return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
   });
 
@@ -177,8 +204,8 @@ const Scholarships: React.FC = () => {
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
-    const matchesDeliveryMode = selectedDeliveryMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedDeliveryMode);
-    const matchesWorkPermission = selectedWorkPermission === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkPermission));
+    const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
+    const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
     return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
   };
 
@@ -322,7 +349,7 @@ const Scholarships: React.FC = () => {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, minPrice, maxPrice]);
+  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
 
   return (
     <div className="bg-white min-h-screen">
@@ -380,7 +407,7 @@ const Scholarships: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-transparent outline-none border-none text-sm text-slate-900 placeholder-slate-400"
               aria-label={t('scholarships.searchPlaceholder')}
-              disabled={loading}
+              disabled={scholarshipsLoading}
             />
           </div>
 
@@ -397,7 +424,7 @@ const Scholarships: React.FC = () => {
               className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
               placeholder="$0"
               aria-label={t('scholarshipsPage.filters.min') + ' scholarship value'}
-              disabled={loading}
+              disabled={scholarshipsLoading}
             />
             <span className="text-xs text-slate-400">-</span>
             <label htmlFor="max-price" className="text-xs text-slate-500">{t('scholarshipsPage.filters.max')}</label>
@@ -411,7 +438,7 @@ const Scholarships: React.FC = () => {
               className="w-20 px-2 py-1 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] bg-slate-50"
               placeholder={formatAmount(maxScholarshipValue)}
               aria-label={t('scholarshipsPage.filters.max') + ' scholarship value'}
-              disabled={loading}
+              disabled={scholarshipsLoading}
             />
           </div>
 
@@ -422,7 +449,7 @@ const Scholarships: React.FC = () => {
               onChange={(e) => setSelectedLevel(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
               aria-label={t('scholarshipsPage.filters.allLevels')}
-              disabled={loading}
+              disabled={scholarshipsLoading}
             >
               {levelOptions.map(option => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -433,7 +460,7 @@ const Scholarships: React.FC = () => {
               onChange={(e) => setSelectedField(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
               aria-label={t('scholarshipsPage.filters.allFields')}
-              disabled={loading}
+              disabled={scholarshipsLoading}
             >
               <option value="all">{t('scholarshipsPage.filters.allFields')}</option>
               <option value="stem">{t('scholarshipsPage.filters.stem')}</option>
@@ -441,36 +468,36 @@ const Scholarships: React.FC = () => {
               <option value="engineering">{t('scholarshipsPage.filters.engineering')}</option>
               <option value="any">{t('scholarshipsPage.filters.anyField')}</option>
             </select>
-                          <select
-                value={selectedDeliveryMode}
-                onChange={(e) => setSelectedDeliveryMode(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-                aria-label={t('scholarshipsPage.scholarshipCard.studyMode')}
-                disabled={loading}
-              >
-              <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
-              <option value="online">{t('scholarshipsPage.filters.online')}</option>
-              <option value="in_person">{t('scholarshipsPage.filters.onCampus')}</option>
-              <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
-            </select>
-                          <select
-                value={selectedWorkPermission}
-                onChange={(e) => setSelectedWorkPermission(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-                aria-label={t('scholarshipsPage.scholarshipCard.workAuthorization')}
-                disabled={loading}
-              >
-              <option value="all">{t('scholarshipsPage.filters.allPermissions')}</option>
-              <option value="OPT">{t('scholarshipsPage.filters.opt')}</option>
-              <option value="CPT">{t('scholarshipsPage.filters.cpt')}</option>
-              <option value="F1">{t('scholarshipsPage.filters.f1')}</option>
-            </select>
+                                                     <select
+                 value={selectedStudyMode}
+                 onChange={(e) => setSelectedStudyMode(e.target.value)}
+                 className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+                 aria-label={t('scholarshipsPage.scholarshipCard.studyMode')}
+                 disabled={scholarshipsLoading}
+               >
+               <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
+               <option value="online">{t('scholarshipsPage.filters.online')}</option>
+               <option value="in_person">{t('scholarshipsPage.filters.onCampus')}</option>
+               <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
+             </select>
+                                                     <select
+                 value={selectedWorkAuth}
+                 onChange={(e) => setSelectedWorkAuth(e.target.value)}
+                 className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+                 aria-label={t('scholarshipsPage.scholarshipCard.workAuthorization')}
+                 disabled={scholarshipsLoading}
+               >
+               <option value="all">{t('scholarshipsPage.filters.allPermissions')}</option>
+               <option value="OPT">{t('scholarshipsPage.filters.opt')}</option>
+               <option value="CPT">{t('scholarshipsPage.filters.cpt')}</option>
+               <option value="F1">{t('scholarshipsPage.filters.f1')}</option>
+             </select>
           </div>
 
           {/* Results Count */}
           <div className="flex items-center justify-end flex-1 min-w-[120px]">
             <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium">
-              {loading ? t('scholarshipsPage.filters.loading') : `${filteredScholarships.length} ${t('scholarshipsPage.filters.scholarshipsFound')}`}
+              {scholarshipsLoading ? t('scholarshipsPage.filters.loading') : `${filteredScholarships.length} ${t('scholarshipsPage.filters.scholarshipsFound')}`}
             </span>
           </div>
         </div>
@@ -721,7 +748,7 @@ const Scholarships: React.FC = () => {
            
            {/* Scholarships Grid */}
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {loading ? (
+             {scholarshipsLoading ? (
                // Skeleton cards during loading
                Array.from({ length: PAGE_SIZE }).map((_, i) => (
                  <div key={i} className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 animate-pulse">
@@ -750,12 +777,12 @@ const Scholarships: React.FC = () => {
                  <button 
                    onClick={() => {
                      setSearchTerm('');
-                     setSelectedLevel('all');
-                     setSelectedField('all');
-                     setSelectedDeliveryMode('all');
-                     setSelectedWorkPermission('all');
-                     setMaxPrice(() => maxScholarshipValue);
-                     setMinPrice(0);
+                                           setSelectedLevel('all');
+                      setSelectedField('all');
+                      setSelectedStudyMode('all');
+                      setSelectedWorkAuth('all');
+                      setMaxPrice(() => maxScholarshipValue);
+                      setMinPrice(0);
                      localStorage.removeItem('scholarshipsPageFilters');
                    }}
                    className="bg-[#05294E] text-white px-8 py-3 rounded-2xl hover:bg-[#05294E]/90 transition-all duration-300 font-bold"

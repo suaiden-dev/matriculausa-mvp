@@ -267,9 +267,9 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">$350</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">$600</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${350 - (activeDiscount.discount_amount || 0)}
+                        ${600 - (activeDiscount.discount_amount || 0)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -279,7 +279,7 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">$350</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">$600</div>
                   )}
                 </div>
               </div>

@@ -15,6 +15,25 @@
     "startSelectionProcess": "Start Selection Process",
     "scholarshipsPlatform": "Scholarships Platform"
   },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Scholarships Locked",
+      "description": "To access our exclusive collection of scholarships, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "universities": {
+      "title": "Universities Locked",
+      "description": "To explore our partner universities and their programs, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "default": {
+      "title": "Content Locked",
+      "description": "To access this content, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "selectionProcessFee": "Selection Process Fee",
+    "completeApplicationJourney": "Complete your application journey",
+    "goToDashboardAndPayFee": "Go to Dashboard & Pay Fee",
+    "learnHowItWorks": "Learn How It Works",
+    "contentLockedMessage": "This content is locked until payment is completed"
+  },
   "home": {
     "hero": {
       "title": "Your Gateway to American Universities",
@@ -22,6 +41,12 @@
       "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey to studying in the USA.",
       "cta": "Start Your Journey",
       "watchVideo": "Watch Video"
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universities Locked",
+      "lockedDescription": "Complete the selection process to unlock detailed university information",
+      "goToDashboard": "Go to Dashboard",
+      "loginToView": "Login to View"
     },
     "features": {
       "title": "Why Choose MatriculaUSA?",
@@ -67,11 +92,11 @@
         },
         "q2": {
           "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee (US$350) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "answer": "The Selection Process Fee (US$600) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         "q3": {
           "question": "What is the Scholarship Fee?",
-          "answer": "The Scholarship Fee (US$550) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+          "answer": "The Scholarship Fee (US$850) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
         },
         "q4": {
           "question": "What is the Application Fee?",
@@ -79,7 +104,7 @@
         },
         "q5": {
           "question": "What is the I-20 Control Fee?",
-          "answer": "The I-20 Control Fee (US$900) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+          "answer": "The I-20 Control Fee (US$1,250) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
         },
         "q6": {
           "question": "Are there any other fees I should be aware of?",

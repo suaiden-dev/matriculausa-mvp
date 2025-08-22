@@ -48,7 +48,7 @@ const CollegeEnrollmentCheckout: React.FC = () => {
           <p className="text-slate-700 text-center mb-2 font-semibold">To complete your enrollment, please pay the following fees:</p>
           <ul className="text-slate-700 text-center mb-4">
             <li>• <span className="font-bold">Application Fee:</span> $350</li>
-            <li>• <span className="font-bold">Scholarship Fee:</span> $550</li>
+            <li>• <span className="font-bold">Scholarship Fee:</span> $850</li>
           </ul>
         </div>
         <StripeCheckout
