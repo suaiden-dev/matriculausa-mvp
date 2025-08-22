@@ -165,14 +165,14 @@ const CartPage: React.FC = () => {
       return (
         <div>
           <h2 className="text-xl font-bold mb-4 text-green-600 flex items-center gap-2">
-            <CheckCircle /> Documents Approved! Ready to proceed with payment.
+            <CheckCircle /> {t('studentDashboard.cartPage.documentsApproved')}
           </h2>
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
             <p className="text-green-700 font-medium">
-              Congratulations! Your documents have been approved. 
+              {t('studentDashboard.cartPage.congratulations')} 
               {cart.length === 1 
-                ? ' Your scholarship has been automatically selected for payment.'
-                : ' Please select one scholarship below to proceed with the application fee payment.'
+                ? ` ${t('studentDashboard.cartPage.autoSelected')}`
+                : ` ${t('studentDashboard.cartPage.selectOneScholarship')}`
               }
             </p>
           </div>
@@ -198,12 +198,12 @@ const CartPage: React.FC = () => {
                         ? 'bg-blue-600 text-white' 
                         : 'bg-slate-200 text-slate-700'
                     }`}>
-                      {selectedScholarship === item.scholarships.id ? 'Selected' : 'Select'}
+                      {selectedScholarship === item.scholarships.id ? t('studentDashboard.cartPage.selected') : t('studentDashboard.cartPage.select')}
                     </div>
                   )}
                   {cart.length === 1 && (
                     <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-600 text-white">
-                      Selected
+                      {t('studentDashboard.cartPage.selected')}
                     </div>
                   )}
                 </div>
@@ -213,8 +213,8 @@ const CartPage: React.FC = () => {
           <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-green-800 mb-1">Ready to Apply!</h3>
-                <p className="text-green-700 text-sm">Complete your application with the one-time fee</p>
+                <h3 className="text-lg font-bold text-green-800 mb-1">{t('studentDashboard.cartPage.readyToApply')}</h3>
+                <p className="text-green-700 text-sm">{t('studentDashboard.cartPage.completeApplication')}</p>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-green-800">
@@ -223,10 +223,10 @@ const CartPage: React.FC = () => {
                     : '350.00'
                   }
                 </div>
-                <div className="text-green-600 text-xs">Application Fee</div>
+                <div className="text-green-600 text-xs">{t('studentDashboard.cartPage.applicationFee')}</div>
                 {selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
                   && Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount) !== 350 && (
-                  <div className="text-purple-600 text-xs font-medium">Custom fee set by university</div>
+                  <div className="text-purple-600 text-xs font-medium">{t('studentDashboard.cartPage.customFeeSet')}</div>
                 )}
               </div>
             </div>
@@ -235,7 +235,7 @@ const CartPage: React.FC = () => {
               paymentType="application_fee"
               feeType="application_fee"
               scholarshipsIds={selectedScholarship ? [selectedScholarship] : []}
-              buttonText={`Pay Application Fee ($${selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
+              buttonText={`${t('studentDashboard.cartPage.payApplicationFee')} ($${selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
                 ? Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount).toFixed(2)
                 : '350.00'
               })`}
@@ -244,17 +244,11 @@ const CartPage: React.FC = () => {
               disabled={!selectedScholarship}
               beforeCheckout={createOrGetApplication}
               metadata={{ selected_scholarship_id: selectedScholarship }}
-              scholarshipData={selectedScholarship ? {
-                title: cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.title || '',
-                universityName: cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.universities?.name || 
-                               cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.university_name || 'Unknown University',
-                applicationFeeAmount: cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount || 350.00
-              } : undefined}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
             />
             <div className="mt-3 text-center">
               <p className="text-green-600 text-xs">
-                ✓ Secure payment • ✓ Instant confirmation • ✓ Full refund policy
+                {t('studentDashboard.cartPage.securePayment')}
               </p>
             </div>
           </div>
@@ -283,14 +277,14 @@ const CartPage: React.FC = () => {
             className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300 mb-4 disabled:bg-slate-300 next-step-button"
             data-testid="next-step-button"
           >
-            {isProcessing ? 'Processing...' : 'Next Step'}
+            {isProcessing ? t('studentDashboard.cartPage.processing') : t('studentDashboard.cartPage.nextStep')}
           </button>
         </div>
         <button
           onClick={handleClearCart}
           className="w-full bg-slate-100 text-slate-700 py-3 px-6 rounded-2xl font-medium text-sm hover:bg-slate-200 transition-all duration-300"
         >
-          Clear Cart
+          {t('studentDashboard.cartPage.clearCart')}
         </button>
       </div>
     );

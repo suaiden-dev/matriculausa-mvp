@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 import { 
   Upload, 
   CheckCircle, 
@@ -16,14 +17,8 @@ import {
 } from 'lucide-react';
 import './DocumentsAndScholarshipChoice.css';
 
-// Documentos obrigatórios - mantendo exatamente os mesmos documentos
-const DOCUMENT_TYPES = [
-  { key: 'passport', label: 'Passport', icon: User, description: 'Valid passport document' },
-  { key: 'diploma', label: 'High School Diploma', icon: GraduationCap, description: 'Official high school diploma or certificate' },
-  { key: 'funds_proof', label: 'Proof of Funds', icon: DollarSign, description: 'Bank statement or financial documentation' },
-];
-
 const DocumentsAndScholarshipChoice: React.FC = () => {
+  const { t } = useTranslation();
   const { userProfile, user } = useAuth();
   const { fetchCart, clearCart } = useCartStore();
   const [documentsApproved, setDocumentsApproved] = useState(userProfile?.documents_status === 'approved');
@@ -44,6 +39,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const [showDocumentSection, setShowDocumentSection] = useState(false);
   
   const navigate = useNavigate();
+
+  // Documentos obrigatórios - mantendo exatamente os mesmos documentos
+  const DOCUMENT_TYPES = [
+    { key: 'passport', label: t('studentDashboard.documentsAndScholarshipChoice.passport'), icon: User, description: t('studentDashboard.documentsAndScholarshipChoice.passportDescription') },
+    { key: 'diploma', label: t('studentDashboard.documentsAndScholarshipChoice.diploma'), icon: GraduationCap, description: t('studentDashboard.documentsAndScholarshipChoice.diplomaDescription') },
+    { key: 'funds_proof', label: t('studentDashboard.documentsAndScholarshipChoice.fundsProof'), icon: DollarSign, description: t('studentDashboard.documentsAndScholarshipChoice.fundsProofDescription') },
+  ];
 
   // Carregar cart quando componente monta
   useEffect(() => {
@@ -437,10 +439,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 mb-3 sm:mb-4">
-            Application Process Setup
+            {t('studentDashboard.documentsAndScholarshipChoice.title')}
           </h1>
           <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto px-2">
-            Complete your student application process by selecting your status and uploading required documents
+            {t('studentDashboard.documentsAndScholarshipChoice.subtitle')}
           </p>
         </div>
 
@@ -452,10 +454,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 <User className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
-                What is your current status in the US?
+                {t('studentDashboard.documentsAndScholarshipChoice.step1Title')}
               </h2>
               <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto px-2">
-                Please select your current immigration status to help us provide the best guidance for your application process.
+                {t('studentDashboard.documentsAndScholarshipChoice.step1Description')}
               </p>
             </div>
             
@@ -475,10 +477,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center mb-2">
                     <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-2" />
-                    <div className="font-bold text-slate-800 text-base sm:text-lg">First-time F-1 Visa Application</div>
+                    <div className="font-bold text-slate-800 text-base sm:text-lg">{t('studentDashboard.documentsAndScholarshipChoice.firstTimeF1')}</div>
                   </div>
                   <div className="text-sm sm:text-base text-slate-600">
-                    I am outside the US and need an F-1 student visa to study in America.
+                    {t('studentDashboard.documentsAndScholarshipChoice.firstTimeF1Description')}
                   </div>
                 </div>
                 <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 transition-transform flex-shrink-0 ${
@@ -501,10 +503,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center mb-2">
                     <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mr-2" />
-                    <div className="font-bold text-slate-800 text-base sm:text-lg">School Transfer</div>
+                    <div className="font-bold text-slate-800 text-base sm:text-lg">{t('studentDashboard.documentsAndScholarshipChoice.schoolTransfer')}</div>
                   </div>
                   <div className="text-sm sm:text-base text-slate-600">
-                    I am already in the US with an F-1 student visa and want to transfer schools.
+                    {t('studentDashboard.documentsAndScholarshipChoice.schoolTransferDescription')}
                   </div>
                 </div>
                 <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 transition-transform flex-shrink-0 ${
@@ -527,10 +529,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center mb-2">
                     <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mr-2" />
-                    <div className="font-bold text-slate-800 text-base sm:text-lg">Status Change</div>
+                    <div className="font-bold text-slate-800 text-base sm:text-lg">{t('studentDashboard.documentsAndScholarshipChoice.statusChange')}</div>
                   </div>
                   <div className="text-sm sm:text-base text-slate-600">
-                    I am already in the US with another visa (e.g., tourist) and want to change my status to student.
+                    {t('studentDashboard.documentsAndScholarshipChoice.statusChangeDescription')}
                   </div>
                 </div>
                 <ChevronRight className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 transition-transform flex-shrink-0 ${
@@ -551,7 +553,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                     Saving...
                   </span>
                 ) : (
-                  'Continue to Documents'
+                  t('studentDashboard.documentsAndScholarshipChoice.continueToDocuments')
                 )}
               </button>
             </div>
@@ -563,13 +565,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-6 sm:mb-8">
             <div className="text-center mb-6 sm:mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
-                Upload Required Documents
+                {t('studentDashboard.documentsAndScholarshipChoice.step2Title')}
               </h2>
               <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto mb-2 px-2">
-                Please upload the following documents to proceed with your application process.
+                {t('studentDashboard.documentsAndScholarshipChoice.step2Description')}
               </p>
               <p className="text-xs sm:text-sm text-slate-500 px-2">
-                <strong>All files must be clear and legible.</strong> Each field accepts only one file.
+                <strong>{t('studentDashboard.documentsAndScholarshipChoice.step2Note')}</strong>
               </p>
             </div>
 
@@ -605,7 +607,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                           <div className="flex items-center space-x-3">
                             <label className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors font-medium text-sm">
                               <Upload className="w-4 h-4 mr-2" />
-                              Escolher arquivo
+                              {t('studentDashboard.documentsAndScholarshipChoice.chooseFile')}
                               <input
                                 type="file"
                                 accept="application/pdf,image/*"
@@ -615,7 +617,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                               />
                             </label>
                             <span className="text-sm text-slate-500">
-                              {hasFile ? hasFile.name : 'Nenhum arquivo escolhido'}
+                              {hasFile ? hasFile.name : t('studentDashboard.documentsAndScholarshipChoice.noFileChosen')}
                             </span>
                           </div>
                           
@@ -650,7 +652,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   disabled={analyzing}
                   className="bg-amber-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base hover:bg-amber-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg w-full sm:w-auto"
                 >
-                  Continue to Manual Review
+                  {t('studentDashboard.documentsAndScholarshipChoice.continueToManualReview')}
                 </button>
               )}
               
@@ -662,17 +664,17 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 {uploading ? (
                   <span className="flex items-center justify-center">
                     <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                    Uploading Documents...
+                    {t('studentDashboard.documentsAndScholarshipChoice.uploadingDocuments')}
                   </span>
                 ) : analyzing ? (
                   <span className="flex items-center justify-center">
                     <div className="animate-pulse h-5 w-5 bg-white rounded-full mr-2"></div>
-                    Analyzing Documents...
+                    {t('studentDashboard.documentsAndScholarshipChoice.analyzingDocuments')}
                   </span>
                 ) : (
                   <span className="flex items-center justify-center">
                     <Upload className="w-5 h-5 mr-2" />
-                    Upload and Analyze Documents
+                    {t('studentDashboard.documentsAndScholarshipChoice.uploadDocuments')}
                   </span>
                 )}
               </button>
@@ -693,17 +695,17 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-green-800 mb-3 sm:mb-4">
-              Documents Approved! ✅
+              {t('studentDashboard.documentsAndScholarshipChoice.documentsApprovedTitle')}
             </h2>
             <p className="text-green-700 text-sm sm:text-lg mb-4 sm:mb-6 max-w-xl mx-auto px-2">
-              Excellent! Your documents have been approved and you're ready to proceed with the application fee payment.
+              {t('studentDashboard.documentsAndScholarshipChoice.documentsApprovedDescription')}
             </p>
             <button
               onClick={() => navigate('/student/dashboard/application-fee')}
               className="bg-green-600 text-white px-8 sm:px-12 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 w-full sm:w-auto"
             >
               <span className="flex items-center justify-center">
-                Proceed to Payment
+                {t('studentDashboard.documentsAndScholarshipChoice.proceedToPayment')}
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
               </span>
             </button>
@@ -721,11 +723,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 </div>
               </div>
               <div className="text-lg sm:text-xl font-bold text-slate-800 mb-2 animate-pulse text-center">
-                Analyzing your documents...
+                {t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayTitle')}
               </div>
               <div className="text-slate-500 text-center text-xs sm:text-sm px-2">
-                This may take up to 40 seconds.<br />
-                Please do not close this window.
+                {t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayDescription')}
               </div>
             </div>
           </div>

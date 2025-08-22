@@ -20,6 +20,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
+import LanguageSelector from '../../components/LanguageSelector';
 // import { StripeCheckout } from '../../components/StripeCheckout';
 // import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 
@@ -340,6 +341,11 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Language Selector */}
+              <div className="hidden sm:block">
+                <LanguageSelector variant="dashboard" showLabel={true} />
               </div>
 
               {/* User Menu */}

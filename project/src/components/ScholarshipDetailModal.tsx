@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   X, 
   Award, 
@@ -34,6 +35,8 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   onClose,
   userProfile
 }) => {
+  const { t } = useTranslation();
+  
   // Controlar o scroll do body quando o modal estiver aberto
   React.useEffect(() => {
     if (isOpen) {
@@ -182,7 +185,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   <div className="absolute top-4 left-4">
                     <span className="bg-[#D0151C] text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2">
                       <Star className="h-4 w-4" />
-                      Exclusive Scholarship
+                      {t('scholarshipsPage.modal.exclusiveScholarship')}
                     </span>
                   </div>
                 )}
@@ -194,13 +197,13 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   </h2>
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 rounded-lg text-sm font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                      {scholarship.field_of_study || 'Any Field'}
+                      {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
                     </span>
                     <span className="text-white/80 text-sm flex items-center gap-1">
                       <Building className="h-4 w-4" />
                       {userProfile?.has_paid_selection_process_fee
-                        ? (scholarship.universities?.name || 'University Information Available')
-                        : 'University Hidden - Unlock with Selection Process'}
+                        ? (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))
+                        : t('scholarshipsPage.modal.universityHidden')}
                     </span>
                   </div>
                 </div>
@@ -216,24 +219,24 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   <div className="bg-white rounded-2xl p-6 border-2 border-[#05294E]/20 shadow-sm">
                     <h3 className="text-xl font-bold text-[#05294E] mb-6 flex items-center gap-2">
                       <DollarSign className="h-5 w-5" />
-                      Financial Breakdown
+                      {t('scholarshipsPage.modal.financialBreakdown')}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-3">
                         <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
-                          <span className="text-slate-600 font-medium">Original Annual Cost</span>
+                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.originalAnnualCost')}</span>
                           <span className="font-bold text-xl text-slate-900">
                             ${formatAmount(scholarship.original_annual_value)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl border border-green-200">
-                          <span className="text-slate-600 font-medium">With Scholarship</span>
+                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.withScholarship')}</span>
                           <span className="font-bold text-xl text-green-700">
                             ${formatAmount(scholarship.annual_value_with_scholarship)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center p-4 bg-[#05294E] text-white rounded-xl">
-                          <span className="font-medium">Annual Savings</span>
+                          <span className="font-medium">{t('scholarshipsPage.modal.annualSavings')}</span>
                           <span className="font-bold text-xl">
                             ${formatAmount((scholarship.original_annual_value || 0) - (scholarship.annual_value_with_scholarship || 0))}
                           </span>
@@ -241,14 +244,14 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                       </div>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
-                          <span className="text-slate-600 font-medium">Cost Per Credit</span>
+                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.costPerCredit')}</span>
                           <span className="font-bold text-lg text-slate-900">
                             ${formatAmount(scholarship.original_value_per_credit)}
                           </span>
                         </div>
                         {scholarship.total_credits && (
                           <div className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
-                            <span className="text-slate-600 font-medium">Total Credits</span>
+                            <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.totalCredits')}</span>
                             <span className="font-bold text-lg text-slate-900">
                               {scholarship.total_credits}
                             </span>
@@ -256,7 +259,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         )}
                         {scholarship.scholarship_percentage && (
                           <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                            <span className="text-slate-600 font-medium">Coverage</span>
+                            <span className="text-slate-600 font-medium">{t('scholarshipsPage.modal.coverage')}</span>
                             <span className="font-bold text-xl text-blue-700">
                               {scholarship.scholarship_percentage}%
                             </span>
@@ -270,28 +273,28 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                     <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                       <BookOpen className="h-5 w-5 text-slate-600" />
-                      Program Information
+                      {t('scholarshipsPage.modal.programInformation')}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-4">
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                           <div className="flex items-center gap-2 mb-2">
                             <GraduationCap className="h-4 w-4 text-slate-600" />
-                            <span className="font-semibold text-slate-700">Academic Level</span>
+                            <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.academicLevel')}</span>
                           </div>
-                          <span className="text-slate-900 capitalize">{scholarship.level || 'Not specified'}</span>
+                          <span className="text-slate-900 capitalize">{scholarship.level || t('scholarshipsPage.modal.notSpecified')}</span>
                         </div>
                         
                         {scholarship.delivery_mode && (
                           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <div className="flex items-center gap-2 mb-2">
                               {getDeliveryModeIcon(scholarship.delivery_mode)}
-                              <span className="font-semibold text-slate-700">Study Mode</span>
+                              <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.studyMode')}</span>
                             </div>
                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                              {scholarship.delivery_mode === 'online' ? 'Online Learning' : 
-                               scholarship.delivery_mode === 'in_person' ? 'On Campus' : 
-                               scholarship.delivery_mode === 'hybrid' ? 'Hybrid Mode' : scholarship.delivery_mode}
+                              {scholarship.delivery_mode === 'online' ? t('scholarshipsPage.modal.onlineLearning') : 
+                               scholarship.delivery_mode === 'in_person' ? t('scholarshipsPage.modal.onCampus') : 
+                               scholarship.delivery_mode === 'hybrid' ? t('scholarshipsPage.modal.hybridMode') : scholarship.delivery_mode}
                             </span>
                           </div>
                         )}
@@ -302,7 +305,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <div className="flex items-center gap-2 mb-2">
                               <Clock className="h-4 w-4 text-slate-600" />
-                              <span className="font-semibold text-slate-700">Program Duration</span>
+                              <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.programDuration')}</span>
                             </div>
                             <span className="text-slate-900">{scholarship.duration}</span>
                           </div>
@@ -312,7 +315,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <div className="flex items-center gap-2 mb-2">
                               <Globe className="h-4 w-4 text-slate-600" />
-                              <span className="font-semibold text-slate-700">Language</span>
+                              <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.language')}</span>
                             </div>
                             <span className="text-slate-900">{scholarship.language}</span>
                           </div>
@@ -326,7 +329,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     <div className="bg-white rounded-2xl p-6 border-2 border-green-200 shadow-sm">
                       <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                         <Briefcase className="h-5 w-5 text-green-600" />
-                        Work Authorization
+                        {t('scholarshipsPage.modal.workAuthorization')}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {scholarship.work_permissions.map((permission: string, index: number) => (
@@ -348,7 +351,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                       <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                         <FileText className="h-5 w-5 text-slate-600" />
-                        Program Description
+                        {t('scholarshipsPage.modal.programDescription')}
                       </h3>
                       <div className="prose prose-slate max-w-none">
                         <p className="text-slate-700 leading-relaxed whitespace-pre-line">
@@ -366,15 +369,15 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     <div className="flex items-center gap-3 mb-3">
                       <DeadlineIcon className={`h-6 w-6 ${deadlineInfo.color}`} />
                       <span className={`font-bold text-lg ${deadlineInfo.color}`}>
-                        Application Deadline
+                        {t('scholarshipsPage.modal.applicationDeadline')}
                       </span>
                     </div>
                     <div className="space-y-2">
                       <p className="text-2xl font-bold text-slate-900">
-                        {getDaysUntilDeadline(scholarship.deadline)} days left
+                        {getDaysUntilDeadline(scholarship.deadline)} {t('scholarshipsPage.modal.daysLeft')}
                       </p>
                       <p className="text-slate-700">
-                        Deadline: {new Date(scholarship.deadline).toLocaleDateString('en-US', {
+                        {t('scholarshipsPage.modal.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
@@ -388,12 +391,12 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                     <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                       <Building className="h-5 w-5 text-slate-600" />
-                      University Information
+                      {t('scholarshipsPage.modal.universityInformation')}
                     </h4>
                     {userProfile?.has_paid_selection_process_fee ? (
                       <div className="space-y-3">
                         <p className="font-semibold text-slate-900">
-                          {scholarship.universities?.name || 'University Name Available'}
+                          {scholarship.universities?.name || t('scholarshipsPage.modal.universityNameAvailable')}
                         </p>
                         {scholarship.universities?.location && (
                           <p className="text-slate-600 flex items-center gap-1">
@@ -404,14 +407,14 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         {scholarship.universities?.ranking && (
                           <p className="text-slate-600 flex items-center gap-1">
                             <TrendingUp className="h-4 w-4" />
-                            Ranking: #{scholarship.universities.ranking}
+                            {t('scholarshipsPage.modal.ranking')} #{scholarship.universities.ranking}
                           </p>
                         )}
                       </div>
                     ) : (
                       <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                         <p className="text-blue-800 text-sm">
-                          🔒 University details available after Selection Process payment.
+                          {t('scholarshipsPage.modal.universityDetailsLocked')}
                         </p>
                       </div>
                     )}
@@ -422,7 +425,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                       <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <Target className="h-5 w-5 text-slate-600" />
-                        Requirements
+                        {t('scholarshipsPage.modal.requirements')}
                       </h4>
                       <div className="space-y-3">
                         {Array.isArray(scholarship.requirements) ? (
@@ -448,7 +451,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     <div className="bg-white rounded-2xl p-6 border-2 border-blue-200 shadow-sm">
                       <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <Award className="h-5 w-5 text-blue-600" />
-                        Additional Benefits
+                        {t('scholarshipsPage.modal.additionalBenefits')}
                       </h4>
                       <div className="space-y-3">
                         {Array.isArray(scholarship.benefits) ? (

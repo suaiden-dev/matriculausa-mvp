@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   User, 
   Edit, 
@@ -32,6 +33,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
   profile,
   onUpdateProfile
 }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -71,12 +73,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
          try {
        // Validate file type
        if (!file.type.startsWith('image/')) {
-         throw new Error('Please select an image file');
+         throw new Error(t('profileManagement.messages.invalidImageFile'));
        }
 
        // Validate file size (max 5MB)
        if (file.size > 5 * 1024 * 1024) {
-         throw new Error('File size must be less than 5MB');
+         throw new Error(t('profileManagement.messages.fileTooLarge'));
        }
 
        const fileExt = file.name.split('.').pop();
@@ -105,7 +107,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         .getPublicUrl(fileName);
 
       const publicUrl = publicUrlData?.publicUrl;
-      if (!publicUrl) throw new Error('Could not get image URL');
+      if (!publicUrl) throw new Error(t('profileManagement.messages.imageUrlError'));
 
       // Update user profile with new avatar URL using RPC function
       const { data: updateResult, error: updateError } = await supabase.rpc('update_user_avatar', {
@@ -116,7 +118,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       if (updateError) throw updateError;
       
       if (!updateResult?.success) {
-        throw new Error(updateResult?.message || 'Failed to update avatar');
+        throw new Error(updateResult?.message || t('profileManagement.messages.avatarUpdateError'));
       }
 
       setAvatarUrl(publicUrl);
@@ -128,7 +130,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       });
 
     } catch (err: any) {
-      setUploadError(err.message || 'Failed to upload avatar. Please try again.');
+      setUploadError(err.message || t('profileManagement.messages.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -159,7 +161,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       await onUpdateProfile(updatedData);
       
       setIsEditing(false);
-      setSuccessMessage('Profile updated successfully!');
+      setSuccessMessage(t('profileManagement.messages.profileUpdated'));
       
       // Clear success message after 5 seconds
       setTimeout(() => {
@@ -167,7 +169,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       }, 5000);
       
     } catch (err: any) {
-      setSaveError(err.message || 'Failed to save profile changes. Please try again.');
+      setSaveError(err.message || t('profileManagement.messages.saveError'));
     } finally {
       setSaving(false);
     }
@@ -209,8 +211,8 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Student Profile</h2>
-          <p className="text-sm sm:text-base text-slate-600">Manage your academic profile and preferences</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t('profileManagement.title')}</h2>
+          <p className="text-sm sm:text-base text-slate-600">{t('profileManagement.subtitle')}</p>
         </div>
         
         {!isEditing && (
@@ -223,7 +225,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
             className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center sm:justify-start shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Edit className="h-4 w-4 mr-2" />
-            Edit Profile
+            {t('profileManagement.editProfile')}
           </button>
         )}
       </div>
@@ -234,12 +236,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         <div className="relative">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-2xl font-bold mb-2">Profile Completeness</h3>
-              <p className="text-blue-100">Complete your profile to unlock more scholarship opportunities</p>
+              <h3 className="text-2xl font-bold mb-2">{t('profileManagement.profileCompleteness.title')}</h3>
+              <p className="text-blue-100">{t('profileManagement.profileCompleteness.subtitle')}</p>
             </div>
             <div className="text-right">
               <div className="text-4xl font-bold mb-2">{completeness}%</div>
-              <div className="text-blue-100 text-sm">Complete</div>
+              <div className="text-blue-100 text-sm">{t('profileManagement.profileCompleteness.complete')}</div>
             </div>
           </div>
           
@@ -253,7 +255,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
           {completeness < 100 && (
             <div className="flex items-center text-blue-100">
               <AlertCircle className="h-4 w-4 mr-2" />
-              <span className="text-sm">Complete your profile to improve scholarship matching</span>
+              <span className="text-sm">{t('profileManagement.profileCompleteness.improveMatching')}</span>
             </div>
           )}
         </div>
@@ -264,7 +266,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         {isEditing ? (
           <div className="p-4 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0 mb-6 sm:mb-8">
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900">Edit Profile</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900">{t('profileManagement.form.editProfile')}</h3>
               <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                 <button
                   onClick={handleSave}
@@ -274,12 +276,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   {saving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Saving...
+                      {t('profileManagement.form.saving')}
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                      {t('profileManagement.form.saveChanges')}
                     </>
                   )}
                 </button>
@@ -289,83 +291,83 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   className="w-full sm:w-auto bg-slate-100 text-slate-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Cancel
+                  {t('profileManagement.form.cancel')}
                 </button>
               </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Full Name *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.fullName')} *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Enter your full name"
+                  placeholder={t('profileManagement.form.placeholders.enterFullName')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.phoneNumber')} *</label>
                 <PhoneInput
                   international
                   defaultCountry="BR"
                   value={formData.phone}
                   onChange={(value) => handleInputChange('phone', value || '')}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Ex: +55 11 99999-8888"
+                  placeholder={t('profileManagement.form.placeholders.phoneExample')}
                   limitMaxLength
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Country *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.country')} *</label>
                 <input
                   type="text"
                   value={formData.country}
                   onChange={(e) => handleInputChange('country', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder="Your country"
+                  placeholder={t('profileManagement.form.placeholders.yourCountry')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Field of Interest</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.fieldOfInterest')}</label>
                 <select
                   value={formData.field_of_interest}
                   onChange={(e) => handleInputChange('field_of_interest', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                 >
-                  <option value="">Select your field</option>
-                  <option value="engineering">Engineering</option>
-                  <option value="business">Business</option>
-                  <option value="computer-science">Computer Science</option>
-                  <option value="medicine">Medicine</option>
-                  <option value="law">Law</option>
-                  <option value="arts">Arts & Humanities</option>
-                  <option value="sciences">Natural Sciences</option>
-                  <option value="other">Other</option>
+                  <option value="">{t('profileManagement.form.placeholders.selectField')}</option>
+                  <option value="engineering">{t('profileManagement.form.fields.engineering')}</option>
+                  <option value="business">{t('profileManagement.form.fields.business')}</option>
+                  <option value="computer-science">{t('profileManagement.form.fields.computerScience')}</option>
+                  <option value="medicine">{t('profileManagement.form.fields.medicine')}</option>
+                  <option value="law">{t('profileManagement.form.fields.law')}</option>
+                  <option value="arts">{t('profileManagement.form.fields.arts')}</option>
+                  <option value="sciences">{t('profileManagement.form.fields.sciences')}</option>
+                  <option value="other">{t('profileManagement.form.fields.other')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Academic Level</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.academicLevel')}</label>
                 <select
                   value={formData.academic_level}
                   onChange={(e) => handleInputChange('academic_level', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                 >
-                  <option value="">Select level</option>
-                  <option value="high-school">High School</option>
-                  <option value="undergraduate">Undergraduate</option>
-                  <option value="graduate">Graduate</option>
-                  <option value="doctorate">Doctorate</option>
+                  <option value="">{t('profileManagement.form.placeholders.selectLevel')}</option>
+                  <option value="high-school">{t('profileManagement.form.fields.highSchool')}</option>
+                  <option value="undergraduate">{t('profileManagement.form.fields.undergraduate')}</option>
+                  <option value="graduate">{t('profileManagement.form.fields.graduate')}</option>
+                  <option value="doctorate">{t('profileManagement.form.fields.doctorate')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">GPA</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.gpa')}</label>
                 <input
                   type="number"
                   step="0.1"
@@ -379,19 +381,19 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">English Proficiency</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.englishProficiency')}</label>
                 <select
                   value={formData.english_proficiency}
                   onChange={(e) => handleInputChange('english_proficiency', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                 >
-                  <option value="">Select proficiency</option>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                  <option value="native">Native</option>
-                  <option value="toefl">TOEFL Certified</option>
-                  <option value="ielts">IELTS Certified</option>
+                  <option value="">{t('profileManagement.form.placeholders.selectProficiency')}</option>
+                  <option value="beginner">{t('profileManagement.form.fields.beginner')}</option>
+                  <option value="intermediate">{t('profileManagement.form.fields.intermediate')}</option>
+                  <option value="advanced">{t('profileManagement.form.fields.advanced')}</option>
+                  <option value="native">{t('profileManagement.form.fields.native')}</option>
+                  <option value="toefl">{t('profileManagement.form.fields.toefl')}</option>
+                  <option value="ielts">{t('profileManagement.form.fields.ielts')}</option>
                 </select>
               </div>
             </div>
@@ -416,7 +418,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   onClick={handleCameraClick}
                   disabled={uploading}
                   className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Change profile picture"
+                  title={t('profileManagement.messages.changeProfilePicture')}
                 >
                   {uploading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -434,16 +436,16 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               </div>
               
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{profile?.name || 'Student Name'}</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">{profile?.name || t('profileManagement.status.studentName')}</h3>
                 <p className="text-slate-600 mb-3">{profile?.email}</p>
                 <div className="flex items-center space-x-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                     <Star className="h-3 w-3 mr-1" />
-                    Active Student
+                    {t('profileManagement.status.activeStudent')}
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Verified
+                    {t('profileManagement.status.verified')}
                   </span>
                 </div>
               </div>
@@ -482,20 +484,20 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
             {/* Profile Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-6">Personal Information</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">{t('profileManagement.sections.personalInformation')}</h4>
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <User className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">Full Name</label>
-                      <p className="text-slate-900">{profile?.name || 'Not provided'}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.fullName')}</label>
+                      <p className="text-slate-900">{profile?.name || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Mail className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">Email</label>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.email')}</label>
                       <p className="text-slate-900">{profile?.email}</p>
                     </div>
                   </div>
@@ -503,53 +505,53 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   <div className="flex items-center">
                     <Phone className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">Phone</label>
-                      <p className="text-slate-900">{profile?.phone || 'Not provided'}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.phone')}</label>
+                      <p className="text-slate-900">{profile?.phone || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <MapPin className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">Country</label>
-                      <p className="text-slate-900">{profile?.country || 'Not provided'}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.country')}</label>
+                      <p className="text-slate-900">{profile?.country || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-6">Academic Information</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">{t('profileManagement.sections.academicInformation')}</h4>
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <BookOpen className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">Field of Interest</label>
-                      <p className="text-slate-900">{profile?.field_of_interest || 'Not provided'}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.fieldOfInterest')}</label>
+                      <p className="text-slate-900">{profile?.field_of_interest || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <GraduationCap className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">Academic Level</label>
-                      <p className="text-slate-900">{profile?.academic_level || 'Not provided'}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.academicLevel')}</label>
+                      <p className="text-slate-900">{profile?.academic_level || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Award className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">GPA</label>
-                      <p className="text-slate-900">{profile?.gpa || 'Not provided'}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.gpa')}</label>
+                      <p className="text-slate-900">{profile?.gpa || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Globe className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">English Proficiency</label>
-                      <p className="text-slate-900">{profile?.english_proficiency || 'Not provided'}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.englishProficiency')}</label>
+                      <p className="text-slate-900">{profile?.english_proficiency || t('profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                 </div>
@@ -558,14 +560,14 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
 
             {/* Account Information */}
             <div className="mt-8 pt-8 border-t border-slate-200">
-              <h4 className="text-lg font-bold text-slate-900 mb-6">Account Information</h4>
+              <h4 className="text-lg font-bold text-slate-900 mb-6">{t('profileManagement.sections.accountInformation')}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex items-center">
                   <Calendar className="h-5 w-5 text-slate-400 mr-3" />
                   <div>
-                    <label className="text-sm font-medium text-slate-500">Member Since</label>
+                    <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.memberSince')}</label>
                     <p className="text-slate-900">
-                      {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Unknown'}
+                      {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : t('profileManagement.status.unknown')}
                     </p>
                   </div>
                 </div>
@@ -573,7 +575,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                 <div className="flex items-center">
                   <Target className="h-5 w-5 text-slate-400 mr-3" />
                   <div>
-                    <label className="text-sm font-medium text-slate-500">Profile Completeness</label>
+                    <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.profileCompleteness')}</label>
                     <p className="text-slate-900">{completeness}%</p>
                   </div>
                 </div>
@@ -589,40 +591,39 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0">
             <AlertCircle className="h-5 w-5 text-yellow-600 mx-auto sm:mx-0 sm:mr-3 sm:mt-0.5" />
             <div className="text-center sm:text-left">
-              <h4 className="font-medium text-yellow-800 mb-2">Complete Your Profile</h4>
+              <h4 className="font-medium text-yellow-800 mb-2">{t('profileManagement.tips.completeProfile')}</h4>
               <p className="text-sm text-yellow-700 mb-4">
-                A complete profile helps us match you with the most relevant scholarship opportunities. 
-                Consider adding the missing information to improve your chances of finding the perfect scholarships.
+                {t('profileManagement.tips.description')}
               </p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                 {!profile?.phone && (
                   <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
-                    Add phone number
+                    {t('profileManagement.tips.addPhoneNumber')}
                   </span>
                 )}
                 {!profile?.country && (
                   <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
-                    Add country
+                    {t('profileManagement.tips.addCountry')}
                   </span>
                 )}
                 {!profile?.field_of_interest && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Add field of interest
+                    {t('profileManagement.tips.addFieldOfInterest')}
                   </span>
                 )}
                 {!profile?.academic_level && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Add academic level
+                    {t('profileManagement.tips.addAcademicLevel')}
                   </span>
                 )}
                 {!profile?.gpa && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Add GPA
+                    {t('profileManagement.tips.addGpa')}
                   </span>
                 )}
                 {!profile?.english_proficiency && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    Add English proficiency
+                    {t('profileManagement.tips.addEnglishProficiency')}
                   </span>
                 )}
               </div>

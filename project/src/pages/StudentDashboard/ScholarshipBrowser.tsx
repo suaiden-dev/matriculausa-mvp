@@ -12,7 +12,6 @@ import {
   DollarSign, 
   GraduationCap, 
   ArrowRight,
-  X,
   CheckCircle,
   Users,
   Monitor,
@@ -369,13 +368,13 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const getDeliveryModeLabel = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
-        return 'Online';
+        return t('studentDashboard.findScholarships.filters.online');
       case 'in_person':
-        return 'On Campus';
+        return t('studentDashboard.findScholarships.scholarshipCard.onCampus');
       case 'hybrid':
-        return 'Hybrid';
+        return t('studentDashboard.findScholarships.filters.hybrid');
       default:
-        return 'Mixed';
+        return t('studentDashboard.findScholarships.scholarshipCard.mixed');
     }
   };
 
@@ -538,16 +537,10 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     });
   }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, showOnlyFavorites, isFavorite]);
 
-  const handleAddToCart = (scholarship: any) => {
-    if (user) {
-      addToCart(scholarship, user.id);
-    } else {
-      console.error("User not authenticated to add items to cart");
-    }
-  };
+
 
   // Função para ir direto para Stripe (quando já tem desconto ativo)
-  const proceedToStripeDirectly = async (scholarship: any) => {
+  const proceedToStripeDirectly = async () => {
     console.log('🎯 [ScholarshipBrowser] Indo direto para Stripe (desconto já aplicado)');
     
     try {
@@ -629,7 +622,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         if (result && result.has_discount) {
           console.log('✅ Usuário já tem desconto ativo, indo direto para Stripe');
           // Se já tem desconto, ir direto para Stripe
-          proceedToStripeDirectly(scholarship);
+          proceedToStripeDirectly();
         } else {
           console.log('❌ Sem desconto ativo, mostrando modal para código de referência');
           // Se não tem desconto, mostrar modal
@@ -710,7 +703,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           >
             <span className="flex items-center">
               <Filter className="h-4 w-4 mr-2" />
-              Filters ({Object.values({ appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays }).filter(Boolean).length} active)
+              {t('common.filter')} ({Object.values({ appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays }).filter(Boolean).length} {t('studentDashboard.findScholarships.filters.active')})
             </span>
             <ChevronDown className={`h-4 w-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} />
           </button>
@@ -735,7 +728,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
             {/* Level Filter */}
             <div>
-              <label htmlFor="level-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Academic Level</label>
+              <label htmlFor="level-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.academicLevel')}</label>
               <select
                 id="level-filter"
                 value={selectedLevel}
@@ -745,15 +738,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 aria-label="Filter by academic level"
               >
                 <option value="all">{t('studentDashboard.findScholarships.allLevels')}</option>
-                <option value="undergraduate">Undergraduate</option>
-                <option value="graduate">Graduate</option>
-                <option value="postgraduate">Postgraduate</option>
+                <option value="undergraduate">{t('studentDashboard.findScholarships.filters.undergraduate')}</option>
+                <option value="graduate">{t('studentDashboard.findScholarships.filters.graduate')}</option>
+                <option value="postgraduate">{t('studentDashboard.findScholarships.filters.postgraduate')}</option>
               </select>
             </div>
 
             {/* Field Filter */}
             <div>
-              <label htmlFor="field-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Field of Study</label>
+              <label htmlFor="field-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.fieldOfStudy')}</label>
               <select
                 id="field-filter"
                 value={selectedField}
@@ -763,16 +756,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 aria-label="Filter by field of study"
               >
                 <option value="all">{t('studentDashboard.findScholarships.allFields')}</option>
-                <option value="stem">STEM</option>
-                <option value="business">Business</option>
-                <option value="engineering">Engineering</option>
-                <option value="any">Any Field</option>
+                <option value="stem">{t('studentDashboard.findScholarships.filters.stem')}</option>
+                <option value="business">{t('studentDashboard.findScholarships.filters.business')}</option>
+                <option value="engineering">{t('studentDashboard.findScholarships.filters.engineering')}</option>
+                <option value="any">{t('studentDashboard.findScholarships.filters.anyField')}</option>
               </select>
             </div>
 
             {/* Delivery Mode Filter */}
             <div>
-              <label htmlFor="delivery-mode-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Study Mode</label>
+              <label htmlFor="delivery-mode-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.studyMode')}</label>
               <select
                 id="delivery-mode-filter"
                 value={selectedDeliveryMode}
@@ -782,15 +775,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 aria-label="Filter by study mode"
               >
                 <option value="all">{t('studentDashboard.findScholarships.allModes')}</option>
-                <option value="online">Online</option>
-                <option value="in_person">On Campus</option>
-                <option value="hybrid">Hybrid</option>
+                <option value="online">{t('studentDashboard.findScholarships.filters.online')}</option>
+                <option value="in_person">{t('studentDashboard.findScholarships.filters.inPerson')}</option>
+                <option value="hybrid">{t('studentDashboard.findScholarships.filters.hybrid')}</option>
               </select>
             </div>
 
             {/* Work Permission Filter */}
             <div>
-              <label htmlFor="work-permission-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Work Authorization</label>
+              <label htmlFor="work-permission-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.workAuthorization')}</label>
               <select
                 id="work-permission-filter"
                 value={selectedWorkPermission}
@@ -800,18 +793,18 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 aria-label="Filter by work authorization"
               >
                 <option value="all">{t('studentDashboard.findScholarships.allPermissions')}</option>
-                <option value="OPT">OPT</option>
-                <option value="CPT">CPT</option>
-                <option value="F1">F1</option>
-                <option value="H1B">H1B</option>
-                <option value="L1">L1</option>
+                <option value="OPT">{t('studentDashboard.findScholarships.filters.opt')}</option>
+                <option value="CPT">{t('studentDashboard.findScholarships.filters.cpt')}</option>
+                <option value="F1">{t('studentDashboard.findScholarships.filters.f1')}</option>
+                <option value="H1B">{t('studentDashboard.findScholarships.filters.h1b')}</option>
+                <option value="L1">{t('studentDashboard.findScholarships.filters.l1')}</option>
               </select>
             </div>
 
             {/* Value Filters */}
             <div className="sm:col-span-2 lg:col-span-1 xl:col-span-2 grid grid-cols-2 gap-2 sm:gap-3">
               <div>
-                <label htmlFor="min-value" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Min Value</label>
+                <label htmlFor="min-value" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.minValue')}</label>
                 <input
                   id="min-value"
                   type="number"
@@ -828,7 +821,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 />
               </div>
               <div>
-                <label htmlFor="max-value" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Max Value</label>
+                <label htmlFor="max-value" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.maxValue')}</label>
                 <input
                   id="max-value"
                   type="number"
@@ -848,7 +841,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
             {/* Deadline Filter */}
             <div>
-              <label htmlFor="deadline-days" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">Deadline (days)</label>
+              <label htmlFor="deadline-days" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.deadlineDays')}</label>
               <input
                 id="deadline-days"
                 type="number"
@@ -888,20 +881,20 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             {isApplyingFilters ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span className="hidden sm:inline">Applying...</span>
-                <span className="sm:hidden">Loading...</span>
+                <span className="hidden sm:inline">{t('studentDashboard.findScholarships.filters.applying')}</span>
+                <span className="sm:hidden">{t('studentDashboard.findScholarships.filters.loading')}</span>
               </>
             ) : filtersApplied ? (
               <>
                 <CheckCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">Filters Applied!</span>
-                <span className="sm:hidden">Applied!</span>
+                <span className="hidden sm:inline">{t('studentDashboard.findScholarships.filters.applied')}</span>
+                <span className="sm:hidden">{t('studentDashboard.findScholarships.filters.applied')}</span>
               </>
             ) : (
               <>
                 <Search className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('studentDashboard.findScholarships.applyFilters')} ({filteredScholarships.length})</span>
-                <span className="sm:hidden">Apply ({filteredScholarships.length})</span>
+                <span className="sm:hidden">{t('common.apply')} ({filteredScholarships.length})</span>
               </>
             )}
           </button>
@@ -923,8 +916,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               className="w-full sm:w-auto bg-slate-200 text-slate-700 px-4 sm:px-6 py-3 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               <Filter className="h-4 w-4" />
-              <span className="hidden sm:inline">Clear All Filters</span>
-              <span className="sm:hidden">Clear</span>
+              <span className="hidden sm:inline">{t('studentDashboard.findScholarships.filters.clearAllFilters')}</span>
+              <span className="sm:hidden">{t('studentDashboard.findScholarships.filters.clear')}</span>
             </button>
           )}
 
@@ -934,14 +927,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         {/* Tags de filtros ativos (apenas os aplicados) */}
         {(appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || appliedMinValue || appliedMaxValue || appliedDeadlineDays) && (
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200">
-            {appliedSearch && <span className="bg-blue-100 text-blue-700 px-2 sm:px-3 py-1 rounded-full text-xs">Search: {appliedSearch}</span>}
-            {appliedLevel !== 'all' && <span className="bg-green-100 text-green-700 px-2 sm:px-3 py-1 rounded-full text-xs">Level: {appliedLevel}</span>}
-            {appliedField !== 'all' && <span className="bg-purple-100 text-purple-700 px-2 sm:px-3 py-1 rounded-full text-xs">Field: {appliedField}</span>}
-            {appliedDeliveryMode !== 'all' && <span className="bg-indigo-100 text-indigo-700 px-2 sm:px-3 py-1 rounded-full text-xs">Mode: {getDeliveryModeLabel(appliedDeliveryMode)}</span>}
-            {appliedWorkPermission !== 'all' && <span className="bg-emerald-100 text-emerald-700 px-2 sm:px-3 py-1 rounded-full text-xs">Work: {appliedWorkPermission}</span>}
-            {appliedMinValue && <span className="bg-yellow-100 text-yellow-700 px-2 sm:px-3 py-1 rounded-full text-xs">Min: {appliedMinValue}</span>}
-            {appliedMaxValue && <span className="bg-yellow-100 text-yellow-700 px-2 sm:px-3 py-1 rounded-full text-xs">Max: {appliedMaxValue}</span>}
-            {appliedDeadlineDays && <span className="bg-red-100 text-red-700 px-2 sm:px-3 py-1 rounded-full text-xs">Deadline: {appliedDeadlineDays} days</span>}
+            {appliedSearch && <span className="bg-blue-100 text-blue-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.search')} {appliedSearch}</span>}
+            {appliedLevel !== 'all' && <span className="bg-green-100 text-green-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.level')} {appliedLevel}</span>}
+            {appliedField !== 'all' && <span className="bg-purple-100 text-purple-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.field')} {appliedField}</span>}
+            {appliedDeliveryMode !== 'all' && <span className="bg-indigo-100 text-indigo-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.mode')} {getDeliveryModeLabel(appliedDeliveryMode)}</span>}
+            {appliedWorkPermission !== 'all' && <span className="bg-emerald-100 text-emerald-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.work')} {appliedWorkPermission}</span>}
+            {appliedMinValue && <span className="bg-yellow-100 text-yellow-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.min')} {appliedMinValue}</span>}
+            {appliedMaxValue && <span className="bg-yellow-100 text-yellow-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.max')} {appliedMaxValue}</span>}
+            {appliedDeadlineDays && <span className="bg-red-100 text-red-700 px-2 sm:px-3 py-1 rounded-full text-xs">{t('studentDashboard.findScholarships.filters.deadline')} {appliedDeadlineDays} {t('studentDashboard.findScholarships.filters.days')}</span>}
           </div>
         )}
 
@@ -950,7 +943,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           <span>
             <span className="font-medium text-blue-600">{filteredScholarships.length}</span> 
             <span className="hidden sm:inline"> {t('studentDashboard.findScholarships.scholarshipsFound')}</span>
-            <span className="sm:hidden"> results</span>
+            <span className="sm:hidden"> {t('studentDashboard.findScholarships.scholarshipsFound')}</span>
           </span>
         </div>
       </div>
@@ -961,7 +954,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           <div className="flex items-center justify-center py-8 sm:py-12">
             <div className="text-center">
               <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
-              <p className="text-sm sm:text-base text-slate-600">Loading featured scholarships...</p>
+              <p className="text-sm sm:text-base text-slate-600">{t('studentDashboard.findScholarships.featuredScholarships.loading')}</p>
             </div>
           </div>
         </div>
@@ -970,15 +963,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
             <div>
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2">
-                <span className="text-[#05294E]">Featured</span> Scholarships
+                <span className="text-[#05294E]">{t('studentDashboard.findScholarships.featuredScholarships.featured')}</span> {t('studentDashboard.findScholarships.featuredScholarships.title')}
               </h3>
               <p className="text-sm sm:text-base text-slate-600">
-                These scholarships are prominently displayed and may have special benefits
+                {t('studentDashboard.findScholarships.featuredScholarships.subtitle')}
               </p>
             </div>
             <div className="text-left sm:text-right">
               <div className="text-xl sm:text-2xl font-bold text-[#05294E]">{filteredFeaturedScholarships.length}</div>
-              <div className="text-xs sm:text-sm text-slate-500">Featured</div>
+              <div className="text-xs sm:text-sm text-slate-500">{t('studentDashboard.findScholarships.featuredScholarships.featured')}</div>
             </div>
           </div>
           
@@ -1001,7 +994,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-10">
                     <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center shadow-lg">
                       <Star className="h-3 w-3 mr-1 fill-current" />
-                      Featured
+                      {t('studentDashboard.findScholarships.scholarshipCard.featured')}
                     </div>
                   </div>
 
@@ -1021,7 +1014,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                     {scholarship.is_exclusive && (
                       <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
                         <span className="bg-[#D0151C] text-white px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-xs font-bold shadow-lg">
-                          Exclusive
+                          {t('studentDashboard.findScholarships.scholarshipCard.exclusive')}
                         </span>
                       </div>
                     )}
@@ -1058,7 +1051,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       </div>
                       <div className="flex items-center text-slate-600 mb-3">
                         <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                        <span className="text-xs font-semibold mr-1">University:</span>
+                        <span className="text-xs font-semibold mr-1">{t('studentDashboard.findScholarships.scholarshipCard.university')}</span>
                         <span className={`text-sm select-none ${!user || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
                           {user && userProfile?.has_paid_selection_process_fee
                             ? (scholarship.universities?.name || 'Unknown University')
@@ -1072,24 +1065,24 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
                         <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                           <DollarSign className="h-4 w-4 text-green-600" />
-                          Financial Overview
+                          {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
                         </h4>
                         
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-xs text-slate-600">Original Price:</span>
+                            <span className="text-xs text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.originalPrice')}</span>
                             <span className="text-sm font-bold text-slate-700">
                               ${formatAmount(scholarship.original_annual_value || scholarship.amount || scholarship.annual_value || 'N/A')}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-xs text-slate-600">With Scholarship:</span>
+                            <span className="text-xs text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.withScholarship')}</span>
                             <span className="text-sm font-bold text-green-600">
                               ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}
                             </span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-xs text-slate-600">Per Credit:</span>
+                            <span className="text-xs text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
                             <span className="text-sm font-bold text-slate-700">
                               ${formatAmount(scholarship.original_value_per_credit || scholarship.per_credit_cost || 'N/A')}
                             </span>
@@ -1105,7 +1098,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                           <div className="flex items-center">
                             {getDeliveryModeIcon(scholarship.delivery_mode)}
-                            <span className="text-xs font-medium text-slate-600 ml-2">Study Mode</span>
+                            <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.studyMode')}</span>
                           </div>
                           <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
                             {getDeliveryModeLabel(scholarship.delivery_mode)}
@@ -1118,7 +1111,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         <div className="p-3 bg-white rounded-lg border border-slate-200">
                           <div className="flex items-center mb-2">
                             <Briefcase className="h-3 w-3 text-emerald-600" />
-                            <span className="text-xs font-medium text-slate-600 ml-2">Work Authorization</span>
+                            <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}</span>
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {scholarship.work_permissions.map((permission: string, index: number) => (
@@ -1137,10 +1130,10 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                         <div className="flex items-center">
                           <Clock className="h-3 w-3 text-red-500" />
-                          <span className="text-xs font-medium text-slate-600 ml-2">Deadline</span>
+                                                      <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
                         </div>
                         <span className="text-xs font-semibold text-slate-700">
-                          {getDaysUntilDeadline(scholarship.deadline)} days left
+                          {getDaysUntilDeadline(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
                         </span>
                       </div>
                     </div>
@@ -1156,9 +1149,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            title="View scholarship details"
                            aria-label="View scholarship details"
                          >
-                           <span className="hidden sm:inline">Show</span>
-                           <span className="sm:hidden">View</span>
-                           <span className="hidden sm:inline ml-1">Details</span>
+                                                     <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
+                          <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
+                          <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
                          </button>
                        </div>
                          
@@ -1168,7 +1161,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              className="flex-1 bg-green-100 text-green-700 py-3 px-4 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center"
                            >
                              <CheckCircle className="h-4 w-4 mr-2" />
-                             ALREADY APPLIED
+                             {t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied')}
                            </button>
                          ) : inCart ? (
                            <button
@@ -1176,7 +1169,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              className="flex-1 bg-red-100 text-red-700 py-3 px-4 rounded-2xl font-semibold hover:bg-red-200 transition-colors flex items-center justify-center"
                            >
                              <Trash2 className="h-4 w-4 mr-2" />
-                             Deselect
+                             {t('studentDashboard.findScholarships.scholarshipCard.deselect')}
                            </button>
                          ) : (
                            <button
@@ -1218,8 +1211,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
                              <span className="relative z-10">
-                               {alreadyApplied ? 'Already Applied' : inCart ? 'Deselect' : (
-                                 isCheckingDiscount ? 'Checking...' : 'Select Scholarship'
+                               {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? t('studentDashboard.findScholarships.scholarshipCard.deselect') : (
+                                 isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')
                                )}
                              </span>
                              {!alreadyApplied && !isCheckingDiscount && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />}
@@ -1242,9 +1235,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
             <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <Star className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-600 mb-2">No Featured Scholarships</h3>
+            <h3 className="text-lg font-semibold text-slate-600 mb-2">{t('studentDashboard.findScholarships.featuredScholarships.noFeatured')}</h3>
             <p className="text-sm text-slate-500">
-              Check back later for highlighted opportunities
+              {t('studentDashboard.findScholarships.featuredScholarships.checkBackLater')}
             </p>
           </div>
         </div>
@@ -1282,7 +1275,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 {scholarship.is_exclusive && (
                   <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
                     <span className="bg-[#D0151C] text-white px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-xs font-bold shadow-lg">
-                      Exclusive
+                      {t('studentDashboard.findScholarships.scholarshipCard.exclusive')}
                     </span>
                   </div>
                 )}
@@ -1314,7 +1307,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   </div>
                   <div className="flex items-center text-slate-600 mb-2 sm:mb-3">
                     <Building className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-[#05294E]" />
-                    <span className="text-xs font-semibold mr-1">University:</span>
+                    <span className="text-xs font-semibold mr-1">{t('studentDashboard.findScholarships.scholarshipCard.university')}</span>
                     <span className={`text-xs sm:text-sm select-none ${!user || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
                       {user && userProfile?.has_paid_selection_process_fee
                         ? (scholarship.universities?.name || 'Unknown University')
@@ -1329,7 +1322,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="flex items-center justify-between p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex items-center">
                           {getDeliveryModeIcon(scholarship.delivery_mode)}
-                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Study Mode</span>
+                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">{t('studentDashboard.findScholarships.scholarshipCard.studyMode')}</span>
                         </div>
                         <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
                           {getDeliveryModeLabel(scholarship.delivery_mode)}
@@ -1342,7 +1335,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex items-center mb-1 sm:mb-2">
                           <Briefcase className="h-3 w-3 text-emerald-600" />
-                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">Work Authorization</span>
+                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">{t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}</span>
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
@@ -1354,7 +1347,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                             </span>
                           ))}
                           {scholarship.work_permissions.length > 3 && (
-                            <span className="text-xs text-slate-500">+{scholarship.work_permissions.length - 3} more</span>
+                            <span className="text-xs text-slate-500">+{scholarship.work_permissions.length - 3} {t('studentDashboard.findScholarships.scholarshipCard.more')}</span>
                           )}
                         </div>
                       </div>
@@ -1366,24 +1359,24 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                   <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
                     <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2">
                       <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                      Financial Overview
+                      {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
                     </h4>
                     
                     <div className="space-y-1 sm:space-y-2">
                       <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-slate-600">Original Price</span>
+                        <span className="text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.originalPrice')}</span>
                         <span className="font-bold text-blue-700">
                           ${formatAmount(scholarship.original_annual_value)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-slate-600">With Scholarship</span>
+                        <span className="text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.withScholarship')}</span>
                         <span className="font-bold text-green-700">
                           ${formatAmount(scholarship.annual_value_with_scholarship)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs text-slate-500 pt-1 sm:pt-2 border-t border-slate-200">
-                        <span>Per Credit</span>
+                        <span>{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
                         <span>${formatAmount(scholarship.original_value_per_credit)}</span>
                       </div>
                     </div>
@@ -1393,22 +1386,22 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 {/* Quick Details */}
                 <div className="space-y-2 sm:space-y-3 flex-1 mb-4">
                   <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-500">Level</span>
+                    <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.level')}</span>
                     <div className="flex items-center">
                       {getLevelIcon(scholarship.level || 'undergraduate')}
                       <span className="ml-1 capitalize text-slate-700 text-xs sm:text-sm">{scholarship.level}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-500">Deadline</span>
+                    <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
                     <div className="flex items-center">
                       <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
-                      <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadline(scholarship.deadline)} days left</span>
+                      <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadline(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}</span>
                     </div>
                   </div>
                   {scholarship.delivery_mode && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Study Mode</span>
+                      <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.studyMode')}</span>
                       <div className="flex items-center">
                         {getDeliveryModeIcon(scholarship.delivery_mode)}
                         <span className="ml-1 text-slate-700">{getDeliveryModeLabel(scholarship.delivery_mode)}</span>
@@ -1427,9 +1420,9 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                            title="View scholarship details"
                            aria-label="View scholarship details"
                          >
-                           <span className="hidden sm:inline">Show</span>
-                           <span className="sm:hidden">View</span>
-                           <span className="hidden sm:inline ml-1">Details</span>
+                                                     <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
+                          <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
+                          <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
                          </button>
                        </div>
                     
@@ -1496,14 +1489,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           <div className="bg-gradient-to-br from-slate-100 to-slate-200 w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 shadow-lg">
             <Award className="h-12 w-12 sm:h-16 sm:w-16 text-slate-400" />
           </div>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-600 mb-3 sm:mb-4">No scholarships found</h3>
-          <p className="text-sm sm:text-base md:text-lg text-slate-500 mb-6 sm:mb-8 max-w-md mx-auto">Try adjusting your search criteria or clear filters to discover more opportunities.</p>
+          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-600 mb-3 sm:mb-4">{t('studentDashboard.findScholarships.noResults.title')}</h3>
+          <p className="text-sm sm:text-base md:text-lg text-slate-500 mb-6 sm:mb-8 max-w-md mx-auto">{t('studentDashboard.findScholarships.noResults.description')}</p>
           <button 
             type="button"
             onClick={(e) => clearAllFilters(e)}
             className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-2xl hover:bg-blue-700 transition-all duration-300 font-bold text-sm sm:text-base"
           >
-            Clear All Filters
+            {t('studentDashboard.findScholarships.noResults.clearAllFilters')}
           </button>
         </div>
       )}

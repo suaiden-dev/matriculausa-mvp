@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { useCartStore } from '../../stores/applicationStore';
+import { useTranslation } from 'react-i18next';
 
 interface UploadedDoc { name: string; url: string; type: string; uploaded_at: string }
 
 const ManualReview: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -279,7 +281,7 @@ const ManualReview: React.FC = () => {
 
       navigate('/student/dashboard/applications');
     } catch (e: any) {
-      setError(e.message || 'Failed to submit manual review');
+      setError(e.message || t('studentDashboard.manualReview.errorMessage'));
     } finally {
       setSubmitting(false);
     }
@@ -304,9 +306,9 @@ const ManualReview: React.FC = () => {
     return null;
   };
   const entries = [
-    { key: 'passport', label: 'Passport' },
-    { key: 'diploma', label: 'High School Diploma' },
-    { key: 'funds_proof', label: 'Proof of Funds' }
+    { key: 'passport', label: t('studentDashboard.manualReview.passport') },
+    { key: 'diploma', label: t('studentDashboard.manualReview.diploma') },
+    { key: 'funds_proof', label: t('studentDashboard.manualReview.fundsProof') }
   ];
 
   return (
@@ -314,9 +316,9 @@ const ManualReview: React.FC = () => {
       <div className="max-w-4xl mx-auto py-8 px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-slate-800 mb-4">Manual Document Review</h1>
+          <h1 className="text-4xl font-bold text-slate-800 mb-4">{t('studentDashboard.manualReview.title')}</h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Some of your documents need manual verification by the university. You can reattach the problematic files below or confirm that all information is accurate to proceed with manual review.
+            {t('studentDashboard.manualReview.subtitle')}
           </p>
         </div>
 
@@ -324,9 +326,9 @@ const ManualReview: React.FC = () => {
         <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 mb-8">
           <div className="text-center mb-8">
             
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">Review Your Documents</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-4">{t('studentDashboard.manualReview.reviewDocumentsTitle')}</h2>
             <p className="text-slate-600">
-              Please review each document below and make any necessary corrections
+              {t('studentDashboard.manualReview.reviewDocumentsDescription')}
             </p>
           </div>
 
@@ -348,7 +350,7 @@ const ManualReview: React.FC = () => {
                       <h3 className="font-bold text-slate-800">{e.label}</h3>
                       {statusOf(e.key) === 'changes_requested' && (
                         <div className="text-sm text-red-600 font-medium">
-                          University requested changes for this document
+                          {t('studentDashboard.manualReview.universityRequestedChanges')}
                         </div>
                       )}
                     </div>
@@ -363,13 +365,13 @@ const ManualReview: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       <span className="text-green-700 font-medium text-sm">
-                        Using current file: {docByType(e.key)!.name || docByType(e.key)!.url.split('/').pop()}
+                        {t('studentDashboard.manualReview.usingCurrentFile')} {docByType(e.key)!.name || docByType(e.key)!.url.split('/').pop()}
                       </span>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-slate-700">
-                        Upload replacement file:
+                        {t('studentDashboard.manualReview.uploadReplacementFile')}
                       </label>
                       {/* Input de arquivo customizado igual ao DocumentsAndScholarshipChoice */}
                       <div className="flex items-center space-x-3">
@@ -377,7 +379,7 @@ const ManualReview: React.FC = () => {
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          Escolher arquivo
+                          {t('studentDashboard.manualReview.chooseFile')}
                           <input
                             type="file"
                             accept="application/pdf,image/*"
@@ -386,7 +388,7 @@ const ManualReview: React.FC = () => {
                           />
                         </label>
                         <span className="text-sm text-slate-500">
-                          {files[e.key] ? files[e.key]?.name : 'Nenhum arquivo escolhido'}
+                          {files[e.key] ? files[e.key]?.name : t('studentDashboard.manualReview.noFileChosen')}
                         </span>
                       </div>
                     </div>
@@ -401,7 +403,7 @@ const ManualReview: React.FC = () => {
                         onChange={(ev) => setUsePrev(prev => ({ ...prev, [e.key]: ev.target.checked }))}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      Use current file (uncheck to upload a new one)
+                      {t('studentDashboard.manualReview.useCurrentFile')}
                     </label>
                   )}
                   
@@ -430,7 +432,7 @@ const ManualReview: React.FC = () => {
               onChange={e => setConfirmAllTrue(e.target.checked)} 
             />
             <label htmlFor="confirmTruth" className="text-slate-700 text-sm  sm:text-base leading-relaxed">
-              <span className="font-semibold ">Declaration of Accuracy:</span> I confirm that all the information and documents provided are accurate and true to the best of my knowledge. I understand that providing false information may result in the rejection of my application.
+              <span className="font-semibold ">{t('studentDashboard.manualReview.declarationOfAccuracy')}</span> {t('studentDashboard.manualReview.declarationText')}
             </label>
           </div>
         </div>
@@ -454,7 +456,7 @@ const ManualReview: React.FC = () => {
             className="px-8 py-3 rounded-2xl border-2 border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 disabled:opacity-50"
             disabled={submitting}
           >
-            Cancel
+            {t('studentDashboard.manualReview.cancel')}
           </button>
           <button
             onClick={handleSubmit}
@@ -464,10 +466,10 @@ const ManualReview: React.FC = () => {
             {submitting ? (
               <span className="flex items-center justify-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                Submitting...
+                {t('studentDashboard.manualReview.submitting')}
               </span>
             ) : (
-              'Submit for Manual Review'
+              t('studentDashboard.manualReview.submitForManualReview')
             )}
           </button>
         </div>

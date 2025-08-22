@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { MapPin, ExternalLink, ArrowLeft, Sparkles, Phone, Mail, Fan as Fax, DollarSign, Award, Clock, Edit, Settings } from 'lucide-react';
 import { mockSchools } from '../data/mockData';
@@ -9,6 +10,7 @@ import Header from '../components/Header';
 import { slugify } from '../utils/slugify';
 
 const UniversityDetail: React.FC = () => {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const [university, setUniversity] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,7 +184,7 @@ const UniversityDetail: React.FC = () => {
       if (!publicUrl) throw new Error('Could not get image URL');
       setImageUrl(publicUrl);
     } catch (err: any) {
-      setUploadError('Failed to upload image. Please try again.');
+      setUploadError(t('universityDetailPage.messages.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -219,7 +221,7 @@ const UniversityDetail: React.FC = () => {
         throw error;
       }
       setIsEditing(false);
-      setSuccessMessage('Profile updated successfully!');
+      setSuccessMessage(t('universityDetailPage.editProfile.successMessage'));
       setTimeout(() => setSuccessMessage(null), 3000);
       // Recarregar dados
       const { data } = await supabase
@@ -228,7 +230,7 @@ const UniversityDetail: React.FC = () => {
         .eq('id', university.id);
       if (data && data.length > 0) setUniversity(data[0]);
     } catch (error: any) {
-      setErrorMessage('Failed to update profile. Please try again.');
+      setErrorMessage(t('universityDetailPage.editProfile.errorMessage'));
       console.error('Erro no catch do update:', error);
     } finally {
       setSaving(false);
@@ -246,7 +248,7 @@ const UniversityDetail: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading university details...</p>
+          <p className="text-gray-600">{t('universityDetailPage.loading')}</p>
         </div>
       </div>
     );
@@ -256,9 +258,9 @@ const UniversityDetail: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">University not found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('universityDetailPage.notFound.title')}</h1>
           <Link to="/schools" className="text-[#05294E] hover:underline">
-            Back to Universities
+            {t('universityDetailPage.notFound.backLink')}
           </Link>
         </div>
       </div>
@@ -287,14 +289,14 @@ const UniversityDetail: React.FC = () => {
                     disabled={saving}
                     className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                   >
-                    Save
+                    {t('universityDetailPage.editProfile.saveButton')}
                   </button>
                   <button
                     onClick={handleCancel}
                     disabled={saving}
                     className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
                   >
-                    Cancel
+                    {t('universityDetailPage.editProfile.cancelButton')}
                   </button>
                 </div>
               ) : (
@@ -303,7 +305,7 @@ const UniversityDetail: React.FC = () => {
                   className="inline-flex items-center px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium"
                 >
                   <Edit className="h-4 w-4 mr-2" />
-                  Edit Profile
+                  {t('universityDetailPage.editProfile.editButton')}
                 </button>
               )
             )}
@@ -337,7 +339,7 @@ const UniversityDetail: React.FC = () => {
               className="bg-white/80 text-[#05294E] px-4 py-2 rounded-lg shadow hover:bg-white"
               disabled={uploading}
             >
-              {uploading ? 'Uploading...' : 'Change Banner'}
+              {uploading ? t('universityDetailPage.editProfile.uploadingBanner') : t('universityDetailPage.editProfile.changeBanner')}
             </button>
             {uploadError && <div className="text-red-600 text-xs mt-1">{uploadError}</div>}
           </div>
@@ -351,7 +353,7 @@ const UniversityDetail: React.FC = () => {
                 {isOwner && (
                   <span className="bg-blue-500/90 backdrop-blur-md border border-white/20 text-white px-3 py-2 rounded-full text-sm font-medium flex items-center shadow-lg">
                     <Settings className="h-3 w-3 mr-1" />
-                    Your University
+                    {t('universityDetailPage.editProfile.yourUniversity')}
                   </span>
                 )}
               </div>
@@ -364,7 +366,7 @@ const UniversityDetail: React.FC = () => {
                     value={formData.name}
                     onChange={e => handleInputChange('name', e.target.value)}
                     className="text-4xl md:text-5xl font-black w-full bg-white/95 backdrop-blur-sm text-[#05294E] rounded-xl px-6 py-4 shadow-2xl border-2 border-white/30 focus:outline-none focus:ring-4 focus:ring-white/50 focus:border-white transition-all duration-300"
-                    placeholder="University Name"
+                    placeholder={t('universityDetailPage.placeholders.universityName')}
                   />
                 ) : (
                   <div className="relative group">
@@ -387,7 +389,7 @@ const UniversityDetail: React.FC = () => {
                     value={formData.location}
                     onChange={e => handleInputChange('location', e.target.value)}
                     className="bg-white/95 backdrop-blur-sm text-[#05294E] rounded-lg px-4 py-2 w-1/2 shadow-lg border-2 border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white transition-all duration-300"
-                    placeholder="Location"
+                    placeholder={t('universityDetailPage.placeholders.location')}
                   />
                 ) : (
                   <div className="bg-black/40 backdrop-blur-md rounded-lg px-4 py-2 inline-block">
@@ -409,7 +411,7 @@ const UniversityDetail: React.FC = () => {
             {/* About */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">About</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{t('universityDetailPage.sections.about')}</h2>
               </div>
               {isEditing ? (
                 <textarea
@@ -417,7 +419,7 @@ const UniversityDetail: React.FC = () => {
                   onChange={e => handleInputChange('description', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                   rows={4}
-                  placeholder="Describe your university..."
+                  placeholder={t('universityDetailPage.placeholders.description')}
                 />
               ) : (
                 <p className="text-gray-600 leading-relaxed">
@@ -429,7 +431,7 @@ const UniversityDetail: React.FC = () => {
             {/* Programs */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Academic Programs</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{t('universityDetailPage.sections.academicPrograms')}</h2>
               </div>
               {isEditing ? (
                 <div>
@@ -439,14 +441,14 @@ const UniversityDetail: React.FC = () => {
                       value={newProgram}
                       onChange={e => setNewProgram(e.target.value)}
                       className="px-2 py-1 border border-slate-200 rounded-lg"
-                      placeholder="Add new program"
+                      placeholder={t('universityDetailPage.placeholders.addNewProgram')}
                     />
                     <button
                       type="button"
                       onClick={handleAddProgram}
                       className="bg-[#05294E] text-white px-3 py-1 rounded-lg"
                     >
-                      Add
+                      {t('universityDetailPage.buttons.add')}
                     </button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -458,10 +460,10 @@ const UniversityDetail: React.FC = () => {
                           onClick={() => handleRemoveProgram(index)}
                           className="ml-2 text-red-500 hover:text-red-700"
                         >
-                          Remove
+                          {t('universityDetailPage.buttons.remove')}
                         </button>
                       </div>
-                    )) : <div className="text-gray-400 col-span-2 md:col-span-3">No programs listed</div>}
+                    )) : <div className="text-gray-400 col-span-2 md:col-span-3">{t('universityDetailPage.messages.noProgramsListed')}</div>}
                   </div>
                 </div>
               ) : (
@@ -473,7 +475,7 @@ const UniversityDetail: React.FC = () => {
                     >
                       {program}
                     </div>
-                  )) : <div className="text-gray-400 col-span-2 md:col-span-3">No programs listed</div>}
+                  )) : <div className="text-gray-400 col-span-2 md:col-span-3">{t('universityDetailPage.messages.noProgramsListed')}</div>}
                 </div>
               )}
             </section>
@@ -484,11 +486,11 @@ const UniversityDetail: React.FC = () => {
             {/* Contact Information */}
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Contact Information</h3>
+                <h3 className="text-lg font-bold text-gray-900">{t('universityDetailPage.sections.contactInformation')}</h3>
               </div>
               {/* Address */}
               <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Address</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('universityDetailPage.sections.address')}</h4>
                 {isEditing ? (
                   <div className="grid grid-cols-1 gap-2">
                     <input
@@ -496,7 +498,7 @@ const UniversityDetail: React.FC = () => {
                       value={formData.address.street}
                       onChange={e => handleAddressChange('street', e.target.value)}
                       className="px-2 py-1 border border-slate-200 rounded-lg"
-                      placeholder="Street"
+                      placeholder={t('universityDetailPage.placeholders.street')}
                     />
                     <div className="flex gap-2">
                       <input
@@ -504,21 +506,21 @@ const UniversityDetail: React.FC = () => {
                         value={formData.address.city}
                         onChange={e => handleAddressChange('city', e.target.value)}
                         className="px-2 py-1 border border-slate-200 rounded-lg w-1/2"
-                        placeholder="City"
+                        placeholder={t('universityDetailPage.placeholders.city')}
                       />
                       <input
                         type="text"
                         value={formData.address.state}
                         onChange={e => handleAddressChange('state', e.target.value)}
                         className="px-2 py-1 border border-slate-200 rounded-lg w-1/4"
-                        placeholder="State"
+                        placeholder={t('universityDetailPage.placeholders.state')}
                       />
                       <input
                         type="text"
                         value={formData.address.zipCode}
                         onChange={e => handleAddressChange('zipCode', e.target.value)}
                         className="px-2 py-1 border border-slate-200 rounded-lg w-1/4"
-                        placeholder="ZIP Code"
+                        placeholder={t('universityDetailPage.placeholders.zipCode')}
                       />
                     </div>
                     <input
@@ -526,7 +528,7 @@ const UniversityDetail: React.FC = () => {
                       value={formData.address.country}
                       onChange={e => handleAddressChange('country', e.target.value)}
                       className="px-2 py-1 border border-slate-200 rounded-lg"
-                      placeholder="Country"
+                      placeholder={t('universityDetailPage.placeholders.country')}
                     />
                   </div>
                 ) : (
@@ -546,14 +548,14 @@ const UniversityDetail: React.FC = () => {
                     {field === 'admissionsEmail' && <Mail className="h-4 w-4 mr-3 text-[#D0151C]" />}
                     {field === 'fax' && <Fax className="h-4 w-4 mr-3 text-gray-500" />}
                     <div>
-                      <div className="text-sm font-medium text-gray-700 capitalize">{field === 'admissionsEmail' ? 'Admissions Email' : field.charAt(0).toUpperCase() + field.slice(1)}</div>
+                      <div className="text-sm font-medium text-gray-700 capitalize">{t(`universityDetailPage.contact.${field}`)}</div>
                       {isEditing ? (
                         <input
                           type="text"
                           value={formData.contact[field]}
                           onChange={e => handleContactChange(field, e.target.value)}
                           className="px-2 py-1 border border-slate-200 rounded-lg"
-                          placeholder={field === 'admissionsEmail' ? 'Admissions Email' : field.charAt(0).toUpperCase() + field.slice(1)}
+                          placeholder={t(`universityDetailPage.contact.${field}`)}
                         />
                       ) : (
                         <div className="text-sm text-gray-600">{contact[field]}</div>
@@ -565,14 +567,14 @@ const UniversityDetail: React.FC = () => {
             </div>
             {/* Website Link */}
             <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Website</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{t('universityDetailPage.sections.website')}</h3>
               {isEditing ? (
                 <input
                   type="url"
                   value={formData.website}
                   onChange={e => handleInputChange('website', e.target.value)}
                   className="w-full px-2 py-1 border border-slate-200 rounded-lg"
-                  placeholder="https://university.edu"
+                  placeholder={t('universityDetailPage.placeholders.website')}
                   aria-label="University website"
                 />
               ) : university.website ? (
@@ -584,11 +586,11 @@ const UniversityDetail: React.FC = () => {
                 >
                   <div className="flex items-center justify-center">
                     <ExternalLink className="h-4 w-4 mr-2" />
-                    Visit Official Website
+                    {t('universityDetailPage.buttons.visitWebsite')}
                   </div>
                 </a>
               ) : (
-                <div className="text-gray-400">No website provided</div>
+                <div className="text-gray-400">{t('universityDetailPage.messages.noWebsiteProvided')}</div>
               )}
             </div>
             {/* Scholarships CTA */}
@@ -598,16 +600,16 @@ const UniversityDetail: React.FC = () => {
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  Scholarship Opportunities
+                  {t('universityDetailPage.sections.scholarshipOpportunities')}
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  Discover exclusive scholarships available at {formData.name}
+                  {t('universityDetailPage.messages.scholarshipDescription')} {formData.name}
                 </p>
                 <Link
                   to="/scholarships"
                   className="block bg-[#D0151C] text-white py-2 px-4 rounded-lg hover:bg-[#D0151C]/90 transition-colors text-sm font-medium"
                 >
-                  View Scholarships
+                  {t('universityDetailPage.buttons.viewScholarships')}
                 </Link>
               </div>
             </div>

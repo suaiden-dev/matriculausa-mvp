@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import ImagePreviewModal from './ImagePreviewModal';
 import DocumentViewerModal from './DocumentViewerModal';
@@ -33,6 +34,7 @@ interface DocumentRequestsCardProps {
 }
 
 const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ applicationId, isSchool, currentUserId, studentType, studentUserId }) => {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
   const [loading, setLoading] = useState(true);
@@ -247,7 +249,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       if (newRequest.attachment) {
         const { data, error } = await supabase.storage.from('document-attachments').upload(`modelos/${Date.now()}_${newRequest.attachment.name}`, newRequest.attachment);
         if (error) {
-          setError('Failed to upload attachment: ' + error.message);
+          setError(t('studentDashboard.documentRequests.messages.failedToUploadAttachment') + ' ' + error.message);
           setCreating(false);
           return;
         }
@@ -270,7 +272,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
-        setError('Usuário não autenticado. Faça login novamente.');
+        setError(t('studentDashboard.documentRequests.messages.userNotAuthenticated'));
         setCreating(false);
         return;
       }
@@ -282,7 +284,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         },
         body: JSON.stringify(payload),
       });
-      let result = {};
+      let result: any = {};
       try {
         result = await response.json();
       } catch (e) {
@@ -290,7 +292,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       }
       // console.log('Resposta da Edge Function:', result);
       if (!response.ok || !result.success) {
-        setError('Failed to create request: ' + (result.error || 'Unknown error'));
+        setError(t('studentDashboard.documentRequests.messages.failedToCreateRequest') + ' ' + (result.error || 'Unknown error'));
         setCreating(false);
         return;
       }
@@ -356,7 +358,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         }
       }
       // Atualizar o estado local
-      setAcceptanceLetter(prev => prev ? {
+      setAcceptanceLetter((prev: any) => prev ? {
         ...prev,
         acceptance_letter_url: data.path,
         acceptance_letter_status: 'approved',
@@ -369,7 +371,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       if (isSchool && refreshData) await refreshData();
     } catch (error: any) {
       // console.error('[LOG] Error uploading acceptance letter:', error, error?.message, error?.details, error?.hint);
-      setError('Failed to upload acceptance letter: ' + error.message);
+      setError(t('studentDashboard.documentRequests.messages.failedToUploadAcceptanceLetter') + ' ' + error.message);
     } finally {
       setAcceptanceLoading(false);
     }
@@ -386,9 +388,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
     try {
       const { data, error } = await supabase.storage.from('document-attachments').upload(`uploads/${Date.now()}_${file.name}`, file);
       if (error) {
-        setError(`Erro ao fazer upload do arquivo: ${error.message}`);
+        setError(t('studentDashboard.documentRequests.messages.errorUploadingFile') + ' ' + error.message);
         // console.error('[UPLOAD] Erro detalhado:', error, { file, requestId, user: currentUserId });
-        alert(`Erro ao fazer upload: ${error.message}\n${JSON.stringify(error, null, 2)}`);
+        alert(t('studentDashboard.documentRequests.messages.errorUploading') + ' ' + error.message + '\n' + JSON.stringify(error, null, 2));
         setUploading(prev => ({ ...prev, [requestId]: false }));
         return;
       }
@@ -495,7 +497,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(link.href), 2000);
     } catch (e) {
-      alert('Failed to download file.');
+      alert(t('studentDashboard.documentRequests.forms.failedToDownloadFile'));
     }
   };
 
@@ -520,7 +522,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         .update({ status: 'approved' })
         .eq('id', uploadId);
       if (error) {
-        setError('Failed to approve the document: ' + error.message);
+        setError(t('studentDashboard.documentRequests.forms.failedToApproveDocument') + ' ' + error.message);
         return;
       }
       fetchRequests();
@@ -537,7 +539,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         .update({ status: 'rejected', review_notes: notes || null })
         .eq('id', uploadId);
       if (error) {
-        setError('Failed to reject the document: ' + error.message);
+        setError(t('studentDashboard.documentRequests.forms.failedToRejectDocument') + ' ' + error.message);
         return;
       }
       fetchRequests();
@@ -605,7 +607,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 {/* Student uploads for this request */}
                 <div className="ml-13">
                   <span className="text-sm font-semibold text-slate-700 mb-2 block">
-                    {isSchool ? 'Student uploads:' : 'Your uploads:'}
+                    {isSchool ? t('studentDashboard.documentRequests.forms.studentUploads') : t('studentDashboard.documentRequests.forms.yourUploads')}
                   </span>
                   {uploads[req.id]?.length > 0 ? (
                     uploads[req.id].map(upload => {
@@ -656,7 +658,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                                 }
                               }}
                             >
-                              View
+                              {t('studentDashboard.documentRequests.forms.view')}
                             </button>
                             <button
                               className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
@@ -674,7 +676,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       );
                     })
                   ) : (
-                    <div className="text-slate-500 text-sm italic">No files uploaded yet.</div>
+                    <div className="text-slate-500 text-sm italic">{t('studentDashboard.documentRequests.forms.noFilesUploadedYet')}</div>
                   )}
                 </div>
 
@@ -682,7 +684,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 {!isSchool && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
                     <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">
-                      <span>Upload new file</span>
+                      <span>{t('studentDashboard.documentRequests.forms.uploadNewFile')}</span>
                       <input
                         id={`file-upload-${req.id}`}
                         type="file"
@@ -698,7 +700,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       disabled={!selectedFiles[req.id] || uploading[req.id]}
                       onClick={() => handleSendUpload(req.id)}
                     >
-                      {uploading[req.id] ? 'Uploading...' : 'Upload'}
+                      {uploading[req.id] ? t('studentDashboard.documentRequests.forms.uploading') : t('studentDashboard.documentRequests.forms.upload')}
                     </button>
                   </div>
                 )}
@@ -719,7 +721,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
               </svg>
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-white mb-1">Acceptance Letter</h3>
+              <h3 className="text-2xl font-bold text-white mb-1">{t('studentDashboard.documentRequests.forms.acceptanceLetter')}</h3>
             </div>
           </div>
         </div>
@@ -728,26 +730,22 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         <div className="p-8">
           {/* Instruções */}
           <p className="text-slate-700 text-lg mb-8 leading-relaxed max-w-4xl">
-            The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled.
+            {t('studentDashboard.documentRequests.forms.acceptanceLetterInstructions')}
           </p>
           
           {/* Status para o aluno */}
           {!isSchool && (
             <div className="flex flex-col items-center gap-4">
-              {console.log('=== DEBUG Acceptance Letter Render ===', { 
-                acceptanceLetter, 
-                status: acceptanceLetter?.acceptance_letter_status,
-                url: acceptanceLetter?.acceptance_letter_url 
-              })}
+
               {acceptanceLetter && acceptanceLetter.acceptance_letter_status === 'approved' ? (
                 <div className="text-center">
                   <div className="mb-4">
                     <span className="px-6 py-3 bg-green-100 text-green-800 border border-green-300 rounded-xl text-base font-semibold">
-                      Acceptance Letter Received! 🎉
+                      {t('studentDashboard.documentRequests.forms.acceptanceLetterReceived')}
                     </span>
                   </div>
                   <p className="text-green-700 text-sm mb-4">
-                    You have been enrolled! Check your dashboard for next steps.
+                    {t('studentDashboard.documentRequests.forms.enrolledMessage')}
                   </p>
                   {acceptanceLetter.acceptance_letter_url && (
                     <div className="flex gap-2 justify-center">
@@ -767,7 +765,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                             
                             if (error) {
                               console.error('Erro ao gerar signed URL:', error);
-                              alert('Erro ao baixar documento. Tente novamente.');
+                              alert(t('studentDashboard.documentRequests.forms.errorDownloadingDocument'));
                               return;
                             }
                             
@@ -792,7 +790,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                             console.log('Download concluído com sucesso');
                           } catch (error) {
                             console.error('Erro no download:', error);
-                            alert('Erro ao baixar documento. Tente novamente.');
+                            alert(t('studentDashboard.documentRequests.forms.errorDownloadingDocument'));
                           } finally {
                             setDownloadingAcceptanceLetter(false);
                           }
@@ -801,10 +799,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         {downloadingAcceptanceLetter ? (
                           <div className="flex items-center gap-2">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Downloading...
+                            {t('studentDashboard.documentRequests.status.downloading')}
                           </div>
                         ) : (
-                          'Download Acceptance Letter'
+                          t('studentDashboard.documentRequests.actions.downloadAcceptanceLetter')
                         )}
                       </button>
                       <button
@@ -823,7 +821,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                             
                             if (error) {
                               console.error('Erro ao gerar signed URL:', error);
-                              alert('Erro ao visualizar documento. Tente novamente.');
+                              alert(t('studentDashboard.documentRequests.forms.errorViewingDocument'));
                               return;
                             }
                             
@@ -833,7 +831,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                             setAcceptanceLetterPreviewUrl(data.signedUrl);
                           } catch (error) {
                             console.error('Erro ao visualizar:', error);
-                            alert('Erro ao visualizar documento. Tente novamente.');
+                            alert(t('studentDashboard.documentRequests.forms.errorViewingDocument'));
                           } finally {
                             setViewingAcceptanceLetter(false);
                           }
@@ -842,10 +840,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         {viewingAcceptanceLetter ? (
                           <div className="flex items-center gap-2">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            Opening...
+                            {t('studentDashboard.documentRequests.status.opening')}
                           </div>
                         ) : (
-                          'View'
+                          t('studentDashboard.documentRequests.actions.view')
                         )}
                       </button>
                     </div>
@@ -853,7 +851,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 </div>
               ) : (
                 <span className="px-6 py-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-xl text-base font-semibold">
-                  Waiting for university
+                  {t('studentDashboard.documentRequests.status.waitingForUniversity')}
                 </span>
               )}
             </div>
@@ -867,24 +865,24 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           <div className="flex items-center gap-3 mb-4">
             <svg className="w-9 h-9 text-blue-500 drop-shadow" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" /></svg>
             <div>
-              <h3 className="text-2xl font-extrabold text-blue-900 mb-1 drop-shadow">Transfer Form</h3>
+              <h3 className="text-2xl font-extrabold text-blue-900 mb-1 drop-shadow">{t('studentDashboard.documentRequests.forms.transferForm')}</h3>
               <p className="text-blue-800 text-base">
                 {isSchool
-                  ? 'Upload the transfer form for this student. Only visible for transfer students.'
-                  : 'Your university will upload your transfer form here. Download it when available.'}
+                  ? t('studentDashboard.documentRequests.forms.transferFormDescriptionSchool')
+                  : t('studentDashboard.documentRequests.forms.transferFormDescriptionStudent')}
               </p>
             </div>
           </div>
           {/* Upload para escola */}
           {isSchool ? (
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 w-full">
-              <label className="btn-ghost cursor-pointer bg-[#F1F5F9] hover:bg-[#3B82F6]/10 text-[#3B82F6] px-3 py-2 rounded-lg font-medium transition w-full sm:w-auto" title="Upload transfer form">
-                <span>Upload transfer form</span>
+                             <label className="btn-ghost cursor-pointer bg-[#F1F5F9] hover:bg-[#3B82F6]/10 text-[#3B82F6] px-3 py-2 rounded-lg font-medium transition w-full sm:w-auto" title={t('studentDashboard.documentRequests.actions.uploadTransferFormTitle')}>
+                 <span>{t('studentDashboard.documentRequests.actions.uploadTransferForm')}</span>
                 <input
                   id="transfer-form-upload"
                   type="file"
-                  title="Select transfer form"
-                  placeholder="Choose a file"
+                  title={t('studentDashboard.documentRequests.actions.selectTransferFormTitle')}
+                  placeholder={t('studentDashboard.documentRequests.forms.chooseFile')}
                   onChange={e => handleFileSelect('transfer_form', e.target.files ? e.target.files[0] : null)}
                   className="sr-only"
                 />
@@ -896,9 +894,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 className={`bg-[#22C55E] text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto`}
                 disabled={!selectedFiles['transfer_form'] || uploading['transfer_form']}
                 onClick={() => handleSendUpload('transfer_form')}
-                title="Send transfer form"
+                title={t('studentDashboard.documentRequests.actions.sendTransferFormTitle')}
               >
-                {uploading['transfer_form'] ? 'Uploading...' : 'Upload'}
+                {uploading['transfer_form'] ? t('studentDashboard.documentRequests.forms.uploading') : t('studentDashboard.documentRequests.forms.upload')}
               </button>
             </div>
           ) : (
@@ -911,27 +909,31 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                     <button
                       className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700 transition"
                       onClick={async () => {
-                        const signedUrl = await getSignedUrl(upload.file_url, upload.id);
-                        if (signedUrl) handleForceDownload(signedUrl, upload.file_url.split('/').pop() || 'transfer_form.pdf');
+                        await getSignedUrl(upload.file_url, upload.id);
+                        const signedUrl = signedUrls[upload.id];
+                        if (signedUrl) {
+                          handleForceDownload(signedUrl, upload.file_url.split('/').pop() || 'transfer_form.pdf');
+                        }
                       }}
                     >
-                      Download Transfer Form
+                      {t('studentDashboard.documentRequests.forms.downloadTransferForm')}
                     </button>
                     <button
                       className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition"
                       onClick={async () => {
-                        const signedUrl = await getSignedUrl(upload.file_url, upload.id);
+                        await getSignedUrl(upload.file_url, upload.id);
+                        const signedUrl = signedUrls[upload.id];
                         if (signedUrl) {
                           setPreviewUrl(signedUrl);
                         }
                       }}
                     >
-                      View
+                      {t('studentDashboard.documentRequests.forms.view')}
                     </button>
                   </div>
                 ))
               ) : (
-                <span className="text-slate-400 text-xs">No transfer form uploaded yet.</span>
+                <span className="text-slate-400 text-xs">{t('studentDashboard.documentRequests.forms.noTransferFormUploadedYet')}</span>
               )}
             </div>
           )}
@@ -942,33 +944,33 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       {showNewModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg border border-slate-200 animate-fade-in">
-            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">New Document Request</h3>
+                            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">{t('studentDashboard.documentRequests.forms.newDocumentRequest')}</h3>
             {error && <div className="text-red-500 mb-4 text-center font-semibold">{error}</div>}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-title">Title <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-title">{t('studentDashboard.documentRequests.forms.titleRequired')}</label>
                 <input
                   id="doc-title"
                   className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
-                  placeholder="Enter document title"
+                  placeholder={t('studentDashboard.documentRequests.forms.enterDocumentTitle')}
                   value={newRequest.title}
                   onChange={e => setNewRequest(r => ({ ...r, title: e.target.value }))}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-description">Description</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-description">{t('studentDashboard.documentRequests.forms.description')}</label>
                 <textarea
                   id="doc-description"
                   className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
-                  placeholder="Enter document description"
+                  placeholder={t('studentDashboard.documentRequests.forms.enterDocumentDescription')}
                   value={newRequest.description}
                   onChange={e => setNewRequest(r => ({ ...r, description: e.target.value }))}
                   rows={3}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-date">Due date</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-date">{t('studentDashboard.documentRequests.forms.dueDate')}</label>
                 <input
                   id="doc-date"
                   className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
@@ -978,11 +980,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-attachment">Attachment</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="doc-attachment">{t('studentDashboard.documentRequests.forms.attachment')}</label>
                 <div className="flex items-center gap-3">
                   <label htmlFor="doc-attachment" className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" /></svg>
-                    <span>{newRequest.attachment ? 'Change file' : 'Select file'}</span>
+                    <span>{newRequest.attachment ? t('studentDashboard.documentRequests.forms.changeFile') : t('studentDashboard.documentRequests.forms.selectFile')}</span>
                     <input
                       id="doc-attachment"
                       type="file"
@@ -1003,14 +1005,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 onClick={() => setShowNewModal(false)}
                 disabled={creating}
               >
-                Cancel
+                {t('studentDashboard.documentRequests.forms.cancel')}
               </button>
               <button
                 className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
                 onClick={handleNewRequest}
                 disabled={creating || !newRequest.title}
               >
-                {creating ? 'Creating...' : 'Create Request'}
+                {creating ? t('studentDashboard.documentRequests.forms.creating') : t('studentDashboard.documentRequests.forms.createRequest')}
               </button>
             </div>
           </div>
@@ -1019,15 +1021,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       {showNewModal && isSchool && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg border border-slate-200 animate-fade-in">
-            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">New Individual Document Request</h3>
+                            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">{t('studentDashboard.documentRequests.forms.newIndividualDocumentRequest')}</h3>
             {error && <div className="text-red-500 mb-4 text-center font-semibold">{error}</div>}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-title">Title <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-title">{t('studentDashboard.documentRequests.forms.titleRequired')}</label>
                 <input
                   id="individual-title"
                   className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
-                  placeholder="Enter document title"
+                  placeholder={t('studentDashboard.documentRequests.forms.enterDocumentTitle')}
                   value={newRequest.title}
                   onChange={e => setNewRequest(r => ({ ...r, title: e.target.value }))}
                   disabled={creating}
@@ -1035,18 +1037,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-desc">Description</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-desc">{t('studentDashboard.documentRequests.forms.description')}</label>
                 <textarea
                   id="individual-desc"
                   className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base min-h-[60px] resize-vertical"
-                  placeholder="Describe the document or instructions (optional)"
+                  placeholder={t('studentDashboard.documentRequests.forms.describeDocumentOptional')}
                   value={newRequest.description}
                   onChange={e => setNewRequest(r => ({ ...r, description: e.target.value }))}
                   disabled={creating}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-date">Due date</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-date">{t('studentDashboard.documentRequests.forms.dueDate')}</label>
                 <input
                   id="individual-date"
                   className="border border-slate-300 rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
@@ -1054,15 +1056,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   value={newRequest.due_date}
                   onChange={e => setNewRequest(r => ({ ...r, due_date: e.target.value }))}
                   disabled={creating}
-                  placeholder="Due date"
+                  placeholder={t('studentDashboard.documentRequests.forms.dueDate')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-attachment">Attachment</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1" htmlFor="individual-attachment">{t('studentDashboard.documentRequests.forms.attachment')}</label>
                 <div className="flex items-center gap-3">
                   <label htmlFor="individual-attachment" className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition font-medium text-blue-700">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 002.828 2.828l6.586-6.586M16 5v6a2 2 0 002 2h6" /></svg>
-                    <span>{newRequest.attachment ? 'Change file' : 'Select file'}</span>
+                    <span>{newRequest.attachment ? t('studentDashboard.documentRequests.forms.changeFile') : t('studentDashboard.documentRequests.forms.selectFile')}</span>
                     <input
                       id="individual-attachment"
                       type="file"
@@ -1083,12 +1085,12 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 onClick={() => { setShowNewModal(false); setNewRequest({ title: '', description: '', due_date: '', attachment: null }); setError(null); }}
                 disabled={creating}
               >
-                Cancel
+                {t('studentDashboard.documentRequests.forms.cancel')}
               </button>
               <button
                 className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 shadow border border-blue-700"
                 onClick={async () => {
-                  if (!newRequest.title) { setError('Title is required'); return; }
+                  if (!newRequest.title) { setError(t('studentDashboard.documentRequests.forms.titleRequired')); return; }
                   setCreating(true);
                   setError(null);
                   let attachment_url = undefined;
@@ -1097,13 +1099,13 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       const { data: { session } } = await supabase.auth.getSession();
                       const accessToken = session?.access_token;
                       if (!accessToken) {
-                        setError('Usuário não autenticado. Faça login novamente.');
+                        setError(t('studentDashboard.documentRequests.messages.userNotAuthenticated'));
                         setCreating(false);
                         return;
                       }
                       const { data, error } = await supabase.storage.from('document-attachments').upload(`individual/${Date.now()}_${newRequest.attachment.name}`, newRequest.attachment);
                       if (error) {
-                        setError('Failed to upload attachment: ' + error.message);
+                        setError(t('studentDashboard.documentRequests.messages.failedToUploadAttachment') + ' ' + error.message);
                         setCreating(false);
                         return;
                       }
@@ -1124,7 +1126,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                     const { data: { session } } = await supabase.auth.getSession();
                     const accessToken = session?.access_token;
                     if (!accessToken) {
-                      setError('Usuário não autenticado. Faça login novamente.');
+                      setError(t('studentDashboard.documentRequests.messages.userNotAuthenticated'));
                       setCreating(false);
                       return;
                     }
@@ -1136,7 +1138,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       },
                       body: JSON.stringify(payload),
                     });
-                    let result = {};
+                    let result: any = {};
                     try {
                       result = await response.json();
                     } catch (e) {
@@ -1144,7 +1146,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                     }
                     // console.log('Resposta da Edge Function (individual):', result);
                     if (!response.ok || !result.success) {
-                      setError('Failed to create request: ' + (result.error || 'Unknown error'));
+                      setError(t('studentDashboard.documentRequests.messages.failedToCreateRequest') + ' ' + (result.error || 'Unknown error'));
                       setCreating(false);
                       return;
                     }
@@ -1159,7 +1161,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 }}
                 disabled={creating}
               >
-                Create Request
+                {t('studentDashboard.documentRequests.forms.createRequest')}
               </button>
             </div>
           </div>
@@ -1182,11 +1184,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 border border-slate-200">
-            <h3 className="text-lg font-bold text-[#05294E] mb-3">Provide a justification</h3>
-            <p className="text-sm text-slate-600 mb-4">Explique o motivo da rejeição deste documento. O aluno verá esta mensagem.</p>
+            <h3 className="text-lg font-bold text-[#05294E] mb-3">{t('studentDashboard.documentRequests.modals.provideJustification')}</h3>
+            <p className="text-sm text-slate-600 mb-4">{t('studentDashboard.documentRequests.modals.rejectionExplanation')}</p>
             <textarea
               className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 min-h-[120px]"
-              placeholder="Ex.: O documento está cortado. Envie novamente em PDF com todas as páginas."
+              placeholder={t('studentDashboard.documentRequests.modals.rejectionExplanationPlaceholder')}
               value={rejectNotes}
               onChange={(e) => setRejectNotes(e.target.value)}
             />
@@ -1195,7 +1197,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                 className="px-4 py-2 rounded-md border border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
                 onClick={() => { setShowRejectModal(false); setPendingRejectUploadId(null); setRejectNotes(''); }}
               >
-                Cancel
+                {t('studentDashboard.documentRequests.forms.cancel')}
               </button>
               <button
                 className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
@@ -1208,7 +1210,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                   setRejectNotes('');
                 }}
               >
-                Confirm
+                {t('studentDashboard.documentRequests.modals.confirm')}
               </button>
             </div>
           </div>
