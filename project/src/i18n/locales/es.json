@@ -92,19 +92,19 @@
         },
         "q2": {
           "question": "¿Qué es la Tarifa de Proceso de Selección?",
-          "answer": "La Tarifa de Proceso de Selección (US$350) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+          "answer": "La Tarifa de Proceso de Selección (US$600) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         "q3": {
           "question": "¿Qué es la Tarifa de Beca?",
-          "answer": "La Tarifa de Beca (US$550) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca."
+          "answer": "La Tarifa de Beca (US$350) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca."
         },
         "q4": {
           "question": "¿Qué es la Tarifa de Solicitud?",
-          "answer": "La Tarifa de Solicitud (US$350) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma."
+          "answer": "La Tarifa de Solicitud (US$850) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma."
         },
         "q5": {
-          "question": "¿Qué es la Tarifa de Control I-20?",
-          "answer": "La Tarifa de Control I-20 (US$900) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa."
+          "question": "¿Qué es la Tarifa de Control de I-20?",
+          "answer": "La Tarifa de Control I-20 (US$1,250) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa."
         },
         "q6": {
           "question": "¿Hay otras tarifas que deba conocer?",
@@ -250,11 +250,11 @@
       },
       "q3": {
         "question": "¿Qué es la Tarifa de Beca?",
-        "answer": "La Tarifa de Beca (US$850) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Beca (US$350) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
       },
       "q4": {
         "question": "¿Qué es la Tarifa de Solicitud?",
-        "answer": "La Tarifa de Solicitud (US$350) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Solicitud (US$850) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
       },
       "q5": {
         "question": "¿Qué es la Tarifa de Control I-20?",
