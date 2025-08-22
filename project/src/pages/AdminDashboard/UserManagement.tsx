@@ -13,8 +13,10 @@ import {
   Calendar,
   Activity,
   List,
-  Grid3X3
+  Grid3X3,
+  UserPlus
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 interface UserManagementProps {
   users: any[];
@@ -23,14 +25,17 @@ interface UserManagementProps {
     students: number;
     schools: number;
     admins: number;
+    affiliate_admins?: number;
   };
   onSuspend: (userId: string) => void;
+  onRefresh?: () => void;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({
   users,
   stats,
-  onSuspend
+  onSuspend,
+  onRefresh
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -148,6 +153,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin': return Crown;
+      case 'affiliate_admin': return UserPlus;
       case 'school': return Building;
       case 'student': return GraduationCap;
       default: return Users;
@@ -157,6 +163,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-purple-100 text-purple-800';
+      case 'affiliate_admin': return 'bg-orange-100 text-orange-800';
       case 'school': return 'bg-blue-100 text-blue-800';
       case 'student': return 'bg-green-100 text-green-800';
       default: return 'bg-slate-100 text-slate-800';
@@ -253,6 +260,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
               <option value="student">Students</option>
               <option value="school">Universities</option>
               <option value="admin">Admins</option>
+              <option value="affiliate_admin">Affiliate Admins</option>
             </select>
 
             <select
@@ -319,10 +327,12 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <div className="flex items-center space-x-3">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                       user.role === 'admin' ? 'bg-purple-100' : 
+                      user.role === 'affiliate_admin' ? 'bg-orange-100' :
                       user.role === 'school' ? 'bg-blue-100' : 'bg-green-100'
                     }`}>
                       <RoleIcon className={`h-6 w-6 ${
                         user.role === 'admin' ? 'text-purple-600' : 
+                        user.role === 'affiliate_admin' ? 'text-orange-600' :
                         user.role === 'school' ? 'text-blue-600' : 'text-green-600'
                       }`} />
                     </div>
@@ -372,17 +382,43 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     View Details
                   </button>
                   
-                  {user.status === 'active' && user.role !== 'admin' && (
-                    <button
-                      onClick={() => onSuspend(user.user_id)}
-                      className="bg-red-100 text-red-700 py-2 px-3 rounded-lg hover:bg-red-200 transition-colors"
-                      title="Suspend User"
-                      aria-label="Suspend user"
-                    >
-                      <Ban className="h-4 w-4" />
-                      <span className="sr-only">Suspend</span>
-                    </button>
-                  )}
+                  <div className="flex gap-2">
+                    {/* Botão para promover a Affiliate Admin */}
+                    {user.status === 'active' && user.role === 'student' && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const { error } = await supabase.rpc('promote_user_to_affiliate_admin', {
+                              user_email: user.email
+                            });
+                            if (error) throw error;
+                            alert('User promoted to Affiliate Admin successfully!');
+                            if (onRefresh) onRefresh();
+                          } catch (error: any) {
+                            console.error('Error promoting user:', error);
+                            alert('Failed to promote user: ' + error.message);
+                          }
+                        }}
+                        className="bg-orange-100 text-orange-700 py-2 px-3 rounded-lg hover:bg-orange-200 transition-colors"
+                        title="Promote to Affiliate Admin"
+                        aria-label="Promote to affiliate admin"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                      </button>
+                    )}
+                    
+                    {user.status === 'active' && !['admin', 'affiliate_admin'].includes(user.role) && (
+                      <button
+                        onClick={() => onSuspend(user.user_id)}
+                        className="bg-red-100 text-red-700 py-2 px-3 rounded-lg hover:bg-red-200 transition-colors"
+                        title="Suspend User"
+                        aria-label="Suspend user"
+                      >
+                        <Ban className="h-4 w-4" />
+                        <span className="sr-only">Suspend</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -431,7 +467,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             try {
                               // Atualiza diretamente em user_profiles.role
                               const newRole = user.role === 'admin' ? 'student' : 'admin';
-                              const { error } = await (await import('../../lib/supabase')).supabase
+                              const { error } = await supabase
                                 .from('user_profiles')
                                 .update({ role: newRole })
                                 .eq('user_id', user.user_id);
@@ -441,7 +477,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                 return;
                               }
                               alert(`Role updated to ${newRole}. Refreshing list...`);
-                              window.location.reload();
+                              if (onRefresh) onRefresh();
                             } catch (e) {
                               console.error(e);
                               alert('Unexpected error');
@@ -454,7 +490,31 @@ const UserManagement: React.FC<UserManagementProps> = ({
                           {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
                         </button>
                       )}
-                      {user.status === 'active' && (
+                      
+                      {/* Botão para promover a Affiliate Admin */}
+                      {user.status === 'active' && user.role === 'student' && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase.rpc('promote_user_to_affiliate_admin', {
+                                user_email: user.email
+                              });
+                              if (error) throw error;
+                              alert('User promoted to Affiliate Admin successfully!');
+                              if (onRefresh) onRefresh();
+                            } catch (error: any) {
+                              console.error('Error promoting user:', error);
+                              alert('Failed to promote user: ' + error.message);
+                            }
+                          }}
+                          className="bg-orange-100 text-orange-700 py-1 px-3 rounded-lg hover:bg-orange-200 transition-colors text-xs font-medium"
+                          title="Promote to Affiliate Admin"
+                          aria-label="Promote to affiliate admin"
+                        >
+                          Make Affiliate Admin
+                        </button>
+                      )}
+                      {user.status === 'active' && !['admin', 'affiliate_admin'].includes(user.role) && (
                         <button
                           onClick={() => onSuspend(user.user_id)}
                           className="bg-red-100 text-red-700 py-1 px-3 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium"
@@ -578,6 +638,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                 value={itemsPerPage}
                 onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
                 className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                title="Items per page"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>
@@ -620,11 +681,13 @@ const UserManagement: React.FC<UserManagementProps> = ({
               <div className="flex items-center space-x-4">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
                   selectedUser.role === 'admin' ? 'bg-purple-100' : 
+                  selectedUser.role === 'affiliate_admin' ? 'bg-orange-100' :
                   selectedUser.role === 'school' ? 'bg-blue-100' : 'bg-green-100'
                 }`}>
                   {React.createElement(getRoleIcon(selectedUser.role), {
                     className: `h-8 w-8 ${
                       selectedUser.role === 'admin' ? 'text-purple-600' : 
+                      selectedUser.role === 'affiliate_admin' ? 'text-orange-600' :
                       selectedUser.role === 'school' ? 'text-blue-600' : 'text-green-600'
                     }`
                   })}
@@ -691,8 +754,31 @@ const UserManagement: React.FC<UserManagementProps> = ({
                 </div>
               </div>
 
-              {selectedUser.status === 'active' && selectedUser.role !== 'admin' && (
+              {selectedUser.status === 'active' && !['admin', 'affiliate_admin'].includes(selectedUser.role) && (
                 <div className="flex space-x-3 pt-4 border-t border-slate-200">
+                  {selectedUser.role === 'student' && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { error } = await supabase.rpc('promote_user_to_affiliate_admin', {
+                            user_email: selectedUser.email
+                          });
+                          if (error) throw error;
+                          alert('User promoted to Affiliate Admin successfully!');
+                          setSelectedUser(null);
+                          if (props.onRefresh) props.onRefresh();
+                        } catch (error: any) {
+                          console.error('Error promoting user:', error);
+                          alert('Failed to promote user: ' + error.message);
+                        }
+                      }}
+                      className="bg-orange-600 text-white py-3 px-6 rounded-xl hover:bg-orange-700 transition-colors font-medium flex items-center"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Make Affiliate Admin
+                    </button>
+                  )}
+                  
                   <button
                     onClick={() => {
                       onSuspend(selectedUser.user_id);

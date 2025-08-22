@@ -501,6 +501,7 @@ const AdminDashboard: React.FC = () => {
               users={users}
               stats={componentStats.users}
               onSuspend={handleSuspendUser}
+              onRefresh={loadAdminData}
             />
           } 
         />

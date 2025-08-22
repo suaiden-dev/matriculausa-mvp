@@ -15,6 +15,8 @@ import SchoolProfileSetup from './pages/SchoolProfileSetup';
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
 import StudentDashboard from './pages/StudentDashboard/index';
 import AdminDashboard from './pages/AdminDashboard/index';
+import AffiliateAdminDashboard from './pages/AffiliateAdminDashboard/index';
+import SellerDashboard from './pages/SellerDashboard/index';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
 import SuccessPage from './pages/SuccessPage';
@@ -90,6 +92,10 @@ const AppContent = () => {
           <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
           {/* Admin Dashboard Direct Route */}
           <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
+          {/* Affiliate Admin Dashboard */}
+          <Route path="/affiliate-admin/dashboard/*" element={<AffiliateAdminDashboard />} />
+          {/* Seller Dashboard */}
+          <Route path="/seller/dashboard/*" element={<SellerDashboard />} />
           {/* Placeholder routes for other pages */}
           <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
           <Route path="/contact" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Contact page coming soon...</div></div>} />
