@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
+import { CheckTermsBeforeCheckout } from './CheckTermsBeforeCheckout';
 
 interface StripeCheckoutProps {
   productId: keyof typeof STRIPE_PRODUCTS;
@@ -51,20 +52,15 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     return <p className="text-red-500">Erro: Produto Stripe não encontrado. Contate o suporte.</p>;
   }
 
-  const handleCheckoutClick = () => {
+  const handlePreCheckoutSuccess = () => {
+    console.log('🔍 [StripeCheckout] handlePreCheckoutSuccess chamado');
     if (!isAuthenticated) {
+      console.error('🔍 [StripeCheckout] Usuário não autenticado');
       onError?.('You must be logged in to checkout');
       return;
     }
-
-    // Mostrar modal de pre-checkout para selection_process apenas se não houver desconto ativo
-    if (feeType === 'selection_process') {
-      // Verificar se já há desconto ativo antes de mostrar o modal
-      checkActiveDiscount();
-    } else {
-      // Para outros tipos, ir direto para checkout
-      handleCheckout();
-    }
+    // Este método será chamado pelo CheckTermsBeforeCheckout após a verificação dos termos
+    checkActiveDiscount();
   };
 
   const checkActiveDiscount = async () => {
@@ -230,34 +226,33 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   };
 
   return (
-    <>
-      <button
-        onClick={handleCheckoutClick}
-        disabled={disabled || loading}
-        className={`${className} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {loading ? 'Processing...' : buttonText}
-      </button>
+    <CheckTermsBeforeCheckout onProceed={handlePreCheckoutSuccess}>
+      <>
+        <button
+          disabled={disabled || loading}
+          className={`${className} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {loading ? 'Processing...' : buttonText}
+        </button>
 
-      {/* Pre-Checkout Modal para Selection Process */}
-      {showPreCheckoutModal && (
-        <PreCheckoutModal
-          isOpen={showPreCheckoutModal}
-          onClose={() => setShowPreCheckoutModal(false)}
-          onProceedToCheckout={handlePreCheckoutProceed}
-          feeType={feeType}
-          productName={product.name}
-          productPrice={feeType === 'selection_process' ? 50 : 350}
-        />
-      )}
+        {/* Pre-Checkout Modal para Selection Process */}
+        {showPreCheckoutModal && (
+          <PreCheckoutModal
+            isOpen={showPreCheckoutModal}
+            onClose={() => setShowPreCheckoutModal(false)}
+            onProceedToCheckout={handlePreCheckoutProceed}
+            feeType={feeType}
+            productName={product.name}
+            productPrice={feeType === 'selection_process' ? 50 : 350}
+          />
+        )}
 
-
-
-      {error && (
-        <div className="mt-2 text-red-600 text-sm">
-          {error}
-        </div>
-      )}
-    </>
+        {error && (
+          <div className="mt-2 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+      </>
+    </CheckTermsBeforeCheckout>
   );
 };

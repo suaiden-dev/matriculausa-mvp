@@ -39,6 +39,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
     if (path.includes('/users')) return 'users';
     if (path.includes('/performance')) return 'performance';
     if (path.includes('/students')) return 'students';
+    if (path.includes('/terms')) return 'terms';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/profile')) return 'profile';
     return 'overview';
@@ -51,6 +52,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
     { id: 'users', label: 'Seller Management', icon: Users, path: '/affiliate-admin/dashboard/users', badge: null },
     { id: 'performance', label: 'Performance Tracking', icon: Activity, path: '/affiliate-admin/dashboard/performance', badge: null },
     { id: 'students', label: 'Student Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
+    { id: 'terms', label: 'Terms Management', icon: CheckCircle, path: '/affiliate-admin/dashboard/terms', badge: null },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
     { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
   ];
@@ -174,6 +176,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                   {activeTab === 'users' && 'Seller Management'}
                   {activeTab === 'sellers' && 'Seller Management'}
                   {activeTab === 'students' && 'Student Overview'}
+                  {activeTab === 'terms' && 'Terms Management'}
                   {activeTab === 'analytics' && 'Analytics & Reports'}
                   {activeTab === 'profile' && 'Profile Settings'}
                 </h1>
@@ -182,6 +185,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                   {activeTab === 'users' && 'Promote existing users to sellers and manage your network'}
                   {activeTab === 'sellers' && 'Manage your seller network and commissions'}
                   {activeTab === 'students' && 'Track student referrals and conversions'}
+                  {activeTab === 'terms' && 'Create and manage terms of agreement for your affiliate program'}
                   {activeTab === 'analytics' && 'Analyze affiliate performance and revenue metrics'}
                   {activeTab === 'profile' && 'Manage your affiliate admin settings'}
                 </p>
