@@ -10,15 +10,18 @@ interface Student {
   created_at: string;
   status: string;
   latest_activity: string;
+  commission_earned?: number;
+  fees_count?: number;
 }
 
 interface MyStudentsProps {
   students: Student[];
   sellerProfile: any;
   onRefresh: () => void;
+  onViewStudent: (studentId: string) => void;
 }
 
-const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefresh }) => {
+const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefresh, onViewStudent }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -96,7 +99,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+              <p className="text-sm font-medium text-slate-600">Total Fees Paid</p>
               <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(totalRevenue)}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -108,13 +111,13 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Average Revenue</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">
+              <p className="text-sm font-medium text-slate-600">Average Fees</p>
+              <p className="text-3xl font-bold text-purple-600 mt-1">
                 {formatCurrency(totalRevenue / filteredStudents.length || 0)}
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-red-600" />
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+              <GraduationCap className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -150,7 +153,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
         {paginatedStudents.length > 0 ? (
           <div className="divide-y divide-slate-200">
             {paginatedStudents.map((student) => (
-              <div key={student.id} className="p-6 hover:bg-slate-50 transition-colors">
+                               <div 
+                  key={student.id} 
+                  className="p-6 hover:bg-slate-50 transition-colors cursor-pointer"
+                  onClick={() => onViewStudent(student.id)}
+                >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -181,16 +188,29 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
                     </div>
                   </div>
                   
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-green-600">
-                      {formatCurrency(student.total_paid || 0)}
-                    </p>
-                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                      student.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {student.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
+                                     <div className="text-right">
+                     <div className="mb-2">
+                       <p className="text-sm text-slate-600">Total Fees Paid</p>
+                       <p className="text-xl font-bold text-green-600">
+                         {formatCurrency(student.total_paid || 0)}
+                       </p>
+                     </div>
+                     <div className="mb-2">
+                       <p className="text-xs text-slate-500">
+                         {student.fees_count || 0} fee{(student.fees_count || 0) !== 1 ? 's' : ''} paid
+                       </p>
+                     </div>
+                     <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                       student.status === 'registered' || student.status === 'enrolled' || student.status === 'completed' 
+                         ? 'bg-green-100 text-green-800' 
+                         : 'bg-gray-100 text-gray-800'
+                     }`}>
+                       {student.status === 'registered' ? 'Registered' : 
+                        student.status === 'enrolled' ? 'Enrolled' :
+                        student.status === 'completed' ? 'Completed' :
+                        student.status === 'dropped' ? 'Dropped' : 'Unknown'}
+                     </span>
+                   </div>
                 </div>
               </div>
             ))}

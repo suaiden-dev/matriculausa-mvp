@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import SellerDashboardLayout from './SellerDashboardLayout';
 import Overview from './Overview';
 import MyStudents from './MyStudents';
+import StudentDetails from './StudentDetails';
 import ReferralTools from './ReferralTools';
 import Performance from './Performance';
 import ProfileSettings from './ProfileSettings';
@@ -44,8 +45,11 @@ const SellerDashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'overview' | 'students' | 'referral-tools' | 'performance' | 'profile'>('overview');
+  const [currentView, setCurrentView] = useState<'overview' | 'students' | 'student-details' | 'referral-tools' | 'performance' | 'profile'>('overview');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const { user } = useAuth();
+  const location = useLocation();
+  const params = useParams();
 
   const [stats, setStats] = useState<SellerStats>({
     totalStudents: 0,
@@ -62,10 +66,6 @@ const SellerDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      console.log('🔍 [SELLER] Starting seller data loading');
-      console.log('🔍 [SELLER] User email:', user?.email);
-      console.log('🔍 [SELLER] User role:', user?.role);
-
       // Search for seller profile
       let seller: any = null;
       const { data: sellerData, error: sellerError } = await supabase
@@ -75,14 +75,9 @@ const SellerDashboard: React.FC = () => {
         .eq('is_active', true)
         .single();
 
-      console.log('🔍 [SELLER] Sellers query result:', { sellerData, sellerError });
-
       if (sellerError) {
-        console.error('❌ [SELLER] Error searching for seller:', sellerError);
-        
         // If seller not found, try searching by user_id
         if (sellerError.code === 'PGRST116') {
-          console.log('🔍 [SELLER] Seller not found by email, trying by user_id...');
           
           const { data: sellerByUserId, error: sellerByUserIdError } = await supabase
             .from('sellers')
@@ -91,11 +86,8 @@ const SellerDashboard: React.FC = () => {
             .eq('is_active', true)
             .single();
           
-          console.log('🔍 [SELLER] Query result by user_id:', { sellerByUserId, sellerByUserIdError });
-          
           if (sellerByUserIdError) {
             // If seller not found by user_id, create a new one
-            console.log('🔍 [SELLER] Seller not found by user_id, creating new seller...');
             
             // First, search for an affiliate_admin to associate
             const { data: affiliateAdmin, error: affiliateAdminError } = await supabase
@@ -124,8 +116,6 @@ const SellerDashboard: React.FC = () => {
               .select()
               .single();
             
-            console.log('🔍 [SELLER] Seller creation result:', { newSeller, createSellerError });
-            
             if (createSellerError) {
               throw new Error(`Error creating seller: ${createSellerError.message}`);
             }
@@ -142,17 +132,29 @@ const SellerDashboard: React.FC = () => {
         seller = sellerData;
       }
 
-      // Search for referenced students
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('referred_by_seller_id', seller.id)
-        .order('created_at', { ascending: false });
+      // Search for referenced students using the new RPC function
+      const { data: referralsData, error: referralsError } = await supabase.rpc(
+        'get_seller_students',
+        { seller_referral_code_param: seller.referral_code }
+      );
 
-      if (studentsError) {
-        console.error('Error loading students:', studentsError);
-        throw new Error(`Failed to load students: ${studentsError.message}`);
+      if (referralsError) {
+        console.error('Error loading referrals:', referralsError);
+        throw new Error(`Failed to load referrals: ${referralsError.message}`);
       }
+
+      // Convert referrals to student format with fee information
+      const studentsData = (referralsData || []).map((referral: any) => ({
+        id: referral.student_id, // Use student_id instead of referral_id
+        full_name: referral.student_name,
+        email: referral.student_email,
+        created_at: referral.registration_date,
+        status: referral.student_status,
+        total_paid: referral.total_fees_paid || 0,
+        commission_earned: referral.commission_earned || 0,
+        fees_count: referral.fees_count || 0,
+        latest_activity: referral.registration_date
+      }));
 
       // Process seller data
       const processedSeller = {
@@ -161,19 +163,19 @@ const SellerDashboard: React.FC = () => {
       };
 
       // Process student data
-      const processedStudents = (studentsData || []).map(student => ({
+      const processedStudents = (studentsData || []).map((student: any) => ({
         ...student,
         latest_activity: student.updated_at || student.created_at
       }));
 
       // Calculate statistics
       const totalStudents = processedStudents.length;
-      const totalRevenue = processedStudents.reduce((sum, s) => sum + (s.total_paid || 0), 0);
+      const totalRevenue = processedStudents.reduce((sum: number, s: any) => sum + (s.total_paid || 0), 0);
       
       // Current month students
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
-      const monthlyStudents = processedStudents.filter(s => {
+      const monthlyStudents = processedStudents.filter((s: any) => {
         const studentDate = new Date(s.created_at);
         return studentDate.getMonth() === currentMonth && studentDate.getFullYear() === currentYear;
       }).length;
@@ -202,6 +204,41 @@ const SellerDashboard: React.FC = () => {
     }
   }, [user, loadSellerData, sellerProfile]);
 
+  // Detect URL changes and set view automatically
+  useEffect(() => {
+    console.log('🔍 [SELLER] URL detection useEffect triggered');
+    console.log('🔍 [SELLER] Current pathname:', location.pathname);
+    console.log('🔍 [SELLER] Current params:', params);
+    
+    if (params.studentId) {
+      console.log('🔍 [SELLER] Found studentId in params:', params.studentId);
+      setSelectedStudentId(params.studentId);
+      setCurrentView('student-details');
+    } else if (location.pathname === '/seller/dashboard' || location.pathname === '/seller/dashboard/') {
+      console.log('🔍 [SELLER] Setting view to overview');
+      setCurrentView('overview');
+    } else if (location.pathname === '/seller/dashboard/students') {
+      console.log('🔍 [SELLER] Setting view to students');
+      setCurrentView('students');
+    } else if (location.pathname === '/seller/dashboard/referral-tools') {
+      console.log('🔍 [SELLER] Setting view to referral-tools');
+      setCurrentView('referral-tools');
+    } else if (location.pathname === '/seller/dashboard/performance') {
+      console.log('🔍 [SELLER] Setting view to performance');
+      setCurrentView('performance');
+    } else if (location.pathname === '/seller/dashboard/profile') {
+      console.log('🔍 [SELLER] Setting view to profile');
+      setCurrentView('profile');
+    } else if (location.pathname.startsWith('/seller/student/')) {
+      console.log('🔍 [SELLER] Detected /seller/student/ route');
+      const pathParts = location.pathname.split('/');
+      const studentIdFromPath = pathParts[pathParts.length - 1];
+      console.log('🔍 [SELLER] Extracted studentId from path:', studentIdFromPath);
+      setSelectedStudentId(studentIdFromPath);
+      setCurrentView('student-details');
+    }
+  }, [location.pathname, params.studentId]);
+
   // Memoize the navigation handler to prevent unnecessary re-renders
   const handleNavigation = useCallback((view: string) => {
     setCurrentView(view as any);
@@ -224,14 +261,25 @@ const SellerDashboard: React.FC = () => {
             onRefresh={handleRefresh}
           />
         );
-      case 'students':
-        return (
-          <MyStudents 
-            students={students}
-            sellerProfile={sellerProfile}
-            onRefresh={handleRefresh}
-          />
-        );
+                     case 'students':
+          return (
+            <MyStudents 
+              students={students}
+              sellerProfile={sellerProfile}
+              onRefresh={handleRefresh}
+              onViewStudent={(studentId) => {
+                console.log('🔍 [SELLER] onViewStudent called with studentId:', studentId);
+                console.log('🔍 [SELLER] Setting selectedStudentId to:', studentId);
+                console.log('🔍 [SELLER] Setting currentView to student-details');
+                setSelectedStudentId(studentId);
+                setCurrentView('student-details');
+              }}
+            />
+          );
+               case 'student-details':
+          return (
+            <StudentDetails key={selectedStudentId} studentId={selectedStudentId!} />
+          );
       case 'referral-tools':
         return (
           <ReferralTools 
