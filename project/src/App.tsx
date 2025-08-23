@@ -96,6 +96,8 @@ const AppContent = () => {
           <Route path="/affiliate-admin/dashboard/*" element={<AffiliateAdminDashboard />} />
           {/* Seller Dashboard */}
           <Route path="/seller/dashboard/*" element={<SellerDashboard />} />
+          {/* Seller Student Details */}
+          <Route path="/seller/student/:studentId" element={<SellerDashboard />} />
           {/* Placeholder routes for other pages */}
           <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
           <Route path="/contact" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Contact page coming soon...</div></div>} />
