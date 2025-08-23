@@ -9,6 +9,7 @@ import SellerPerformanceTracking from './SellerPerformanceTracking';
 import StudentTracking from './StudentTracking';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
+import Terms from './Terms';
 
 interface AffiliateAdminStats {
   totalStudents: number;
@@ -244,6 +245,7 @@ const AffiliateAdminDashboard: React.FC = () => {
         />
         <Route path="users" element={<SellerManagement />} />
         <Route path="performance" element={<SellerPerformanceTracking />} />
+        <Route path="terms" element={<Terms />} />
 
         <Route 
           path="students" 
