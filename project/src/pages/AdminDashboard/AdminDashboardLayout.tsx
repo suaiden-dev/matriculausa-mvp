@@ -20,7 +20,8 @@ import {
   CreditCard,
   Star,
   ArrowRightLeft,
-  FileText
+  FileText,
+  FileCheck
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -55,6 +56,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/transfer-management')) return 'transfer-management';
     if (path.includes('/transfer-settings')) return 'transfer-settings';
     if (path.includes('/transfer-reports')) return 'transfer-reports';
+    if (path.includes('/terms')) return 'terms';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
   };
@@ -111,6 +113,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'payout-requests', label: 'Payout Requests', icon: CreditCard, path: '/admin/dashboard/payout-requests', badge: null },
     { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
+    { id: 'terms', label: 'Terms Management', icon: FileCheck, path: '/admin/dashboard/terms', badge: null },
     { id: 'settings', label: 'System Settings', icon: Settings, path: '/admin/dashboard/settings', badge: null }
   ];
 
@@ -237,6 +240,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'transfer-management' && 'Transfer Management'}
                   {activeTab === 'transfer-settings' && 'Transfer Settings'}
                   {activeTab === 'transfer-reports' && 'Transfer Reports'}
+                  {activeTab === 'terms' && 'Terms Management'}
                   {activeTab === 'settings' && 'System Settings'}
                 </h1>
                 <p className="text-slate-600">
@@ -247,6 +251,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'transfer-management' && 'Process and manage university payment transfers'}
                   {activeTab === 'transfer-settings' && 'Configure automatic transfer rules and settings'}
                   {activeTab === 'transfer-reports' && 'Financial analytics and transfer performance insights'}
+                  {activeTab === 'terms' && 'Create and manage terms of agreement for the affiliate program'}
                   {activeTab === 'settings' && 'Configure system settings and preferences'}
                 </p>
               </div>

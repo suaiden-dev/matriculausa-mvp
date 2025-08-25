@@ -1,4 +1,49 @@
 {
+  "stepByStepGuide": {
+    "title": "Step-by-Step Guide",
+    "subtitle": "How the application process works",
+    "closeButton": "Close step-by-step guide",
+    "progress": "Step {current} of {total}",
+    "previous": "Previous",
+    "next": "Next",
+    "startNow": "Start Now!",
+    "steps": {
+      "step1": {
+        "title": "Welcome to Matrícula USA! 🎓",
+        "description": "Let's guide you through the entire application process for scholarships in the USA. It's easier than you think!"
+      },
+      "step2": {
+        "title": "1. Explore Scholarships",
+        "description": "Browse our list of scholarships. Each one has detailed information about values, requirements, and partner universities. Click on the ones that interest you!"
+      },
+      "step3": {
+        "title": "2. Add to Selection List",
+        "description": "Select the scholarships you want to apply for and add them to your selection list. You can choose multiple scholarships and manage your selections easily."
+      },
+      "step4": {
+        "title": "3. Student Type",
+        "description": "Select your student type: Initial, Transfer, or Status Change. This helps us direct the best opportunities for your profile."
+      },
+      "step5": {
+        "title": "4. Upload Documents",
+        "description": "Upload your documents: Passport, High School Diploma, and a Bank Statement. Our team will review everything and give you feedback."
+      },
+      "step6": {
+        "title": "5. Application Fee Selection",
+        "description": "Once your documents are approved, you must choose only one scholarship to proceed. (See the screenshot for details.)"
+      },
+      "step7": {
+        "title": "6. My Applications & Scholarship Fee",
+        "description": "Inside 'My Applications', after paying the Application Fee, you will be able to pay the Scholarship Fee for your chosen scholarship."
+      },
+      "step8": {
+        "title": "7. Application Chat & I-20 Control Fee",
+        "description": "In the Application Chat, you can talk directly to the university. The university may request more documents. Here you will also pay the I-20 Control Fee if required."
+      }
+    },
+    "expandImage": "Expand image",
+    "previewNotAvailable": "Preview not available"
+  },
   "nav": {
     "home": "Home",
     "howItWorks": "How It Works",
@@ -1070,6 +1115,13 @@
       "description": "See the full application journey in detail.",
       "button": "How it works?"
     },
+    "selectionProcess": {
+      "title": "Selection Process",
+      "description": "Start your journey to American education by completing our comprehensive selection process.",
+      "completeApplicationProcess": "Complete your application process",
+      "discountApplied": "✨ You have a discount coupon applied!",
+      "startButton": "Start Selection Process"
+    },
     "stats": {
       "myApplications": "My Applications",
       "totalSubmitted": "Total submitted",
@@ -1114,7 +1166,34 @@
     },
     "recentApplications": {
       "title": "Recent Applications",
-      "subtitle": "Track your latest scholarship submissions"
+      "subtitle": "Track your latest scholarship submissions",
+      "noApplications": "No applications yet",
+      "startJourneyMessage": "Start your journey by browsing and applying to scholarships",
+      "browseScholarships": "Browse Scholarships",
+      "totalApplications": "Total Applications",
+      "showingApplications": "Showing {count} of {total} applications",
+      "loadMoreApplications": "Load More Applications",
+      "viewAllApplications": "View All Applications",
+      "scholarshipApplication": "Scholarship Application",
+      "university": "University",
+      "applied": "Applied:",
+      "deadline": "Deadline:",
+      "couponApplied": "Coupon applied:",
+      "shown": "shown",
+      "status": {
+        "approved": "Approved",
+        "under_review": "Review",
+        "pending": "Pending"
+      },
+      "unknownUniversity": "Unknown University",
+      "unknownScholarship": "Unknown Scholarship",
+      "unknownUser": "Unknown User",
+      "unknownStudent": "Unknown Student",
+      "unknownRequest": "Unknown Request",
+      "unknownDate": "Unknown date",
+      "unknownError": "Unknown error",
+      "unknown": "Unknown",
+      "dropped": "Dropped"
     },
     "findScholarships": {
       "title": "Find Scholarships",
@@ -1945,6 +2024,43 @@
     "tryAgain": "Try Again",
     "errorLoadingData": "Error loading data",
     "loading": "Loading {title}..."
+  },
+  "preCheckoutModal": {
+    "securePayment": "Secure Payment",
+    "redirectToStripe": "Redirecting to Stripe",
+    "closeModal": "Close modal",
+    "securePaymentViaStripe": "Secure payment via Stripe",
+    "referralCode": "Referral Code",
+    "enterReferralCode": "Enter your referral code to get a discount",
+    "placeholder": "Enter code",
+    "validate": "Validate",
+    "validating": "Validating...",
+    "pleaseEnterCode": "Please enter a code",
+    "invalidCode": "Invalid or inactive code",
+    "selfReferral": "You cannot use your own referral code",
+    "alreadyUsedCode": "You have already used a referral code previously",
+    "validCode": "Valid code! $50 discount applied",
+    "errorValidating": "Error validating code",
+    "codeAlreadyUsed": "Code already used",
+    "discountAlreadyApplied": "Your discount has already been applied previously",
+    "continueWithoutCode": "Continue without code",
+    "goToPayment": "Go to payment",
+    "applyCodeAndContinue": "Apply code and continue",
+    "openingStripe": "Opening Stripe...",
+    "mustAcceptTerms": "You must accept the terms and conditions before continuing",
+    "termsAndConditions": {
+      "title": "Terms and Conditions",
+      "termsOfUse": "Terms of Use",
+      "and": "and",
+      "privacyPolicy": "Privacy Policy",
+      "description": "before proceeding with payment"
+    },
+    "closeTerms": "Close terms",
+    "scrollToBottomFirst": "Scroll to bottom first",
+    "readingTerms": "Please read the terms before accepting",
+    "acceptContractTerms": "I accept the contract terms and conditions",
+    "cancel": "Cancel",
+    "acceptTerms": "Accept Terms"
   },
   "footer": {
     "company": {

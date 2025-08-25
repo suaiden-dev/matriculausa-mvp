@@ -260,8 +260,8 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="flex items-center">
                   <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-white mr-2 sm:mr-3" />
                   <div>
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">Selection Process</h3>
-                    <p className="text-blue-100 text-xs sm:text-sm">Complete your application process</p>
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">{t('studentDashboard.selectionProcess.title')}</h3>
+                    <p className="text-blue-100 text-xs sm:text-sm">{t('studentDashboard.selectionProcess.completeApplicationProcess')}</p>
                   </div>
                 </div>
                 <div className="text-left sm:text-right">
@@ -274,7 +274,7 @@ const Overview: React.FC<OverviewProps> = ({
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
                         <span className="text-xs text-green-300 font-medium">
-                          Coupon applied: -${activeDiscount.discount_amount}
+                          {t('studentDashboard.recentApplications.couponApplied')} -${activeDiscount.discount_amount}
                         </span>
                       </div>
                     </div>
@@ -284,10 +284,10 @@ const Overview: React.FC<OverviewProps> = ({
                 </div>
               </div>
               <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
-                Start your journey to American education by completing our comprehensive selection process.
+                {t('studentDashboard.selectionProcess.description')}
                 {activeDiscount?.has_discount && (
                   <span className="block mt-1 text-green-300 font-medium">
-                    ✨ You have a discount coupon applied!
+                    {t('studentDashboard.selectionProcess.discountApplied')}
                   </span>
                 )}
               </p>
@@ -295,7 +295,7 @@ const Overview: React.FC<OverviewProps> = ({
                 productId="selectionProcess"
                 feeType="selection_process"
                 paymentType="selection_process"
-                buttonText="Start Selection Process"
+                buttonText={t('studentDashboard.selectionProcess.startButton')}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base"
                 successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                 cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
@@ -432,11 +432,11 @@ const Overview: React.FC<OverviewProps> = ({
                   <div className="text-xl sm:text-2xl font-bold text-blue-600">{recentApplications.length}</div>
                   {recentApplications.length > visibleApplications && (
                     <div className="text-sm text-slate-500">
-                      ({visibleApplications} shown)
+                      ({visibleApplications} {t('studentDashboard.recentApplications.shown')})
                     </div>
                   )}
                 </div>
-                <div className="text-slate-500 text-xs">Total Applications</div>
+                <div className="text-slate-500 text-xs">{t('studentDashboard.recentApplications.totalApplications')}</div>
               </div>
             </div>
             
@@ -445,14 +445,14 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400" />
                 </div>
-                <h4 className="text-lg sm:text-xl font-semibold text-slate-700 mb-2">No applications yet</h4>
-                <p className="text-slate-500 mb-6 px-4">Start your journey by browsing and applying to scholarships</p>
+                <h4 className="text-lg sm:text-xl font-semibold text-slate-700 mb-2">{t('studentDashboard.recentApplications.noApplications')}</h4>
+                <p className="text-slate-500 mb-6 px-4">{t('studentDashboard.recentApplications.startJourneyMessage')}</p>
                 <Link
                   to="/student/dashboard/scholarships"
                   className="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-sm sm:text-base"
                 >
                   <Search className="w-4 h-4" />
-                  Browse Scholarships
+                  {t('studentDashboard.recentApplications.browseScholarships')}
                 </Link>
               </div>
             ) : (
@@ -494,10 +494,10 @@ const Overview: React.FC<OverviewProps> = ({
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 sm:mb-3 gap-2 sm:gap-0">
                             <div className="min-w-0 flex-1">
                               <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
-                                {scholarship?.title || 'Scholarship Application'}
+                                {scholarship?.title || t('studentDashboard.recentApplications.scholarshipApplication')}
                               </h4>
                               <p className="text-slate-600 font-medium text-sm sm:text-base truncate">
-                                {scholarship?.universities?.name || 'University'}
+                                {scholarship?.universities?.name || t('studentDashboard.recentApplications.university')}
                               </p>
                             </div>
                             <div className={`flex w-[90px] items-center sm:w-[110px] gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
@@ -506,7 +506,9 @@ const Overview: React.FC<OverviewProps> = ({
                                 {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                               </span>
                               <span className="sm:hidden">
-                                {app.status === 'approved' ? 'Approved' : app.status === 'under_review' ? 'Review' : 'Pending'}
+                                {app.status === 'approved' ? t('studentDashboard.recentApplications.status.approved') : 
+                                 app.status === 'under_review' ? t('studentDashboard.recentApplications.status.under_review') : 
+                                 t('studentDashboard.recentApplications.status.pending')}
                               </span>
                             </div>
                           </div>
@@ -529,7 +531,7 @@ const Overview: React.FC<OverviewProps> = ({
                           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                              <span>Applied: {new Date(app.applied_at).toLocaleDateString('en-US', { 
+                              <span>{t('studentDashboard.recentApplications.applied')} {new Date(app.applied_at).toLocaleDateString('en-US', { 
                                 month: 'short', 
                                 day: 'numeric', 
                                 year: 'numeric' 
@@ -538,7 +540,7 @@ const Overview: React.FC<OverviewProps> = ({
                             {scholarship?.deadline && (
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                                <span>Deadline: {new Date(scholarship.deadline).toLocaleDateString('en-US', { 
+                                <span>{t('studentDashboard.recentApplications.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', { 
                                   month: 'short', 
                                   day: 'numeric', 
                                   year: 'numeric' 
@@ -556,9 +558,12 @@ const Overview: React.FC<OverviewProps> = ({
                 {recentApplications.length > 0 && (
                   <div className="text-center space-y-3 sm:space-y-4">
                     {/* Contador de Applications */}
-                    <div className="text-xs sm:text-sm text-slate-600">
-                      Showing {displayedApplications.length} of {recentApplications.length} applications
-                    </div>
+                                      <div className="text-xs sm:text-sm text-slate-600">
+                    {t('studentDashboard.recentApplications.showingApplications', { 
+                      count: displayedApplications.length, 
+                      total: recentApplications.length 
+                    })}
+                  </div>
                     
                     {/* Load More Button */}
                     {hasMoreApplications && (
@@ -569,7 +574,7 @@ const Overview: React.FC<OverviewProps> = ({
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
-                        Load More Applications
+                        {t('studentDashboard.recentApplications.loadMoreApplications')}
                       </button>
                     )}
                     
@@ -579,7 +584,7 @@ const Overview: React.FC<OverviewProps> = ({
                       className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 font-semibold border-2 border-blue-200 hover:border-blue-300 text-sm sm:text-base"
                     >
                       <FileText className="w-4 h-4" />
-                      View All Applications
+                      {t('studentDashboard.recentApplications.viewAllApplications')}
                       <ArrowUpRight className="w-4 h-4" />
                     </Link>
                   </div>

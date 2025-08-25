@@ -1,4 +1,49 @@
 {
+  "stepByStepGuide": {
+    "title": "Guia Passo a Passo",
+    "subtitle": "Como funciona o processo de candidatura",
+    "closeButton": "Fechar guia passo a passo",
+    "progress": "Passo {current} de {total}",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "startNow": "Começar Agora!",
+    "steps": {
+      "step1": {
+        "title": "Bem-vindo ao Matrícula USA! 🎓",
+        "description": "Vamos guiá-lo através de todo o processo de candidatura para bolsas nos EUA. É mais fácil do que você pensa!"
+      },
+      "step2": {
+        "title": "1. Explorar Bolsas",
+        "description": "Navegue pela nossa lista de bolsas. Cada uma tem informações detalhadas sobre valores, requisitos e universidades parceiras. Clique nas que lhe interessam!"
+      },
+      "step3": {
+        "title": "2. Adicionar à Lista de Seleção",
+        "description": "Selecione as bolsas para as quais deseja se candidatar e adicione-as à sua lista de seleção. Você pode escolher múltiplas bolsas e gerenciar suas seleções facilmente."
+      },
+      "step4": {
+        "title": "3. Tipo de Estudante",
+        "description": "Selecione seu tipo de estudante: Inicial, Transferência ou Mudança de Status. Isso nos ajuda a direcionar as melhores oportunidades para seu perfil."
+      },
+      "step5": {
+        "title": "4. Enviar Documentos",
+        "description": "Envie seus documentos: Passaporte, Diploma do Ensino Médio e Extrato Bancário. Nossa equipe revisará tudo e dará feedback."
+      },
+      "step6": {
+        "title": "5. Seleção da Taxa de Candidatura",
+        "description": "Uma vez que seus documentos sejam aprovados, você deve escolher apenas uma bolsa para prosseguir. (Veja a captura de tela para detalhes.)"
+      },
+      "step7": {
+        "title": "6. Minhas Candidaturas e Taxa de Bolsa",
+        "description": "Dentro de 'Minhas Candidaturas', após pagar a Taxa de Candidatura, você poderá pagar a Taxa de Bolsa para sua bolsa escolhida."
+      },
+      "step8": {
+        "title": "7. Chat de Candidatura e Taxa de Controle I-20",
+        "description": "No Chat de Candidatura, você pode falar diretamente com a universidade. A universidade pode solicitar mais documentos. Aqui você também pagará a Taxa de Controle I-20 se for necessária."
+      }
+    },
+    "expandImage": "Expandir imagem",
+    "previewNotAvailable": "Prévia não disponível"
+  },
   "nav": {
     "home": "Início",
     "howItWorks": "Como Funciona",
@@ -1070,6 +1115,13 @@
       "description": "Veja toda a jornada de candidatura em detalhes.",
       "button": "Como funciona?"
     },
+    "selectionProcess": {
+      "title": "Processo de Seleção",
+      "description": "Comece sua jornada para a educação americana completando nosso processo de seleção abrangente.",
+      "completeApplicationProcess": "Complete seu processo de candidatura",
+      "discountApplied": "✨ Você tem um cupom de desconto aplicado!",
+      "startButton": "Iniciar Processo de Seleção"
+    },
     "stats": {
       "myApplications": "Minhas Candidaturas",
       "totalSubmitted": "Total enviadas",
@@ -1114,7 +1166,34 @@
     },
     "recentApplications": {
       "title": "Candidaturas Recentes",
-      "subtitle": "Acompanhe suas últimas submissões de bolsa"
+      "subtitle": "Acompanhe suas últimas submissões de bolsa",
+      "noApplications": "Nenhuma candidatura ainda",
+      "startJourneyMessage": "Comece sua jornada navegando e se candidatando a bolsas",
+      "browseScholarships": "Navegar Bolsas",
+      "totalApplications": "Total de Candidaturas",
+      "showingApplications": "Mostrando {count} de {total} candidaturas",
+      "loadMoreApplications": "Carregar Mais Candidaturas",
+      "viewAllApplications": "Ver Todas as Candidaturas",
+      "scholarshipApplication": "Candidatura de Bolsa",
+      "university": "Universidade",
+      "applied": "Candidatado:",
+      "deadline": "Prazo:",
+      "couponApplied": "Cupom aplicado:",
+      "shown": "mostradas",
+      "status": {
+        "approved": "Aprovada",
+        "under_review": "Revisão",
+        "pending": "Pendente"
+      },
+      "unknownUniversity": "Universidade Desconhecida",
+      "unknownScholarship": "Bolsas Desconhecidas",
+      "unknownUser": "Usuário Desconhecido",
+      "unknownStudent": "Estudante Desconhecido",
+      "unknownRequest": "Solicitação Desconhecida",
+      "unknownDate": "Data desconhecida",
+      "unknownError": "Erro desconhecido",
+      "unknown": "Desconhecido",
+      "dropped": "Desistiu"
     },
     "findScholarships": {
       "title": "Encontrar Bolsas",
@@ -1948,6 +2027,43 @@
     "tryAgain": "Tentar Novamente",
     "errorLoadingData": "Erro ao carregar dados",
     "loading": "Carregando {title}..."
+  },
+  "preCheckoutModal": {
+    "securePayment": "Pagamento Seguro",
+    "redirectToStripe": "Redirecionando para o Stripe",
+    "closeModal": "Fechar modal",
+    "securePaymentViaStripe": "Pagamento seguro via Stripe",
+    "referralCode": "Código de Referência",
+    "enterReferralCode": "Digite seu código de referência para obter desconto",
+    "placeholder": "Digite o código",
+    "validate": "Validar",
+    "validating": "Validando...",
+    "pleaseEnterCode": "Por favor, digite um código",
+    "invalidCode": "Código inválido ou inativo",
+    "selfReferral": "Você não pode usar seu próprio código de referência",
+    "alreadyUsedCode": "Você já usou um código de referência anteriormente",
+    "validCode": "Código válido! Desconto de $50 aplicado",
+    "errorValidating": "Erro ao validar código",
+    "codeAlreadyUsed": "Código já utilizado",
+    "discountAlreadyApplied": "Seu desconto já foi aplicado anteriormente",
+    "continueWithoutCode": "Continuar sem código",
+    "goToPayment": "Ir para pagamento",
+    "applyCodeAndContinue": "Aplicar código e continuar",
+    "openingStripe": "Abrindo Stripe...",
+    "mustAcceptTerms": "Você deve aceitar os termos e condições antes de continuar",
+    "termsAndConditions": {
+      "title": "Termos e Condições",
+      "termsOfUse": "Termos de Uso",
+      "and": "e",
+      "privacyPolicy": "Política de Privacidade",
+      "description": "antes de prosseguir com o pagamento"
+    },
+    "closeTerms": "Fechar termos",
+    "scrollToBottomFirst": "Role até o final primeiro",
+    "readingTerms": "Por favor, leia os termos antes de aceitar",
+    "acceptContractTerms": "Aceito os termos e condições do contrato",
+    "cancel": "Cancelar",
+    "acceptTerms": "Aceitar Termos"
   },
   "footer": {
     "company": {
