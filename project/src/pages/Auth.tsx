@@ -49,6 +49,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [sellerReferralCodeValid, setSellerReferralCodeValid] = useState<boolean | null>(null);
   const [sellerReferralCodeLoading, setSellerReferralCodeLoading] = useState(false);
   const [isSellerReferralCodeLocked, setIsSellerReferralCodeLocked] = useState(false);
+  // New states for referral code UI
+  const [showReferralCodeSection, setShowReferralCodeSection] = useState<boolean | null>(null);
+  const [selectedReferralType, setSelectedReferralType] = useState<'friend' | 'seller' | null>(null);
   const termsContentRef = useRef<HTMLDivElement>(null);
   const privacyContentRef = useRef<HTMLDivElement>(null);
   
@@ -77,6 +80,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         setFormData(prev => ({ ...prev, affiliateCode: pendingReferralCode }));
         setIsReferralCodeLocked(true);
         validateAffiliateCode(pendingReferralCode);
+        // Configure the new UI for friend referral code
+        setShowReferralCodeSection(true);
+        setSelectedReferralType('friend');
         // IMPORTANTE: Limpar o campo de seller se este for um código de Matricula Rewards
         setFormData(prev => ({ ...prev, sellerReferralCode: '' }));
         setIsSellerReferralCodeLocked(false);
@@ -89,6 +95,9 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         setFormData(prev => ({ ...prev, sellerReferralCode: pendingSellerCode }));
         setIsSellerReferralCodeLocked(true);
         validateSellerReferralCode(pendingSellerCode);
+        // Configure the new UI for seller referral code
+        setShowReferralCodeSection(true);
+        setSelectedReferralType('seller');
         // IMPORTANTE: Limpar o campo de Matricula Rewards se este for um código de Seller
         setFormData(prev => ({ ...prev, affiliateCode: '' }));
         setIsReferralCodeLocked(false);
@@ -199,6 +208,43 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }
   };
 
+  // Handle referral code section toggle
+  const handleReferralCodeToggle = (hasCode: boolean) => {
+    if (hasCode) {
+      // User says they have a code - show the type selection
+      setShowReferralCodeSection(true);
+    } else {
+      // User says they don't have a code - mark as answered but don't show input
+      setShowReferralCodeSection(false);
+      // Clear all referral codes when user says they don't have one
+      setFormData(prev => ({ 
+        ...prev, 
+        affiliateCode: '', 
+        sellerReferralCode: '' 
+      }));
+      setSelectedReferralType(null);
+      setAffiliateCodeValid(null);
+      setSellerReferralCodeValid(null);
+      setIsReferralCodeLocked(false);
+      setIsSellerReferralCodeLocked(false);
+    }
+  };
+
+  // Handle referral type selection
+  const handleReferralTypeSelect = (type: 'friend' | 'seller') => {
+    setSelectedReferralType(type);
+    // Clear the other type's code when switching
+    if (type === 'friend') {
+      setFormData(prev => ({ ...prev, sellerReferralCode: '' }));
+      setSellerReferralCodeValid(null);
+      setIsSellerReferralCodeLocked(false);
+    } else {
+      setFormData(prev => ({ ...prev, affiliateCode: '' }));
+      setAffiliateCodeValid(null);
+      setIsReferralCodeLocked(false);
+    }
+  };
+
   // Handle scroll in terms modal
   const handleTermsScroll = () => {
     if (termsContentRef.current) {
@@ -287,6 +333,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         // Validar aceitação dos termos
         if (!termsAccepted) {
           setError(t('authPage.messages.mustAcceptTerms'));
+          setLoading(false);
+          return;
+        }
+        
+        // Validar resposta sobre código de referência (apenas para estudantes)
+        if (activeTab === 'student' && showReferralCodeSection === null) {
+          setError(t('authPage.messages.mustAnswerReferralCode'));
           setLoading(false);
           return;
         }
@@ -700,227 +753,285 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* Affiliate Code Field */}
-                  <div>
-                    <label htmlFor="affiliateCode" className="block text-sm font-bold text-slate-900 mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Gift className="h-4 w-4 text-[#05294E]" />
-                        <span>{t('authPage.register.referralCode.title')}</span>
-                      </div>
-                    </label>
-                    <div className="relative">
-                      {isReferralCodeLocked ? (
-                        <Lock className="absolute left-4 top-4 h-5 w-5 text-green-500" />
-                      ) : (
-                        <Gift className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      )}
-                      <input
-                        id="affiliateCode"
-                        name="affiliateCode"
-                        type="text"
-                        value={formData.affiliateCode || ''}
-                        onChange={handleAffiliateCodeChange}
-                        readOnly={isReferralCodeLocked}
-                        className={`w-full pl-12 pr-4 py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 ${
-                          isReferralCodeLocked 
-                            ? 'bg-gray-50 cursor-not-allowed' 
-                            : ''
-                        } ${
-                          affiliateCodeValid === true 
-                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
-                            : affiliateCodeValid === false 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                        }`}
-                        placeholder={isReferralCodeLocked ? t('authPage.register.referralCode.applied') : t('authPage.register.referralCode.placeholder')}
-                        maxLength={8}
-                      />
-                      {affiliateCodeLoading && (
-                        <div className="absolute right-4 top-4">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#05294E]"></div>
+                  {/* Referral Code Section */}
+                  {termsAccepted && (
+                    <div className="col-span-2">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <div className="flex items-center mb-3">
+                          <UserCheck className="h-4 w-4 text-slate-500 mr-2" />
+                          <span className="text-sm font-medium text-slate-700">
+                            {t('authPage.register.referralCode.title')}
+                          </span>
                         </div>
-                      )}
-                      {affiliateCodeValid === true && (
-                        <div className="absolute right-4 top-4">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        </div>
-                      )}
-                      {affiliateCodeValid === false && formData.affiliateCode && (
-                        <div className="absolute right-4 top-4">
-                          <X className="h-4 w-4 text-red-500" />
-                        </div>
-                      )}
-                    </div>
-                    {formData.affiliateCode && (
-                      <div className="mt-2 text-sm">
-                        {affiliateCodeValid === true && (
-                          <p className="text-green-600 flex items-center">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {t('authPage.register.referralCode.valid')}
-                            {isReferralCodeLocked && (
-                              <span className="ml-2 text-blue-600">
-                                {t('authPage.register.referralCode.appliedFromLink')}
-                              </span>
-                            )}
-                          </p>
-                        )}
-                        {affiliateCodeValid === false && (
-                          <p className="text-red-600 flex items-center">
-                            <X className="h-3 w-3 mr-1" />
-                            {t('authPage.register.referralCode.invalid')}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Seller Referral Code Field */}
-                  <div>
-                    <label htmlFor="sellerReferralCode" className="block text-sm font-bold text-slate-900 mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Target className="h-4 w-4 text-red-600" />
-                        <span>{t('authPage.register.sellerReferralCode.title')}</span>
-                      </div>
-                    </label>
-                    <div className="relative">
-                      {isSellerReferralCodeLocked ? (
-                        <Lock className="absolute left-4 top-4 h-5 w-5 text-green-500" />
-                      ) : (
-                        <Target className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      )}
-                      <input
-                        id="sellerReferralCode"
-                        name="sellerReferralCode"
-                        type="text"
-                        value={formData.sellerReferralCode || ''}
-                        onChange={handleSellerReferralCodeChange}
-                        readOnly={isSellerReferralCodeLocked}
-                        className={`w-full pl-12 pr-4 py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 ${
-                          isSellerReferralCodeLocked 
-                            ? 'bg-gray-50 cursor-not-allowed' 
-                            : ''
-                        } ${
-                          sellerReferralCodeValid === true 
-                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
-                            : sellerReferralCodeValid === false 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                        }`}
-                        placeholder={isSellerReferralCodeLocked ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.sellerReferralCode.placeholder')}
-                        maxLength={20}
-                      />
-                      {sellerReferralCodeLoading && (
-                        <div className="absolute right-4 top-4">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                        </div>
-                      )}
-                      {sellerReferralCodeValid === true && (
-                        <div className="absolute right-4 top-4">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        </div>
-                      )}
-                      {sellerReferralCodeValid === false && formData.sellerReferralCode && (
-                        <div className="absolute right-4 top-4">
-                          <X className="h-4 w-4 text-red-500" />
-                        </div>
-                      )}
-                    </div>
-                    {formData.sellerReferralCode && (
-                      <div className="mt-2 text-sm">
-                        {sellerReferralCodeValid === true && (
-                          <p className="text-green-600 flex items-center">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {t('authPage.register.sellerReferralCode.valid')}
-                            {isSellerReferralCodeLocked && (
-                              <span className="ml-2 text-blue-600">
-                                {t('authPage.register.sellerReferralCode.appliedFromLink')}
-                              </span>
-                            )}
-                          </p>
+                        {/* Initial choice */}
+                        {showReferralCodeSection === null && (
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleReferralCodeToggle(true)}
+                              className="flex items-center px-3 py-2 bg-white border border-slate-300 rounded-lg hover:border-[#05294E] hover:bg-slate-50 transition-all duration-200 text-sm"
+                            >
+                              <CheckCircle className="h-4 w-4 text-slate-400 mr-2" />
+                              {t('authPage.register.referralCode.yesIHave')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReferralCodeToggle(false)}
+                              className="flex items-center px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg hover:border-slate-400 transition-all duration-200 text-sm text-slate-600"
+                            >
+                              {t('authPage.register.referralCode.noThanks')}
+                            </button>
+                          </div>
                         )}
-                        {sellerReferralCodeValid === false && (
-                          <p className="text-red-600 flex items-center">
-                            <X className="h-3 w-3 mr-1" />
-                            {t('authPage.register.sellerReferralCode.invalid')}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Seller Referral Code Field */}
-                  <div>
-                    <label htmlFor="sellerReferralCode" className="block text-sm font-bold text-slate-900 mb-2">
-                      <div className="flex items-center space-x-2">
-                        <Target className="h-4 w-4 text-red-600" />
-                        <span>{t('authPage.register.sellerReferralCode.title')}</span>
-                      </div>
-                    </label>
-                    <div className="relative">
-                      {isSellerReferralCodeLocked ? (
-                        <Lock className="absolute left-4 top-4 h-5 w-5 text-green-500" />
-                      ) : (
-                        <Target className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
-                      )}
-                      <input
-                        id="sellerReferralCode"
-                        name="sellerReferralCode"
-                        type="text"
-                        value={formData.sellerReferralCode || ''}
-                        onChange={handleSellerReferralCodeChange}
-                        readOnly={isSellerReferralCodeLocked}
-                        className={`w-full pl-12 pr-4 py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 ${
-                          isSellerReferralCodeLocked 
-                            ? 'bg-gray-50 cursor-not-allowed' 
-                            : ''
-                        } ${
-                          sellerReferralCodeValid === true 
-                            ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
-                            : sellerReferralCodeValid === false 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
-                        }`}
-                        placeholder={isSellerReferralCodeLocked ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.sellerReferralCode.placeholder')}
-                        maxLength={20}
-                      />
-                      {sellerReferralCodeLoading && (
-                        <div className="absolute right-4 top-4">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                        </div>
-                      )}
-                      {sellerReferralCodeValid === true && (
-                        <div className="absolute right-4 top-4">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        </div>
-                      )}
-                      {sellerReferralCodeValid === false && formData.sellerReferralCode && (
-                        <div className="absolute right-4 top-4">
-                          <X className="h-4 w-4 text-red-500" />
-                        </div>
-                      )}
-                    </div>
-                    {formData.sellerReferralCode && (
-                      <div className="mt-2 text-sm">
-                        {sellerReferralCodeValid === true && (
-                          <p className="text-green-600 flex items-center">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            {t('authPage.register.sellerReferralCode.valid')}
-                            {isSellerReferralCodeLocked && (
-                              <span className="ml-2 text-blue-600">
-                                {t('authPage.register.sellerReferralCode.appliedFromLink')}
+                        {/* User chose "No, thanks" */}
+                        {showReferralCodeSection === false && (
+                          <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center">
+                              <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                              <span className="text-sm text-green-700">
+                                {t('authPage.register.referralCode.noCodeSelected')}
                               </span>
-                            )}
-                          </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowReferralCodeSection(null)}
+                              className="text-xs text-green-600 hover:text-green-800 font-medium"
+                            >
+                              {t('authPage.register.referralCode.changeAnswer')}
+                            </button>
+                          </div>
                         )}
-                        {sellerReferralCodeValid === false && (
-                          <p className="text-red-600 flex items-center">
-                            <X className="h-3 w-3 mr-1" />
-                            {t('authPage.register.sellerReferralCode.invalid')}
-                          </p>
+
+                        {/* Referral code input section */}
+                        {showReferralCodeSection === true && (
+                          <div className="space-y-3">
+                            {/* Type selection */}
+                            {!selectedReferralType && (
+                              <div className="space-y-2">
+                                <p className="text-xs text-slate-600">
+                                  {t('authPage.register.referralCode.chooseType')}
+                                </p>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReferralTypeSelect('friend')}
+                                    className="flex items-center px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-[#05294E] hover:bg-slate-50 transition-all duration-200 text-sm"
+                                  >
+                                    <Gift className="h-3 w-3 text-[#05294E] mr-2" />
+                                    {t('authPage.register.referralCode.friendCode')}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReferralTypeSelect('seller')}
+                                    className="flex items-center px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-[#D0151C] hover:bg-slate-50 transition-all duration-200 text-sm"
+                                  >
+                                    <Target className="h-3 w-3 text-[#D0151C] mr-2" />
+                                    {t('authPage.register.referralCode.sellerCode')}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Friend referral code input */}
+                            {selectedReferralType === 'friend' && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <Gift className="h-3 w-3 text-[#05294E] mr-2" />
+                                    <span className="text-sm font-medium text-slate-700">
+                                      {t('authPage.register.referralCode.friendCode')}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReferralTypeSelect('seller')}
+                                    className="text-xs text-[#05294E] hover:text-[#041f3a] font-medium"
+                                  >
+                                    {t('authPage.register.referralCode.switchToSeller')}
+                                  </button>
+                                </div>
+                                <div className="relative">
+                                  {isReferralCodeLocked ? (
+                                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                  )}
+                                  <input
+                                    id="affiliateCode"
+                                    name="affiliateCode"
+                                    type="text"
+                                    value={formData.affiliateCode || ''}
+                                    onChange={handleAffiliateCodeChange}
+                                    readOnly={isReferralCodeLocked}
+                                    className={`w-full pl-10 pr-8 py-2 bg-white border rounded-lg focus:outline-none focus:ring-1 transition-all duration-200 text-sm ${
+                                      isReferralCodeLocked 
+                                        ? 'bg-gray-50 cursor-not-allowed' 
+                                        : ''
+                                    } ${
+                                      affiliateCodeValid === true 
+                                        ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
+                                        : affiliateCodeValid === false 
+                                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                                        : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                                    }`}
+                                    placeholder={isReferralCodeLocked ? t('authPage.register.referralCode.applied') : t('authPage.register.referralCode.placeholder')}
+                                    maxLength={8}
+                                  />
+                                  {affiliateCodeLoading && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#05294E]"></div>
+                                    </div>
+                                  )}
+                                  {affiliateCodeValid === true && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <CheckCircle className="h-3 w-3 text-green-500" />
+                                    </div>
+                                  )}
+                                  {affiliateCodeValid === false && formData.affiliateCode && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <X className="h-3 w-3 text-red-500" />
+                                    </div>
+                                  )}
+                                </div>
+                                {formData.affiliateCode && (
+                                  <div className="text-xs">
+                                    {affiliateCodeValid === true && (
+                                      <p className="text-green-600 flex items-center">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        {t('authPage.register.referralCode.valid')}
+                                        {isReferralCodeLocked && (
+                                          <span className="ml-2 text-blue-600">
+                                            {t('authPage.register.referralCode.appliedFromLink')}
+                                          </span>
+                                        )}
+                                      </p>
+                                    )}
+                                    {affiliateCodeValid === false && (
+                                      <p className="text-red-600 flex items-center">
+                                        <X className="h-3 w-3 mr-1" />
+                                        {t('authPage.register.referralCode.invalid')}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Seller referral code input */}
+                            {selectedReferralType === 'seller' && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <Target className="h-3 w-3 text-[#D0151C] mr-2" />
+                                    <span className="text-sm font-medium text-slate-700">
+                                      {t('authPage.register.sellerReferralCode.title')}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReferralTypeSelect('friend')}
+                                    className="text-xs text-[#D0151C] hover:text-[#B01218] font-medium"
+                                  >
+                                    {t('authPage.register.referralCode.switchToFriend')}
+                                  </button>
+                                </div>
+                                <div className="relative">
+                                  {isSellerReferralCodeLocked ? (
+                                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                  )}
+                                  <input
+                                    id="sellerReferralCode"
+                                    name="sellerReferralCode"
+                                    type="text"
+                                    value={formData.sellerReferralCode || ''}
+                                    onChange={handleSellerReferralCodeChange}
+                                    readOnly={isSellerReferralCodeLocked}
+                                    className={`w-full pl-10 pr-8 py-2 bg-white border rounded-lg focus:outline-none focus:ring-1 transition-all duration-200 text-sm ${
+                                      isSellerReferralCodeLocked 
+                                        ? 'bg-gray-50 cursor-not-allowed' 
+                                        : ''
+                                    } ${
+                                      sellerReferralCodeValid === true 
+                                        ? 'border-green-300 focus:ring-green-500 focus:border-green-500' 
+                                        : sellerReferralCodeValid === false 
+                                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                                        : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
+                                    }`}
+                                    placeholder={isSellerReferralCodeLocked ? t('authPage.register.sellerReferralCode.applied') : t('authPage.register.sellerReferralCode.placeholder')}
+                                    maxLength={20}
+                                  />
+                                  {sellerReferralCodeLoading && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#D0151C]"></div>
+                                    </div>
+                                  )}
+                                  {sellerReferralCodeValid === true && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <CheckCircle className="h-3 w-3 text-green-500" />
+                                    </div>
+                                  )}
+                                  {sellerReferralCodeValid === false && formData.sellerReferralCode && (
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                      <X className="h-3 w-3 text-red-500" />
+                                    </div>
+                                  )}
+                                </div>
+                                {formData.sellerReferralCode && (
+                                  <div className="text-xs">
+                                    {sellerReferralCodeValid === true && (
+                                      <p className="text-green-600 flex items-center">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        {t('authPage.register.sellerReferralCode.valid')}
+                                        {isSellerReferralCodeLocked && (
+                                          <span className="ml-2 text-blue-600">
+                                            {t('authPage.register.sellerReferralCode.appliedFromLink')}
+                                          </span>
+                                        )}
+                                      </p>
+                                    )}
+                                    {sellerReferralCodeValid === false && (
+                                      <p className="text-red-600 flex items-center">
+                                        <X className="h-3 w-3 mr-1" />
+                                        {t('authPage.register.sellerReferralCode.invalid')}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Back button */}
+                            <div className="pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowReferralCodeSection(null);
+                                  setSelectedReferralType(null);
+                                  setFormData(prev => ({ 
+                                    ...prev, 
+                                    affiliateCode: '', 
+                                    sellerReferralCode: '' 
+                                  }));
+                                  setAffiliateCodeValid(null);
+                                  setSellerReferralCodeValid(null);
+                                  setIsReferralCodeLocked(false);
+                                  setIsSellerReferralCodeLocked(false);
+                                }}
+                                className="text-xs text-slate-400 hover:text-slate-600 font-medium flex items-center transition-colors"
+                              >
+                                <X className="h-3 w-3 mr-1" />
+                                {t('authPage.register.referralCode.backToChoice')}
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -1099,7 +1210,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !termsAccepted}
+              disabled={loading || !termsAccepted || (activeTab === 'student' && showReferralCodeSection === null)}
               className={`w-full flex justify-center py-4 px-4 border border-transparent text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 activeTab === 'student' 
                   ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]' 
