@@ -1,4 +1,49 @@
 {
+  "stepByStepGuide": {
+    "title": "Step-by-Step Guide",
+    "subtitle": "How the application process works",
+    "closeButton": "Close step-by-step guide",
+    "progress": "Step {current} of {total}",
+    "previous": "Previous",
+    "next": "Next",
+    "startNow": "Start Now!",
+    "steps": {
+      "step1": {
+        "title": "Welcome to Matrícula USA! 🎓",
+        "description": "Let's guide you through the entire application process for scholarships in the USA. It's easier than you think!"
+      },
+      "step2": {
+        "title": "1. Explore Scholarships",
+        "description": "Browse our list of scholarships. Each one has detailed information about values, requirements, and partner universities. Click on the ones that interest you!"
+      },
+      "step3": {
+        "title": "2. Add to Selection List",
+        "description": "Select the scholarships you want to apply for and add them to your selection list. You can choose multiple scholarships and manage your selections easily."
+      },
+      "step4": {
+        "title": "3. Student Type",
+        "description": "Select your student type: Initial, Transfer, or Status Change. This helps us direct the best opportunities for your profile."
+      },
+      "step5": {
+        "title": "4. Upload Documents",
+        "description": "Upload your documents: Passport, High School Diploma, and a Bank Statement. Our team will review everything and give you feedback."
+      },
+      "step6": {
+        "title": "5. Application Fee Selection",
+        "description": "Once your documents are approved, you must choose only one scholarship to proceed. (See the screenshot for details.)"
+      },
+      "step7": {
+        "title": "6. My Applications & Scholarship Fee",
+        "description": "Inside 'My Applications', after paying the Application Fee, you will be able to pay the Scholarship Fee for your chosen scholarship."
+      },
+      "step8": {
+        "title": "7. Application Chat & I-20 Control Fee",
+        "description": "In the Application Chat, you can talk directly to the university. The university may request more documents. Here you will also pay the I-20 Control Fee if required."
+      }
+    },
+    "expandImage": "Expand image",
+    "previewNotAvailable": "Preview not available"
+  },
   "nav": {
     "home": "Home",
     "howItWorks": "How It Works",

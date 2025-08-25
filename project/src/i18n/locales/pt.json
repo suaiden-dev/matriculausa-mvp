@@ -1,4 +1,49 @@
 {
+  "stepByStepGuide": {
+    "title": "Guia Passo a Passo",
+    "subtitle": "Como funciona o processo de candidatura",
+    "closeButton": "Fechar guia passo a passo",
+    "progress": "Passo {current} de {total}",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "startNow": "Começar Agora!",
+    "steps": {
+      "step1": {
+        "title": "Bem-vindo ao Matrícula USA! 🎓",
+        "description": "Vamos guiá-lo através de todo o processo de candidatura para bolsas nos EUA. É mais fácil do que você pensa!"
+      },
+      "step2": {
+        "title": "1. Explorar Bolsas",
+        "description": "Navegue pela nossa lista de bolsas. Cada uma tem informações detalhadas sobre valores, requisitos e universidades parceiras. Clique nas que lhe interessam!"
+      },
+      "step3": {
+        "title": "2. Adicionar à Lista de Seleção",
+        "description": "Selecione as bolsas para as quais deseja se candidatar e adicione-as à sua lista de seleção. Você pode escolher múltiplas bolsas e gerenciar suas seleções facilmente."
+      },
+      "step4": {
+        "title": "3. Tipo de Estudante",
+        "description": "Selecione seu tipo de estudante: Inicial, Transferência ou Mudança de Status. Isso nos ajuda a direcionar as melhores oportunidades para seu perfil."
+      },
+      "step5": {
+        "title": "4. Enviar Documentos",
+        "description": "Envie seus documentos: Passaporte, Diploma do Ensino Médio e Extrato Bancário. Nossa equipe revisará tudo e dará feedback."
+      },
+      "step6": {
+        "title": "5. Seleção da Taxa de Candidatura",
+        "description": "Uma vez que seus documentos sejam aprovados, você deve escolher apenas uma bolsa para prosseguir. (Veja a captura de tela para detalhes.)"
+      },
+      "step7": {
+        "title": "6. Minhas Candidaturas e Taxa de Bolsa",
+        "description": "Dentro de 'Minhas Candidaturas', após pagar a Taxa de Candidatura, você poderá pagar a Taxa de Bolsa para sua bolsa escolhida."
+      },
+      "step8": {
+        "title": "7. Chat de Candidatura e Taxa de Controle I-20",
+        "description": "No Chat de Candidatura, você pode falar diretamente com a universidade. A universidade pode solicitar mais documentos. Aqui você também pagará a Taxa de Controle I-20 se for necessária."
+      }
+    },
+    "expandImage": "Expandir imagem",
+    "previewNotAvailable": "Prévia não disponível"
+  },
   "nav": {
     "home": "Início",
     "howItWorks": "Como Funciona",

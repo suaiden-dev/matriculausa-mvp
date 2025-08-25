@@ -1,4 +1,49 @@
 {
+  "stepByStepGuide": {
+    "title": "Guía Paso a Paso",
+    "subtitle": "Cómo funciona el proceso de solicitud",
+    "closeButton": "Cerrar guía paso a paso",
+    "progress": "Paso {current} de {total}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "startNow": "¡Comenzar Ahora!",
+    "steps": {
+      "step1": {
+        "title": "¡Bienvenido a Matrícula USA! 🎓",
+        "description": "Te guiaremos a través de todo el proceso de solicitud para becas en EE.UU. ¡Es más fácil de lo que piensas!"
+      },
+      "step2": {
+        "title": "1. Explorar Becas",
+        "description": "Navega por nuestra lista de becas. Cada una tiene información detallada sobre valores, requisitos y universidades asociadas. ¡Haz clic en las que te interesen!"
+      },
+      "step3": {
+        "title": "2. Agregar a la Lista de Selección",
+        "description": "Selecciona las becas para las que quieres solicitar y agrégalas a tu lista de selección. Puedes elegir múltiples becas y gestionar tus selecciones fácilmente."
+      },
+      "step4": {
+        "title": "3. Tipo de Estudiante",
+        "description": "Selecciona tu tipo de estudiante: Inicial, Transferencia o Cambio de Estado. Esto nos ayuda a dirigir las mejores oportunidades para tu perfil."
+      },
+      "step5": {
+        "title": "4. Subir Documentos",
+        "description": "Sube tus documentos: Pasaporte, Diploma de Secundaria y Estado de Cuenta Bancario. Nuestro equipo revisará todo y te dará retroalimentación."
+      },
+      "step6": {
+        "title": "5. Selección de Tarifa de Solicitud",
+        "description": "Una vez que tus documentos sean aprobados, debes elegir solo una beca para proceder. (Ver la captura de pantalla para detalles.)"
+      },
+      "step7": {
+        "title": "6. Mis Solicitudes y Tarifa de Beca",
+        "description": "Dentro de 'Mis Solicitudes', después de pagar la Tarifa de Solicitud, podrás pagar la Tarifa de Beca para tu beca elegida."
+      },
+      "step8": {
+        "title": "7. Chat de Solicitud y Tarifa de Control I-20",
+        "description": "En el Chat de Solicitud, puedes hablar directamente con la universidad. La universidad puede solicitar más documentos. Aquí también pagarás la Tarifa de Control I-20 si es necesaria."
+      }
+    },
+    "expandImage": "Expandir imagen",
+    "previewNotAvailable": "Vista previa no disponible"
+  },
   "nav": {
     "home": "Inicio",
     "howItWorks": "Cómo Funciona",
