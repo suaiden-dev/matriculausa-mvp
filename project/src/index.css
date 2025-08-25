@@ -77,12 +77,12 @@
   }
   
   /* CSS específico para inputs de arquivo - PREVENIR QUEBRAS DE LAYOUT */
-  input[type="file"] {
+  /* input[type="file"] {
     position: absolute !important;
     left: -9999px !important;
     opacity: 0 !important;
     pointer-events: none !important;
-  }
+  } */
   
   /* Garantir que labels de arquivo sejam estáveis */
   label[for*="file"],
