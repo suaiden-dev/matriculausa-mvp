@@ -72,9 +72,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="mt-2 text-slate-600">
-            Monitor your sales performance and key metrics
-          </p>
+
         </div>
         <button
           onClick={onRefresh}
