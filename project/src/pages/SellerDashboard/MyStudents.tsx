@@ -12,6 +12,8 @@ interface Student {
   latest_activity: string;
   commission_earned?: number;
   fees_count?: number;
+  scholarship_title?: string;
+  university_name?: string;
 }
 
 interface MyStudentsProps {
@@ -62,14 +64,13 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
     return new Date(dateString).toLocaleDateString('en-US');
   };
 
-  const totalRevenue = filteredStudents.reduce((sum, s) => sum + (s.total_paid || 0), 0);
+  // Estatísticas calculadas dinamicamente
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Students</h1>
           <p className="mt-1 text-sm text-slate-600">
             Track the students you have referenced
           </p>
@@ -83,7 +84,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -99,25 +100,13 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Fees Paid</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(totalRevenue)}</p>
+              <p className="text-sm font-medium text-slate-600">Active Students</p>
+                             <p className="text-3xl font-bold text-orange-600 mt-1">
+                 {filteredStudents.filter(s => s.status === 'active' || s.status === 'registered' || s.status === 'enrolled').length}
+               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Average Fees</p>
-              <p className="text-3xl font-bold text-purple-600 mt-1">
-                {formatCurrency(totalRevenue / filteredStudents.length || 0)}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <GraduationCap className="h-6 w-6 text-purple-600" />
+            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+              <Calendar className="h-6 w-6 text-orange-600" />
             </div>
           </div>
         </div>
@@ -152,65 +141,63 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         {paginatedStudents.length > 0 ? (
           <div className="divide-y divide-slate-200">
-            {paginatedStudents.map((student) => (
-                               <div 
-                  key={student.id} 
-                  className="p-6 hover:bg-slate-50 transition-colors cursor-pointer"
-                  onClick={() => onViewStudent(student.id)}
-                >
-                <div className="flex items-center justify-between">
+            {paginatedStudents.map((student, index) => (
+              <div 
+                key={`${student.id}-${index}`}
+                className="p-6 hover:bg-slate-50 transition-colors cursor-pointer"
+                onClick={() => onViewStudent(student.id)}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                       <span className="text-lg font-medium text-blue-600">
                         {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
                       </span>
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-slate-900">
                         {student.full_name || 'Name not provided'}
                       </h3>
-                      <div className="flex items-center space-x-4 mt-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
                         <div className="flex items-center text-sm text-slate-500">
-                          <Mail className="h-4 w-4 mr-1" />
-                          {student.email}
+                          <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{student.email}</span>
                         </div>
                         {student.country && (
                           <div className="flex items-center text-sm text-slate-500">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {student.country}
+                            <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">{student.country}</span>
                           </div>
                         )}
                         <div className="flex items-center text-sm text-slate-500">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {formatDate(student.created_at)}
+                          <Calendar className="h-4 w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate">{formatDate(student.created_at)}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                                     <div className="text-right">
-                     <div className="mb-2">
-                       <p className="text-sm text-slate-600">Total Fees Paid</p>
-                       <p className="text-xl font-bold text-green-600">
-                         {formatCurrency(student.total_paid || 0)}
-                       </p>
-                     </div>
-                     <div className="mb-2">
-                       <p className="text-xs text-slate-500">
-                         {student.fees_count || 0} fee{(student.fees_count || 0) !== 1 ? 's' : ''} paid
-                       </p>
-                     </div>
-                     <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                       student.status === 'registered' || student.status === 'enrolled' || student.status === 'completed' 
-                         ? 'bg-green-100 text-green-800' 
-                         : 'bg-gray-100 text-gray-800'
-                     }`}>
-                       {student.status === 'registered' ? 'Registered' : 
-                        student.status === 'enrolled' ? 'Enrolled' :
-                        student.status === 'completed' ? 'Completed' :
-                        student.status === 'dropped' ? 'Dropped' : 'Unknown'}
-                     </span>
-                   </div>
+                  <div className="flex-shrink-0">
+                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                      student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' || student.status === 'completed' 
+                        ? 'bg-green-100 text-green-800' 
+                        : student.status === 'pending' || student.status === 'processing'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : student.status === 'dropped' || student.status === 'cancelled'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {student.status === 'active' ? 'Active' :
+                       student.status === 'registered' ? 'Registered' : 
+                       student.status === 'enrolled' ? 'Enrolled' :
+                       student.status === 'completed' ? 'Completed' :
+                       student.status === 'pending' ? 'Pending' :
+                       student.status === 'processing' ? 'Processing' :
+                       student.status === 'dropped' ? 'Dropped' : 
+                       student.status === 'cancelled' ? 'Cancelled' :
+                       student.status || 'Unknown'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

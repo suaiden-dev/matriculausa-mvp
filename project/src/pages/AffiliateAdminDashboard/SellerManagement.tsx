@@ -1,219 +1,197 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Users, UserPlus, Check, X, AlertTriangle, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Users, UserPlus, Check, X, AlertTriangle, Crown, ChevronLeft, ChevronRight, Settings, UserCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import SellerRegistrationLinkGenerator from '../../components/SellerRegistrationLinkGenerator';
+import SellerRegistrationsManager from '../../components/SellerRegistrationsManager';
 
-interface User {
+interface Seller {
   id: string;
   user_id: string;
-  email: string;
-  full_name?: string;
+  email: string | null;
+  full_name?: string | null;
   role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
-  created_at: string;
-  phone?: string;
-  country?: string;
-  isSeller?: boolean;
+  created_at: string | null;
+  phone?: string | null;
+  country?: string | null;
+  isSeller: boolean;
   hasInactiveAffiliateCode?: boolean;
 }
 
 const SellerManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState<string>('all');
-  const [promotingUser, setPromotingUser] = useState<string | null>(null);
   const [demotingUser, setDemotingUser] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'management' | 'registration' | 'pending'>('management');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [sellerToDeactivate, setSellerToDeactivate] = useState<{ id: string; name: string } | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [localModifications, setLocalModifications] = useState<Set<string>>(new Set());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deactivatedSellers, setDeactivatedSellers] = useState<Set<string>>(new Set());
   const { user: currentUser } = useAuth();
 
-  // Constantes de paginação
+     // Pagination constants
   const USERS_PER_PAGE = 20;
 
   useEffect(() => {
-    loadAllUsers();
+    console.log('🔄 useEffect triggered - calling loadSellers');
+    loadSellers(false); // Don't force refresh on mount
   }, []);
 
-  const loadAllUsers = useCallback(async () => {
+  const loadSellers = useCallback(async (forceRefresh = false) => {
     try {
-      setLoading(true);
-
-      // Buscar todos os usuários
-      const { data: usersData, error: usersError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (usersError) {
-        console.error('Error loading users:', usersError);
-        throw new Error(`Failed to load users: ${usersError.message}`);
+      console.log('🔄 loadSellers called - fetching sellers from database', { forceRefresh });
+      
+      // If not forcing refresh and we have local modifications, skip
+      if (!forceRefresh && localModifications.size > 0) {
+        console.log('⚠️ Skipping loadSellers due to local modifications');
+        return;
       }
+      
+      setLoading(true);
+      setIsRefreshing(true);
 
-      // Buscar sellers reais da tabela sellers
+      // Fetch all active sellers
       const { data: sellersData, error: sellersError } = await supabase
         .from('sellers')
         .select('*')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
       if (sellersError) {
-        console.error('Error loading sellers:', sellersError);
+        console.error('❌ Error loading sellers:', sellersError);
         throw new Error(`Failed to load sellers: ${sellersError.message}`);
       }
 
-      // Processar dados - só é seller se estiver na tabela sellers
-      const processedUsers = (usersData || []).map(user => {
-        // Verificar se o usuário é um seller real (está na tabela sellers)
-        const isRealSeller = sellersData?.some(seller => 
-          seller.user_id === user.user_id
-        ) || false;
+      console.log('📊 Sellers data from database:', sellersData?.length || 0, 'sellers');
 
-        return {
-          ...user,
-          isSeller: isRealSeller,
-          hasInactiveAffiliateCode: false // Removido o sistema antigo de affiliate_codes
-        };
-      });
+      // Process seller data
+      const processedUsers = (sellersData || []).map((seller: any) => ({
+        id: seller.id,
+        user_id: seller.user_id,
+        email: seller.email || null,
+        full_name: seller.name || null,
+        role: 'seller' as const,
+        created_at: seller.created_at || null,
+        phone: seller.phone || null,
+        country: seller.territory || null,
+        isSeller: true,
+        hasInactiveAffiliateCode: false
+      }));
 
-      setUsers(processedUsers);
+             // Filter out deactivated sellers from database results
+       const activeSellersFromDB = processedUsers.filter(seller => 
+         !deactivatedSellers.has(seller.id)
+       );
+       
+       console.log('🔄 Filtered sellers from database:', {
+         total: processedUsers.length,
+         active: activeSellersFromDB.length,
+         deactivated: deactivatedSellers.size
+       });
+
+       // Set sellers in local state
+       setSellers(activeSellersFromDB);
+      
+      console.log('✅ Sellers state updated with', processedUsers.length, 'sellers');
     } catch (error: any) {
-      console.error('Error loading users:', error);
+      console.error('❌ Error loading sellers:', error);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [localModifications, deactivatedSellers]); // Include dependencies to prevent stale closures
 
-  const promoteToSeller = async (userId: string, userName: string) => {
+    const deactivateSeller = async (sellerId: string, userName: string) => {
     try {
-      setPromotingUser(userId);
+      setDemotingUser(sellerId);
+      console.log('🔄 Starting deactivation for seller:', sellerId, userName);
 
-      // Buscar o user_profile_id pelo user_id
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-
-      if (profileError || !userProfile) {
-        throw new Error('User profile not found');
-      }
-
-      // Usar a nova função create_seller_from_user_profile
-      const { data, error } = await supabase.rpc('create_seller_from_user_profile', {
-        user_profile_id: userProfile.id,
-        affiliate_admin_user_id: currentUser?.id
-      });
-
-      if (error) throw error;
-
-      const result = data as { success: boolean; message: string };
-      
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-
-      // Recarregar dados
-      await loadAllUsers();
-      alert(`${userName} has been successfully promoted to seller!`);
-
-    } catch (error: any) {
-      console.error('Error promoting user to seller:', error);
-      alert(`Error promoting user: ${error.message}`);
-    } finally {
-      setPromotingUser(null);
-    }
-  };
-
-  const demoteFromSeller = async (userId: string, userName: string) => {
-    // Confirmação antes de rebaixar
-    const confirmed = window.confirm(
-      `Are you sure you want to remove "${userName}" as a seller?\n\n` +
-      `This action will:\n` +
-      `• Deactivate their seller account\n` +
-      `• Remove their seller privileges\n` +
-      `• They will no longer be able to refer students\n` +
-      `• Their referral code will be deactivated\n\n` +
-      `This action can be undone by promoting them to seller again.`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      setDemotingUser(userId);
-
-      // Buscar o seller do usuário
-      const { data: seller, error: sellerError } = await supabase
-        .from('sellers')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .single();
-
-      if (sellerError || !seller) {
-        throw new Error('Seller not found for this user');
-      }
-
-      // Desativar o seller (soft delete)
+      // Step 1: Deactivate the seller in the sellers table (soft delete)
       const { error: updateError } = await supabase
         .from('sellers')
         .update({ is_active: false })
-        .eq('id', seller.id);
+        .eq('id', sellerId);
 
       if (updateError) {
-        throw new Error(`Failed to deactivate seller: ${updateError.message}`);
+        console.error('❌ Error updating sellers table:', updateError);
+        throw new Error(`Failed to deactivate seller in database: ${updateError.message}`);
       }
 
-      // Atualizar role do usuário para student
-      const { error: roleError } = await supabase
-        .from('user_profiles')
-        .update({ role: 'student' })
-        .eq('user_id', userId);
+      console.log('✅ Seller deactivated in database successfully');
 
-      if (roleError) {
-        console.warn('Warning: Failed to update user role:', roleError);
-      }
+      // Step 2: Update local state immediately - remove seller from list
+      setSellers(prevSellers => {
+        const updatedSellers = prevSellers.filter(seller => seller.id !== sellerId);
+        console.log('🔄 Updated local state:', {
+          before: prevSellers.length,
+          after: updatedSellers.length,
+          removed: sellerId
+        });
+        return updatedSellers;
+      });
 
-      // Recarregar dados
-      await loadAllUsers();
-      alert(`${userName} has been successfully demoted from seller!`);
+      // Step 3: Track this modification to prevent reloading
+      setLocalModifications(prev => new Set(prev).add(sellerId));
+      setDeactivatedSellers(prev => new Set(prev).add(sellerId));
+      console.log('✅ Added seller to local modifications and deactivated sellers:', sellerId);
+      
+      // Step 4: Close modal and clear state
+      setShowConfirmModal(false);
+      setSellerToDeactivate(null);
+      
+      // Step 5: Show success message
+      setSuccessMessage(`${userName} was deactivated successfully!`);
+      setTimeout(() => setSuccessMessage(''), 3000);
 
+      console.log('✅ Seller deactivation completed successfully');
     } catch (error: any) {
-      console.error('Error demoting user from seller:', error);
-      alert(`Error demoting user: ${error.message}`);
+      console.error('❌ Error during seller deactivation:', error);
+      setErrorMessage(`Error deactivating seller: ${error.message}`);
+      setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setDemotingUser(null);
     }
   };
 
+     // Function to open confirmation modal
+  const openDeactivateModal = (sellerId: string, sellerName: string) => {
+    setSellerToDeactivate({ id: sellerId, name: sellerName });
+    setShowConfirmModal(true);
+  };
 
+     // Function to confirm deactivation
+  const confirmDeactivation = () => {
+    if (sellerToDeactivate) {
+      deactivateSeller(sellerToDeactivate.id, sellerToDeactivate.name);
+    }
+  };
 
-  // Filtros aplicados globalmente (não limitados à página)
-  const filteredUsers = users.filter(user => {
+     // Filter sellers based on search
+  const filteredSellers = sellers.filter(seller => {
     const matchesSearch = 
-      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = 
-      filterRole === 'all' || 
-      (filterRole === 'seller' && user.isSeller) ||
-      (filterRole === 'non-seller' && !user.isSeller) ||
-      user.role === filterRole;
+      (seller.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (seller.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
-    return matchesSearch && matchesFilter;
+    return matchesSearch;
   });
 
-  // Cálculos de paginação
-  const totalUsers = filteredUsers.length;
-  const totalPages = Math.ceil(totalUsers / USERS_PER_PAGE);
+     // Pagination calculations
+  const totalSellers = filteredSellers.length;
+  const totalPages = Math.ceil(totalSellers / USERS_PER_PAGE);
   const startIndex = (currentPage - 1) * USERS_PER_PAGE;
   const endIndex = startIndex + USERS_PER_PAGE;
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+  const paginatedSellers = filteredSellers.slice(startIndex, endIndex);
 
-  // Reset da página quando filtros mudam
+     // Reset page when search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterRole]);
+  }, [searchTerm]);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -222,39 +200,29 @@ const SellerManagement: React.FC = () => {
   };
 
   const getPaginationInfo = () => {
-    if (totalUsers === 0) return 'No users found';
+    if (totalSellers === 0) return 'No sellers found';
     const start = startIndex + 1;
-    const end = Math.min(endIndex, totalUsers);
-    return `Showing ${start}-${end} of ${totalUsers} users`;
+    const end = Math.min(endIndex, totalSellers);
+    return `Showing ${start}-${end} of ${totalSellers} sellers`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const getRoleColor = (role: string, isSeller: boolean) => {
-    if (isSeller) return 'bg-green-100 text-green-800';
-    switch (role) {
-      case 'student': return 'bg-blue-100 text-blue-800';
-      case 'school': return 'bg-purple-100 text-purple-800';
-      case 'affiliate_admin': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid Date';
     }
   };
 
-  const getRoleLabel = (role: string, isSeller: boolean) => {
-    if (isSeller) return 'Seller';
-    switch (role) {
-      case 'student': return 'Student';
-      case 'school': return 'School';
-      case 'affiliate_admin': return 'Affiliate Admin';
-      default: return role;
-    }
-  };
+
+
+  // Debug log for render
+  console.log('🔄 SellerManagement render - sellers count:', sellers.length, 'loading:', loading, 'local modifications:', localModifications.size, 'deactivated sellers:', deactivatedSellers.size);
 
   if (loading) {
     return (
@@ -267,298 +235,339 @@ const SellerManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Users className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-500">Total Users</p>
-              <p className="text-2xl font-bold text-slate-900">{users.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <UserPlus className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-500">Sellers</p>
-              <p className="text-2xl font-bold text-slate-900">
-                {users.filter(u => u.isSeller).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Crown className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-500">Students</p>
-              <p className="text-2xl font-bold text-slate-900">
-                {users.filter(u => u.role === 'student').length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Users className="h-6 w-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-500">Available to Promote</p>
-              <p className="text-2xl font-bold text-slate-900">
-                {users.filter(u => !u.isSeller && u.role === 'student').length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search users by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          <div className="sm:w-48">
-            <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              aria-label="Filter users by role"
+      {/* Tabs Navigation */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="border-b border-slate-200">
+          <nav className="-mb-px flex space-x-8 px-6">
+            <button
+              onClick={() => setActiveTab('management')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'management'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
             >
-              <option value="all">All Users</option>
-              <option value="student">Students</option>
-              <option value="school">Schools</option>
-              <option value="seller">Current Sellers</option>
-              <option value="non-seller">Non-Sellers</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-              {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">All Platform Users</h2>
-                <p className="text-slate-600 text-sm">Manage user roles and promote users to sellers</p>
-              </div>
-              <div className="text-sm text-slate-500">
-                {getPaginationInfo()}
-              </div>
-            </div>
-          </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Joined
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {paginatedUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">
-                          {user.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-slate-900">
-                          {user.full_name || 'No name'}
-                        </p>
-                        <p className="text-sm text-slate-500">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role, user.isSeller || false)}`}>
-                      {getRoleLabel(user.role, user.isSeller || false)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-900">
-                    <div>
-                      <p>{user.phone || 'No phone'}</p>
-                      <p className="text-slate-500">{user.country || 'No country'}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">
-                    {formatDate(user.created_at)}
-                  </td>
-                  <td className="px-6 py-4">
-                    {user.isSeller ? (
-                      <button
-                        onClick={() => demoteFromSeller(user.user_id, user.full_name || 'Unknown User')}
-                        disabled={demotingUser === user.user_id}
-                        className="inline-flex items-center px-3 py-1 border border-red-600 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {demotingUser === user.user_id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600 mr-1"></div>
-                            Demoting...
-                          </>
-                        ) : (
-                          <>
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Remove Seller
-                          </>
-                        )}
-                      </button>
-
-                    ) : user.role === 'student' ? (
-                      <button
-                        onClick={() => promoteToSeller(user.user_id, user.full_name || 'Unknown User')}
-                        disabled={promotingUser === user.user_id}
-                        className="inline-flex items-center px-3 py-1 border border-blue-600 rounded-md text-xs font-medium text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {promotingUser === user.user_id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600 mr-1"></div>
-                            Promoting...
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="h-3 w-3 mr-1" />
-                            Promote to Seller
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                        <X className="h-3 w-3 mr-1" />
-                        Cannot Promote
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {paginatedUsers.length === 0 && filteredUsers.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No users found</h3>
-              <p className="text-slate-500">Try adjusting your search or filter criteria.</p>
-            </div>
-          )}
+              <Users className="w-4 h-4 inline mr-2" />
+              Manage Sellers
+            </button>
+            <button
+              onClick={() => setActiveTab('registration')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'registration'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <UserPlus className="w-4 h-4 inline mr-2" />
+              Generate Registration Links
+            </button>
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'pending'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <UserCheck className="w-4 h-4 inline mr-2" />
+              Pending Registrations
+            </button>
+          </nav>
         </div>
 
-        {/* Paginação */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-200">
-            {/* Informações da página centralizadas */}
-            <div className="flex items-center justify-center mb-4">
-              <div className="text-sm text-slate-500">
-                Page {currentPage} of {totalPages}
-              </div>
-            </div>
-            
-            {/* Controles de navegação centralizados */}
-            <div className="flex items-center justify-center space-x-2">
-              <button
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </button>
-              
-              {/* Números das páginas */}
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  let pageNumber;
-                  if (totalPages <= 5) {
-                    pageNumber = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNumber = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNumber = totalPages - 4 + i;
-                  } else {
-                    pageNumber = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNumber}
-                      onClick={() => goToPage(pageNumber)}
-                      className={`inline-flex items-center px-3 py-1 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        currentPage === pageNumber
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      {pageNumber}
-                    </button>
-                  );
-                })}
-                
-                {totalPages > 5 && currentPage < totalPages - 2 && (
-                  <>
-                    <span className="px-2 text-slate-500">...</span>
-                    <button
-                      onClick={() => goToPage(totalPages)}
-                      className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
+        {/* Tab Content */}
+        <div className="p-6">
+          {activeTab === 'management' && (
+            <>
+                             {/* Header Stats */}
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                   <div className="flex items-center">
+                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                       <Users className="h-6 w-6 text-blue-600" />
+                     </div>
+                     <div className="ml-4">
+                       <p className="text-sm font-medium text-slate-500">Total Sellers</p>
+                       <p className="text-2xl font-bold text-slate-900">{sellers.length}</p>
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                   <div className="flex items-center">
+                     <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                       <UserPlus className="h-6 w-6 text-green-600" />
+                     </div>
+                     <div className="ml-4">
+                       <p className="text-sm font-medium text-slate-500">Active Sellers</p>
+                       <p className="text-2xl font-bold text-slate-900">
+                         {sellers.filter(s => s.isSeller).length}
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                   <div className="flex items-center">
+                     <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                       <Settings className="h-6 w-6 text-orange-600" />
+                     </div>
+                     <div className="ml-4">
+                       <p className="text-sm font-medium text-slate-500">Management</p>
+                       <p className="text-2xl font-bold text-slate-900">Active</p>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+                             {/* Search */}
+               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
+                 <div className="flex flex-col sm:flex-row gap-4">
+                   <div className="flex-1">
+                     <div className="relative">
+                       <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                       <input
+                         type="text"
+                         placeholder="Search sellers by name or email..."
+                         value={searchTerm}
+                         onChange={(e) => setSearchTerm(e.target.value)}
+                         className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       />
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+                             {/* Sellers Table */}
+               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                 <div className="px-6 py-4 border-b border-slate-200">
+                                        <div className="flex justify-between items-center">
+                       <div>
+                         <h2 className="text-xl font-bold text-slate-900">My Sellers</h2>
+                         <p className="text-slate-600 text-sm">Sellers registered through your codes</p>
+                       </div>
+                                                <div className="flex items-center space-x-4">
+                           {deactivatedSellers.size > 0 && (
+                             <div className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
+                               {deactivatedSellers.size} seller{deactivatedSellers.size > 1 ? 's' : ''} deactivated this session
+                             </div>
+                           )}
+                           <button
+                             onClick={() => {
+                               console.log('🔄 Manual refresh requested');
+                               setLocalModifications(new Set()); // Clear modifications
+                               setDeactivatedSellers(new Set()); // Clear deactivated sellers
+                               loadSellers(true); // Force refresh
+                             }}
+                             disabled={isRefreshing}
+                             className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                           >
+                             {isRefreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
+                           </button>
+                           <div className="text-sm text-slate-500">
+                             {getPaginationInfo()}
+                           </div>
+                         </div>
+                     </div>
+                 </div>
+                 <div className="overflow-x-auto">
+                   <table className="min-w-full divide-y divide-slate-200">
+                     <thead className="bg-slate-50">
+                       <tr>
+                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                           Seller
+                         </th>
+                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                           Status
+                         </th>
+                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                           Registered on
+                         </th>
+                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                           Actions
+                         </th>
+                       </tr>
+                     </thead>
+                                         <tbody className="bg-white divide-y divide-slate-200">
+                       {paginatedSellers.map((seller) => (
+                         <tr key={seller.id} className="hover:bg-slate-50">
+                           <td className="px-6 py-4 whitespace-nowrap">
+                             <div className="flex items-center">
+                               <div className="flex-shrink-0 h-10 w-10">
+                                 <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                                   <span className="text-sm font-medium text-green-700">
+                                     {seller.full_name?.charAt(0) || seller.email?.charAt(0) || '?'}
+                                   </span>
+                                 </div>
+                               </div>
+                               <div className="ml-4">
+                                 <div className="text-sm font-medium text-slate-900">
+                                   {seller.full_name || 'Name not provided'}
+                                 </div>
+                                 <div className="text-sm text-slate-500">{seller.email}</div>
+                               </div>
+                             </div>
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                             Active Seller
+                           </span>
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                             {formatDate(seller.created_at)}
+                           </td>
+                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                             <button
+                               onClick={() => openDeactivateModal(seller.id, seller.full_name || seller.email || 'Seller')}
+                               disabled={demotingUser === seller.id}
+                               className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                             >
+                               {demotingUser === seller.id ? 'Deactivating...' : 'Deactivate'}
+                             </button>
+                           </td>
+                         </tr>
+                       ))}
+                     </tbody>
+                  </table>
+                </div>
+
+                                 {paginatedSellers.length === 0 && filteredSellers.length === 0 && (
+                   <div className="text-center py-12">
+                     <UserPlus className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                                           <h3 className="text-lg font-medium text-slate-900 mb-2">No sellers found</h3>
+                      <p className="text-slate-500">You don't have any sellers registered yet. Use the "Generate Registration Links" tab to create registration codes.</p>
+                   </div>
+                 )}
+
+                                 {/* Pagination */}
+                 {totalPages > 1 && (
+                   <div className="px-6 py-4 border-t border-slate-200">
+                     {/* Page information centered */}
+                     <div className="flex items-center justify-center mb-4">
+                       <div className="text-sm text-slate-500">
+                         Page {currentPage} of {totalPages}
+                       </div>
+                     </div>
+                     
+                     {/* Navigation controls centered */}
+                     <div className="flex items-center justify-center space-x-2">
+                      <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Previous
+                      </button>
+                      
+                                             {/* Page numbers */}
+                       <div className="flex items-center space-x-1">
+                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                          let pageNumber;
+                          if (totalPages <= 5) {
+                            pageNumber = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNumber = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNumber = totalPages - 4 + i;
+                          } else {
+                            pageNumber = currentPage - 2 + i;
+                          }
+                          
+                          return (
+                            <button
+                              key={pageNumber}
+                              onClick={() => goToPage(pageNumber)}
+                              className={`inline-flex items-center px-3 py-1 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                currentPage === pageNumber
+                                  ? 'border-blue-600 bg-blue-600 text-white'
+                                  : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
+                              }`}
+                            >
+                              {pageNumber}
+                            </button>
+                          );
+                        })}
+                        
+                        {totalPages > 5 && currentPage < totalPages - 2 && (
+                          <>
+                            <span className="px-2 text-slate-500">...</span>
+                            <button
+                              onClick={() => goToPage(totalPages)}
+                              className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              {totalPages}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      
+                      <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-              
-              <button
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </button>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+
+          {activeTab === 'registration' && (
+            <SellerRegistrationLinkGenerator />
+          )}
+
+          {activeTab === 'pending' && (
+            <SellerRegistrationsManager />
+          )}
+        </div>
       </div>
+
+             {/* Confirmation Modal */}
+       {showConfirmModal && sellerToDeactivate && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+             <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+             <h3 className="text-lg font-medium text-slate-900 mb-2">Confirm Deactivation</h3>
+             <p className="text-slate-600 mb-4">
+               Are you sure you want to deactivate the seller "{sellerToDeactivate.name}"?
+               This action cannot be undone.
+             </p>
+             <div className="flex justify-end space-x-2">
+               <button
+                 onClick={() => setShowConfirmModal(false)}
+                 className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+               >
+                 Cancel
+               </button>
+               <button
+                 onClick={confirmDeactivation}
+                 className="px-4 py-2 border border-red-600 rounded-md text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+               >
+                 Deactivate
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+             {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50">
+          {successMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-md shadow-lg z-50">
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
 };
 
-export default SellerManagement; 
+export default SellerManagement;
