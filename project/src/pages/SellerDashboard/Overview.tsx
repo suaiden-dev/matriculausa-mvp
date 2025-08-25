@@ -23,9 +23,10 @@ interface OverviewProps {
   sellerProfile: any;
   students: any[];
   onRefresh: () => void;
+  onNavigate?: (view: string) => void;
 }
 
-const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = [], onRefresh }) => {
+const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = [], onRefresh, onNavigate }) => {
   const recentStudents = students.slice(0, 5);
 
   const formatCurrency = (amount: number) => {
@@ -45,21 +46,24 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       description: 'View all referenced students',
       icon: GraduationCap,
       color: 'bg-gradient-to-r from-red-500 to-red-600',
-      count: stats.totalStudents
+      count: stats.totalStudents,
+      view: 'students'
     },
     {
       title: 'Referral Tools',
       description: 'Access tools to increase sales',
       icon: Target,
       color: 'bg-gradient-to-r from-orange-500 to-orange-600',
-      count: stats.conversionRate
+      count: `${stats.conversionRate}%`,
+      view: 'referral-tools'
     },
     {
       title: 'Performance',
       description: 'Analyze metrics and performance',
       icon: TrendingUp,
       color: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
-      count: stats.totalRevenue
+      count: formatCurrency(stats.totalRevenue),
+      view: 'performance'
     }
   ];
 
@@ -68,7 +72,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Seller Dashboard</h1>
           <p className="mt-2 text-slate-600">
             Monitor your sales performance and key metrics
           </p>
@@ -81,25 +84,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         </button>
       </div>
 
-      {/* Welcome Card */}
-      <div className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border border-red-200 rounded-2xl p-6">
-        <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center shadow-lg">
-            <Crown className="h-8 w-8 text-white" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-slate-900">
-              Welcome, {sellerProfile?.name || 'Seller'}! 👋
-            </h2>
-            <p className="text-slate-600 mt-1">
-              Keep making a difference in students' lives. Your referral code: 
-              <code className="ml-2 px-3 py-2 bg-white rounded-lg border-2 border-red-200 text-red-700 font-mono font-bold shadow-sm">
-                {sellerProfile?.referral_code}
-              </code>
-            </p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -178,15 +163,17 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {quickActions.map((action, index) => {
           return (
-            <div key={index} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-lg transition-all duration-300 group cursor-pointer">
+            <div 
+              key={index} 
+              className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+              onClick={() => onNavigate && onNavigate(action.view)}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 ${action.color} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                   <action.icon className="h-6 w-6 text-white" />
                 </div>
                 <div className="flex items-center">
                   <span className="text-2xl font-bold text-slate-900">{action.count}</span>
-                  {action.title === 'Conversion Rate' && <span className="text-sm text-slate-500 ml-1">%</span>}
-                  {action.title === 'Total Revenue' && <span className="text-sm text-slate-500 ml-1">$</span>}
                 </div>
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">{action.title}</h3>

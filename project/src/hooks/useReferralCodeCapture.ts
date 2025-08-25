@@ -8,15 +8,16 @@ export const useReferralCodeCapture = () => {
     // Captura código de referência da URL em qualquer página
     const params = new URLSearchParams(location.search);
     const refCode = params.get('ref');
+    const sellerRegCode = params.get('code'); // Código de registro de seller
     
     if (refCode) {
-      console.log('[useReferralCodeCapture] Código detectado na URL:', refCode);
+      console.log('[useReferralCodeCapture] Código de referência detectado na URL:', refCode);
       
       // Detecta automaticamente o tipo de código baseado no formato
       const isSellerCode = refCode.startsWith('SELLER_') || refCode.length > 8;
       const isMatriculaRewardsCode = refCode.startsWith('MATR') || (refCode.length <= 8 && /^[A-Z0-9]+$/.test(refCode));
       
-      console.log('[useReferralCodeCapture] Análise do código:', {
+      console.log('[useReferralCodeCapture] Análise do código de referência:', {
         code: refCode,
         isSellerCode,
         isMatriculaRewardsCode,
@@ -50,6 +51,17 @@ export const useReferralCodeCapture = () => {
           localStorage.removeItem('pending_seller_referral_code');
           console.log('[useReferralCodeCapture] ⚠️ Código não reconhecido, salvo como Matricula Rewards:', refCode);
         }
+      }
+    }
+
+    // Captura código de registro de seller
+    if (sellerRegCode) {
+      console.log('[useReferralCodeCapture] Código de registro de seller detectado na URL:', sellerRegCode);
+      
+      const existingRegCode = localStorage.getItem('pending_seller_registration_code');
+      if (!existingRegCode || existingRegCode !== sellerRegCode) {
+        localStorage.setItem('pending_seller_registration_code', sellerRegCode);
+        console.log('[useReferralCodeCapture] ✅ Código de registro de seller capturado e salvo:', sellerRegCode);
       }
     }
   }, [location.search]);

@@ -56,6 +56,7 @@ const Home: React.FC = () => {
       case 'school': return '/school/dashboard';
       case 'admin': return '/admin/dashboard';
       case 'affiliate_admin': return '/affiliate-admin/dashboard';
+      case 'seller': return '/seller/dashboard';
       default: return '/';
     }
   };

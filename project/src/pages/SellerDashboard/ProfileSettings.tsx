@@ -183,7 +183,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Seller Profile</h2>
           <p className="text-sm sm:text-base text-slate-600">Manage your seller profile and preferences</p>
         </div>
         
