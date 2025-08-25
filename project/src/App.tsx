@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './hooks/useAuth';
 import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
@@ -102,28 +103,25 @@ const AppContent = () => {
           <Route path="/seller/student/:studentId" element={<SellerDashboard />} />
           {/* Placeholder routes for other pages */}
           <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
-          <Route path="/contact" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Contact page coming soon...</div></div>} />
-          <Route path="/checkout/success" element={<SuccessPage />} />
-          <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-          <Route path="/student/dashboard/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-          <Route path="/student/dashboard/application-fee/success" element={<ApplicationFeeSuccess />} />
-          <Route path="/application-fee/cancel" element={<ApplicationFeeCancel />} />
-          <Route path="/student/dashboard/payment-success" element={<SuccessPage />} />
-          <Route path="/student/dashboard/enrollment-fee-success" element={<SuccessPage />} />
-          <Route path="/student/dashboard/payment-error" element={<PaymentErrorPage />} />
-          <Route path="/student/dashboard/application-fee-success" element={<ApplicationFeeSuccess />} />
-          <Route path="/student/dashboard/application-fee-error" element={<ApplicationFeeError />} />
-          <Route path="/student/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
-          <Route path="/student/i20-control-fee-error" element={<I20ControlFeeError />} />
-          <Route path="/support-center" element={<SupportCenter />} />
+          <Route path="/contact" element={<ContactUs />} />
           <Route path="/faq" element={<FAQ />} />
-          <Route path="/contact-us" element={<ContactUs />} />
-          <Route path="/help-center" element={<HelpCenter />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/support" element={<SupportCenter />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/for-universities" element={<ForUniversities />} />
+          <Route path="/success" element={<SuccessPage />} />
+          <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
+          <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
+          <Route path="/payment-error" element={<PaymentErrorPage />} />
+          <Route path="/application-fee-error" element={<ApplicationFeeError />} />
+          <Route path="/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
+          <Route path="/i20-control-fee-error" element={<I20ControlFeeError />} />
+          <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/auth-callback" element={<AuthCallback />} />
+          {/* Catch-all route for 404 */}
+          <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
           </Routes>
         </Layout>
       </AuthRedirect>
@@ -131,12 +129,14 @@ const AppContent = () => {
   );
 };
 
-function App() {
+const App: React.FC = () => {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppContent />
-    </Router>
+    <HelmetProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </HelmetProvider>
   );
-}
+};
 
 export default App;

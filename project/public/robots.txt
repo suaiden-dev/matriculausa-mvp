@@ -1,0 +1,48 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://matriculausa.com/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Disallow admin and dashboard areas
+Disallow: /admin/
+Disallow: /student/dashboard/
+Disallow: /school/dashboard/
+Disallow: /seller/dashboard/
+Disallow: /affiliate-admin/
+
+# Disallow private and temporary files
+Disallow: /api/
+Disallow: /_redirects
+Disallow: /*.json$
+Disallow: /*.xml$
+Disallow: /temp/
+Disallow: /private/
+
+# Allow important pages
+Allow: /about
+Allow: /scholarships
+Allow: /schools
+Allow: /how-it-works
+Allow: /contact
+Allow: /faq
+Allow: /privacy-policy
+Allow: /terms-of-service
+Allow: /for-universities
+Allow: /support
+
+# Specific rules for search engines
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 2
