@@ -20,7 +20,9 @@ import {
   GraduationCap,
   Phone,
   Mail,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import StripeConnectPaymentNotifications from '../../components/StripeConnectPaymentNotifications';
@@ -91,32 +93,70 @@ const StripeConnectTransfers: React.FC = () => {
   const [successfulTransfers, setSuccessfulTransfers] = useState(0);
   const [activeTab, setActiveTab] = useState<'transfers' | 'notifications'>('transfers');
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
+  
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   useEffect(() => {
     if (university?.id) {
       fetchTransfers();
     }
-  }, [university?.id, filterStatus, filterFeeCategory]);
+  }, [university?.id, filterStatus, filterFeeCategory, currentPage, pageSize]);
 
   const fetchTransfers = async () => {
     try {
       setLoading(true);
       
-      let query = supabase
-        .from('stripe_connect_transfers_detailed')
-        .select('*')
-        .eq('university_id', university?.id)
-        .order('created_at', { ascending: false });
-
+      // Construir filtros base
+      const filters: any = { university_id: university?.id };
+      
       if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus);
+        filters.status = filterStatus;
       }
 
       if (filterFeeCategory !== 'all') {
-        query = query.eq('fee_category', filterFeeCategory);
+        filters.fee_category = filterFeeCategory;
       }
 
-      const { data, error: fetchError } = await query;
+      // Primeiro, buscar a contagem total
+      let countQuery = supabase
+        .from('stripe_connect_transfers_detailed')
+        .select('*', { count: 'exact', head: true });
+
+      // Aplicar filtros na query de contagem
+      Object.entries(filters).forEach(([key, value]) => {
+        countQuery = countQuery.eq(key, value);
+      });
+
+      const { count, error: countError } = await countQuery;
+      
+      if (countError) {
+        throw countError;
+      }
+
+      setTotalCount(count || 0);
+      console.log('Total count:', count, 'Page size:', pageSize, 'Total pages:', Math.ceil((count || 0) / pageSize));
+
+      // Buscar dados com paginação
+      let dataQuery = supabase
+        .from('stripe_connect_transfers_detailed')
+        .select('*');
+
+      // Aplicar filtros na query de dados
+      Object.entries(filters).forEach(([key, value]) => {
+        dataQuery = dataQuery.eq(key, value);
+      });
+
+      // Aplicar ordenação e paginação
+      dataQuery = dataQuery
+        .order('created_at', { ascending: false })
+        .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+      const { data, error: fetchError } = await dataQuery;
 
       if (fetchError) {
         throw fetchError;
@@ -124,10 +164,11 @@ const StripeConnectTransfers: React.FC = () => {
 
       setTransfers(data || []);
 
-      const total = data?.reduce((sum, t) => sum + t.amount, 0) || 0;
+      // Calcular estatísticas dos dados da página atual
+      const pageTotal = data?.reduce((sum, t) => sum + t.amount, 0) || 0;
       const successful = data?.filter(t => t.status === 'succeeded').length || 0;
       
-      setTotalAmount(total);
+      setTotalAmount(pageTotal);
       setSuccessfulTransfers(successful);
 
     } catch (err) {
@@ -136,6 +177,15 @@ const StripeConnectTransfers: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
   };
 
   const formatAmount = (amount: number) => {
@@ -333,7 +383,7 @@ const StripeConnectTransfers: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-600">Total Transfers</p>
-                  <p className="text-2xl font-bold text-slate-900">{transfers.length}</p>
+                  <p className="text-2xl font-bold text-slate-900">{totalCount}</p>
                 </div>
               </div>
             </div>
@@ -454,123 +504,204 @@ const StripeConnectTransfers: React.FC = () => {
                     <p className="text-slate-600">No transfers found</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Fee Type
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Student
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Scholarship
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Amount
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-slate-200">
-                        {transfers.map((transfer) => (
-                          <tr key={transfer.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                {getStatusIcon(transfer.status)}
-                                <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transfer.status)}`}>
-                                  {getStatusText(transfer.status)}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center space-x-2">
-                                {transfer.fee_category && (
-                                  <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getFeeCategoryColor(transfer.fee_category)}`}>
-                                    {getFeeCategoryIcon(transfer.fee_category)}
-                                    <span className="ml-1">{transfer.fee_category.replace('_', ' ')}</span>
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-slate-500 mt-1">
-                                {transfer.fee_type}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className={getStudentDisplayStyle(transfer)}>
-                                  {getStudentDisplayName(transfer)}
-                                </div>
-                                {getStudentDisplayInfo(transfer) && (
-                                  <>
-                                    {transfer.student_country && (
-                                      <div className="text-xs text-slate-500 flex items-center">
-                                        <MapPin className="w-3 h-3 mr-1" />
-                                        {getStudentDisplayInfo(transfer)?.country}
-                                      </div>
-                                    )}
-                                    {transfer.student_level && (
-                                      <div className="text-xs text-slate-500 flex items-center">
-                                        <GraduationCap className="w-3 h-3 mr-1" />
-                                        {getStudentDisplayInfo(transfer)?.level}
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-slate-900">
-                                {transfer.scholarship_title || 'N/A'}
-                              </div>
-                              {transfer.scholarship_field && (
-                                <div className="text-xs text-slate-500">
-                                  {transfer.scholarship_field}
-                                </div>
-                              )}
-                              {transfer.scholarship_amount && (
-                                <div className="text-xs text-slate-500">
-                                  {formatScholarshipAmount(transfer.scholarship_amount)}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-slate-900">
-                                {formatAmount(transfer.amount)}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-slate-900">
-                                {formatDate(transfer.created_at)}
-                              </div>
-                              {transfer.hours_since_transfer && (
-                                <div className="text-xs text-slate-500">
-                                  {Math.round(transfer.hours_since_transfer)}h ago
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <button
-                                onClick={() => setSelectedTransfer(transfer)}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
-                              >
-                                View Details
-                              </button>
-                            </td>
+                  <>
+                    <div className="overflow-x-auto">
+                      <div className="px-6 py-4 border-b border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-medium text-slate-900">Transfers</h3>
+                          <div className="flex items-center space-x-4">
+                            <label htmlFor="page-size-select" className="text-sm text-slate-600">Show:</label>
+                            <select
+                              id="page-size-select"
+                              value={pageSize}
+                              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                              className="px-3 py-1 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              aria-label="Select number of transfers to display per page"
+                            >
+                              <option value={10}>10</option>
+                              <option value={20}>20</option>
+                              <option value={50}>50</option>
+                              <option value={100}>100</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Fee Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Student
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Scholarship
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Amount
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Actions
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                          {transfers.map((transfer) => (
+                            <tr key={transfer.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  {getStatusIcon(transfer.status)}
+                                  <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transfer.status)}`}>
+                                    {getStatusText(transfer.status)}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center space-x-2">
+                                  {transfer.fee_category && (
+                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${getFeeCategoryColor(transfer.fee_category)}`}>
+                                      {getFeeCategoryIcon(transfer.fee_category)}
+                                      <span className="ml-1">{transfer.fee_category.replace('_', ' ')}</span>
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-slate-500 mt-1">
+                                  {transfer.fee_type}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div>
+                                  <div className={getStudentDisplayStyle(transfer)}>
+                                    {getStudentDisplayName(transfer)}
+                                  </div>
+                                  {getStudentDisplayInfo(transfer) && (
+                                    <>
+                                      {transfer.student_country && (
+                                        <div className="text-xs text-slate-500 flex items-center">
+                                          <MapPin className="w-3 h-3 mr-1" />
+                                          {getStudentDisplayInfo(transfer)?.country}
+                                        </div>
+                                      )}
+                                      {transfer.student_level && (
+                                        <div className="text-xs text-slate-500 flex items-center">
+                                          <GraduationCap className="w-3 h-3 mr-1" />
+                                          {getStudentDisplayInfo(transfer)?.level}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-slate-900">
+                                  {transfer.scholarship_title || 'N/A'}
+                                </div>
+                                {transfer.scholarship_field && (
+                                  <div className="text-xs text-slate-500">
+                                    {transfer.scholarship_field}
+                                  </div>
+                                )}
+                                {transfer.scholarship_amount && (
+                                  <div className="text-xs text-slate-500">
+                                    {formatScholarshipAmount(transfer.scholarship_amount)}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-slate-900">
+                                  {formatAmount(transfer.amount)}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-slate-900">
+                                  {formatDate(transfer.created_at)}
+                                </div>
+                                {transfer.hours_since_transfer && (
+                                  <div className="text-xs text-slate-500">
+                                    {Math.round(transfer.hours_since_transfer)}h ago
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => setSelectedTransfer(transfer)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                                >
+                                  View Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* Pagination */}
+                    {totalCount > 0 && (
+                      <div className="px-6 py-4 border-t border-slate-200">
+                        <div className="flex items-center justify-center">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              disabled={currentPage === 1}
+                              className="px-3 py-1 border border-slate-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                              aria-label="Go to previous page"
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum;
+                              if (totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              } else {
+                                pageNum = currentPage - 2 + i;
+                              }
+                              
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => handlePageChange(pageNum)}
+                                  className={`px-3 py-1 border rounded-md text-sm ${
+                                    currentPage === pageNum
+                                      ? 'bg-blue-600 text-white border-blue-600'
+                                      : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+                            
+                            <button
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              disabled={currentPage === totalPages}
+                              className="px-3 py-1 border border-slate-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                              aria-label="Go to next page"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-center mt-2">
+                          <div className="text-sm text-slate-700">
+                            Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} results
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </>

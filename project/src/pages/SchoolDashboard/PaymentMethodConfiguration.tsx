@@ -155,12 +155,6 @@ const PaymentMethodConfiguration: React.FC = () => {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center space-x-4 mb-4">
-          <button
-            onClick={() => window.history.back()}
-            className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Payment Method Configuration</h1>
             <p className="text-slate-600 mt-2">

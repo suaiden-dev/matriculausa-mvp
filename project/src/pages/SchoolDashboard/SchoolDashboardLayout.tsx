@@ -39,6 +39,16 @@ interface SchoolDashboardLayoutProps {
   children: React.ReactNode;
 }
 
+interface SidebarItem {
+  id: string;
+  label: string;
+  icon: any;
+  path: string;
+  badge: string | null;
+  status?: 'em_desenvolvimento';
+  dropdown?: SidebarItem[];
+}
+
 const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, children }) => {
   // Estado para dropdowns da sidebar
   const [dropdownOpen, setDropdownOpen] = useState<Record<string, boolean>>({});
@@ -179,17 +189,25 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     );
   }
 
-  const sidebarItems = [
+  const sidebarItems: SidebarItem[] = [
     { id: 'overview', label: 'Overview', icon: Home, path: '/school/dashboard', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/school/dashboard/scholarships', badge: university?.profile_completed ? null : 'Setup' },
     { id: 'selection-process', label: 'Selection Process', icon: UserCheck, path: '/school/dashboard/selection-process', badge: null },
     { id: 'students', label: 'Students', icon: Users, path: '/school/dashboard/students', badge: null },
     { id: 'global-docs', label: 'Global Document Requests', icon: Edit, path: '/school/dashboard/global-document-requests', badge: null },
-    { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
-    { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
-    { id: 'stripe-transfers', label: 'Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null, status: 'em_desenvolvimento' },
-    { id: 'payment-method-config', label: 'Payment Methods', icon: CreditCard, path: '/school/dashboard/payment-method-config', badge: null, status: 'em_desenvolvimento' },
-    { id: 'payment-dashboard', label: 'Payment Dashboard', icon: DollarSign, path: '/school/dashboard/payment-dashboard', badge: null, status: 'em_desenvolvimento' },
+    {
+      id: 'payments',
+      label: 'Payments',
+      icon: DollarSign,
+      path: '/school/dashboard/analytics',
+      badge: null,
+      dropdown: [
+        { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
+        { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
+        { id: 'stripe-transfers', label: 'Stripe Connect Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null, status: 'em_desenvolvimento' },
+        { id: 'payment-method-config', label: 'Payment Requests', icon: CreditCard, path: '/school/dashboard/payment-method-config', badge: null, status: 'em_desenvolvimento' }
+      ]
+    },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
     { id: 'profile', label: 'University Profile', icon: Building, path: '/school/dashboard/profile', badge: null },
     {
@@ -329,10 +347,10 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                     </div>
                     {/* Dropdown */}
                     <div
-                      className={`overflow-hidden transition-all duration-300 ${dropdownOpen?.[item.id] ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'} bg-slate-50 rounded-xl shadow-lg border border-slate-200 mt-2 ml-4 mr-4`}
+                      className={`overflow-hidden transition-all duration-300 ${dropdownOpen?.[item.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} bg-slate-50 rounded-xl shadow-lg border border-slate-200 mt-2 ml-4 mr-4`}
                       style={{ pointerEvents: dropdownOpen?.[item.id] ? 'auto' : 'none' }}
                     >
-                      {item.dropdown.map(sub => {
+                      {(isProduction ? item.dropdown.filter(sub => sub.status !== 'em_desenvolvimento') : item.dropdown).map(sub => {
                         const SubIcon = sub.icon;
                         const isSubActive = activeTab === sub.id;
                         return (
@@ -430,7 +448,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'profile' && 'University Profile'}
                   {activeTab === 'students' && 'Students'}
                   {activeTab === 'selection-process' && 'Selection Process'}
-                  {activeTab === 'analytics' && 'Analytics & Reports'}
+                  {activeTab === 'analytics' && 'Payment Management'}
                   {activeTab === 'stripe-connect' && 'Stripe Connect'}
                   {activeTab === 'stripe-transfers' && 'Transfers'}
                   {activeTab === 'payment-method-config' && 'Payment Methods'}
@@ -442,7 +460,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'profile' && 'Keep your university information up to date'}
                   {activeTab === 'students' && 'Manage applicants and students'}
                   {activeTab === 'selection-process' && 'Review and approve student applications'}
-                  {activeTab === 'analytics' && 'Detailed performance analysis and metrics'}
+                  {activeTab === 'analytics' && 'Track and manage scholarship payment requests'}
                   {activeTab === 'stripe-connect' && 'Manage your Stripe Connect integration'}
                   {activeTab === 'stripe-transfers' && 'View and manage payment transfers'}
                   {activeTab === 'payment-method-config' && 'Configure payment methods'}

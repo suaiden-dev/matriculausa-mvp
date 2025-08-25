@@ -1,235 +1,513 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../hooks/useAuth';
+import React, { useState } from 'react';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  Filter, 
+  Download, 
+  Eye, 
+  Calendar, 
+  User, 
+  Building, 
+  CreditCard, 
+  Banknote, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight, 
+  Loader2,
+  Award,
+  FileText,
+  Globe
+} from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { usePayments } from '../../hooks/usePayments';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
-interface StudentProfile {
-  id: string;
-  user_id: string;
-  full_name: string;
-  email?: string;
-  phone?: string;
-  country?: string;
-}
-
-interface PaymentStatus {
-  paid: boolean;
-  date?: string;
-}
-
-interface StudentPaymentInfo {
-  student: StudentProfile;
-  applicationFee: PaymentStatus;
-  schoolMatriculaFee: PaymentStatus;
-  scholarshipFee: PaymentStatus;
-  i20ControlFee: PaymentStatus;
-}
-
-const FEE_TYPES = [
-  // { key: 'selectionProcessFee', label: 'Selection Process Fee', column: 'has_paid_selection_process_fee' },
-  { key: 'applicationFee', label: 'Application Fee', column: 'is_application_fee_paid' },
-  { key: 'scholarshipFee', label: 'Scholarship Fee', column: 'is_scholarship_fee_paid' },
-  { key: 'i20ControlFee', label: 'I-20 Control Fee', column: null }, // sempre pendente
-];
-
 const PaymentManagement: React.FC = () => {
+  const { university } = useUniversity();
   const { user } = useAuth();
-  const { university, applications, loading: universityLoading } = useUniversity();
-  const [students, setStudents] = useState<any[]>([]);
-  const [filter, setFilter] = useState('');
-  const [loading, setLoading] = useState(true);
+  
+  const {
+    payments,
+    stats,
+    totalCount,
+    totalPages,
+    loading,
+    error,
+    currentPage,
+    pageSize,
+    filters,
+    loadPayments,
+    updateFilters,
+    clearFilters,
+    handlePageChange,
+    handlePageSizeChange,
+    exportPayments,
+    hasPayments,
+    hasFilters,
+  } = usePayments(university?.id);
+  
+  // UI state
+  const [showFilters, setShowFilters] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    if (university && applications.length >= 0) {
-      fetchStudents();
-    }
-  }, [university, applications]);
-
-  const fetchStudents = async () => {
-    if (!university) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+  const handleExport = async () => {
     try {
-      // Buscar apenas estudantes que se aplicaram para bolsas desta universidade
-      const { data: profiles, error } = await supabase
-        .from('scholarship_applications')
-        .select(`
-          user_profiles!student_id(
-            id,
-            user_id,
-            full_name,
-            phone,
-            country,
-            is_application_fee_paid,
-            is_scholarship_fee_paid,
-            email
-          ),
-          scholarships!inner(university_id)
-        `)
-        .eq('scholarships.university_id', university.id);
-
-      if (error) {
-        console.error('Error fetching students:', error);
-        setLoading(false);
-        return;
-      }
-
-      // Extrair perfis únicos dos estudantes (evitar duplicatas)
-      const uniqueStudents = new Map();
-      profiles?.forEach((application: any) => {
-        const profile = application.user_profiles;
-        if (profile && !uniqueStudents.has(profile.user_id)) {
-          uniqueStudents.set(profile.user_id, profile);
-        }
-      });
-
-      setStudents(Array.from(uniqueStudents.values()));
-    } catch (error) {
-      console.error('Error fetching students:', error);
+      setExporting(true);
+      const blob = await exportPayments();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payment_requests_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Error exporting payments:', err);
     } finally {
-      setLoading(false);
+      setExporting(false);
     }
   };
 
-  const filtered = students.filter((s) =>
-    s.full_name?.toLowerCase().includes(filter.toLowerCase())
-  );
+  const handleFilterChange = () => {
+    setShowFilters(false);
+  };
 
-  // Mostrar loading se ainda está carregando dados da universidade
-  if (universityLoading) {
-    return (
-      <div className="p-4 md:p-6">
-        <div className="text-center py-10">Loading university data...</div>
-      </div>
-    );
-  }
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(amount);
+  };
 
-  // Verificar se a universidade existe
-  if (!university) {
+  const formatScholarshipAmount = (amount: number | null | undefined) => {
+    if (!amount) return 'N/A';
+    // If amount is already in cents (like from transfer), format normally
+    if (amount >= 100) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(amount / 100);
+    }
+    // If amount is already in dollars, format directly
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      succeeded: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Paid' },
+      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
+      processing: { color: 'bg-blue-100 text-blue-800', icon: Clock, label: 'Processing' },
+      failed: { color: 'bg-red-100 text-red-800', icon: AlertCircle, label: 'Failed' },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
+
     return (
-      <div className="p-4 md:p-6">
-        <div className="text-center py-10">
-          <p className="text-gray-500">University information not found.</p>
-        </div>
-      </div>
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {config.label}
+      </span>
     );
-  }
+  };
+
+  const getApplicationStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
+      approved: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Approved' },
+      rejected: { color: 'bg-red-100 text-red-800', icon: AlertCircle, label: 'Rejected' },
+      under_review: { color: 'bg-blue-100 text-blue-800', icon: Eye, label: 'Under Review' },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
+
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {config.label}
+      </span>
+    );
+  };
 
   return (
     <ProfileCompletionGuard 
       isProfileCompleted={university?.profile_completed}
-      title="Complete your profile to manage payments"
-      description="Finish setting up your university profile to track and manage scholarship payments"
+      title="Complete your profile to manage payment requests"
+      description="Finish setting up your university profile to track and manage scholarship payment requests"
     >
-      <div className="min-h-screen ">
-        <div className="max-w-7xl ">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            {/* Header: title + description + counter */}
-            <div className="px-4 sm:px-6 py-6 flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-[#05294E] tracking-tight">Payment Management</h1>
-                  <p className="mt-2 text-sm sm:text-base text-slate-600">
-                    Here you can view student payments for your university's scholarships - only the application fee status is shown.
-                  </p>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Payment Requests Management</h1>
+            <p className="text-gray-600">Monitor and manage all scholarship payment requests and application fees</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 ease-in-out"
+            >
+              <Filter className={`w-4 h-4 mr-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
+              Filters
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              {exporting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}>
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label htmlFor="search-query" className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <input
+                  id="search-query"
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={filters.search_query}
+                  onChange={(e) => updateFilters({ search_query: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  aria-label="Search payment requests by student name or email"
+                />
+              </div>
+              <div>
+                <label htmlFor="application-status-filter" className="block text-sm font-medium text-gray-700 mb-2">Application Status</label>
+                <select
+                  id="application-status-filter"
+                  value={filters.application_status_filter}
+                  onChange={(e) => updateFilters({ application_status_filter: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  aria-label="Filter by application status"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="under_review">Under Review</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="payment-type-filter" className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+                <select
+                  id="payment-type-filter"
+                  value={filters.payment_type_filter}
+                  onChange={(e) => updateFilters({ payment_type_filter: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  aria-label="Filter by payment type"
+                >
+                  <option value="all">All Types</option>
+                  <option value="application_fee">Application Fee</option>
+                  <option value="scholarship_fee">Scholarship Fee</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="date-from" className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                <div className="space-y-2">
+                  <input
+                    id="date-from"
+                    type="date"
+                    value={filters.date_from}
+                    onChange={(e) => updateFilters({ date_from: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    aria-label="Filter payment requests from date"
+                  />
+                  <input
+                    id="date-to"
+                    type="date"
+                    value={filters.date_to}
+                    onChange={(e) => updateFilters({ date_to: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    aria-label="Filter payment requests to date"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <button
+                onClick={clearFilters}
+                className="text-sm text-gray-600 hover:text-gray-800"
+              >
+                Clear all filters
+              </button>
+            </div>
+          </div>
                 </div>
 
-                <div className="flex items-center w-full sm:w-auto justify-start sm:justify-end">
-                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
-                    <span className="font-medium">{filtered.length}</span>
-                    <span className="ml-2 text-sm text-slate-600">Students</span>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Applications</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total_applications}</p>
                   </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total_revenue)}</p>
                 </div>
               </div>
             </div>
 
-            {/* Separation and Filters */}
-            <div className="border-t border-slate-100 bg-white">
-              <div className="px-4 sm:px-6 py-4">
-                <div className="flex flex-col gap-4">
-                  <div className="w-full">
-                    <input
-                      type="text"
-                      placeholder="Filter by student name..."
-                      className="border border-slate-300 rounded-lg px-4 py-3 w-full sm:max-w-md focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                      value={filter}
-                      onChange={e => setFilter(e.target.value)}
-                    />
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Paid Application Fees</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.paid_application_fees}</p>
+              </div>
+            </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">
-                      Showing {filtered.length} students from <span className="font-medium">{university.name}</span>
-                    </span>
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending Application Fees</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.pending_application_fees}</p>
                   </div>
                 </div>
+          </div>
+        </div>
+
+        {/* Payment Requests Table */}
+        <div className="bg-white shadow border rounded-lg">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Payment Requests</h3>
+              <div className="flex items-center space-x-4">
+                <label htmlFor="page-size-select" className="text-sm text-gray-600">Show:</label>
+                <select
+                  id="page-size-select"
+                  value={pageSize}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  aria-label="Select number of payment requests to display per page"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
               </div>
             </div>
           </div>
 
           {loading ? (
-            <div className="text-center py-10">Loading payments...</div>
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                <p className="text-red-600">{error}</p>
+                <button
+                  onClick={() => loadPayments(currentPage)}
+                  className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
           ) : (
+            <>
             <div className="overflow-x-auto">
-              <table className="min-w-full bg-white rounded-xl shadow border border-slate-200">
-                <thead className="bg-slate-100 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-slate-700 text-sm sm:text-base">Student</th>
-                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-slate-700 text-sm sm:text-base hidden sm:table-cell">Email</th>
-                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-slate-700 text-sm sm:text-base hidden md:table-cell">Phone</th>
-                    <th className="px-3 sm:px-4 py-3 text-left font-semibold text-slate-700 text-sm sm:text-base">Application Fee</th>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Student & Application
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Scholarship Details
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Application Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Payment Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Applied Date
+                      </th>
+                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th> */}
                   </tr>
                 </thead>
-                <tbody>
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="text-center text-gray-400 py-8 text-sm sm:text-base">No students found.</td>
-                    </tr>
-                  )}
-                  {filtered.map((student, idx) => (
-                    <tr key={student.id} className={
-                      `border-b last:border-0 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50`
-                    }>
-                      <td className="px-3 sm:px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-[#05294E] text-sm sm:text-base">{student.full_name}</span>
-                          <div className="flex flex-col gap-1 sm:hidden">
-                            {student.email && (
-                              <span className="text-xs text-slate-600">{student.email}</span>
-                            )}
-                            {student.phone && (
-                              <span className="text-xs text-slate-600">{student.phone}</span>
-                            )}
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {payments.map((payment) => (
+                      <tr key={payment.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{payment.student_name}</div>
+                            <div className="text-sm text-gray-500">{payment.student_email}</div>
+                            <div className="text-xs text-gray-400 flex items-center mt-1">
+                              <Globe className="w-3 h-3 mr-1" />
+                              {payment.student_country}
+                            </div>
                           </div>
-                        </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{payment.scholarship_title}</div>
+                            {payment.scholarship_field && (
+                              <div className="text-xs text-gray-500">
+                                {payment.scholarship_field}
+                              </div>
+                            )}
+                            {/* {payment.scholarship_amount && (
+                              <div className="text-xs text-gray-500">
+                                {formatScholarshipAmount(payment.scholarship_amount)}
+                              </div>
+                            )} */}
+                            {/* <div className="text-xs text-gray-400 flex items-center mt-1">
+                              <Award className="w-3 h-3 mr-1" />
+                              {payment.scholarship_type || 'Not specified'}
+                            </div> */}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getApplicationStatusBadge(payment.application_status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getStatusBadge(payment.status)}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {payment.payment_type === 'application_fee' ? 'Application Fee' : 'Scholarship Fee'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {formatCurrency(payment.amount_charged)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(payment.applied_at)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 hidden sm:table-cell text-sm sm:text-base">{student.email || '-'}</td>
-                      <td className="px-3 sm:px-4 py-3 hidden md:table-cell text-sm sm:text-base">{student.phone || '-'}</td>
-                      <td className="px-3 sm:px-4 py-3">
-                        {student.is_application_fee_paid ? (
-                          <span className="flex items-center justify-center gap-1 text-green-600 font-bold text-sm sm:text-base">
-                            <CheckCircle size={16} className="sm:w-[18px] sm:h-[18px]" /> 
-                            <span className="hidden sm:inline">Paid</span>
-                            <span className="sm:hidden">✓</span>
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center gap-1 text-red-500 font-bold text-sm sm:text-base">
-                            <XCircle size={16} className="sm:w-[18px] sm:h-[18px]" /> 
-                            <span className="hidden sm:inline">Pending</span>
-                            <span className="sm:hidden">✗</span>
-                          </span>
-                        )}
-                      </td>
+                        {/* <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            className="text-indigo-600 hover:text-indigo-900 mr-3"
+                            title="View application details"
+                            aria-label="View application details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            className="text-gray-600 hover:text-gray-900"
+                            title="Download application"
+                            aria-label="Download application"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </td> */}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-gray-200">
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      aria-label="Go to previous page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-3 py-1 border rounded-md text-sm ${
+                            currentPage === pageNum
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      aria-label="Go to next page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="text-center mt-2">
+                  <div className="text-sm text-gray-700">
+                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} results
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

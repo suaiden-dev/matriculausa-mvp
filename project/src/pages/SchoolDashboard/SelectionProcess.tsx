@@ -1709,7 +1709,7 @@ const SelectionProcess: React.FC = () => {
 
         {/* Student Details View */}
         {selectedStudent && (
-          <div className="fixed inset-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto">
+          <div className="fixed inset-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto pt-20">
             <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
               
 
