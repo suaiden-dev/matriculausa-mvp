@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
-import { CheckTermsBeforeCheckout } from './CheckTermsBeforeCheckout';
 
 interface StripeCheckoutProps {
   productId: keyof typeof STRIPE_PRODUCTS;
@@ -59,7 +58,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       onError?.('You must be logged in to checkout');
       return;
     }
-    // Este método será chamado pelo CheckTermsBeforeCheckout após a verificação dos termos
+    // Este método será chamado pelo PreCheckoutModal após a verificação dos termos
     checkActiveDiscount();
   };
 
@@ -226,33 +225,32 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   };
 
   return (
-    <CheckTermsBeforeCheckout onProceed={handlePreCheckoutSuccess}>
-      <>
-        <button
-          disabled={disabled || loading}
-          className={`${className} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          {loading ? 'Processing...' : buttonText}
-        </button>
+    <>
+      <button
+        onClick={checkActiveDiscount}
+        disabled={disabled || loading}
+        className={`${className} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        {loading ? 'Processing...' : buttonText}
+      </button>
 
-        {/* Pre-Checkout Modal para Selection Process */}
-        {showPreCheckoutModal && (
-          <PreCheckoutModal
-            isOpen={showPreCheckoutModal}
-            onClose={() => setShowPreCheckoutModal(false)}
-            onProceedToCheckout={handlePreCheckoutProceed}
-            feeType={feeType}
-            productName={product.name}
-            productPrice={feeType === 'selection_process' ? 50 : 350}
-          />
-        )}
+      {/* Pre-Checkout Modal para Selection Process */}
+      {showPreCheckoutModal && (
+        <PreCheckoutModal
+          isOpen={showPreCheckoutModal}
+          onClose={() => setShowPreCheckoutModal(false)}
+          onProceedToCheckout={handlePreCheckoutProceed}
+          feeType={feeType}
+          productName={product.name}
+          productPrice={feeType === 'selection_process' ? 50 : 350}
+        />
+      )}
 
-        {error && (
-          <div className="mt-2 text-red-600 text-sm">
-            {error}
-          </div>
-        )}
-      </>
-    </CheckTermsBeforeCheckout>
+      {error && (
+        <div className="mt-2 text-red-600 text-sm">
+          {error}
+        </div>
+      )}
+    </>
   );
 };

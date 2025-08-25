@@ -1070,6 +1070,13 @@
       "description": "Veja toda a jornada de candidatura em detalhes.",
       "button": "Como funciona?"
     },
+    "selectionProcess": {
+      "title": "Processo de Seleção",
+      "description": "Comece sua jornada para a educação americana completando nosso processo de seleção abrangente.",
+      "completeApplicationProcess": "Complete seu processo de candidatura",
+      "discountApplied": "✨ Você tem um cupom de desconto aplicado!",
+      "startButton": "Iniciar Processo de Seleção"
+    },
     "stats": {
       "myApplications": "Minhas Candidaturas",
       "totalSubmitted": "Total enviadas",
@@ -1114,7 +1121,34 @@
     },
     "recentApplications": {
       "title": "Candidaturas Recentes",
-      "subtitle": "Acompanhe suas últimas submissões de bolsa"
+      "subtitle": "Acompanhe suas últimas submissões de bolsa",
+      "noApplications": "Nenhuma candidatura ainda",
+      "startJourneyMessage": "Comece sua jornada navegando e se candidatando a bolsas",
+      "browseScholarships": "Navegar Bolsas",
+      "totalApplications": "Total de Candidaturas",
+      "showingApplications": "Mostrando {count} de {total} candidaturas",
+      "loadMoreApplications": "Carregar Mais Candidaturas",
+      "viewAllApplications": "Ver Todas as Candidaturas",
+      "scholarshipApplication": "Candidatura de Bolsa",
+      "university": "Universidade",
+      "applied": "Candidatado:",
+      "deadline": "Prazo:",
+      "couponApplied": "Cupom aplicado:",
+      "shown": "mostradas",
+      "status": {
+        "approved": "Aprovada",
+        "under_review": "Revisão",
+        "pending": "Pendente"
+      },
+      "unknownUniversity": "Universidade Desconhecida",
+      "unknownScholarship": "Bolsas Desconhecidas",
+      "unknownUser": "Usuário Desconhecido",
+      "unknownStudent": "Estudante Desconhecido",
+      "unknownRequest": "Solicitação Desconhecida",
+      "unknownDate": "Data desconhecida",
+      "unknownError": "Erro desconhecido",
+      "unknown": "Desconhecido",
+      "dropped": "Desistiu"
     },
     "findScholarships": {
       "title": "Encontrar Bolsas",
@@ -1948,6 +1982,43 @@
     "tryAgain": "Tentar Novamente",
     "errorLoadingData": "Erro ao carregar dados",
     "loading": "Carregando {title}..."
+  },
+  "preCheckoutModal": {
+    "securePayment": "Pagamento Seguro",
+    "redirectToStripe": "Redirecionando para o Stripe",
+    "closeModal": "Fechar modal",
+    "securePaymentViaStripe": "Pagamento seguro via Stripe",
+    "referralCode": "Código de Referência",
+    "enterReferralCode": "Digite seu código de referência para obter desconto",
+    "placeholder": "Digite o código",
+    "validate": "Validar",
+    "validating": "Validando...",
+    "pleaseEnterCode": "Por favor, digite um código",
+    "invalidCode": "Código inválido ou inativo",
+    "selfReferral": "Você não pode usar seu próprio código de referência",
+    "alreadyUsedCode": "Você já usou um código de referência anteriormente",
+    "validCode": "Código válido! Desconto de $50 aplicado",
+    "errorValidating": "Erro ao validar código",
+    "codeAlreadyUsed": "Código já utilizado",
+    "discountAlreadyApplied": "Seu desconto já foi aplicado anteriormente",
+    "continueWithoutCode": "Continuar sem código",
+    "goToPayment": "Ir para pagamento",
+    "applyCodeAndContinue": "Aplicar código e continuar",
+    "openingStripe": "Abrindo Stripe...",
+    "mustAcceptTerms": "Você deve aceitar os termos e condições antes de continuar",
+    "termsAndConditions": {
+      "title": "Termos e Condições",
+      "termsOfUse": "Termos de Uso",
+      "and": "e",
+      "privacyPolicy": "Política de Privacidade",
+      "description": "antes de prosseguir com o pagamento"
+    },
+    "closeTerms": "Fechar termos",
+    "scrollToBottomFirst": "Role até o final primeiro",
+    "readingTerms": "Por favor, leia os termos antes de aceitar",
+    "acceptContractTerms": "Aceito os termos e condições do contrato",
+    "cancel": "Cancelar",
+    "acceptTerms": "Aceitar Termos"
   },
   "footer": {
     "company": {

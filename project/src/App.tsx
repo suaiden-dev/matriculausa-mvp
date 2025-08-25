@@ -37,6 +37,7 @@ import ForUniversities from './pages/ForUniversities';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
+import TestTermsAcceptance from './pages/TestTermsAcceptance';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
