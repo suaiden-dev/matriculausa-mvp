@@ -118,7 +118,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
           {/* Seller Status */}
           <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                 <DollarSign className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
@@ -128,13 +128,11 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
             </div>
             
             <div className="flex items-center justify-center mt-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-red-100 to-orange-100 text-red-700 border border-red-200">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
                 <Shield className="h-3 w-3 mr-1" />
                 Seller Access
               </span>
             </div>
-
-
           </div>
 
           {/* Navigation */}
@@ -149,12 +147,12 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                   onClick={() => handleNavigation(item.path, item.id)}
                   className={`group flex items-center justify-between w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg border border-red-500'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 hover:border hover:border-red-200'
+                      ? 'bg-blue-600 text-white shadow-lg border border-blue-500'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-blue-50 hover:border hover:border-blue-200'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-red-600'}`} />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-600'}`} />
                     <span className="text-sm">{item.label}</span>
                   </div>
                   {item.badge && (
@@ -217,7 +215,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                   <input
                     type="text"
                     placeholder="Search..."
-                    className="w-80 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200 hover:bg-white hover:border-red-300"
+                    className="w-80 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:bg-white hover:border-blue-300"
                   />
                 </div>
               </div>
@@ -226,9 +224,9 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
               <div className="relative">
                 <button
                   onClick={() => { setUserMenuOpen(!userMenuOpen); setSidebarOpen(false); }}
-                  className="flex items-center space-x-3 p-2 rounded-xl hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 transition-all duration-200"
+                  className="flex items-center space-x-3 p-2 rounded-xl hover:bg-blue-50 transition-all duration-200"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center shadow-sm">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm">
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div className="hidden md:block text-left">
@@ -240,7 +238,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
 
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
-                    <div className="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-red-50 to-orange-50">
+                    <div className="px-4 py-3 border-b border-slate-200 bg-blue-50">
                       <p className="font-semibold text-slate-900">{user?.name}</p>
                       <p className="text-sm text-slate-600">{user?.email}</p>
                     </div>
@@ -250,7 +248,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                         handleNavigation('/seller/dashboard/profile', 'profile');
                         setUserMenuOpen(false);
                       }}
-                      className="flex items-center w-full px-4 py-3 text-sm text-slate-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 transition-all duration-200"
+                      className="flex items-center w-full px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 transition-all duration-200"
                     >
                       <Settings className="h-4 w-4 mr-3 text-slate-400" />
                       Profile Settings
@@ -261,7 +259,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                         handleNavigation('/seller/dashboard/performance', 'performance');
                         setUserMenuOpen(false);
                       }}
-                      className="flex items-center w-full px-4 py-3 text-sm text-slate-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 transition-all duration-200"
+                      className="flex items-center w-full px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 transition-all duration-200"
                     >
                       <Activity className="h-4 w-4 mr-3 text-slate-400" />
                       Activity Logs
@@ -271,7 +269,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                     
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 transition-all duration-200 font-medium"
+                      className="flex items-center w-full px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 transition-all duration-200 font-medium"
                     >
                       <LogOut className="h-4 w-4 mr-3" />
                       Logout

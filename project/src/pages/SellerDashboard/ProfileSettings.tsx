@@ -189,7 +189,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
         {!isEditing && (
           <button
             onClick={handleEditToggle}
-            className="w-full sm:w-auto bg-red-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-red-700 transition-colors font-medium flex items-center justify-center sm:justify-start shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center sm:justify-start shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Profile
@@ -198,17 +198,17 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
       </div>
 
       {/* Profile Completeness */}
-      <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-8 text-white relative overflow-hidden">
+      <div className="bg-blue-600 rounded-2xl p-8 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-2xl font-bold mb-2">Profile Completeness</h3>
-              <p className="text-red-100">Complete your profile to unlock more seller features</p>
+              <p className="text-blue-100">Complete your profile to unlock more seller features</p>
             </div>
             <div className="text-right">
               <div className="text-4xl font-bold mb-2">{completeness}%</div>
-              <div className="text-red-100 text-sm">Complete</div>
+              <div className="text-blue-100 text-sm">Complete</div>
             </div>
           </div>
           
@@ -220,7 +220,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
           </div>
           
           {completeness < 100 && (
-            <div className="flex items-center text-red-100">
+            <div className="flex items-center text-blue-100">
               <AlertCircle className="h-4 w-4 mr-2" />
               <span className="text-sm">Complete your profile to improve seller capabilities</span>
             </div>
@@ -238,7 +238,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-full sm:w-auto bg-red-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-red-700 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? (
                     <>
@@ -270,7 +270,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   placeholder="Enter your full name"
                 />
               </div>
@@ -281,7 +281,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   disabled
                 />
                 <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
@@ -293,7 +293,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   placeholder="Ex: (11) 99999-9999"
                 />
               </div>
@@ -304,7 +304,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                   type="text"
                   value={formData.territory}
                   onChange={(e) => handleInputChange('territory', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   placeholder="Ex: São Paulo, South Brazil, etc."
                 />
               </div>
@@ -314,7 +314,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 <select
                   value={formData.notifications.email ? 'true' : 'false'}
                   onChange={(e) => handleInputChange('notifications.email', e.target.value === 'true')}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   aria-label="Configure email notifications"
                 >
                   <option value="true">Enabled</option>
@@ -327,7 +327,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 <select
                   value={formData.notifications.sms ? 'true' : 'false'}
                   onChange={(e) => handleInputChange('notifications.sms', e.target.value === 'true')}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all duration-200"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   aria-label="Configure SMS notifications"
                 >
                   <option value="true">Enabled</option>
@@ -341,7 +341,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
             {/* Profile Header */}
             <div className="flex flex-col sm:flex-row items-center sm:space-x-6 space-y-4 sm:space-y-0 mb-6 sm:mb-8">
               <div className="relative">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-blue-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
                   {avatarUrl ? (
                     <img 
                       src={avatarUrl} 
@@ -355,12 +355,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 <button 
                   onClick={handleCameraClick}
                   disabled={uploading}
-                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-red-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Change profile photo"
                   aria-label="Change profile photo"
                 >
                   {uploading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                   ) : (
                     <Camera className="h-4 w-4" />
                   )}
@@ -379,7 +379,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">{sellerProfile?.name || 'Seller'}</h3>
                 <p className="text-slate-600 mb-3">{sellerProfile?.email || user?.email}</p>
                 <div className="flex items-center space-x-4">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                     <Users className="h-3 w-3 mr-1" />
                     MatriculaUSA Seller
                   </span>
@@ -406,7 +406,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center">
                   <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <p className="text-green-700 text-sm">{successMessage}</p>
+                  <p className="text-red-700 text-sm">{successMessage}</p>
                 </div>
               </div>
             )}
@@ -503,11 +503,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
             {/* Referral Code Info */}
             <div className="mt-8 pt-8 border-t border-slate-200">
               <h4 className="text-lg font-bold text-slate-900 mb-6">Referral Information</h4>
-              <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-200 p-6">
+              <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-600 mb-1">Your Referral Code</p>
-                    <p className="text-2xl font-mono font-bold text-red-600">{sellerProfile?.referral_code}</p>
+                    <p className="text-2xl font-mono font-bold text-blue-600">{sellerProfile?.referral_code}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-slate-600">Administrator</p>
@@ -546,7 +546,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, sellerProfile, 
 
       {/* Profile Tips */}
       {completeness < 100 && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0">
             <AlertCircle className="h-5 w-5 text-yellow-600 mx-auto sm:mx-0 sm:mr-3 sm:mt-0.5" />
             <div className="text-center sm:text-left">

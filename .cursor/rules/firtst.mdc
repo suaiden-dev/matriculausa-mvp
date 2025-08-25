@@ -40,4 +40,5 @@ Evite escrever scripts em arquivos, se possível, especialmente se o script é p
 Evite ter arquivos com mais de 200-300 linhas de código. Refatore nesse ponto.
 Os dados simulados são necessários apenas para testes, nunca simule dados para dev ou prod.
 
-Nunca sobrescreva meu arquivo .env sem primeiro perguntar e confirmar.]
+Nunca sobrescreva meu arquivo .env sem primeiro perguntar e confirmar.
+Lembre de sempre verificar se os arquivos que você alterou não tem erros]
