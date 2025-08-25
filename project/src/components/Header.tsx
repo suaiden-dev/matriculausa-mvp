@@ -71,6 +71,7 @@ const Header: React.FC = () => {
       case 'school': return '/school/dashboard';
       case 'admin': return '/admin/dashboard';
       case 'affiliate_admin': return '/affiliate-admin/dashboard';
+      case 'seller': return '/seller/dashboard';
       default: return '/';
     }
   };
@@ -82,6 +83,7 @@ const Header: React.FC = () => {
       case 'school': return 'School Dashboard';
       case 'admin': return 'Admin Dashboard';
       case 'affiliate_admin': return 'Affiliate Admin Dashboard';
+      case 'seller': return 'Seller Dashboard';
       default: return 'Dashboard';
     }
   };
@@ -92,6 +94,7 @@ const Header: React.FC = () => {
       case 'school': return 'bg-green-600';
       case 'student': return 'bg-[#05294E]';
       case 'affiliate_admin': return 'bg-orange-600';
+      case 'seller': return 'bg-blue-600';
       default: return 'bg-[#05294E]';
     }
   };

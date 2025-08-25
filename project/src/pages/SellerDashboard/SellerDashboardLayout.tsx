@@ -24,13 +24,15 @@ interface SellerDashboardLayoutProps {
   sellerProfile: any;
   children: React.ReactNode;
   onNavigate?: (view: string) => void;
+  currentView?: string;
 }
 
 const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   user,
   sellerProfile,
   children,
-  onNavigate
+  onNavigate,
+  currentView
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,6 +41,12 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const getActiveTab = () => {
+    // If currentView is provided, use it (for card navigation)
+    if (currentView && currentView !== 'student-details') {
+      return currentView;
+    }
+    
+    // Otherwise, fall back to URL-based detection
     const path = location.pathname;
     if (path === '/seller/dashboard' || path === '/seller/dashboard/') return 'overview';
     if (path.includes('/students')) return 'students';
@@ -51,7 +59,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   const activeTab = getActiveTab();
 
   const sidebarItems = [
-    { id: 'overview', label: 'Dashboard', icon: BarChart3, path: '/seller/dashboard', badge: null },
+    { id: 'overview', label: 'Overview', icon: BarChart3, path: '/seller/dashboard', badge: null },
     { id: 'students', label: 'My Students', icon: GraduationCap, path: '/seller/dashboard/students', badge: null },
     { id: 'referral-tools', label: 'Referral Tools', icon: Target, path: '/seller/dashboard/referral-tools', badge: null },
     { id: 'performance', label: 'Performance', icon: Activity, path: '/seller/dashboard/performance', badge: null },
@@ -88,13 +96,16 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-20 px-6 border-b border-slate-200">
-            <div className="flex items-center justify-center w-full">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center justify-center w-full hover:opacity-80 transition-opacity duration-200"
+            >
               <img 
                 src="/logo.png.png" 
                 alt="Matrícula USA" 
-                className="h-12 w-auto"
+                className="h-12 w-auto cursor-pointer"
               />
-            </div>
+            </button>
             <button
               onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
               className="lg:hidden absolute right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -123,26 +134,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
               </span>
             </div>
 
-            {/* Referral Code */}
-            {sellerProfile?.referral_code && (
-              <div className="mt-3 p-3 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200">
-                <p className="text-xs text-slate-600 mb-1 font-medium">Your Referral Code:</p>
-                <div className="flex items-center justify-between">
-                  <code className="text-sm font-mono text-red-700 bg-white px-3 py-2 rounded-lg border-2 border-red-200 font-bold shadow-sm">
-                    {sellerProfile.referral_code}
-                  </code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(sellerProfile.referral_code);
-                      // Here you can add a confirmation toast
-                    }}
-                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-100 px-2 py-1 rounded transition-colors font-medium"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Navigation */}

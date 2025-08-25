@@ -19,6 +19,7 @@ import AffiliateAdminDashboard from './pages/AffiliateAdminDashboard/index';
 import SellerDashboard from './pages/SellerDashboard/index';
 import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
+import SellerRegistration from './pages/SellerRegistration';
 import SuccessPage from './pages/SuccessPage';
 import ScholarshipFeeSuccess from './pages/StudentDashboard/ScholarshipFeeSuccess';
 import ApplicationFeeSuccess from './pages/StudentDashboard/ApplicationFeeSuccess';
@@ -79,6 +80,7 @@ const AppContent = () => {
           <Route path="/register" element={<Auth mode="register" />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/admin/register" element={<AdminRegistration />} />
+          <Route path="/seller/register" element={<SellerRegistration />} />
           <Route path="/scholarships" element={<Scholarships />} />
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />

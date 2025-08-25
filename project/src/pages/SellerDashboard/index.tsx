@@ -26,6 +26,10 @@ interface Student {
   created_at: string;
   status: string;
   latest_activity: string;
+  commission_earned?: number;
+  fees_count?: number;
+  scholarship_title?: string;
+  university_name?: string;
 }
 
 interface SellerProfile {
@@ -45,8 +49,16 @@ const SellerDashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'overview' | 'students' | 'student-details' | 'referral-tools' | 'performance' | 'profile'>('overview');
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<'overview' | 'students' | 'student-details' | 'referral-tools' | 'performance' | 'profile'>(() => {
+    // Tentar recuperar a view do localStorage
+    const savedView = localStorage.getItem('sellerDashboardView');
+    return (savedView as any) || 'overview';
+  });
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(() => {
+    // Tentar recuperar o studentId do localStorage
+    const savedStudentId = localStorage.getItem('sellerDashboardStudentId');
+    return savedStudentId || null;
+  });
   const { user } = useAuth();
   const location = useLocation();
   const params = useParams();
@@ -132,7 +144,7 @@ const SellerDashboard: React.FC = () => {
         seller = sellerData;
       }
 
-      // Search for referenced students using the new RPC function
+      // Load seller referrals using the RPC function
       const { data: referralsData, error: referralsError } = await supabase.rpc(
         'get_seller_students',
         { seller_referral_code_param: seller.referral_code }
@@ -145,7 +157,7 @@ const SellerDashboard: React.FC = () => {
 
       // Convert referrals to student format with fee information
       const studentsData = (referralsData || []).map((referral: any) => ({
-        id: referral.student_id, // Use student_id instead of referral_id
+        id: referral.student_id,
         full_name: referral.student_name,
         email: referral.student_email,
         created_at: referral.registration_date,
@@ -153,7 +165,9 @@ const SellerDashboard: React.FC = () => {
         total_paid: referral.total_fees_paid || 0,
         commission_earned: referral.commission_earned || 0,
         fees_count: referral.fees_count || 0,
-        latest_activity: referral.registration_date
+        latest_activity: referral.registration_date,
+        scholarship_title: referral.scholarship_title || 'No scholarship selected',
+        university_name: referral.university_name || 'No university selected'
       }));
 
       // Process seller data
@@ -197,6 +211,16 @@ const SellerDashboard: React.FC = () => {
     }
   }, [user?.id, user?.email, user?.name]);
 
+  // Função para salvar o estado no localStorage
+  const saveStateToStorage = useCallback((view: string, studentId: string | null) => {
+    localStorage.setItem('sellerDashboardView', view);
+    if (studentId) {
+      localStorage.setItem('sellerDashboardStudentId', studentId);
+    } else {
+      localStorage.removeItem('sellerDashboardStudentId');
+    }
+  }, []);
+
   // Only load data once when component mounts or user changes
   useEffect(() => {
     if (user && user.email && !sellerProfile) {
@@ -206,48 +230,55 @@ const SellerDashboard: React.FC = () => {
 
   // Detect URL changes and set view automatically
   useEffect(() => {
-    console.log('🔍 [SELLER] URL detection useEffect triggered');
-    console.log('🔍 [SELLER] Current pathname:', location.pathname);
-    console.log('🔍 [SELLER] Current params:', params);
-    
+    // Only update view from URL if it's a direct navigation (not from cards)
+    // This prevents conflicts with card navigation
     if (params.studentId) {
-      console.log('🔍 [SELLER] Found studentId in params:', params.studentId);
       setSelectedStudentId(params.studentId);
       setCurrentView('student-details');
-    } else if (location.pathname === '/seller/dashboard' || location.pathname === '/seller/dashboard/') {
-      console.log('🔍 [SELLER] Setting view to overview');
-      setCurrentView('overview');
-    } else if (location.pathname === '/seller/dashboard/students') {
-      console.log('🔍 [SELLER] Setting view to students');
-      setCurrentView('students');
-    } else if (location.pathname === '/seller/dashboard/referral-tools') {
-      console.log('🔍 [SELLER] Setting view to referral-tools');
-      setCurrentView('referral-tools');
-    } else if (location.pathname === '/seller/dashboard/performance') {
-      console.log('🔍 [SELLER] Setting view to performance');
-      setCurrentView('performance');
-    } else if (location.pathname === '/seller/dashboard/profile') {
-      console.log('🔍 [SELLER] Setting view to profile');
-      setCurrentView('profile');
+      saveStateToStorage('student-details', params.studentId);
     } else if (location.pathname.startsWith('/seller/student/')) {
-      console.log('🔍 [SELLER] Detected /seller/student/ route');
       const pathParts = location.pathname.split('/');
       const studentIdFromPath = pathParts[pathParts.length - 1];
-      console.log('🔍 [SELLER] Extracted studentId from path:', studentIdFromPath);
       setSelectedStudentId(studentIdFromPath);
       setCurrentView('student-details');
+      saveStateToStorage('student-details', studentIdFromPath);
     }
-  }, [location.pathname, params.studentId]);
+    // Remove URL-based view detection for dashboard sections to avoid conflicts with card navigation
+  }, [location.pathname, params.studentId, saveStateToStorage]);
 
   // Memoize the navigation handler to prevent unnecessary re-renders
   const handleNavigation = useCallback((view: string) => {
+    // Update internal state first
     setCurrentView(view as any);
-  }, []);
+    
+    // Se não for para student-details, limpar o selectedStudentId
+    if (view !== 'student-details') {
+      setSelectedStudentId(null);
+      saveStateToStorage(view, null);
+    } else {
+      saveStateToStorage(view, selectedStudentId);
+    }
+  }, [selectedStudentId, saveStateToStorage]);
 
   // Memoize the refresh handler
   const handleRefresh = useCallback(() => {
+    // Se estiver na view de detalhes do estudante, não recarregar tudo
+    if (currentView === 'student-details' && selectedStudentId) {
+      // Apenas recarregar dados do estudante específico
+      return;
+    }
     loadSellerData();
-  }, [loadSellerData]);
+  }, [loadSellerData, currentView, selectedStudentId]);
+
+  // Função para recarregar apenas os dados do estudante específico
+  const handleStudentRefresh = useCallback(() => {
+    if (selectedStudentId) {
+      // Forçar re-render do StudentDetails com uma nova key
+      const currentId = selectedStudentId;
+      setSelectedStudentId(null);
+      setTimeout(() => setSelectedStudentId(currentId), 10);
+    }
+  }, [selectedStudentId]);
 
   // Memoize the current view component to prevent unnecessary re-renders
   const currentViewComponent = useMemo(() => {
@@ -259,27 +290,30 @@ const SellerDashboard: React.FC = () => {
             sellerProfile={sellerProfile}
             students={students.slice(0, 5)}
             onRefresh={handleRefresh}
+            onNavigate={handleNavigation}
           />
         );
-                     case 'students':
-          return (
-            <MyStudents 
-              students={students}
-              sellerProfile={sellerProfile}
-              onRefresh={handleRefresh}
-              onViewStudent={(studentId) => {
-                console.log('🔍 [SELLER] onViewStudent called with studentId:', studentId);
-                console.log('🔍 [SELLER] Setting selectedStudentId to:', studentId);
-                console.log('🔍 [SELLER] Setting currentView to student-details');
-                setSelectedStudentId(studentId);
-                setCurrentView('student-details');
-              }}
-            />
-          );
-               case 'student-details':
-          return (
-            <StudentDetails key={selectedStudentId} studentId={selectedStudentId!} />
-          );
+      case 'students':
+        return (
+          <MyStudents 
+            students={students}
+            sellerProfile={sellerProfile}
+            onRefresh={handleRefresh}
+            onViewStudent={(studentId) => {
+              setSelectedStudentId(studentId);
+              setCurrentView('student-details');
+              saveStateToStorage('student-details', studentId);
+            }}
+          />
+        );
+      case 'student-details':
+        return (
+          <StudentDetails 
+            key={selectedStudentId} 
+            studentId={selectedStudentId!} 
+            onRefresh={handleStudentRefresh}
+          />
+        );
       case 'referral-tools':
         return (
           <ReferralTools 
@@ -310,16 +344,17 @@ const SellerDashboard: React.FC = () => {
             sellerProfile={sellerProfile}
             students={students.slice(0, 5)}
             onRefresh={handleRefresh}
+            onNavigate={handleNavigation}
           />
         );
     }
-  }, [currentView, stats, sellerProfile, students, user, handleRefresh]);
+  }, [currentView, stats, sellerProfile, students, user, handleRefresh, selectedStudentId, handleStudentRefresh]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading dashboard...</p>
         </div>
       </div>
@@ -354,10 +389,11 @@ const SellerDashboard: React.FC = () => {
   }
 
   return (
-    <SellerDashboardLayout 
-      user={user} 
+    <SellerDashboardLayout
+      user={user}
       sellerProfile={sellerProfile}
       onNavigate={handleNavigation}
+      currentView={currentView}
     >
       {currentViewComponent}
     </SellerDashboardLayout>

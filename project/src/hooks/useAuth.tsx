@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const buildUser = async (sessionUser: any, currentProfile: UserProfile | null): Promise<User> => {
-      // Prioridade: perfil.role -> user_metadata.role -> verificar se é universidade -> perfil.is_admin -> fallback por email
+      // Prioridade: perfil.role -> user_metadata.role -> verificar se é universidade -> verificar se é vendedor -> perfil.is_admin -> fallback por email
       let role = currentProfile?.role as User['role'] | undefined;
       if (!role) role = sessionUser?.user_metadata?.role as User['role'] | undefined;
       
@@ -123,6 +123,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
       
+      // Se ainda não tem role, verificar se é um vendedor
+      if (!role) {
+        try {
+          console.log('🔍 [USEAUTH] Verificando se usuário é vendedor...');
+          const { data: seller, error: sellerError } = await supabase
+            .from('sellers')
+            .select('id, referral_code')
+            .eq('user_id', sessionUser.id)
+            .eq('is_active', true)
+            .single();
+          
+          if (sellerError) {
+            console.log('🔍 [USEAUTH] Erro ao verificar vendedor:', sellerError);
+          } else if (seller) {
+            role = 'seller';
+            console.log('✅ [USEAUTH] Usuário identificado como vendedor:', seller);
+          } else {
+            console.log('🔍 [USEAUTH] Usuário não é vendedor ativo');
+          }
+        } catch (error) {
+          console.log('🔍 [USEAUTH] Erro geral ao verificar vendedor:', error);
+          // Se não encontrar vendedor, continuar com a lógica normal
+        }
+      }
+      
       if (!role && currentProfile) role = currentProfile.is_admin ? 'admin' : undefined;
       if (!role) role = getDefaultRole(sessionUser?.email || '');
 
@@ -136,10 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hasPaidProcess: currentProfile?.has_paid_selection_process_fee,
         university_image: (sessionUser as any).university_image || null,
       };
-      console.log('🔧 [USEAUTH] Usuario construído:', builtUser);
-      console.log('🔧 [USEAUTH] Role final:', role);
-      console.log('🔧 [USEAUTH] Profile role:', currentProfile?.role);
-      console.log('🔧 [USEAUTH] Metadata role:', sessionUser?.user_metadata?.role);
+      // Usuario construído com sucesso
       return builtUser;
     };
 
