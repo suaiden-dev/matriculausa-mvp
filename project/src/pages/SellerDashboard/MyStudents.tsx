@@ -77,7 +77,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
         </div>
         <button
           onClick={onRefresh}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+          className="bg-[#3B82F6] hover:bg-[#365d9b] text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
         >
           Refresh
         </button>

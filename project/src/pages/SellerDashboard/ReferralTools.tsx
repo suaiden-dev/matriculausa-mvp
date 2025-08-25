@@ -41,7 +41,7 @@ const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile, stats }) =
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Referral Code</h3>
           <div className="bg-slate-50 rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-mono font-bold text-red-600">{referralCode}</span>
+              <span className="text-2xl font-mono font-bold text-[#3B82F6]">{referralCode}</span>
               <button
                 onClick={() => copyToClipboard(referralCode, 'code')}
                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center space-x-2"
