@@ -753,8 +753,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* Referral Code Section */}
-                  {termsAccepted && (
                     <div className="col-span-2">
                       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                         <div className="flex items-center mb-3">
@@ -1031,7 +1029,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         )}
                       </div>
                     </div>
-                  )}
                 </div>
               </>
             )}
