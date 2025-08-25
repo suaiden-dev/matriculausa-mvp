@@ -1193,13 +1193,13 @@ const NewScholarship: React.FC = () => {
               </div>
             </div>
 
-            {/* Dynamic Fees Section */}
+            {/* Application Fee Configuration Section */}
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
                 <DollarSign className="h-5 w-5 mr-2 text-purple-600" />
-                Dynamic Fees
+                Application Fee Configuration
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Application Fee Amount (USD) *
@@ -1217,38 +1217,22 @@ const NewScholarship: React.FC = () => {
                     Set the application fee amount for this scholarship. Students will see this value when applying.
                   </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Platform Fee Percentage (%) *
-                  </label>
-                  <input
-                    type="number"
-                    name="platform_fee_percentage"
-                    value={formData.platform_fee_percentage}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                    placeholder="e.g., 15.00"
-                    required
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Percentage of the application fee that goes to the platform (0-100%).
-                  </p>
-                </div>
+                
               </div>
               
-              {/* Information about dynamic fees */}
+              {/* Information about application fees */}
               <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-xl">
                 <div className="flex items-start">
                   <Info className="h-5 w-5 text-purple-600 mr-3 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h4 className="font-medium text-purple-800 mb-1">About Dynamic Fees</h4>
+                    <h4 className="font-medium text-purple-800 mb-1">About Application Fees</h4>
                     <p className="text-sm text-purple-700">
-                      You can now set custom application fees for each scholarship. This allows you to:
+                      Configure the application fee for this scholarship. This allows you to:
                     </p>
                     <ul className="text-sm text-purple-700 mt-2 space-y-1">
-                      <li>• Set different fees based on program value and complexity</li>
-                      <li>• Cover specific administrative costs for each scholarship</li>
-                      <li>• Provide transparent pricing to students</li>
+                      <li>• Set appropriate fees based on program value and complexity</li>
+                      <li>• Cover administrative costs for processing applications</li>
+                      <li>• Provide transparent pricing to students upfront</li>
                       <li>• Maintain competitive advantage in the market</li>
                     </ul>
                   </div>
