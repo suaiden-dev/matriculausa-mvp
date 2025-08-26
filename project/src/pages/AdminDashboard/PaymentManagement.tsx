@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { UniversityPaymentRequestService, type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
 import { 
   CheckCircle, 
   XCircle, 
@@ -16,7 +17,10 @@ import {
   TrendingUp,
   AlertCircle,
   List,
-  Grid3X3
+  Grid3X3,
+  Clock,
+  CheckCircle2,
+  Shield
 } from 'lucide-react';
 
 interface PaymentRecord {
@@ -86,6 +90,25 @@ const PaymentManagement: React.FC = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
+  // Estados para University Payment Requests
+  const [activeTab, setActiveTab] = useState<'payments' | 'university-requests'>('payments');
+  const [universityRequests, setUniversityRequests] = useState<UniversityPaymentRequest[]>([]);
+  const [loadingUniversityRequests, setLoadingUniversityRequests] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<UniversityPaymentRequest | null>(null);
+  const [showRequestDetails, setShowRequestDetails] = useState(false);
+  const [universityRequestsViewMode, setUniversityRequestsViewMode] = useState<'grid' | 'list'>('grid');
+  const [adminBalance, setAdminBalance] = useState<number>(0);
+  const [loadingBalance, setLoadingBalance] = useState(false);
+
+  // Estados para modais de ações
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
+  const [showAddNotesModal, setShowAddNotesModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
   // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20); // 20 itens por página para melhor visualização
@@ -96,6 +119,18 @@ const PaymentManagement: React.FC = () => {
       loadUniversities();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (activeTab === 'university-requests') {
+      loadUniversityPaymentRequests();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (universityRequests.length > 0) {
+      loadAdminBalance();
+    }
+  }, [universityRequests]);
 
   useEffect(() => {
     const saved = localStorage.getItem('payment-view-mode') as 'grid' | 'list';
@@ -127,6 +162,107 @@ const PaymentManagement: React.FC = () => {
       console.error('Error loading universities:', error);
     }
   };
+
+  const loadUniversityPaymentRequests = async () => {
+    try {
+      setLoadingUniversityRequests(true);
+      const data = await UniversityPaymentRequestService.listAllPaymentRequests();
+      setUniversityRequests(data);
+    } catch (error: any) {
+      console.error('Error loading university payment requests:', error);
+    } finally {
+      setLoadingUniversityRequests(false);
+    }
+  };
+
+  const loadAdminBalance = async () => {
+    try {
+      setLoadingBalance(true);
+      // Calcular saldo baseado em todos os pagamentos recebidos menos os pagamentos feitos
+      const totalRevenue = universityRequests.reduce((sum, r) => sum + r.amount_usd, 0);
+      const totalPaidOut = universityRequests
+        .filter(r => r.status === 'paid')
+        .reduce((sum, r) => sum + r.amount_usd, 0);
+      const availableBalance = totalRevenue - totalPaidOut;
+      setAdminBalance(availableBalance);
+    } catch (error: any) {
+      console.error('Error loading admin balance:', error);
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+
+  const approveUniversityRequest = async (id: string) => {
+    try {
+      await UniversityPaymentRequestService.adminApprove(id, user!.id);
+      await loadUniversityPaymentRequests();
+    } catch (error: any) {
+      console.error('Error approving request:', error);
+    }
+  };
+
+  const rejectUniversityRequest = async (id: string) => {
+    try {
+      setActionLoading(true);
+      await UniversityPaymentRequestService.adminReject(id, user!.id, rejectReason);
+      await loadUniversityPaymentRequests();
+      setShowRejectModal(false);
+      setRejectReason('');
+    } catch (error: any) {
+      console.error('Error rejecting request:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const markUniversityRequestAsPaid = async (id: string) => {
+    try {
+      setActionLoading(true);
+      await UniversityPaymentRequestService.adminMarkPaid(id, user!.id, paymentReference);
+      await loadUniversityPaymentRequests();
+      await loadAdminBalance();
+      setShowMarkPaidModal(false);
+      setPaymentReference('');
+    } catch (error: any) {
+      console.error('Error marking as paid:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const addAdminNotes = async (id: string) => {
+      try {
+      setActionLoading(true);
+      await UniversityPaymentRequestService.adminAddNotes(id, adminNotes);
+        await loadUniversityPaymentRequests();
+      setShowAddNotesModal(false);
+      setAdminNotes('');
+      } catch (error: any) {
+        console.error('Error adding notes:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Funções auxiliares para abrir modais
+  const openRejectModal = (id: string) => {
+    const request = universityRequests.find(r => r.id === id);
+    setSelectedRequest(request || null);
+    setShowRejectModal(true);
+  };
+
+  const openMarkPaidModal = (id: string) => {
+    const request = universityRequests.find(r => r.id === id);
+    setSelectedRequest(request || null);
+    setShowMarkPaidModal(true);
+  };
+
+  const openAddNotesModal = (id: string) => {
+    const request = universityRequests.find(r => r.id === id);
+    setSelectedRequest(request || null);
+    setShowAddNotesModal(true);
+  };
+
 
   const loadPaymentData = async () => {
     try {
@@ -559,8 +695,37 @@ const PaymentManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'payments'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Student Payments
+          </button>
+          <button
+            onClick={() => setActiveTab('university-requests')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'university-requests'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            University Payment Requests
+          </button>
+        </nav>
+      </div>
+
+      {/* Student Payments Tab Content */}
+      {activeTab === 'payments' && (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
@@ -1020,6 +1185,623 @@ const PaymentManagement: React.FC = () => {
           </div>
         </div>
       )}
+      </>)}
+
+      {/* University Payment Requests Tab Content */}
+      {activeTab === 'university-requests' && (
+        <div className="space-y-6">
+          {/* Stats Cards for University Requests */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Building2 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Requests</p>
+                  <p className="text-2xl font-bold text-gray-900">{universityRequests.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Pending</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {universityRequests.filter(r => r.status === 'pending').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Approved</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {universityRequests.filter(r => r.status === 'approved').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <DollarSign className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${universityRequests.reduce((sum, r) => sum + r.amount_usd, 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Shield className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Available Balance</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {loadingBalance ? (
+                      <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
+                    ) : (
+                      `$${adminBalance.toLocaleString()}`
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* University Requests List */}
+          <div className="bg-white rounded-xl shadow border">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+              <h2 className="text-lg font-semibold text-gray-900">University Payment Requests</h2>
+              <p className="text-gray-600 mt-1">Manage payment requests from universities</p>
+                </div>
+                <div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
+                  <button
+                    onClick={() => setUniversityRequestsViewMode('grid')}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                      universityRequestsViewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Grid view"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setUniversityRequestsViewMode('list')}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                      universityRequestsViewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="List view"
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {loadingUniversityRequests ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : universityRequests.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Building2 className="h-8 w-8 text-gray-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No payment requests found</h3>
+                <p className="text-gray-500">University payment requests will appear here when they are submitted</p>
+              </div>
+            ) : (
+              <div className="p-6">
+                {universityRequestsViewMode === 'grid' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {universityRequests.map((request) => (
+                    <div 
+                      key={request.id}
+                      className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors cursor-pointer border"
+                      onClick={() => {
+                        setSelectedRequest(request);
+                        setShowRequestDetails(true);
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 text-lg mb-1">
+                            {request.university?.name || 'Unknown University'}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {request.user?.full_name || request.user?.email || 'Unknown User'}
+                          </p>
+                        </div>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          request.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                          request.status === 'paid' ? 'bg-green-100 text-green-800' :
+                          request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        </span>
+                      </div>
+
+                      <div className="mb-4">
+                        <div className="text-2xl font-bold text-gray-900 mb-2">
+                          ${request.amount_usd.toLocaleString()}
+                        </div>
+                        <p className="text-sm text-gray-600 capitalize">
+                          {request.payout_method.replace('_', ' ')}
+                        </p>
+                      </div>
+
+                      <div className="text-sm text-gray-500">
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </div>
+
+                      {/* Action Buttons */}
+                      {request.status === 'pending' && (
+                        <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-gray-200">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              approveUniversityRequest(request.id);
+                            }}
+                            className="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRejectModal(request.id);
+                            }}
+                            className="flex-1 px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+
+                      {request.status === 'approved' && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openMarkPaidModal(request.id);
+                            }}
+                            className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Mark as Paid
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // List View (Table)
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            University
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Amount
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Method
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {universityRequests.map((request) => (
+                          <tr key={request.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <Building2 className="h-5 w-5 text-gray-600" />
+              </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {request.university?.name || 'Unknown University'}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {request.user?.full_name || request.user?.email || 'Unknown User'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                <div className="font-medium">${request.amount_usd.toLocaleString()}</div>
+                                <div className="text-gray-500">{request.amount_coins} coins</div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900 capitalize">
+                                {request.payout_method.replace('_', ' ')}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                request.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                                request.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(request.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequest(request);
+                                    setShowRequestDetails(true);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                                >
+                                  <Eye size={16} />
+                                  Details
+                                </button>
+                                
+                                {request.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => approveUniversityRequest(request.id)}
+                                      className="text-green-600 hover:text-green-900 flex items-center gap-1"
+                                    >
+                                      <CheckCircle size={16} />
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => openRejectModal(request.id)}
+                                      className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                                    >
+                                      <XCircle size={16} />
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
+                                
+                                {request.status === 'approved' && (
+                                  <button
+                                                                          onClick={() => openMarkPaidModal(request.id)}
+                                    className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                                  >
+                                    <DollarSign size={16} />
+                                    Mark Paid
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* University Request Details Modal */}
+      {showRequestDetails && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Payment Request Details</h3>
+                <button 
+                  onClick={() => setShowRequestDetails(false)} 
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* University Info */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">University</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-lg font-semibold">{selectedRequest.university?.name}</p>
+                    <p className="text-gray-600">{selectedRequest.university?.location}</p>
+                  </div>
+                </div>
+
+                {/* Request Details */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Request Details</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Amount:</span>
+                      <span className="font-semibold">${selectedRequest.amount_usd.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Method:</span>
+                      <span className="font-semibold capitalize">{selectedRequest.payout_method.replace('_', ' ')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedRequest.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                        selectedRequest.status === 'paid' ? 'bg-green-100 text-green-800' :
+                        selectedRequest.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Created:</span>
+                      <span>{new Date(selectedRequest.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Details */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Payment Details</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+
+
+                    {selectedRequest.payout_details_preview ? (
+                      (() => {
+                        const details = selectedRequest.payout_details_preview as Record<string, any>;
+                        const method = String(selectedRequest.payout_method);
+                        
+
+                        
+                        if (method === 'zelle') {
+                          return (
+                            <div className="space-y-3">
+                              <h5 className="font-medium text-gray-900">Zelle Information</h5>
+                              <div className="space-y-2">
+                                {details.email && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Email:</span>
+                                    <span className="font-medium">{details.email}</span>
+                                  </div>
+                                )}
+                                {details.phone && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Phone:</span>
+                                    <span className="font-medium">{details.phone}</span>
+                                  </div>
+                                )}
+                                {details.name && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Name:</span>
+                                    <span className="font-medium">{details.name}</span>
+                                  </div>
+                                )}
+                                {/* Fallback para mostrar todos os campos disponíveis se nenhum dos campos específicos existir */}
+                                {!details.email && !details.phone && !details.name && (
+                                  <div className="text-sm text-gray-600">
+                                    <p className="mb-2">Available fields:</p>
+                                    {Object.entries(details).map(([key, value]) => (
+                                      <div key={key} className="flex justify-between py-1 border-b border-gray-100">
+                                        <span className="text-gray-600 capitalize">{key.replace('_', ' ')}:</span>
+                                        <span className="font-medium">{String(value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        } else if (method === 'bank_transfer') {
+                          return (
+                            <div className="space-y-3">
+                              <h5 className="font-medium text-gray-900">Bank Transfer Information</h5>
+                              <div className="space-y-2">
+                                {details.bank_name && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Bank Name:</span>
+                                    <span className="font-medium">{details.bank_name}</span>
+                                  </div>
+                                )}
+                                {details.account_number && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Account Number:</span>
+                                    <span className="font-medium font-mono">{details.account_number}</span>
+                                  </div>
+                                )}
+                                {details.routing_number && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Routing Number:</span>
+                                    <span className="font-medium font-mono">{details.routing_number}</span>
+                                  </div>
+                                )}
+                                {details.account_type && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Account Type:</span>
+                                    <span className="font-medium capitalize">{details.account_type}</span>
+                                  </div>
+                                )}
+                                {/* Fallback para mostrar todos os campos disponíveis se nenhum dos campos específicos existir */}
+                                {!details.bank_name && !details.account_number && !details.routing_number && !details.account_type && (
+                                  <div className="text-sm text-gray-600">
+                                    <p className="mb-2">Available fields:</p>
+                                    {Object.entries(details).map(([key, value]) => (
+                                      <div key={key} className="flex justify-between py-1 border-b border-gray-100">
+                                        <span className="text-gray-600 capitalize">{key.replace('_', ' ')}:</span>
+                                        <span className="font-medium">{String(value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        } else if (method === 'stripe') {
+                          return (
+                            <div className="space-y-3">
+                              <h5 className="font-medium text-gray-900">Stripe Information</h5>
+                              <div className="space-y-2">
+                                {details.stripe_email && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Email:</span>
+                                    <span className="font-medium">{details.stripe_email}</span>
+                                  </div>
+                                )}
+                                {details.account_id && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Account ID:</span>
+                                    <span className="font-medium font-mono">{details.account_id}</span>
+                                  </div>
+                                )}
+                                {details.customer_id && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Customer ID:</span>
+                                    <span className="font-medium font-mono">{details.customer_id}</span>
+                                  </div>
+                                )}
+                                {details.stripe_account_id && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Stripe Account ID:</span>
+                                    <span className="font-medium font-mono">{details.stripe_account_id}</span>
+                                  </div>
+                                )}
+                                {/* Fallback para mostrar todos os campos disponíveis se nenhum dos campos específicos existir */}
+                                {!details.stripe_email && !details.account_id && !details.customer_id && !details.stripe_account_id && (
+                                  <div className="text-sm text-gray-600">
+                                    <p className="mb-2">Available fields:</p>
+                                    {Object.entries(details).map(([key, value]) => (
+                                      <div key={key} className="flex justify-between py-1 border-b border-gray-100">
+                                        <span className="text-gray-600 capitalize">{key.replace('_', ' ')}:</span>
+                                        <span className="font-medium">{String(value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          // Fallback para métodos não reconhecidos
+                          return (
+                            <div className="space-y-3">
+                              <h5 className="font-medium text-gray-900 capitalize">{method.replace('_', ' ')} Information</h5>
+                              <div className="space-y-2">
+                                {Object.entries(details).map(([key, value]) => (
+                                  <div key={key} className="flex justify-between">
+                                    <span className="text-gray-600 capitalize">{key.replace('_', ' ')}:</span>
+                                    <span className="font-medium">{String(value)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()
+                    ) : (
+                      <div className="text-center py-4">
+                        <CreditCard className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                        <p className="text-gray-500">No payment details available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Admin Notes */}
+                {selectedRequest.admin_notes && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Admin Notes</h4>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700">{selectedRequest.admin_notes}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center space-x-3 pt-4 border-t">
+                  <button
+                    onClick={() => openAddNotesModal(selectedRequest.id)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Add Notes
+                  </button>
+                  
+                  {selectedRequest.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          approveUniversityRequest(selectedRequest.id);
+                          setShowRequestDetails(false);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          openRejectModal(selectedRequest.id);
+                          setShowRequestDetails(false);
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  
+                  {selectedRequest.status === 'approved' && (
+                    <button
+                      onClick={() => {
+                          openMarkPaidModal(selectedRequest.id);
+                        setShowRequestDetails(false);
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Mark as Paid
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Payment Details Modal */}
       {showDetails && selectedPayment && (
@@ -1107,6 +1889,150 @@ const PaymentManagement: React.FC = () => {
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Request Modal */}
+      {showRejectModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Reject Payment Request</h3>
+              <button 
+                onClick={() => setShowRejectModal(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Rejection
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Please provide a reason for rejecting this payment request..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowRejectModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => rejectUniversityRequest(selectedRequest.id)}
+                  disabled={!rejectReason.trim() || actionLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? 'Rejecting...' : 'Reject Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark as Paid Modal */}
+      {showMarkPaidModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Mark as Paid</h3>
+              <button 
+                onClick={() => setShowMarkPaidModal(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Reference (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="Transaction ID, check number, or other reference..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowMarkPaidModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => markUniversityRequestAsPaid(selectedRequest.id)}
+                  disabled={actionLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? 'Marking as Paid...' : 'Mark as Paid'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Admin Notes Modal */}
+      {showAddNotesModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Add Admin Notes</h3>
+              <button 
+                onClick={() => setShowAddNotesModal(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Admin Notes
+                </label>
+                <textarea
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Add any administrative notes or comments..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowAddNotesModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => addAdminNotes(selectedRequest.id)}
+                  disabled={!adminNotes.trim() || actionLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {actionLoading ? 'Adding Notes...' : 'Add Notes'}
                 </button>
               </div>
             </div>

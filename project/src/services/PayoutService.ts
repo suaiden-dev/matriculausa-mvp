@@ -58,6 +58,7 @@ export class PayoutService {
     const { data, error } = await supabase
       .from('university_payout_requests')
       .select('*, universities(name)')
+      .eq('request_type', 'matricula_rewards') // Filtrar apenas matricula_rewards
       .order('created_at', { ascending: false });
 
     if (error) {

@@ -107,6 +107,7 @@ const StripeConnect: React.FC = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [successfulTransfers, setSuccessfulTransfers] = useState(0);
   const [activeTab, setActiveTab] = useState<'setup' | 'transfers' | 'notifications'>('setup');
+  const [transferSubTab, setTransferSubTab] = useState<'platform' | 'stripe_connect'>('platform');
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   
   // Estados de paginação
@@ -125,10 +126,10 @@ const StripeConnect: React.FC = () => {
     if (university?.id) {
       fetchStripeConnectStatus();
       if (activeTab === 'transfers') {
-      fetchTransfers();
+        fetchTransfers();
+      }
     }
-    }
-  }, [university?.id, filterStatus, filterFeeCategory, currentPage, pageSize, activeTab]);
+  }, [university?.id, filterStatus, filterFeeCategory, currentPage, pageSize, activeTab, transferSubTab]);
 
   const fetchTransfers = async () => {
     try {
@@ -141,8 +142,21 @@ const StripeConnect: React.FC = () => {
         filters.status = filterStatus;
       }
 
-      if (filterFeeCategory !== 'all') {
-        filters.fee_category = filterFeeCategory;
+      // Filtrar por tipo de transação baseado na sub-aba
+      if (transferSubTab === 'platform') {
+        // Transações via plataforma: application, scholarship, i20_control, selection_process
+        if (filterFeeCategory === 'all') {
+          filters.fee_category = ['application', 'scholarship', 'i20_control', 'selection_process'];
+        } else {
+          filters.fee_category = filterFeeCategory;
+        }
+      } else if (transferSubTab === 'stripe_connect') {
+        // Transações Stripe Connect: custom, test, outros tipos não padrão
+        if (filterFeeCategory === 'all') {
+          filters.fee_category = ['custom', 'test'];
+        } else {
+          filters.fee_category = filterFeeCategory;
+        }
       }
 
       // Primeiro, buscar a contagem total
@@ -152,7 +166,11 @@ const StripeConnect: React.FC = () => {
 
       // Aplicar filtros na query de contagem
       Object.entries(filters).forEach(([key, value]) => {
-        countQuery = countQuery.eq(key, value);
+        if (Array.isArray(value)) {
+          countQuery = countQuery.in(key, value);
+        } else {
+          countQuery = countQuery.eq(key, value);
+        }
       });
 
       const { count, error: countError } = await countQuery;
@@ -171,7 +189,11 @@ const StripeConnect: React.FC = () => {
 
       // Aplicar filtros na query de dados
       Object.entries(filters).forEach(([key, value]) => {
-        dataQuery = dataQuery.eq(key, value);
+        if (Array.isArray(value)) {
+          dataQuery = dataQuery.in(key, value);
+        } else {
+          dataQuery = dataQuery.eq(key, value);
+        }
       });
 
       // Aplicar ordenação e paginação
@@ -782,6 +804,38 @@ const StripeConnect: React.FC = () => {
             </>
           ) : activeTab === 'transfers' ? (
             <>
+              {/* Sub-tabs para categorias de transfers */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => setTransferSubTab('platform')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      transferSubTab === 'platform'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Transações via Plataforma
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setTransferSubTab('stripe_connect')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      transferSubTab === 'stripe_connect'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      Transações Stripe Connect
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Filters */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
@@ -810,11 +864,20 @@ const StripeConnect: React.FC = () => {
                       aria-label="Filter by fee category"
                     >
                       <option value="all">All</option>
-                      <option value="application">Application Fee</option>
-                      <option value="scholarship">Scholarship Fee</option>
-                      <option value="i20_control">I-20 Control Fee</option>
-                      <option value="selection_process">Selection Process Fee</option>
-                      <option value="custom">Custom Fee</option>
+                      {transferSubTab === 'platform' ? (
+                        <>
+                          <option value="application">Application Fee</option>
+                          <option value="scholarship">Scholarship Fee</option>
+                          <option value="i20_control">I-20 Control Fee</option>
+                          <option value="selection_process">Selection Process Fee</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="custom">Custom Fees</option>
+                          <option value="test">Test Fees</option>
+                          <option value="other">Other</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>
@@ -822,6 +885,17 @@ const StripeConnect: React.FC = () => {
 
               {/* Transfers List */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {transferSubTab === 'platform' ? 'Transações via Plataforma' : 'Transações Stripe Connect'}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    {transferSubTab === 'platform' 
+                      ? 'Transações de taxas de aplicação, bolsas e outros serviços da plataforma'
+                      : 'Transações personalizadas enviadas diretamente via Stripe Connect'
+                    }
+                  </p>
+                </div>
                 {loading ? (
                   <div className="p-8 sm:p-12 text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -843,7 +917,12 @@ const StripeConnect: React.FC = () => {
                     <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <CreditCard className="w-8 h-8 text-slate-400" />
                     </div>
-                    <p className="text-slate-600">No transfers found</p>
+                    <p className="text-slate-600">
+                      {transferSubTab === 'platform' 
+                        ? 'No platform transactions found'
+                        : 'No Stripe Connect transactions found'
+                      }
+                    </p>
                   </div>
                 ) : (
                   <>
@@ -875,7 +954,7 @@ const StripeConnect: React.FC = () => {
                               Status
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                              Fee Type
+                              {transferSubTab === 'platform' ? 'Fee Type' : 'Transaction Type'}
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                               Student

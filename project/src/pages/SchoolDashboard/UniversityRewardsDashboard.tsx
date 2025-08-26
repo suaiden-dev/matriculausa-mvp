@@ -345,7 +345,7 @@ const UniversityRewardsDashboard: React.FC = () => {
             {/* Header Section */}
             <div className="mb-8">
               <div className="flex items-center gap-4 mb-6">
-                <div className="hidden sm:block sm:w-12 sm:h-12 bg-[#05294E] rounded-xl flex items-center justify-center">
+                <div className="hidden sm:w-12 sm:h-12 bg-[#05294E] rounded-xl sm:flex items-center justify-center">
                   <Gift className="h-6 w-6 text-white" />
                 </div>
                 <div>

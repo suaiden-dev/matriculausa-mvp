@@ -68,7 +68,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
   const blockedRoutes = [
     '/school/dashboard/stripe-connect-setup',
     '/school/dashboard/stripe-connect-transfers', 
-    '/school/dashboard/payment-method-config',
+
     '/school/dashboard/payment-dashboard'
   ];
   
@@ -131,9 +131,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/students')) return 'students';
     if (path.includes('/selection-process')) return 'selection-process';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
-    if (path.includes('/stripe-connect/transfers')) return 'stripe-transfers';
     if (path.includes('/stripe-connect')) return 'stripe-connect';
-    if (path.includes('/payment-method-config')) return 'payment-method-config';
+
     if (path.includes('/payment-dashboard')) return 'payment-dashboard';
 
     if (path.includes('/inbox')) return 'inbox';
@@ -204,8 +203,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       dropdown: [
         { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
         { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
-        { id: 'stripe-transfers', label: 'Stripe Connect Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null, status: 'em_desenvolvimento' },
-        { id: 'payment-method-config', label: 'Payment Requests', icon: CreditCard, path: '/school/dashboard/payment-method-config', badge: null, status: 'em_desenvolvimento' }
       ]
     },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
@@ -347,7 +344,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                     </div>
                     {/* Dropdown */}
                     <div
-                      className={`overflow-hidden transition-all duration-300 ${dropdownOpen?.[item.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} bg-slate-50 rounded-xl shadow-lg border border-slate-200 mt-2 ml-4 mr-4`}
+                      className={`overflow-hidden transition-all duration-300 ${dropdownOpen?.[item.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} mt-2 ml-4 mr-4`}
                       style={{ pointerEvents: dropdownOpen?.[item.id] ? 'auto' : 'none' }}
                     >
                       {(isProduction ? item.dropdown.filter(sub => sub.status !== 'em_desenvolvimento') : item.dropdown).map(sub => {
@@ -357,8 +354,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                           <Link
                             key={sub.id}
                             to={sub.path}
-                            className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                              isSubActive ? 'bg-[#05294E] text-white shadow' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            className={`flex items-center px-4 py-3 my-1 rounded-xl font-medium transition-all duration-200 ${
+                              isSubActive ? 'bg-[#05294E] text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                             }`}
                             onClick={() => {
                               setSidebarOpen(false);
@@ -450,8 +447,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'selection-process' && 'Selection Process'}
                   {activeTab === 'analytics' && 'Payment Management'}
                   {activeTab === 'stripe-connect' && 'Stripe Connect'}
-                  {activeTab === 'stripe-transfers' && 'Transfers'}
-                  {activeTab === 'payment-method-config' && 'Payment Methods'}
+          
                   {activeTab === 'payment-dashboard' && 'Payment Dashboard'}
                 </h1>
                 <p className="text-slate-600">
@@ -462,8 +458,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'selection-process' && 'Review and approve student applications'}
                   {activeTab === 'analytics' && 'Track and manage scholarship payment requests'}
                   {activeTab === 'stripe-connect' && 'Manage your Stripe Connect integration'}
-                  {activeTab === 'stripe-transfers' && 'View and manage payment transfers'}
-                  {activeTab === 'payment-method-config' && 'Configure payment methods'}
+          
                   {activeTab === 'payment-dashboard' && 'Monitor payment activities'}
                 </p>
               </div>
