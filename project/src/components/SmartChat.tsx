@@ -127,7 +127,6 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           }}
         >
 
-
           {/* Botão de Ajuda */}
           <div
             onClick={toggleHelp}
