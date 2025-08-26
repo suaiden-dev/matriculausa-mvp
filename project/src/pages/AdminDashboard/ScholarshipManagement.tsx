@@ -406,16 +406,6 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                       </div>
 
                                 <div className="space-y-4">
-                                  {selectedScholarship.platform_fee_percentage && (
-                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <DollarSign className="h-4 w-4 text-slate-600" />
-                                        <span className="font-semibold text-slate-700">Platform Fee</span>
-                                      </div>
-                                      <span className="text-slate-900">{selectedScholarship.platform_fee_percentage}%</span>
-                                    </div>
-                                  )}
-
                                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                                     <div className="flex items-center gap-2 mb-2">
                                       <CheckCircle className="h-4 w-4 text-slate-600" />

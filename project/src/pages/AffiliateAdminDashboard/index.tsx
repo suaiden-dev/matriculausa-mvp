@@ -6,7 +6,7 @@ import AffiliateAdminDashboardLayout from './AffiliateAdminDashboardLayout';
 import Overview from './Overview';
 import SellerManagement from './SellerManagement';
 import SellerPerformanceTracking from './SellerPerformanceTracking';
-import StudentTracking from './StudentTracking';
+import EnhancedStudentTracking from './EnhancedStudentTracking';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
 
@@ -248,11 +248,7 @@ const AffiliateAdminDashboard: React.FC = () => {
         <Route 
           path="students" 
           element={
-            <StudentTracking 
-              students={students}
-              sellers={sellers}
-              onRefresh={loadAffiliateAdminData}
-            />
+            <EnhancedStudentTracking />
           } 
         />
         <Route 

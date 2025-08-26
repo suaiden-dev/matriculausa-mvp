@@ -297,7 +297,6 @@ async function handleCheckoutSessionCompleted(session: any) {
       const userId = metadata.user_id || metadata.student_id;
       const applicationId = metadata.application_id;
       const applicationFeeAmount = metadata.application_fee_amount || '350.00';
-      const platformFeePercentage = metadata.platform_fee_percentage || '15.00';
       const universityId = metadata.university_id;
 
       if (userId && applicationId) {
@@ -335,13 +334,12 @@ async function handleCheckoutSessionCompleted(session: any) {
           console.log('User profile updated - application fee paid');
         }
 
-        // Log dos valores processados (sem platform fee)
-        console.log('Application fee payment processed (100% to university):', {
+        // Log dos valores processados
+        console.log('Application fee payment processed:', {
           userId,
           applicationId,
           applicationFeeAmount,
-          universityId,
-          platformFeeDisabled: true
+          universityId
         });
 
         // --- NOTIFICAÇÃO VIA WEBHOOK N8N ---
