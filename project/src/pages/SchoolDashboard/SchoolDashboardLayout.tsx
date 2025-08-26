@@ -131,7 +131,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/students')) return 'students';
     if (path.includes('/selection-process')) return 'selection-process';
     if (path.includes('/ai-solutions')) return 'ai-solutions';
-    if (path.includes('/stripe-connect/transfers')) return 'stripe-transfers';
     if (path.includes('/stripe-connect')) return 'stripe-connect';
 
     if (path.includes('/payment-dashboard')) return 'payment-dashboard';
@@ -204,8 +203,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       dropdown: [
         { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
         { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
-        { id: 'stripe-transfers', label: 'Stripe Connect Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null, status: 'em_desenvolvimento' },
-
       ]
     },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
@@ -450,7 +447,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'selection-process' && 'Selection Process'}
                   {activeTab === 'analytics' && 'Payment Management'}
                   {activeTab === 'stripe-connect' && 'Stripe Connect'}
-                  {activeTab === 'stripe-transfers' && 'Transfers'}
           
                   {activeTab === 'payment-dashboard' && 'Payment Dashboard'}
                 </h1>
@@ -462,7 +458,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'selection-process' && 'Review and approve student applications'}
                   {activeTab === 'analytics' && 'Track and manage scholarship payment requests'}
                   {activeTab === 'stripe-connect' && 'Manage your Stripe Connect integration'}
-                  {activeTab === 'stripe-transfers' && 'View and manage payment transfers'}
           
                   {activeTab === 'payment-dashboard' && 'Monitor payment activities'}
                 </p>

@@ -31,6 +31,7 @@ import { usePayments } from '../../hooks/usePayments';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { UniversityPaymentRequestService } from '../../services/UniversityPaymentRequestService';
 import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 const PaymentManagement: React.FC = () => {
   const { university } = useUniversity();
@@ -79,7 +80,12 @@ const PaymentManagement: React.FC = () => {
   // Request details modal state
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [showRequestDetailsModal, setShowRequestDetailsModal] = useState(false);
-
+  
+  // Stripe Connect status state
+  const [hasStripeConnect, setHasStripeConnect] = useState(false);
+  const [loadingStripeStatus, setLoadingStripeStatus] = useState(true);
+  const navigate = useNavigate();
+  
   const handleExport = async () => {
     try {
       setExporting(true);
@@ -99,6 +105,46 @@ const PaymentManagement: React.FC = () => {
     }
   };
 
+  const checkStripeConnectStatus = async () => {
+    if (!university?.id) return;
+    
+    try {
+      setLoadingStripeStatus(true);
+      
+      // Verificar se a universidade tem configuração de taxa com Stripe Connect
+      const { data: feeConfig, error } = await supabase
+        .from('university_fee_configurations')
+        .select('stripe_connect_enabled, stripe_connect_account_id')
+        .eq('university_id', university.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error checking Stripe Connect status:', error);
+        return;
+      }
+      
+      // Se existe configuração e tem Stripe Connect habilitado
+      const hasConnect = feeConfig && 
+        feeConfig.stripe_connect_enabled === true && 
+        feeConfig.stripe_connect_account_id;
+      
+      setHasStripeConnect(!!hasConnect);
+      
+      console.log('🔗 [Stripe Connect] Status check:', {
+        universityId: university.id,
+        feeConfig,
+        hasConnect,
+        stripeEnabled: feeConfig?.stripe_connect_enabled,
+        accountId: feeConfig?.stripe_connect_account_id
+      });
+      
+    } catch (error: any) {
+      console.error('Error checking Stripe Connect status:', error);
+    } finally {
+      setLoadingStripeStatus(false);
+    }
+  };
+
   const loadUniversityPaymentRequests = async () => {
     if (!university?.id) return;
     
@@ -113,24 +159,41 @@ const PaymentManagement: React.FC = () => {
         .filter((r: any) => r.status === 'paid')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      // Buscar o total real de application fees recebidas pela universidade
-      // Este é o faturamento real, independente de filtros
-      const { data: totalRevenueData } = await supabase
-        .from('scholarship_applications')
+      // SOLUÇÃO FINAL: Buscar apenas as bolsas únicas que têm aplicações pagas
+      // Usar uma query mais eficiente para evitar duplicatas
+      const { data: scholarshipsWithPaidApps, error: revenueError } = await supabase
+        .from('scholarships')
         .select(`
-          scholarships!inner(
-            application_fee_amount,
-            university_id
-          )
+          id,
+          application_fee_amount,
+          university_id
         `)
-        .eq('scholarships.university_id', university.id)
+        .eq('university_id', university.id);
+      
+      if (revenueError) {
+        console.error('Error fetching scholarships:', revenueError);
+      }
+      
+      // Buscar quais bolsas têm pelo menos uma aplicação paga
+      const { data: paidApplications, error: paidError } = await supabase
+        .from('scholarship_applications')
+        .select('scholarship_id')
         .eq('is_application_fee_paid', true);
       
-      // Calcular o faturamento total real
-      const totalApplicationFeesReceived = totalRevenueData?.reduce((sum: number, app: any) => {
-        const feeAmount = app.scholarships?.application_fee_amount || 0;
-        return sum + feeAmount;
-      }, 0) || 0;
+      if (paidError) {
+        console.error('Error fetching paid applications:', paidError);
+      }
+      
+      // Criar um Set com os IDs das bolsas que têm aplicações pagas
+      const paidScholarshipIds = new Set(paidApplications?.map(app => app.scholarship_id) || []);
+      
+      // Filtrar apenas as bolsas que têm aplicações pagas e somar seus valores
+      const totalApplicationFeesReceived = scholarshipsWithPaidApps
+        ?.filter(scholarship => paidScholarshipIds.has(scholarship.id))
+        .reduce((sum: number, scholarship: any) => {
+          const feeAmount = scholarship.application_fee_amount || 0;
+          return sum + feeAmount;
+        }, 0) || 0;
       
       // O saldo disponível é: Faturamento Real - Pago - Aprovado (reservado)
       const totalApproved = requests
@@ -140,11 +203,14 @@ const PaymentManagement: React.FC = () => {
       // Saldo disponível = Faturamento Real - Pago - Aprovado (reservado)
       const availableBalance = Math.max(0, totalApplicationFeesReceived - totalPaidOut - totalApproved);
       
-      console.log('💰 [Balance] Calculation:', {
+      console.log('💰 [Balance] Calculation (FIXED):', {
         totalApplicationFeesReceived,
         totalPaidOut,
         totalApproved,
         availableBalance,
+        uniqueScholarshipsWithPaidApplications: paidScholarshipIds.size,
+        totalScholarships: scholarshipsWithPaidApps?.length || 0,
+        totalApplicationsPaid: paidApplications?.length || 0,
         requestsCount: requests.length,
         paidRequests: requests.filter(r => r.status === 'paid').length,
         pendingRequests: requests.filter(r => r.status === 'pending').length,
@@ -168,6 +234,7 @@ const PaymentManagement: React.FC = () => {
   React.useEffect(() => {
     if (university?.id) {
       loadUniversityPaymentRequests();
+      checkStripeConnectStatus();
     }
   }, [university?.id]);
 
@@ -737,8 +804,69 @@ const PaymentManagement: React.FC = () => {
       )}
 
       {/* University Payment Requests Tab Content */}
-      {activeTab === 'university-requests' && (
+              {activeTab === 'university-requests' && (
         <>
+                    {/* Stripe Connect Banner - Only show if not connected */}
+                    {!loadingStripeStatus && !hasStripeConnect && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-[#05294E] rounded-lg">
+                            <CreditCard className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Upgrade to Stripe Connect</h2>
+                            <p className="text-gray-600 text-sm mb-4">Skip payment requests, get paid instantly!</p>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <CheckCircle className="w-4 h-4 text-[#05294E]" />
+                                <div>
+                                  <h4 className="font-medium text-gray-900 text-sm">Instant Payments</h4>
+                                  <p className="text-xs text-gray-600">Application fees go directly to your account</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <TrendingUp className="w-4 h-4 text-[#05294E]" />
+                                <div>
+                                  <h4 className="text-sm font-medium text-gray-900">No More Delays</h4>
+                                  <p className="text-xs text-gray-600">Skip admin approval and waiting periods</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <button
+                              onClick={() => navigate('/school/dashboard/stripe-connect')}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white text-sm font-medium rounded-lg hover:bg-[#05294E]/80 transition-colors"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              Connect Stripe Account
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Stripe Connect Success Message - Only show if connected */}
+                    {!loadingStripeStatus && hasStripeConnect && (
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-6 shadow-sm mb-6">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-green-100 rounded-lg">
+                            <CheckCircle className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h2 className="text-xl font-semibold text-green-900 mb-2">✅ Stripe Connect Active</h2>
+                            <p className="text-green-700 text-sm mb-4">Great! Your Stripe Connect account is set up. Application fees will be paid directly to your connected account.</p>
+                            
+                            <div className="flex items-center gap-2 text-green-600 text-sm">
+                              <CheckCircle className="w-4 h-4" />
+                              <span>No more payment requests needed</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
           {/* Stats Cards for University Requests */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-lg shadow border">
