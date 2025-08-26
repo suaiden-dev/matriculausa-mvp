@@ -126,24 +126,7 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
             zIndex: 10002,
           }}
         >
-          {/* Texto de Suporte Acadêmico */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200 shadow-lg max-w-[200px] opacity-0 animate-fadeInRight"
-            style={{
-              animation: 'fadeInRight 0.5s ease-out 0.3s forwards'
-            }}
-          >
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="h-3 w-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <h4 className="font-semibold text-slate-900 text-xs truncate">Academic Support</h4>
-                <p className="text-xs text-slate-500 truncate">24/7 assistance available</p>
-              </div>
-            </div>
-          </div>
+
 
           {/* Botão de Ajuda */}
           <div
