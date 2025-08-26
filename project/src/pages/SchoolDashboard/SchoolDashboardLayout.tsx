@@ -68,7 +68,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
   const blockedRoutes = [
     '/school/dashboard/stripe-connect-setup',
     '/school/dashboard/stripe-connect-transfers', 
-    '/school/dashboard/payment-method-config',
+
     '/school/dashboard/payment-dashboard'
   ];
   
@@ -133,7 +133,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/ai-solutions')) return 'ai-solutions';
     if (path.includes('/stripe-connect/transfers')) return 'stripe-transfers';
     if (path.includes('/stripe-connect')) return 'stripe-connect';
-    if (path.includes('/payment-method-config')) return 'payment-method-config';
+
     if (path.includes('/payment-dashboard')) return 'payment-dashboard';
 
     if (path.includes('/inbox')) return 'inbox';
@@ -205,7 +205,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         { id: 'analytics', label: 'Payment Management', icon: BarChart3, path: '/school/dashboard/analytics', badge: null },
         { id: 'stripe-connect', label: 'Stripe Connect', icon: CreditCard, path: '/school/dashboard/stripe-connect', badge: null },
         { id: 'stripe-transfers', label: 'Stripe Connect Transfers', icon: DollarSign, path: '/school/dashboard/stripe-connect/transfers', badge: null, status: 'em_desenvolvimento' },
-        { id: 'payment-method-config', label: 'Payment Requests', icon: CreditCard, path: '/school/dashboard/payment-method-config', badge: null, status: 'em_desenvolvimento' }
+
       ]
     },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Gift, path: '/school/dashboard/matricula-rewards', badge: null },
@@ -451,7 +451,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'analytics' && 'Payment Management'}
                   {activeTab === 'stripe-connect' && 'Stripe Connect'}
                   {activeTab === 'stripe-transfers' && 'Transfers'}
-                  {activeTab === 'payment-method-config' && 'Payment Methods'}
+          
                   {activeTab === 'payment-dashboard' && 'Payment Dashboard'}
                 </h1>
                 <p className="text-slate-600">
@@ -463,7 +463,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                   {activeTab === 'analytics' && 'Track and manage scholarship payment requests'}
                   {activeTab === 'stripe-connect' && 'Manage your Stripe Connect integration'}
                   {activeTab === 'stripe-transfers' && 'View and manage payment transfers'}
-                  {activeTab === 'payment-method-config' && 'Configure payment methods'}
+          
                   {activeTab === 'payment-dashboard' && 'Monitor payment activities'}
                 </p>
               </div>

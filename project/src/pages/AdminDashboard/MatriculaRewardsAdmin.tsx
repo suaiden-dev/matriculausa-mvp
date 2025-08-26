@@ -254,9 +254,11 @@ const MatriculaRewardsAdmin: React.FC = () => {
       setLoadingPayouts(true);
       setError(null);
       // Try to load with invoice embed and payment details
+      // Filtrar apenas requests do tipo matricula_rewards
       const { data, error } = await supabase
         .from('university_payout_requests')
         .select('*, universities(name), payout_invoices(invoice_number), payout_details_preview, payout_method')
+        .eq('request_type', 'matricula_rewards') // Filtrar apenas matricula_rewards
         .order('created_at', { ascending: false });
       if (error) throw error;
       setPayouts(data || []);
@@ -347,6 +349,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
       const { data: payoutsData, error: poErr } = await supabase
         .from('university_payout_requests')
         .select('status, created_at')
+        .eq('request_type', 'matricula_rewards') // Filtrar apenas matricula_rewards
         .gte('created_at', start)
         .order('created_at', { ascending: false });
       if (poErr) console.warn('[Admin] payout_requests error:', poErr);
