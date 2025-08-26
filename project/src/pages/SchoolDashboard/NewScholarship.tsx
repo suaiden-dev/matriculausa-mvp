@@ -67,7 +67,6 @@ const NewScholarship: React.FC = () => {
     work_permissions: [] as string[],
     // Novos campos para taxas dinâmicas
     application_fee_amount: '350.00',
-    platform_fee_percentage: '15.00',
   });
 
   // Helper texts for work permissions
@@ -165,7 +164,6 @@ const NewScholarship: React.FC = () => {
           work_permissions: Array.isArray(scholarship.work_permissions) ? scholarship.work_permissions : [],
           // Novos campos para taxas dinâmicas
           application_fee_amount: scholarship.application_fee_amount || '350.00',
-          platform_fee_percentage: scholarship.platform_fee_percentage || '15.00',
         });
 
         // Set image preview if exists
@@ -463,12 +461,6 @@ const NewScholarship: React.FC = () => {
       return;
     }
 
-    if (!formData.platform_fee_percentage || isNaN(Number(formData.platform_fee_percentage)) || Number(formData.platform_fee_percentage) < 0 || Number(formData.platform_fee_percentage) > 100) {
-      setError('Platform fee percentage must be a valid number between 0 and 100');
-      setLoading(false);
-      return;
-    }
-
     if (!formData.deadline.trim()) {
       setError('Application deadline is required');
       setLoading(false);
@@ -514,7 +506,6 @@ const NewScholarship: React.FC = () => {
           annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
           // Novos campos para taxas dinâmicas
           application_fee_amount: Number(formData.application_fee_amount),
-          platform_fee_percentage: Number(formData.platform_fee_percentage),
         };
         if (includeWP) payload.work_permissions = formData.work_permissions.filter((wp) => wp !== 'F1');
         if (includeDM) payload.delivery_mode = formData.delivery_mode;

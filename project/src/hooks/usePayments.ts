@@ -215,7 +215,6 @@ export const usePayments = (universityId: string | undefined) => {
             amount,
             scholarship_type,
             application_fee_amount,
-            platform_fee_percentage,
             university_id,
             universities(name),
             field_of_study,
