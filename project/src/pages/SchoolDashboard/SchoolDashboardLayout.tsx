@@ -344,7 +344,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                     </div>
                     {/* Dropdown */}
                     <div
-                      className={`overflow-hidden transition-all duration-300 ${dropdownOpen?.[item.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} bg-slate-50 rounded-xl shadow-lg border border-slate-200 mt-2 ml-4 mr-4`}
+                      className={`overflow-hidden transition-all duration-300 ${dropdownOpen?.[item.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} mt-2 ml-4 mr-4`}
                       style={{ pointerEvents: dropdownOpen?.[item.id] ? 'auto' : 'none' }}
                     >
                       {(isProduction ? item.dropdown.filter(sub => sub.status !== 'em_desenvolvimento') : item.dropdown).map(sub => {
@@ -354,8 +354,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                           <Link
                             key={sub.id}
                             to={sub.path}
-                            className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                              isSubActive ? 'bg-[#05294E] text-white shadow' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            className={`flex items-center px-4 py-3 my-1 rounded-xl font-medium transition-all duration-200 ${
+                              isSubActive ? 'bg-[#05294E] text-white' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                             }`}
                             onClick={() => {
                               setSidebarOpen(false);
