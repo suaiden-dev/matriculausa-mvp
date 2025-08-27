@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, CheckCircle, Database, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, CheckCircle, Database, Eye, EyeOff, History, Users, Calendar, Globe, FileText } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { supabase } from '../../lib/supabase';
@@ -144,6 +144,20 @@ interface Term {
   updated_at: string;
 }
 
+interface TermAcceptance {
+  id: string;
+  user_id: string;
+  term_id: string;
+  term_type: string;
+  accepted_at: string;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  user_email?: string;
+  user_full_name?: string;
+  term_title?: string;
+}
+
 const TermsManagement: React.FC = () => {
   const [terms, setTerms] = useState<Term[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,6 +167,12 @@ const TermsManagement: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [viewingTerm, setViewingTerm] = useState<Term | null>(null);
   const [showRawContent, setShowRawContent] = useState(false);
+  
+  // Acceptance history states
+  const [activeTab, setActiveTab] = useState<'terms' | 'history'>('terms');
+  const [acceptanceHistory, setAcceptanceHistory] = useState<TermAcceptance[]>([]);
+  const [acceptanceHistoryLoading, setAcceptanceHistoryLoading] = useState(false);
+  const [selectedTermForHistory, setSelectedTermForHistory] = useState<Term | null>(null);
 
   // Configuração do React Quill
   const quillModules = {
@@ -234,9 +254,85 @@ const TermsManagement: React.FC = () => {
     }
   };
 
+  // Carregar histórico de aceitações
+  const loadAcceptanceHistory = async (termId?: string) => {
+    try {
+      setAcceptanceHistoryLoading(true);
+      
+      // Buscar as aceitações
+      let query = supabase
+        .from('comprehensive_term_acceptance')
+        .select('*')
+        .order('accepted_at', { ascending: false });
+
+      if (termId) {
+        query = query.eq('term_id', termId);
+      }
+
+      const { data: acceptances, error: acceptancesError } = await query;
+      if (acceptancesError) throw acceptancesError;
+
+      if (!acceptances || acceptances.length === 0) {
+        setAcceptanceHistory([]);
+        return;
+      }
+
+      // Buscar informações dos usuários
+      const userIds = [...new Set(acceptances.map(a => a.user_id))];
+      const { data: userProfiles, error: usersError } = await supabase
+        .from('user_profiles')
+        .select('user_id, email, full_name')
+        .in('user_id', userIds);
+
+      if (usersError) throw usersError;
+
+      // Buscar informações dos termos
+      const termIds = [...new Set(acceptances.map(a => a.term_id))];
+      const { data: terms, error: termsError } = await supabase
+        .from('application_terms')
+        .select('id, title')
+        .in('id', termIds);
+
+      if (termsError) throw termsError;
+
+      // Criar mapas para lookup rápido
+      const userMap = new Map(userProfiles?.map(u => [u.user_id, u]) || []);
+      const termMap = new Map(terms?.map(t => [t.id, t]) || []);
+
+      // Combinar os dados
+      const transformedData = acceptances.map(acceptance => ({
+        id: acceptance.id,
+        user_id: acceptance.user_id,
+        term_id: acceptance.term_id,
+        term_type: acceptance.term_type,
+        accepted_at: acceptance.accepted_at,
+        ip_address: acceptance.ip_address,
+        user_agent: acceptance.user_agent,
+        created_at: acceptance.created_at,
+        user_email: userMap.get(acceptance.user_id)?.email || 'N/A',
+        user_full_name: userMap.get(acceptance.user_id)?.full_name || 'N/A',
+        term_title: termMap.get(acceptance.term_id)?.title || 'N/A'
+      }));
+
+      setAcceptanceHistory(transformedData);
+    } catch (error: any) {
+      console.error('Error loading acceptance history:', error);
+      setError(error.message);
+    } finally {
+      setAcceptanceHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadTerms();
   }, []);
+
+  // Load acceptance history when history tab is selected
+  useEffect(() => {
+    if (activeTab === 'history') {
+      loadAcceptanceHistory();
+    }
+  }, [activeTab]);
 
   // Criar novo termo
   const handleCreateTerm = async () => {
@@ -385,6 +481,8 @@ const TermsManagement: React.FC = () => {
   const handleDeleteTerm = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este termo?')) return;
 
+
+
     try {
       console.log('🔄 Excluindo termo:', id);
       
@@ -421,9 +519,37 @@ const TermsManagement: React.FC = () => {
       {/* Estilos personalizados para o React Quill */}
       <style>{quillStyles}</style>
       
-      {/* Botão para criar novo termo */}
-      <div className="flex justify-end">
-        {!newTerm && (
+      {/* Abas de navegação */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('terms')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'terms'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Gerenciar Termos
+          </button>
+          <button
+            onClick={() => {
+              setSelectedTermForHistory(null);
+              setActiveTab('history');
+              loadAcceptanceHistory();
+            }}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'history'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Histórico de Aceitações
+          </button>
+        </div>
+        
+        {/* Botão para criar novo termo */}
+        {activeTab === 'terms' && !newTerm && (
           <button
             onClick={() => setNewTerm({ title: '', content: '', status: true })}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center"
@@ -519,9 +645,12 @@ const TermsManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Terms List */}
-      <div className="space-y-6">
-        {terms.map((term) => (
+      {/* Conteúdo baseado na aba ativa */}
+      {activeTab === 'terms' && (
+        <>
+          {/* Terms List */}
+          <div className="space-y-6">
+            {terms.map((term) => (
           <div
             key={term.id}
             className={`bg-white rounded-xl shadow-sm border p-6 cursor-pointer transition-all duration-200 hover:shadow-md ${
@@ -606,6 +735,17 @@ const TermsManagement: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
+                      onClick={() => {
+                        setSelectedTermForHistory(term);
+                        setActiveTab('history');
+                        loadAcceptanceHistory(term.id);
+                      }}
+                      className="p-2 text-green-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Ver histórico de aceitações"
+                    >
+                      <History className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => setViewingTerm(term)}
                       className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                       title="Ver detalhes"
@@ -666,7 +806,137 @@ const TermsManagement: React.FC = () => {
             )}
           </div>
         )}
-      </div>
+          </div>
+        </>
+      )}
+
+      {/* Aba de Histórico de Aceitações */}
+      {activeTab === 'history' && (
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-medium text-gray-900">
+                {selectedTermForHistory 
+                  ? `Histórico de Aceitações - ${selectedTermForHistory.title}`
+                  : 'Histórico Geral de Aceitações de Termos'
+                }
+              </h3>
+              {selectedTermForHistory && (
+                <button
+                  onClick={() => {
+                    setSelectedTermForHistory(null);
+                    loadAcceptanceHistory();
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Ver Todos os Termos
+                </button>
+              )}
+            </div>
+
+            {acceptanceHistoryLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : acceptanceHistory.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <History className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg">Nenhum registro de aceitação encontrado</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  {selectedTermForHistory 
+                    ? 'Este termo ainda não foi aceito por nenhum usuário.'
+                    : 'Ainda não há registros de aceitação de termos.'
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Usuário
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Termo
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Aceito Em
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Endereço IP
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Navegador/Dispositivo
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {acceptanceHistory.map((acceptance) => (
+                      <tr key={acceptance.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-8 w-8">
+                              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Users className="w-4 h-4 text-blue-600" />
+                              </div>
+                            </div>
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900">
+                                {acceptance.user_full_name || 'N/A'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {acceptance.user_email || 'N/A'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-8 w-8">
+                              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-green-600" />
+                              </div>
+                            </div>
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900">
+                                {acceptance.term_title || 'N/A'}
+                              </div>
+                              <div className="text-sm text-gray-500 capitalize">
+                                {acceptance.term_type.replace(/_/g, ' ')}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center">
+                            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                            {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {acceptance.ip_address || 'N/A'}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
+                          <div className="flex items-center">
+                            <Globe className="w-4 h-4 mr-2 text-gray-400" />
+                            <span title={acceptance.user_agent || 'N/A'}>
+                              {acceptance.user_agent ? 
+                                acceptance.user_agent.substring(0, 50) + (acceptance.user_agent.length > 50 ? '...' : '') 
+                                : 'N/A'
+                              }
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Term View Modal */}
       {viewingTerm && (

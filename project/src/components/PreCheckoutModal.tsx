@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Dialog } from '@headlessui/react';
-import { X, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Lock, FileText, Scroll } from 'lucide-react';
+import { X, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Lock, FileText, Scroll, Target } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 
 interface Term {
   id: string;
@@ -38,7 +39,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   console.log('🔍 [PreCheckoutModal] Componente renderizado, isOpen:', isOpen);
   
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  const { recordTermAcceptance } = useTermsAcceptance();
   const [discountCode, setDiscountCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{
@@ -59,12 +61,16 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const [userClickedCheckbox, setUserClickedCheckbox] = useState(false); // Track user interaction
   const termsContentRef = useRef<HTMLDivElement>(null);
   
+  // Verificar se o usuário tem seller_referral_code
+  const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
+  
   console.log('🔍 [PreCheckoutModal] Estados atuais:', {
     termsAccepted,
     showTermsModal,
     hasScrolledToBottom,
     activeTerm: activeTerm ? 'loaded' : 'null',
-    loadingTerms
+    loadingTerms,
+    hasSellerReferralCode
   });
 
   // Reset state when modal opens/closes
@@ -132,9 +138,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     try {
       setLoadingTerms(true);
       const { data, error } = await supabase
-        .from('affiliate_terms')
+        .from('application_terms')
         .select('*')
-        .eq('status', true)
+        .eq('term_type', 'checkout_terms')
+        .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -226,12 +233,24 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   };
 
   // Handle terms acceptance
-  const handleTermsAccept = () => {
+  const handleTermsAccept = async () => {
     console.log('🔍 [PreCheckoutModal] handleTermsAccept chamado');
     if (hasScrolledToBottom) {
-      console.log('🔍 [PreCheckoutModal] Termos aceitos, fechando modal');
-      setTermsAccepted(true);
-      setShowTermsModal(false);
+      try {
+        // Record acceptance of checkout terms
+        if (activeTerm) {
+          await recordTermAcceptance(activeTerm.id, 'checkout_terms');
+        }
+        
+        console.log('🔍 [PreCheckoutModal] Termos aceitos e registrados, fechando modal');
+        setTermsAccepted(true);
+        setShowTermsModal(false);
+      } catch (error) {
+        console.error('🔍 [PreCheckoutModal] Erro ao registrar aceitação dos termos:', error);
+        // Still allow user to proceed even if recording fails
+        setTermsAccepted(true);
+        setShowTermsModal(false);
+      }
     }
   };
 
@@ -258,6 +277,16 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setValidationResult({
         isValid: false,
         message: t('preCheckoutModal.pleaseEnterCode')
+      });
+      return;
+    }
+
+    // PRIMEIRO: Verificar se o usuário tem seller_referral_code
+    if (hasSellerReferralCode) {
+      console.log('🔍 [PreCheckoutModal] ❌ Usuário tem seller_referral_code, não pode usar código de desconto.');
+      setValidationResult({
+        isValid: false,
+        message: t('preCheckoutModal.sellerReferralCodeBlocked')
       });
       return;
     }
@@ -418,8 +447,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
               </div>
 
 
-              {/* Discount Code Input */}
-              {!hasUsedReferralCode ? (
+              {/* Discount Code Input - Apenas para usuários sem seller_referral_code */}
+              {!hasUsedReferralCode && !hasSellerReferralCode ? (
                 <div className="space-y-4">
                   <div className="text-center">
                     <label className="block text-lg font-semibold text-gray-900 mb-2">
@@ -473,7 +502,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : !hasSellerReferralCode && (
                 <div className="bg-green-50 rounded-xl p-6 text-center border-0">
                   <div className="flex items-center justify-center space-x-3 mb-3">
                     <CheckCircle className="w-8 h-8 text-green-600" />
@@ -506,38 +535,58 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
 
             {/* Footer */}
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 px-6 py-6 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={handleSkip}
-                disabled={!termsAccepted}
-                className={`flex-1 px-6 py-4 border-2 rounded-xl font-semibold transition-all ${
-                  termsAccepted
-                    ? 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
-                    : 'border-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {t('preCheckoutModal.continueWithoutCode')}
-              </button>
-              <button
-                onClick={handleProceed}
-                disabled={isLoading || !termsAccepted}
-                className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 ${
-                  validationResult?.isValid && codeApplied
-                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
-                    : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-                } ${isLoading || !termsAccepted ? 'opacity-75 cursor-not-allowed' : ''}`}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>{t('preCheckoutModal.openingStripe')}</span>
-                  </div>
-                ) : validationResult?.isValid && codeApplied ? (
-                  t('preCheckoutModal.applyCodeAndContinue')
-                ) : (
-                  t('preCheckoutModal.goToPayment')
-                )}
-              </button>
-              
+              {/* Para usuários COM seller_referral_code: apenas um botão */}
+              {hasSellerReferralCode ? (
+                <button
+                  onClick={handleProceed}
+                  disabled={isLoading || !termsAccepted}
+                  className="flex-1 px-6 py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:opacity-75 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>{t('preCheckoutModal.openingStripe')}</span>
+                    </div>
+                  ) : (
+                    t('preCheckoutModal.goToPayment')
+                  )}
+                </button>
+              ) : (
+                /* Para usuários SEM seller_referral_code: dois botões (comportamento original) */
+                <>
+                  <button
+                    onClick={handleSkip}
+                    disabled={!termsAccepted}
+                    className={`flex-1 px-6 py-4 border-2 rounded-xl font-semibold transition-all ${
+                      termsAccepted
+                        ? 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {t('preCheckoutModal.continueWithoutCode')}
+                  </button>
+                  <button
+                    onClick={handleProceed}
+                    disabled={isLoading || !termsAccepted}
+                    className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                      validationResult?.isValid && codeApplied
+                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
+                        : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                    } ${isLoading || !termsAccepted ? 'opacity-75 cursor-not-allowed' : ''}`}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>{t('preCheckoutModal.openingStripe')}</span>
+                      </div>
+                    ) : validationResult?.isValid && codeApplied ? (
+                      t('preCheckoutModal.applyCodeAndContinue')
+                    ) : (
+                      t('preCheckoutModal.goToPayment')
+                    )}
+                  </button>
+                </>
+              )}
             </div>
             
           </Dialog.Panel>

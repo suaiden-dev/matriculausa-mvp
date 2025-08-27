@@ -63,6 +63,10 @@ const UniversityRewardsDashboard: React.FC = () => {
   const [submittingPayout, setSubmittingPayout] = useState(false);
   const [inputError, setInputError] = useState<string | null>(null);
 
+  // Pagination for payouts
+  const payoutsPerPage = 5; // Number of payouts to show per page
+  const [currentPayoutPage, setCurrentPayoutPage] = useState(1);
+
   // Real-time validation of requested amount
   const validatePaymentAmount = (amount: number) => {
     const availableBalance = rewardsAccount?.balance_coins || 0;
@@ -192,6 +196,17 @@ const UniversityRewardsDashboard: React.FC = () => {
     
     // Reload program data
     await loadMatriculaRewardsData();
+  };
+
+  // Pagination logic for payouts
+  const totalPayoutPages = Math.ceil(payouts.length / payoutsPerPage);
+  const paginatedPayouts = payouts.slice(
+    (currentPayoutPage - 1) * payoutsPerPage,
+    currentPayoutPage * payoutsPerPage
+  );
+
+  const handlePayoutPageChange = (page: number) => {
+    setCurrentPayoutPage(page);
   };
 
   const formatCurrency = (amount: number) => {
@@ -791,37 +806,62 @@ const UniversityRewardsDashboard: React.FC = () => {
                 <p className="text-gray-600 mt-1">Track your cash-out requests sent to MatriculaUSA</p>
               </div>
               <div className="p-6">
-                {payouts.length ? (
-                  <div className="space-y-4">
-                    {payouts.map((payout) => (
-                      <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center">
-                            <Users className="h-6 w-6 text-white" />
+                {paginatedPayouts.length ? (
+                  <>
+                    <div className="space-y-4">
+                      {paginatedPayouts.map((payout) => (
+                        <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center">
+                              <Users className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">
+                                Invoice: {(payout as any).payout_invoices?.[0]?.invoice_number || payout.id.slice(0,8)}
+                              </h3>
+                              <p className="text-sm text-gray-500">
+                                {formatDate(payout.created_at)} • Method: {String((payout as any).payout_method || '').replace('_',' ')}
+                              </p>
+                              <p className="text-sm text-gray-600 font-medium">
+                                Status: {payout.status}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">
-                              Invoice: {(payout as any).payout_invoices?.[0]?.invoice_number || payout.id.slice(0,8)}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                              {formatDate(payout.created_at)} • Method: {String((payout as any).payout_method || '').replace('_',' ')}
-                            </p>
-                            <p className="text-sm text-gray-600 font-medium">
-                              Status: {payout.status}
-                            </p>
+                          <div className="text-right">
+                            <div className="font-bold text-gray-900 text-lg">
+                              {formatCurrency(Number((payout as any).amount_usd || payout.amount_coins))}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {payout.amount_coins} coins
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold text-gray-900 text-lg">
-                            {formatCurrency(Number((payout as any).amount_usd || payout.amount_coins))}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {payout.amount_coins} coins
-                          </div>
-                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Pagination Controls */}
+                    {totalPayoutPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 py-6 border-t border-gray-200 mt-6">
+                        <button
+                          onClick={() => handlePayoutPageChange(Math.max(currentPayoutPage - 1, 1))}
+                          disabled={currentPayoutPage === 1}
+                          className="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 disabled:bg-gray-200 disabled:text-gray-400 hover:bg-gray-200 transition-colors"
+                        >
+                          Previous
+                        </button>
+                        <span className="px-4 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg">
+                          Page {currentPayoutPage} of {totalPayoutPages}
+                        </span>
+                        <button
+                          onClick={() => handlePayoutPageChange(Math.min(currentPayoutPage + 1, totalPayoutPages))}
+                          disabled={currentPayoutPage === totalPayoutPages}
+                          className="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 disabled:bg-gray-200 disabled:text-gray-400 hover:bg-gray-200 transition-colors"
+                        >
+                          Next
+                        </button>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-16">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

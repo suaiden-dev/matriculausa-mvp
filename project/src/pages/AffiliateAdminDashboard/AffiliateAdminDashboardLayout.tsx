@@ -13,7 +13,8 @@ import {
   Crown,
   CheckCircle,
   User,
-  ChevronDown
+  ChevronDown,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 

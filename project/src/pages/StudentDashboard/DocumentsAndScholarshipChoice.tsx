@@ -92,6 +92,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const handleUpload = async () => {
     setUploading(true);
     setError(null);
+    setFieldErrors({}); // Limpar erros anteriores
     try {
       if (!user) throw new Error('User not authenticated');
       
@@ -157,6 +158,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         },
         body: JSON.stringify(webhookBody),
       });
+      
+      if (!webhookResponse.ok) {
+        throw new Error(`Webhook request failed: ${webhookResponse.status} ${webhookResponse.statusText}`);
+      }
       
       const webhookResult = await webhookResponse.json();
       
@@ -257,13 +262,56 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           });
         }
       } else {
+        // Resposta inesperada ou erro no n8n - tratar como erro e ir para manual review
+        console.error('Unexpected n8n response:', webhookResult);
+        
+        // Salvar documentos para revisão manual
+        await supabase
+          .from('user_profiles')
+          .update({
+            documents: uploadedDocs,
+            documents_uploaded: true,
+            documents_status: 'under_review',
+          })
+          .eq('user_id', user.id);
+
+        // Salvar dados no localStorage para manual review
+        const errorData = {
+          passport: 'Document analysis failed. Please review manually.',
+          funds_proof: 'Document analysis failed. Please review manually.',
+          diploma: 'Document analysis failed. Please review manually.',
+        };
+        
+        localStorage.setItem('documentAnalysisErrors', JSON.stringify(errorData));
+        localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
+        
         setAnalyzing(false);
-        setError('Unexpected response from document analysis. Please try again.');
+        setError('Document analysis failed. Please continue to manual review.');
+        setFieldErrors(errorData);
+        
+        // Limpar todos os arquivos para permitir nova seleção
+        setFiles({ passport: null, diploma: null, funds_proof: null });
       }
     } catch (e: any) {
+      console.error('Upload error:', e);
       setUploading(false);
       setAnalyzing(false);
-      setError(e.message || 'Upload failed');
+      
+      // Em caso de erro, definir erros genéricos para forçar manual review
+      const genericErrors = {
+        passport: 'Upload failed. Please review manually.',
+        funds_proof: 'Upload failed. Please review manually.',
+        diploma: 'Upload failed. Please review manually.',
+      };
+      
+      setFieldErrors(genericErrors);
+      setError(e.message || 'Upload failed. Please continue to manual review.');
+      
+      // Salvar dados de erro no localStorage para manual review
+      if (user) {
+        localStorage.setItem('documentAnalysisErrors', JSON.stringify(genericErrors));
+        localStorage.setItem('documentUploadedDocs', JSON.stringify([]));
+      }
     }
   };
 
@@ -646,7 +694,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
             {/* Upload Button */}
             <div className="text-center flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">
-              {Object.values(fieldErrors).some(Boolean) && (
+              {(Object.values(fieldErrors).some(Boolean) || error) && (
                 <button
                   onClick={() => navigate('/student/dashboard/manual-review')}
                   disabled={analyzing}
@@ -679,11 +727,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 )}
               </button>
               
-              {error && (
+              {/* {error && (
                 <div className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
                   {error}
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         )}
