@@ -52,6 +52,7 @@ interface StudentInfo {
   has_paid_selection_process_fee?: boolean;
   has_paid_i20_control_fee?: boolean;
   student_process_type?: string;
+  application_status?: string;
 }
 
 interface FeePayment {
@@ -124,30 +125,37 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
       setLoading(true);
       setError(null);
 
-      // Carregar informações do estudante
-      const { data: studentData, error: studentError } = await supabase.rpc(
-        'get_student_detailed_info',
-        { target_student_id: studentId }
-      );
+             // Carregar informações do estudante
+       console.log('🔍 [STUDENT_DETAILS] Chamando RPC get_student_detailed_info para studentId:', studentId);
+       const { data: studentData, error: studentError } = await supabase.rpc(
+         'get_student_detailed_info',
+         { target_student_id: studentId }
+       );
 
-      if (studentError) {
-        console.error('❌ [STUDENT_DETAILS] Erro na RPC:', studentError);
-        throw new Error(`Failed to load student info: ${studentError.message}`);
-      }
+       if (studentError) {
+         console.error('❌ [STUDENT_DETAILS] Erro na RPC:', studentError);
+         throw new Error(`Failed to load student info: ${studentError.message}`);
+       }
 
-      if (studentData && studentData.length > 0) {
-        // Converter bigint para number para compatibilidade com TypeScript
-        const studentInfoData = {
-          ...studentData[0],
-          total_fees_paid: Number(studentData[0].total_fees_paid || 0),
-          fees_count: Number(studentData[0].fees_count || 0)
-        };
-        setStudentInfo(studentInfoData);
-        // Dados do estudante carregados com sucesso
-      } else {
-        console.warn('⚠️ [STUDENT_DETAILS] Nenhum dado retornado da RPC');
-        setStudentInfo(null);
-      }
+       console.log('🔍 [STUDENT_DETAILS] Dados retornados da RPC:', studentData);
+
+       if (studentData && studentData.length > 0) {
+         // Converter bigint para number para compatibilidade com TypeScript
+         const studentInfoData = {
+           ...studentData[0],
+           total_fees_paid: Number(studentData[0].total_fees_paid || 0),
+           fees_count: Number(studentData[0].fees_count || 0)
+         };
+         console.log('🔍 [STUDENT_DETAILS] Dados processados do estudante:', studentInfoData);
+         console.log('🔍 [STUDENT_DETAILS] application_status:', studentInfoData.application_status);
+         console.log('🔍 [STUDENT_DETAILS] student_process_type:', studentInfoData.student_process_type);
+         console.log('🔍 [STUDENT_DETAILS] Chamando setStudentInfo com:', studentInfoData);
+         setStudentInfo(studentInfoData);
+         // Dados do estudante carregados com sucesso
+       } else {
+         console.warn('⚠️ [STUDENT_DETAILS] Nenhum dado retornado da RPC');
+         setStudentInfo(null);
+       }
 
       // Carregar histórico de taxas
       const { data: feesData, error: feesError } = await supabase.rpc(
@@ -199,6 +207,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
 
   // Carregar dados quando o studentId mudar
   useEffect(() => {
+    console.log('🔍 [STUDENT_DETAILS] useEffect disparado com studentId:', studentId);
     if (studentId) {
       loadStudentDetails();
     }
@@ -356,6 +365,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
   }
 
   // Se um estudante está selecionado, mostrar detalhes
+  console.log('🔍 [STUDENT_DETAILS] Renderizando componente com studentInfo:', studentInfo);
+  console.log('🔍 [STUDENT_DETAILS] application_status no render:', studentInfo?.application_status);
+  
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header Section */}
@@ -601,18 +613,30 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
                         </dd>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Application Status</dt>
-                        <dd className="text-base text-slate-700">
-                          {scholarshipApplication?.status ? 
-                            scholarshipApplication.status.charAt(0).toUpperCase() + scholarshipApplication.status.slice(1) : 
-                            'Status not available'
-                          }
-                        </dd>
-                      </div>
-                    </div>
+                                         <div className="flex items-start space-x-3">
+                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                       <div className="flex-1">
+                         <dt className="text-sm font-medium text-slate-600">Application Status</dt>
+                         <dd className="text-base text-slate-700">
+                           {(() => {
+                             console.log('🔍 [STUDENT_DETAILS] Renderizando Application Status:');
+                             console.log('🔍 [STUDENT_DETAILS] studentInfo:', studentInfo);
+                             console.log('🔍 [STUDENT_DETAILS] studentInfo.application_status:', studentInfo?.application_status);
+                             console.log('🔍 [STUDENT_DETAILS] Tipo do application_status:', typeof studentInfo?.application_status);
+                             console.log('🔍 [STUDENT_DETAILS] studentInfo completo:', JSON.stringify(studentInfo, null, 2));
+                             
+                             if (studentInfo?.application_status) {
+                               const formattedStatus = studentInfo.application_status.charAt(0).toUpperCase() + studentInfo.application_status.slice(1);
+                               console.log('🔍 [STUDENT_DETAILS] Status formatado:', formattedStatus);
+                               return formattedStatus;
+                             } else {
+                               console.log('🔍 [STUDENT_DETAILS] Status não disponível, mostrando fallback');
+                               return 'Status not available';
+                             }
+                           })()}
+                         </dd>
+                       </div>
+                     </div>
                     <div className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">

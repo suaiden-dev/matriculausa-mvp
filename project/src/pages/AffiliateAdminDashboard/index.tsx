@@ -31,6 +31,7 @@ interface Student {
   total_paid: number;
   created_at: string;
   status: string;
+  application_status?: string;
 }
 
 interface Seller {
@@ -133,7 +134,8 @@ const AffiliateAdminDashboard: React.FC = () => {
         referral_code_used: student.referral_code_used || '',
         total_paid: student.total_paid || 0,
         created_at: student.created_at,
-        status: student.status || 'active'
+        status: student.status || 'active',
+        application_status: student.application_status || 'Not specified'
       }));
 
       // Atualizar estatísticas
