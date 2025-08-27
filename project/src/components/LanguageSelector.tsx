@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Globe } from 'lucide-react';
+import { ChevronDown, Globe, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
+import { useLanguageDetection } from '../hooks/useLanguageDetection';
 
 interface Language {
   code: string;
@@ -17,19 +18,46 @@ const languages: Language[] = [
 interface LanguageSelectorProps {
   variant?: 'header' | 'footer' | 'compact' | 'dashboard';
   showLabel?: boolean;
+  showResetOption?: boolean;
+  showAutoApplyStatus?: boolean;
 }
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ 
   variant = 'header', 
-  showLabel = true 
+  showLabel = true,
+  showResetOption = false,
+  showAutoApplyStatus = false
 }) => {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const { 
+    browserLanguage, 
+    isBrowserDefault, 
+    isApplied,
+    forceApplyDetectedLanguage,
+    checkIfDetectedLanguageApplied
+  } = useLanguageDetection();
 
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
 
+  // Verificar se o idioma detectado foi aplicado
+  const detectedLanguageApplied = checkIfDetectedLanguageApplied();
+
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
+    setIsOpen(false);
+  };
+
+  const handleResetToBrowserLanguage = async () => {
+    if (browserLanguage && browserLanguage !== i18n.language) {
+      await i18n.changeLanguage(browserLanguage);
+      localStorage.setItem('i18nextLng', browserLanguage);
+    }
+    setIsOpen(false);
+  };
+
+  const handleForceApplyDetectedLanguage = async () => {
+    await forceApplyDetectedLanguage();
     setIsOpen(false);
   };
 
@@ -49,6 +77,9 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     dashboard: "origin-top-right absolute right-0 mt-2 w-48 rounded-xl shadow-xl bg-white border border-slate-200 focus:outline-none z-50"
   };
 
+  // Verificar se o idioma atual é diferente do idioma do navegador
+  const isDifferentFromBrowser = browserLanguage && browserLanguage !== i18n.language;
+
   return (
     <div className={baseClasses}>
       <div>
@@ -65,6 +96,16 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             {showLabel && (
               <span className={variant === 'compact' ? 'hidden sm:inline' : variant === 'dashboard' ? 'hidden lg:inline' : ''}>
                 {currentLanguage.name}
+                {isBrowserDefault(currentLanguage.code) && (
+                  <span className="ml-1 text-xs text-blue-600"></span>
+                )}
+                {showAutoApplyStatus && isBrowserDefault(currentLanguage.code) && (
+                  detectedLanguageApplied ? (
+                    <CheckCircle className="ml-1 h-3 w-3 text-green-600" />
+                  ) : (
+                    <AlertCircle className="ml-1 h-3 w-3 text-yellow-600" />
+                  )
+                )}
               </span>
             )}
           </span>
@@ -93,7 +134,10 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                   onClick={() => handleLanguageChange(language.code)}
                 >
                   <span className="mr-3">{language.flag}</span>
-                  {language.name}
+                  <span className="flex-1 text-left">{language.name}</span>
+                  {isBrowserDefault(language.code) && (
+                    <span className="text-xs text-blue-600 mr-2"></span>
+                  )}
                   {currentLanguage.code === language.code && (
                     <span className="ml-auto">
                       <svg className="h-4 w-4 text-[#05294E]" fill="currentColor" viewBox="0 0 20 20">
@@ -103,6 +147,35 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                   )}
                 </button>
               ))}
+              
+              {/* Opção para redefinir para o idioma do navegador */}
+              {showResetOption && isDifferentFromBrowser && browserLanguage && (
+                <>
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <button
+                    className="group flex items-center w-full px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                    role="menuitem"
+                    onClick={handleResetToBrowserLanguage}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-3 text-blue-500" />
+                    <span>Redefinir para {languages.find(lang => lang.code === browserLanguage)?.name}</span>
+                    <span className="ml-auto text-xs text-gray-400">(Navegador)</span>
+                  </button>
+                </>
+              )}
+
+              {/* Opção para forçar aplicação do idioma detectado */}
+              {showAutoApplyStatus && isDifferentFromBrowser && browserLanguage && (
+                <button
+                  className="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 transition-colors"
+                  role="menuitem"
+                  onClick={handleForceApplyDetectedLanguage}
+                >
+                  <AlertCircle className="h-4 w-4 mr-3 text-yellow-500" />
+                  <span>Forçar Aplicação do {languages.find(lang => lang.code === browserLanguage)?.name}</span>
+                  <span className="ml-auto text-xs text-gray-400">(Auto)</span>
+                </button>
+              )}
             </div>
           </div>
         </>
