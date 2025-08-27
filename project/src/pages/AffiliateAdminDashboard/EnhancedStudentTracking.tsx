@@ -21,7 +21,11 @@ import {
   ArrowLeft,
   Home,
   BarChart3,
-  Settings
+  Settings,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Filter as FilterIcon
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -106,11 +110,35 @@ interface Student {
   created_at: string;
   status: string;
   user_id: string;
+  university_id?: string;
+  university_name?: string;
+}
+
+interface University {
+  id: string;
+  name: string;
+  logo_url?: string;
+  location?: string;
+}
+
+interface FilterState {
+  searchTerm: string;
+  sellerFilter: string;
+  universityFilter: string;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  statusFilter: string;
+  paymentStatusFilter: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
 }
 
 const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [universities, setUniversities] = useState<University[]>([]);
   const [expandedSellers, setExpandedSellers] = useState<Set<string>>(new Set());
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [studentDetails, setStudentDetails] = useState<StudentInfo | null>(null);
@@ -118,18 +146,50 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [scholarshipApplication, setScholarshipApplication] = useState<ScholarshipApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sellerFilter, setSellerFilter] = useState('all');
   const [error, setError] = useState<string | null>(null);
   const [showStudentDetails, setShowStudentDetails] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Estado dos filtros
+  const [filters, setFilters] = useState<FilterState>({
+    searchTerm: '',
+    sellerFilter: 'all',
+    universityFilter: 'all',
+    dateRange: {
+      start: '',
+      end: ''
+    },
+    statusFilter: 'all',
+    paymentStatusFilter: 'all',
+    sortBy: 'revenue',
+    sortOrder: 'desc'
+  });
 
-  // Estado atual para debug (removido para produção)
+  // Carregar universidades para filtros
+  const loadUniversities = useCallback(async () => {
+    try {
+      const { data: universitiesData, error: universitiesError } = await supabase
+        .from('universities')
+        .select('id, name, logo_url, location')
+        .eq('is_approved', true)
+        .order('name');
+
+      if (!universitiesError && universitiesData) {
+        setUniversities(universitiesData);
+      }
+    } catch (error) {
+      console.warn('Could not load universities:', error);
+    }
+  }, []);
 
   // Carregar dados iniciais
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Carregar universidades em paralelo
+      await loadUniversities();
 
       // Se userId estiver disponível, usar funções SQL corrigidas para dados reais
       if (userId) {
@@ -337,7 +397,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadUniversities]);
 
   // Carregar detalhes de um estudante específico
   const loadStudentDetails = useCallback(async (studentId: string) => {
@@ -419,28 +479,111 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     }
   }, []);
 
-  // Filtrar dados
-  const filteredSellers = sellers.filter(seller => {
-    if (sellerFilter !== 'all' && seller.id !== sellerFilter) return false;
-    if (searchTerm && !seller.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
+  // Aplicar filtros e ordenação
+  const getFilteredAndSortedData = useCallback(() => {
+    let filteredSellers = sellers.filter(seller => {
+      // Filtro por vendedor específico
+      if (filters.sellerFilter !== 'all' && seller.id !== filters.sellerFilter) return false;
+      
+      // Filtro por termo de busca
+      if (filters.searchTerm && !seller.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) return false;
+      
+      return true;
+    });
 
-  const filteredStudents = students.filter(student => {
-    if (sellerFilter !== 'all' && student.referred_by_seller_id !== sellerFilter) return false;
-    if (searchTerm && !student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !student.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
+    let filteredStudents = students.filter(student => {
+      // Filtro por vendedor
+      if (filters.sellerFilter !== 'all' && student.referred_by_seller_id !== filters.sellerFilter) return false;
+      
+      // Filtro por termo de busca
+      if (filters.searchTerm && 
+          !student.full_name.toLowerCase().includes(filters.searchTerm.toLowerCase()) && 
+          !student.email.toLowerCase().includes(filters.searchTerm.toLowerCase())) return false;
+      
+      // Filtro por universidade
+      if (filters.universityFilter !== 'all' && student.university_id !== filters.universityFilter) return false;
+      
+      // Filtro por período
+      if (filters.dateRange.start || filters.dateRange.end) {
+        const studentDate = new Date(student.created_at);
+        const startDate = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
+        const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
+        
+        if (startDate && studentDate < startDate) return false;
+        if (endDate && studentDate > endDate) return false;
+      }
+      
+      // Filtro por status
+      if (filters.statusFilter !== 'all' && student.status !== filters.statusFilter) return false;
+      
+      return true;
+    });
 
-  console.log('🔍 Filtered data:', {
-    totalStudents: students.length,
-    filteredStudents: filteredStudents.length,
-    sellerFilter,
-    searchTerm,
-    studentSellerIds: students.map(s => ({ id: s.id, name: s.full_name, sellerId: s.referred_by_seller_id })),
-    allStudents: students.map(s => ({ id: s.id, name: s.full_name, total_paid: s.total_paid, sellerId: s.referred_by_seller_id }))
-  });
+    // Aplicar ordenação
+    const sortData = (data: any[], sortBy: string, sortOrder: 'asc' | 'desc') => {
+      return [...data].sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        switch (sortBy) {
+          case 'revenue':
+            aValue = a.total_revenue || a.total_paid || 0;
+            bValue = b.total_revenue || b.total_paid || 0;
+            break;
+          case 'students':
+            aValue = a.students_count || 0;
+            bValue = b.students_count || 0;
+            break;
+          case 'name':
+            aValue = a.name || a.full_name || '';
+            bValue = b.name || b.full_name || '';
+            break;
+          case 'date':
+            aValue = new Date(a.created_at || a.last_referral_date);
+            bValue = new Date(b.created_at || b.last_referral_date);
+            break;
+          default:
+            aValue = a.total_revenue || a.total_paid || 0;
+            bValue = b.total_revenue || b.total_paid || 0;
+        }
+
+        if (typeof aValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
+        if (sortOrder === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+    };
+
+    filteredSellers = sortData(filteredSellers, filters.sortBy, filters.sortOrder);
+    
+    // Para estudantes, ordenar por data de criação (mais recentes primeiro)
+    filteredStudents = sortData(filteredStudents, 'date', 'desc');
+
+    return { filteredSellers, filteredStudents };
+  }, [sellers, students, filters]);
+
+  // Obter dados filtrados e ordenados
+  const { filteredSellers, filteredStudents } = getFilteredAndSortedData();
+
+  // Resetar filtros
+  const resetFilters = () => {
+    setFilters({
+      searchTerm: '',
+      sellerFilter: 'all',
+      universityFilter: 'all',
+      dateRange: { start: '', end: '' },
+      statusFilter: 'all',
+      paymentStatusFilter: 'all',
+      sortBy: 'revenue',
+      sortOrder: 'desc'
+    });
+  };
 
   // Toggle expandir vendedor
   const toggleSellerExpansion = (sellerId: string) => {
@@ -1095,12 +1238,12 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Total Students</p>
-                  <p className="text-3xl font-bold text-blue-600 mt-1">{students.length}</p>
+                  <p className="text-3xl font-bold text-blue-600 mt-1">{filteredStudents.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                   <GraduationCap className="h-6 w-6 text-blue-600" />
@@ -1113,7 +1256,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                 <div>
                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
                   <p className="text-3xl font-bold text-green-600 mt-1">
-                    {formatCurrency(students.reduce((sum, student) => sum + (student.total_paid || 0), 0))}
+                    {formatCurrency(filteredStudents.reduce((sum, student) => sum + (student.total_paid || 0), 0))}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -1126,35 +1269,52 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Active Sellers</p>
-                  <p className="text-3xl font-bold text-purple-600 mt-1">{sellers.length}</p>
+                  <p className="text-3xl font-bold text-purple-600 mt-1">{filteredSellers.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                   <Users className="h-6 w-6 text-purple-600" />
                 </div>
               </div>
             </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Avg. Revenue/Student</p>
+                  <p className="text-3xl font-bold text-orange-600 mt-1">
+                    {filteredStudents.length > 0 
+                      ? formatCurrency(filteredStudents.reduce((sum, student) => sum + (student.total_paid || 0), 0) / filteredStudents.length)
+                      : formatCurrency(0)
+                    }
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <BarChart3 className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Filtros */}
+          {/* Filtros Avançados */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex flex-col lg:flex-row gap-4 mb-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Search sellers or students..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={filters.searchTerm}
+                    onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
                     className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                   />
                 </div>
               </div>
               
-              <div>
+              <div className="flex gap-3">
                 <select
-                  value={sellerFilter}
-                  onChange={(e) => setSellerFilter(e.target.value)}
+                  value={filters.sellerFilter}
+                  onChange={(e) => setFilters(prev => ({ ...prev, sellerFilter: e.target.value }))}
                   className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                 >
                   <option value="all">All Sellers</option>
@@ -1164,12 +1324,155 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                     </option>
                   ))}
                 </select>
+
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={`px-4 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center gap-2 ${
+                    showAdvancedFilters 
+                      ? 'bg-[#05294E] text-white' 
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <FilterIcon className="h-4 w-4" />
+                  Advanced
+                </button>
               </div>
             </div>
+
+            {/* Filtros Avançados Expandidos */}
+            {showAdvancedFilters && (
+              <div className="border-t border-slate-200 pt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Filtro por Universidade */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">University</label>
+                    <select
+                      value={filters.universityFilter}
+                      onChange={(e) => setFilters(prev => ({ ...prev, universityFilter: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    >
+                      <option value="all">All Universities</option>
+                      {universities.map((university) => (
+                        <option key={university.id} value={university.id}>
+                          {university.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro por Período - Data Inicial */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
+                    <input
+                      type="date"
+                      value={filters.dateRange.start}
+                      onChange={(e) => setFilters(prev => ({ 
+                        ...prev, 
+                        dateRange: { ...prev.dateRange, start: e.target.value }
+                      }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    />
+                  </div>
+
+                  {/* Filtro por Período - Data Final */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
+                    <input
+                      type="date"
+                      value={filters.dateRange.end}
+                      onChange={(e) => setFilters(prev => ({ 
+                        ...prev, 
+                        dateRange: { ...prev.dateRange, end: e.target.value }
+                      }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    />
+                  </div>
+
+                  {/* Filtro por Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                    <select
+                      value={filters.statusFilter}
+                      onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="registered">Registered</option>
+                      <option value="enrolled">Enrolled</option>
+                      <option value="completed">Completed</option>
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="dropped">Dropped</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Ordenação */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
+                    <select
+                      value={filters.sortBy}
+                      onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    >
+                      <option value="revenue">Revenue</option>
+                      <option value="students">Students Count</option>
+                      <option value="name">Name</option>
+                      <option value="date">Date</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Order</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'desc' }))}
+                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                          filters.sortOrder === 'desc' 
+                            ? 'bg-[#05294E] text-white' 
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        <TrendingDown className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'asc' }))}
+                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                          filters.sortOrder === 'asc' 
+                            ? 'bg-[#05294E] text-white' 
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      onClick={resetFilters}
+                      className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mt-4 flex items-center text-sm text-slate-600">
               <span className="font-medium">{filteredStudents.length}</span>
               <span className="ml-1">student{filteredStudents.length !== 1 ? 's' : ''} found</span>
+              {showAdvancedFilters && (
+                <span className="ml-4 text-slate-500">
+                  • Showing top performers by {filters.sortBy === 'revenue' ? 'revenue' : 
+                    filters.sortBy === 'students' ? 'student count' : 
+                    filters.sortBy === 'name' ? 'name' : 'date'}
+                </span>
+              )}
             </div>
           </div>
 
