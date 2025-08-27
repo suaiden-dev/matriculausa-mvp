@@ -15,7 +15,7 @@ function corsResponse(body: string | object | null, status = 200) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Content-Type': 'application/json',
   };
-  if (status === 204) return new Response(null, { status, headers });
+  if (status === 204) return corsResponse(null, 204);
   return new Response(JSON.stringify(body), { status, headers });
 }
 
@@ -51,40 +51,57 @@ Deno.serve(async (req) => {
       return corsResponse({ success: false, error: result?.error || 'Código inválido' }, 200);
     }
 
-    // Criar/garantir o cupom genérico no Stripe (id: MATR_<code>) e Promotion Code visível (o próprio código)
+    // Criar cupom no Stripe com ID válido
     try {
-      const couponId = result.stripe_coupon_id; // MATR_<CODE>
       const discountAmount = result.discount_amount;
+      const couponName = `Matricula Rewards - ${normalized}`;
+      
+      // Criar cupom no Stripe (Stripe gera o ID automaticamente)
+      const coupon = await stripe.coupons.create({
+        amount_off: discountAmount * 100,
+        currency: 'usd',
+        duration: 'once',
+        name: couponName,
+        metadata: { 
+          affiliate_code: normalized, 
+          user_id: user.id, 
+          referrer_id: result.referrer_id 
+        }
+      });
 
-      // Recupera ou cria cupom
-      let coupon;
-      try { coupon = await stripe.coupons.retrieve(couponId); } catch { coupon = null; }
-      if (!coupon) {
-        coupon = await stripe.coupons.create({
-          id: couponId,
-          amount_off: discountAmount * 100,
-          currency: 'usd',
-          duration: 'once',
-          name: `Matricula Rewards - ${normalized}`,
-          metadata: { affiliate_code: normalized, user_id: user.id, referrer_id: result.referrer_id }
-        });
+      // Atualizar o registro na base de dados com o ID real do cupom
+      const { error: updateError } = await supabase
+        .from('used_referral_codes')
+        .update({ 
+          stripe_coupon_id: coupon.id,
+          status: 'applied'
+        })
+        .eq('user_id', user.id)
+        .eq('affiliate_code', normalized);
+
+      if (updateError) {
+        console.error('[validate-referral-code] Error updating coupon ID:', updateError);
       }
 
-      // Promotion Code com o mesmo texto do código
-      const promoList = await stripe.promotionCodes.list({ code: normalized, limit: 1 });
-      if (!promoList.data.length) {
+      // Criar Promotion Code com o próprio código de referência
+      try {
         await stripe.promotionCodes.create({
           coupon: coupon.id,
           code: normalized,
           active: true,
           metadata: { affiliate_code: normalized }
         });
+      } catch (promoError: any) {
+        // Se já existe, não é problema
+        if (promoError.code !== 'resource_already_exists') {
+          console.error('[validate-referral-code] Promotion code error:', promoError);
+        }
       }
 
-      console.log('[validate-referral-code] ✅ Coupon & Promotion Code ok:', couponId, normalized);
+      console.log('[validate-referral-code] ✅ Coupon created successfully:', coupon.id, 'for code:', normalized);
     } catch (stripeError: any) {
       console.error('[validate-referral-code] Stripe error:', stripeError?.message || stripeError);
-      // continua retornando success para não travar a UX; o desconto já fica associado ao usuário
+      // Continua retornando success para não travar a UX
     }
 
     return corsResponse({ success: true });
