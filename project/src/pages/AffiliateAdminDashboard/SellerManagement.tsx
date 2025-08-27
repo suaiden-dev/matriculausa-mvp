@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Users, UserPlus, Check, X, AlertTriangle, Crown, ChevronLeft, ChevronRight, Settings, UserCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Users, UserPlus, UserCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import SellerRegistrationLinkGenerator from '../../components/SellerRegistrationLinkGenerator';
@@ -341,6 +341,7 @@ const SellerManagement: React.FC = () => {
   }
 
   return (
+    <React.Fragment>
     <div className="space-y-6">
       {/* Tabs Navigation - Simplified */}
       <div className="bg-white border-b border-gray-200">
@@ -614,7 +615,7 @@ const SellerManagement: React.FC = () => {
           {errorMessage}
         </div>
       )}
-    </div>
+    </React.Fragment>
   );
 };
 
