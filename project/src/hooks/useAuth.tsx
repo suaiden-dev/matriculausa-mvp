@@ -247,12 +247,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             const desiredRoleFromMetadata = (session.user.user_metadata?.role as 'student' | 'school' | 'admin' | undefined) || 'student';
 
+            // Se o usuário tem seller_referral_code, sempre começar como 'student'
+            // O role será elevado para 'seller' apenas após aprovação do admin
+            const finalRole = session.user.user_metadata?.seller_referral_code ? 'student' : desiredRoleFromMetadata;
+
             const profileData = {
               user_id: session.user.id,
               full_name: fullName,
               phone: phone,
               status: 'active',
-              role: desiredRoleFromMetadata,
+              role: finalRole,
               // Include referral codes if provided
               affiliate_code: session.user.user_metadata?.affiliate_code || null,
               seller_referral_code: session.user.user_metadata?.seller_referral_code || null

@@ -19,7 +19,6 @@ interface OverviewProps {
     activeSellers?: number;
     totalStudents?: number;
     totalRevenue?: number;
-    monthlyGrowth?: number;
   };
   sellers?: any[];
   students?: any[];
@@ -35,8 +34,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
     totalSellers: stats?.totalSellers || 0,
     activeSellers: stats?.activeSellers || 0,
     totalStudents: stats?.totalStudents || 0,
-    totalRevenue: stats?.totalRevenue || 0,
-    monthlyGrowth: stats?.monthlyGrowth || 0
+    totalRevenue: stats?.totalRevenue || 0
   };
 
   // Verificar se há dados
@@ -83,13 +81,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Dashboard Overview</h1>
-          <p className="mt-2 text-slate-600">
-            Monitor your affiliate program performance and key metrics
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <button
           onClick={onRefresh}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
@@ -158,7 +150,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
                 <p className="text-3xl font-bold text-slate-900">{safeStats.totalStudents}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-[#05294E] mr-1" />
-                  <span className="text-sm font-medium text-[#05294E]">+{safeStats.monthlyGrowth}% this month</span>
+                  <span className="text-sm font-medium text-[#05294E]">Performance</span>
                 </div>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -175,7 +167,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                   <span className="text-sm font-medium text-emerald-600">
-                    {safeStats.monthlyGrowth > 0 ? `+${safeStats.monthlyGrowth}%` : `${safeStats.monthlyGrowth}%`} vs last month
+                    Performance tracking
                   </span>
                 </div>
               </div>

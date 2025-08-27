@@ -32,18 +32,18 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [hasScrolledToBottomPrivacy, setHasScrolledToBottomPrivacy] = useState(false);
   
-  // Estados para validação do código de registro
+  // States for registration code validation
   const [registrationCodeValid, setRegistrationCodeValid] = useState<boolean | null>(null);
   const [registrationCodeLoading, setRegistrationCodeLoading] = useState(false);
   const [isRegistrationCodeLocked, setIsRegistrationCodeLocked] = useState(false);
 
-  // Carregar código de registro da URL ou localStorage
+  // Load registration code from URL or localStorage
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const codeFromUrl = searchParams.get('code');
     
     if (codeFromUrl) {
-      console.log('[SELLER_REG] Código encontrado na URL:', codeFromUrl);
+      console.log('[SELLER_REG] Code found in URL:', codeFromUrl);
       setFormData(prev => ({ ...prev, registration_code: codeFromUrl }));
       setIsRegistrationCodeLocked(true);
       validateRegistrationCode(codeFromUrl);
@@ -51,7 +51,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       // Verificar localStorage
       const pendingCode = localStorage.getItem('pending_seller_registration_code');
       if (pendingCode) {
-        console.log('[SELLER_REG] Código encontrado no localStorage:', pendingCode);
+        console.log('[SELLER_REG] Code found in localStorage:', pendingCode);
         setFormData(prev => ({ ...prev, registration_code: pendingCode }));
         setIsRegistrationCodeLocked(true);
         validateRegistrationCode(pendingCode);
@@ -59,7 +59,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     }
   }, [location.search]);
 
-  // Validar código de registro de seller
+  // Validate seller registration code
   const validateRegistrationCode = async (code: string) => {
     if (!code || code.length < 4) {
       setRegistrationCodeValid(false);
@@ -68,7 +68,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
 
     setRegistrationCodeLoading(true);
     try {
-      console.log('[SELLER_REG] Validando código de registro:', code);
+      console.log('[SELLER_REG] Validating registration code:', code);
       const { data, error } = await supabase
         .from('seller_registration_codes')
         .select('code, is_active')
@@ -76,16 +76,16 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         .eq('is_active', true)
         .single();
 
-      console.log('[SELLER_REG] Resultado da validação:', { data, error });
+      console.log('[SELLER_REG] Validation result:', { data, error });
 
       if (error) {
-        console.error('[SELLER_REG] Erro na validação:', error);
+        console.error('[SELLER_REG] Validation error:', error);
         setRegistrationCodeValid(false);
       } else if (data) {
-        console.log('[SELLER_REG] Código válido:', data);
+        console.log('[SELLER_REG] Valid code:', data);
         setRegistrationCodeValid(true);
       } else {
-        console.log('[SELLER_REG] Código não encontrado');
+        console.log('[SELLER_REG] Code not found');
         setRegistrationCodeValid(false);
       }
     } catch (error) {
@@ -96,7 +96,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     }
   };
 
-  // Handle código de registro change
+  // Handle registration code change
   const handleRegistrationCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, registration_code: code }));
@@ -115,8 +115,8 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     setLoading(true);
 
     try {
-      console.log('[SELLER_REG] Iniciando processo de registro de seller');
-      console.log('[SELLER_REG] Dados do formulário:', formData);
+      console.log('[SELLER_REG] Starting seller registration process');
+              console.log('[SELLER_REG] Form data:', formData);
       
       if (formData.password !== formData.confirmPassword) {
         setError('Passwords do not match');
@@ -132,7 +132,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         return;
       }
       
-      // Validar telefone obrigatório
+      // Validate required phone
       if (!formData.phone || formData.phone.length < 8) {
         console.log('❌ [SELLER_REG] Phone validation failed:', {
           phone: formData.phone,
@@ -143,30 +143,35 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         return;
       }
       
-      // Validar aceitação dos termos
+      // Validate terms acceptance
       if (!termsAccepted) {
         setError('You must accept the terms and conditions');
         setLoading(false);
         return;
       }
 
-      // Validar código de registro
+      // Validate registration code
       if (!formData.registration_code || !registrationCodeValid) {
+        console.log('❌ [SELLER_REG] Code validation failed:', {
+          code: formData.registration_code,
+          isValid: registrationCodeValid
+        });
         setError('Invalid registration code');
         setLoading(false);
         return;
       }
       
-      console.log('✅ [SELLER_REG] Validações passaram');
+              console.log('✅ [SELLER_REG] Validations passed');
+              console.log('🔑 [SELLER_REG] Registration code used:', formData.registration_code);
       
-      // 1. Criar usuário no auth
+      // 1. Create user in auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         options: {
           data: {
             full_name: formData.full_name,
-            role: 'seller',
+            role: 'student', // User starts as student, not as seller
             phone: formData.phone
           }
         }
@@ -178,39 +183,51 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       }
 
       if (!authData.user) {
-        throw new Error('Falha ao criar usuário');
+        throw new Error('Failed to create user');
       }
 
-      console.log('✅ [SELLER_REG] Usuário criado no auth:', authData.user.id);
+              console.log('✅ [SELLER_REG] User created in auth:', authData.user.id);
 
-      // 2. Criar registro pendente na tabela seller_registrations
-      const { error: registrationError } = await supabase
+      // 2. Create pending registration in seller_registrations table
+              console.log('[SELLER_REG] Trying to create pending registration with data:', {
+        user_id: authData.user.id,
+        admin_id: null,
+        registration_code: formData.registration_code,
+        email: formData.email.trim().toLowerCase(),
+        full_name: formData.full_name,
+        phone: formData.phone,
+        status: 'pending'
+      });
+
+      const { data: registrationData, error: registrationError } = await supabase
         .from('seller_registrations')
         .insert({
-          user_id: authData.user.id, // Adicionar o user_id
-          admin_id: null, // Será preenchido quando o admin aprovar
+          user_id: authData.user.id, // Add the user_id
+          admin_id: null, // Will be filled when admin approves
           registration_code: formData.registration_code,
           email: formData.email.trim().toLowerCase(),
           full_name: formData.full_name,
           phone: formData.phone,
           status: 'pending'
-        });
+        })
+        .select()
+        .single();
 
       if (registrationError) {
-        console.error('[SELLER_REG] Erro ao criar registro pendente:', registrationError);
-        // Não vamos falhar aqui, pois o usuário já foi criado
+        console.error('[SELLER_REG] Error creating pending registration:', registrationError);
+                  throw new Error(`Error creating registration: ${registrationError.message}`);
+      } else {
+                  console.log('[SELLER_REG] Pending registration created successfully:', registrationData);
       }
 
-      console.log('✅ [SELLER_REG] Registro pendente criado');
-
-      // 3. Limpar localStorage
+      // 3. Clear localStorage
       localStorage.removeItem('pending_seller_registration_code');
 
-      // 4. Mostrar modal de verificação
+      // 4. Show verification modal
       setShowVerificationModal(true);
 
     } catch (err: any) {
-      console.error('[SELLER_REG] Erro no registro:', err);
+              console.error('[SELLER_REG] Registration error:', err);
       let errorMessage = 'Authentication failed';
       
       if (err.message) {

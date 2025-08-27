@@ -26,6 +26,8 @@ const SellerManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'management' | 'registration' | 'pending'>('management');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [sellerToDeactivate, setSellerToDeactivate] = useState<{ id: string; name: string } | null>(null);
+  const [sellerToRemove, setSellerToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -34,22 +36,24 @@ const SellerManagement: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deactivatedSellers, setDeactivatedSellers] = useState<Set<string>>(new Set());
   const { user: currentUser } = useAuth();
+  
+  // Memoize the user to prevent unnecessary re-renders
+  const memoizedUser = React.useMemo(() => currentUser, [currentUser?.id]);
+
+
 
      // Pagination constants
   const USERS_PER_PAGE = 20;
 
-  useEffect(() => {
-    console.log('🔄 useEffect triggered - calling loadSellers');
-    loadSellers(false); // Don't force refresh on mount
-  }, []);
-
-  const loadSellers = useCallback(async (forceRefresh = false) => {
+  const loadSellers = async (forceRefresh = false) => {
     try {
-      console.log('🔄 loadSellers called - fetching sellers from database', { forceRefresh });
-      
       // If not forcing refresh and we have local modifications, skip
       if (!forceRefresh && localModifications.size > 0) {
-        console.log('⚠️ Skipping loadSellers due to local modifications');
+        return;
+      }
+      
+      // If not forcing refresh and we already have sellers, skip
+      if (!forceRefresh && sellers.length > 0 && !forceRefresh) {
         return;
       }
       
@@ -68,8 +72,6 @@ const SellerManagement: React.FC = () => {
         throw new Error(`Failed to load sellers: ${sellersError.message}`);
       }
 
-      console.log('📊 Sellers data from database:', sellersData?.length || 0, 'sellers');
-
       // Process seller data
       const processedUsers = (sellersData || []).map((seller: any) => ({
         id: seller.id,
@@ -84,68 +86,103 @@ const SellerManagement: React.FC = () => {
         hasInactiveAffiliateCode: false
       }));
 
-             // Filter out deactivated sellers from database results
-       const activeSellersFromDB = processedUsers.filter(seller => 
-         !deactivatedSellers.has(seller.id)
-       );
-       
-       console.log('🔄 Filtered sellers from database:', {
-         total: processedUsers.length,
-         active: activeSellersFromDB.length,
-         deactivated: deactivatedSellers.size
-       });
+      // Filter out deactivated sellers from database results
+      const activeSellersFromDB = processedUsers.filter(seller => 
+        !deactivatedSellers.has(seller.id)
+      );
 
-       // Set sellers in local state
-       setSellers(activeSellersFromDB);
-      
-      console.log('✅ Sellers state updated with', processedUsers.length, 'sellers');
+      // Set sellers in local state
+      setSellers(activeSellersFromDB);
     } catch (error: any) {
       console.error('❌ Error loading sellers:', error);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [localModifications, deactivatedSellers]); // Include dependencies to prevent stale closures
+  };
+
+        // Load deactivated sellers from localStorage on component mount
+      useEffect(() => {
+        const storedDeactivated = JSON.parse(localStorage.getItem('deactivatedSellers') || '[]');
+        if (storedDeactivated.length > 0) {
+          setDeactivatedSellers(new Set(storedDeactivated));
+        }
+      }, []);
+
+  // Load sellers only once when component mounts
+  useEffect(() => {
+    // Only load if we haven't loaded data yet and haven't initialized
+    if (!dataLoadedRef.current && !isInitialized.current) {
+      isInitialized.current = true;
+      loadSellers(false);
+      dataLoadedRef.current = true;
+    }
+  }, []); // Empty dependency array to run only once
+
+  // Add a cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+  
+    };
+  }, []);
+
+  // Add a ref to track if we've already loaded data
+  const dataLoadedRef = React.useRef(false);
+
+  // Add a flag to prevent multiple API calls
+  const isInitialized = React.useRef(false);
+
+  // Debug: Log when component re-renders (only in development)
+  if (process.env.NODE_ENV === 'development') {
+
+  }
+
+  // Prevent unnecessary re-renders by memoizing the component
+  const memoizedSellers = React.useMemo(() => sellers, [sellers]);
 
     const deactivateSeller = async (sellerId: string, userName: string) => {
     try {
       setDemotingUser(sellerId);
-      console.log('🔄 Starting deactivation for seller:', sellerId, userName);
+      console.log('🔄 Starting deactivation for seller:', userName);
 
-      // Step 1: Deactivate the seller in the sellers table (soft delete)
-      const { error: updateError } = await supabase
-        .from('sellers')
-        .update({ is_active: false })
-        .eq('id', sellerId);
+      // Step 1: Deactivate the seller using the new SQL function that bypasses RLS
+      const { data: deactivateResult, error: updateError } = await supabase
+        .rpc('deactivate_seller_by_admin', { 
+          seller_id: sellerId, 
+          admin_user_id: currentUser?.id 
+        });
 
       if (updateError) {
-        console.error('❌ Error updating sellers table:', updateError);
+        console.error('❌ Error calling deactivate_seller_by_admin:', updateError);
         throw new Error(`Failed to deactivate seller in database: ${updateError.message}`);
       }
 
-      console.log('✅ Seller deactivated in database successfully');
+      if (!deactivateResult) {
+        console.error('❌ deactivate_seller_by_admin returned false');
+        throw new Error('Failed to deactivate seller - function returned false');
+      }
 
-      // Step 2: Update local state immediately - remove seller from list
-      setSellers(prevSellers => {
-        const updatedSellers = prevSellers.filter(seller => seller.id !== sellerId);
-        console.log('🔄 Updated local state:', {
-          before: prevSellers.length,
-          after: updatedSellers.length,
-          removed: sellerId
-        });
-        return updatedSellers;
-      });
+      // Step 2: User role already updated by the SQL function
 
-      // Step 3: Track this modification to prevent reloading
+      // Step 3: Update local state immediately - remove seller from list
+      setSellers(prevSellers => prevSellers.filter(seller => seller.id !== sellerId));
+
+      // Step 4: Track this modification to prevent reloading
       setLocalModifications(prev => new Set(prev).add(sellerId));
       setDeactivatedSellers(prev => new Set(prev).add(sellerId));
-      console.log('✅ Added seller to local modifications and deactivated sellers:', sellerId);
       
-      // Step 4: Close modal and clear state
+      // Step 5: Persist deactivated sellers to localStorage
+      const storedDeactivated = JSON.parse(localStorage.getItem('deactivatedSellers') || '[]');
+      if (!storedDeactivated.includes(sellerId)) {
+        storedDeactivated.push(sellerId);
+        localStorage.setItem('deactivatedSellers', JSON.stringify(storedDeactivated));
+      }
+      
+      // Step 6: Close modal and clear state
       setShowConfirmModal(false);
       setSellerToDeactivate(null);
       
-      // Step 5: Show success message
+      // Step 7: Show success message
       setSuccessMessage(`${userName} was deactivated successfully!`);
       setTimeout(() => setSuccessMessage(''), 3000);
 
@@ -159,10 +196,80 @@ const SellerManagement: React.FC = () => {
     }
   };
 
-     // Function to open confirmation modal
+     // Function to completely remove a seller (hard delete)
+  const removeSeller = async (sellerId: string, userName: string) => {
+    try {
+      setDemotingUser(sellerId);
+      console.log('🗑️ Starting complete removal for seller:', sellerId, userName);
+
+      // Step 1: Remove from sellers table
+      const { error: deleteError } = await supabase
+        .from('sellers')
+        .delete()
+        .eq('id', sellerId);
+
+      if (deleteError) {
+        console.error('❌ Error deleting seller:', deleteError);
+        throw new Error(`Failed to delete seller: ${deleteError.message}`);
+      }
+
+      // Step 2: Update user role to 'former_seller' in user_profiles
+      const { error: roleUpdateError } = await supabase
+        .from('user_profiles')
+        .update({ 
+          role: 'former_seller',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', sellerId);
+
+      if (roleUpdateError) {
+        console.error('❌ Error updating user role:', roleUpdateError);
+        console.warn('⚠️ Seller deleted but role update failed');
+      }
+
+      // Step 3: Update local state
+      setSellers(prevSellers => prevSellers.filter(seller => seller.id !== sellerId));
+      
+      // Step 4: Remove from deactivated sellers set
+      setDeactivatedSellers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(sellerId);
+        return newSet;
+      });
+
+      // Step 5: Remove from localStorage
+      const storedDeactivated = JSON.parse(localStorage.getItem('deactivatedSellers') || '[]');
+      const updatedStored = storedDeactivated.filter((id: string) => id !== sellerId);
+      localStorage.setItem('deactivatedSellers', JSON.stringify(updatedStored));
+
+      // Step 6: Close modal
+      setShowRemoveModal(false);
+      setSellerToRemove(null);
+      
+      // Step 7: Show success message
+      setSuccessMessage(`${userName} was completely removed from the system!`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+
+      console.log('✅ Seller removal completed successfully');
+    } catch (error: any) {
+      console.error('❌ Error during seller removal:', error);
+      setErrorMessage(`Error removing seller: ${error.message}`);
+      setTimeout(() => setErrorMessage(''), 5000);
+    } finally {
+      setDemotingUser(null);
+    }
+  };
+
+  // Function to open confirmation modal
   const openDeactivateModal = (sellerId: string, sellerName: string) => {
     setSellerToDeactivate({ id: sellerId, name: sellerName });
     setShowConfirmModal(true);
+  };
+
+  // Function to open removal modal
+  const openRemoveModal = (sellerId: string, sellerName: string) => {
+    setSellerToRemove({ id: sellerId, name: sellerName });
+    setShowRemoveModal(true);
   };
 
      // Function to confirm deactivation
@@ -222,208 +329,174 @@ const SellerManagement: React.FC = () => {
 
 
   // Debug log for render
-  console.log('🔄 SellerManagement render - sellers count:', sellers.length, 'loading:', loading, 'local modifications:', localModifications.size, 'deactivated sellers:', deactivatedSellers.size);
+  
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-slate-600">Loading users...</span>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600"></div>
+        <span className="ml-2 text-gray-600">Loading...</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Tabs Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="border-b border-slate-200">
-          <nav className="-mb-px flex space-x-8 px-6">
-            <button
-              onClick={() => setActiveTab('management')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'management'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Users className="w-4 h-4 inline mr-2" />
-              Manage Sellers
-            </button>
-            <button
-              onClick={() => setActiveTab('registration')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'registration'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <UserPlus className="w-4 h-4 inline mr-2" />
-              Generate Registration Links
-            </button>
-            <button
-              onClick={() => setActiveTab('pending')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'pending'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <UserCheck className="w-4 h-4 inline mr-2" />
-              Pending Registrations
-            </button>
-          </nav>
-        </div>
+      {/* Tabs Navigation - Simplified */}
+      <div className="bg-white border-b border-gray-200">
+        <nav className="flex space-x-6 px-6">
+          <button
+            onClick={() => setActiveTab('management')}
+            className={`py-3 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'management'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Manage Sellers
+          </button>
+          <button
+            onClick={() => setActiveTab('registration')}
+            className={`py-3 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'registration'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Generate Links
+          </button>
+          <button
+                         onClick={() => setActiveTab('pending')}
+             className={`py-3 px-1 border-b-2 font-medium text-sm ${
+               activeTab === 'pending'
+                 ? 'border-blue-500 text-blue-600'
+                 : 'border-transparent text-gray-500 hover:text-gray-700'
+             }`}
+           >
+             Pending
+           </button>
+         </nav>
+       </div>
 
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'management' && (
             <>
-                             {/* Header Stats */}
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                   <div className="flex items-center">
-                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                       <Users className="h-6 w-6 text-blue-600" />
-                     </div>
-                     <div className="ml-4">
-                       <p className="text-sm font-medium text-slate-500">Total Sellers</p>
-                       <p className="text-2xl font-bold text-slate-900">{sellers.length}</p>
-                     </div>
-                   </div>
+                             {/* Header Stats - Simplified */}
+               <div className="flex items-center space-x-8 mb-6">
+                 <div className="flex items-center space-x-2">
+                   <Users className="h-5 w-5 text-gray-600" />
+                   <span className="text-sm text-gray-600">{sellers.length} Active Sellers</span>
                  </div>
-
-                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                   <div className="flex items-center">
-                     <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                       <UserPlus className="h-6 w-6 text-green-600" />
-                     </div>
-                     <div className="ml-4">
-                       <p className="text-sm font-medium text-slate-500">Active Sellers</p>
-                       <p className="text-2xl font-bold text-slate-900">
-                         {sellers.filter(s => s.isSeller).length}
-                       </p>
-                     </div>
+                 
+                 {deactivatedSellers.size > 0 && (
+                   <div className="flex items-center space-x-2">
+                     <UserCheck className="h-5 w-5 text-orange-500" />
+                     <span className="text-sm text-orange-600">{deactivatedSellers.size} deactivated</span>
                    </div>
-                 </div>
-
-                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                   <div className="flex items-center">
-                     <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                       <Settings className="h-6 w-6 text-orange-600" />
-                     </div>
-                     <div className="ml-4">
-                       <p className="text-sm font-medium text-slate-500">Management</p>
-                       <p className="text-2xl font-bold text-slate-900">Active</p>
-                     </div>
-                   </div>
-                 </div>
+                 )}
                </div>
 
-                             {/* Search */}
-               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
-                 <div className="flex flex-col sm:flex-row gap-4">
-                   <div className="flex-1">
-                     <div className="relative">
-                       <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                       <input
-                         type="text"
-                         placeholder="Search sellers by name or email..."
-                         value={searchTerm}
-                         onChange={(e) => setSearchTerm(e.target.value)}
-                         className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                       />
-                     </div>
-                   </div>
+                             {/* Search - Simplified */}
+               <div className="mb-6">
+                 <div className="relative max-w-md">
+                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                   <input
+                     type="text"
+                     placeholder="Search sellers..."
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   />
                  </div>
                </div>
 
                              {/* Sellers Table */}
                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                  <div className="px-6 py-4 border-b border-slate-200">
-                                        <div className="flex justify-between items-center">
-                       <div>
-                         <h2 className="text-xl font-bold text-slate-900">My Sellers</h2>
-                         <p className="text-slate-600 text-sm">Sellers registered through your codes</p>
-                       </div>
-                                                <div className="flex items-center space-x-4">
-                           {deactivatedSellers.size > 0 && (
-                             <div className="text-sm text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
-                               {deactivatedSellers.size} seller{deactivatedSellers.size > 1 ? 's' : ''} deactivated this session
-                             </div>
-                           )}
-                           <button
-                             onClick={() => {
-                               console.log('🔄 Manual refresh requested');
-                               setLocalModifications(new Set()); // Clear modifications
-                               setDeactivatedSellers(new Set()); // Clear deactivated sellers
-                               loadSellers(true); // Force refresh
-                             }}
-                             disabled={isRefreshing}
-                             className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             {isRefreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
-                           </button>
-                           <div className="text-sm text-slate-500">
-                             {getPaginationInfo()}
-                           </div>
-                         </div>
+                   <div className="flex justify-between items-center">
+                     <div>
+                       <h2 className="text-lg font-semibold text-gray-900">Sellers</h2>
                      </div>
+                     <div className="flex items-center space-x-3">
+                       <button
+                         onClick={() => {
+                           setLocalModifications(new Set());
+                           setDeactivatedSellers(new Set());
+                           loadSellers(true);
+                         }}
+                         disabled={isRefreshing}
+                         className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50"
+                       >
+                         {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                       </button>
+                       <div className="text-sm text-gray-500">
+                         {getPaginationInfo()}
+                       </div>
+                     </div>
+                   </div>
                  </div>
                  <div className="overflow-x-auto">
                    <table className="min-w-full divide-y divide-slate-200">
-                     <thead className="bg-slate-50">
+                     <thead className="bg-gray-50">
                        <tr>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                            Seller
                          </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                            Status
                          </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                           Registered on
+                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Date
                          </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                            Actions
                          </th>
                        </tr>
                      </thead>
-                                         <tbody className="bg-white divide-y divide-slate-200">
+                     <tbody className="bg-white divide-y divide-gray-200">
                        {paginatedSellers.map((seller) => (
-                         <tr key={seller.id} className="hover:bg-slate-50">
+                         <tr key={seller.id} className="hover:bg-gray-50">
                            <td className="px-6 py-4 whitespace-nowrap">
                              <div className="flex items-center">
-                               <div className="flex-shrink-0 h-10 w-10">
-                                 <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                                   <span className="text-sm font-medium text-green-700">
-                                     {seller.full_name?.charAt(0) || seller.email?.charAt(0) || '?'}
-                                   </span>
-                                 </div>
+                               <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                 <span className="text-sm font-medium text-gray-700">
+                                   {seller.full_name?.charAt(0) || seller.email?.charAt(0) || '?'}
+                                 </span>
                                </div>
-                               <div className="ml-4">
-                                 <div className="text-sm font-medium text-slate-900">
+                               <div className="ml-3">
+                                 <div className="text-sm font-medium text-gray-900">
                                    {seller.full_name || 'Name not provided'}
                                  </div>
-                                 <div className="text-sm text-slate-500">{seller.email}</div>
+                                 <div className="text-sm text-gray-500">{seller.email}</div>
                                </div>
                              </div>
                            </td>
                            <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                             Active Seller
-                           </span>
+                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                               Active
+                             </span>
                            </td>
-                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                              {formatDate(seller.created_at)}
                            </td>
                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                             <button
-                               onClick={() => openDeactivateModal(seller.id, seller.full_name || seller.email || 'Seller')}
-                               disabled={demotingUser === seller.id}
-                               className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                             >
-                               {demotingUser === seller.id ? 'Deactivating...' : 'Deactivate'}
-                             </button>
+                             <div className="flex space-x-2">
+                               <button
+                                 onClick={() => openDeactivateModal(seller.id, seller.full_name || seller.email || 'Seller')}
+                                 disabled={demotingUser === seller.id}
+                                 className="text-red-600 hover:text-red-900 disabled:opacity-50 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50"
+                               >
+                                 {demotingUser === seller.id ? 'Deactivating...' : 'Deactivate'}
+                               </button>
+                               <button
+                                 onClick={() => openRemoveModal(seller.id, seller.full_name || seller.email || 'Seller')}
+                                 disabled={demotingUser === seller.id}
+                                 className="text-gray-600 hover:text-gray-900 disabled:opacity-50 text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50"
+                               >
+                                 {demotingUser === seller.id ? 'Removing...' : 'Remove'}
+                               </button>
+                             </div>
                            </td>
                          </tr>
                        ))}
@@ -431,88 +504,39 @@ const SellerManagement: React.FC = () => {
                   </table>
                 </div>
 
-                                 {paginatedSellers.length === 0 && filteredSellers.length === 0 && (
-                   <div className="text-center py-12">
-                     <UserPlus className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                                           <h3 className="text-lg font-medium text-slate-900 mb-2">No sellers found</h3>
-                      <p className="text-slate-500">You don't have any sellers registered yet. Use the "Generate Registration Links" tab to create registration codes.</p>
+                 {paginatedSellers.length === 0 && filteredSellers.length === 0 && (
+                   <div className="text-center py-8">
+                     <UserPlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                     <p className="text-gray-500">No sellers found</p>
                    </div>
                  )}
 
-                                 {/* Pagination */}
+                 {/* Pagination - Simplified */}
                  {totalPages > 1 && (
-                   <div className="px-6 py-4 border-t border-slate-200">
-                     {/* Page information centered */}
-                     <div className="flex items-center justify-center mb-4">
-                       <div className="text-sm text-slate-500">
-                         Page {currentPage} of {totalPages}
-                       </div>
-                     </div>
-                     
-                     {/* Navigation controls centered */}
+                   <div className="px-6 py-3 border-t border-gray-200">
                      <div className="flex items-center justify-center space-x-2">
-                      <button
-                        onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
-                      </button>
-                      
-                                             {/* Page numbers */}
-                       <div className="flex items-center space-x-1">
-                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                          let pageNumber;
-                          if (totalPages <= 5) {
-                            pageNumber = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNumber = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNumber = totalPages - 4 + i;
-                          } else {
-                            pageNumber = currentPage - 2 + i;
-                          }
-                          
-                          return (
-                            <button
-                              key={pageNumber}
-                              onClick={() => goToPage(pageNumber)}
-                              className={`inline-flex items-center px-3 py-1 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                currentPage === pageNumber
-                                  ? 'border-blue-600 bg-blue-600 text-white'
-                                  : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
-                              }`}
-                            >
-                              {pageNumber}
-                            </button>
-                          );
-                        })}
-                        
-                        {totalPages > 5 && currentPage < totalPages - 2 && (
-                          <>
-                            <span className="px-2 text-slate-500">...</span>
-                            <button
-                              onClick={() => goToPage(totalPages)}
-                              className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              {totalPages}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                      
-                      <button
-                        onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </button>
-                    </div>
-                  </div>
-                )}
+                       <button
+                         onClick={() => goToPage(currentPage - 1)}
+                         disabled={currentPage === 1}
+                         className="px-3 py-1 text-sm border border-gray-300 rounded text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                       >
+                         Previous
+                       </button>
+                       
+                       <span className="text-sm text-gray-500 px-3">
+                         {currentPage} of {totalPages}
+                       </span>
+                       
+                       <button
+                         onClick={() => goToPage(currentPage + 1)}
+                         disabled={currentPage === totalPages}
+                         className="px-3 py-1 text-sm border border-gray-300 rounded text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                       >
+                         Next
+                       </button>
+                     </div>
+                   </div>
+                 )}
               </div>
             </>
           )}
@@ -527,26 +551,24 @@ const SellerManagement: React.FC = () => {
         </div>
       </div>
 
-             {/* Confirmation Modal */}
+             {/* Confirmation Modal - Simplified */}
        {showConfirmModal && sellerToDeactivate && (
          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-             <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-             <h3 className="text-lg font-medium text-slate-900 mb-2">Confirm Deactivation</h3>
-             <p className="text-slate-600 mb-4">
-               Are you sure you want to deactivate the seller "{sellerToDeactivate.name}"?
-               This action cannot be undone.
+           <div className="bg-white p-4 rounded-lg shadow-xl max-w-sm w-full">
+             <h3 className="text-lg font-medium text-gray-900 mb-3">Deactivate Seller?</h3>
+             <p className="text-gray-600 mb-4">
+               This will deactivate "{sellerToDeactivate.name}"
              </p>
              <div className="flex justify-end space-x-2">
                <button
                  onClick={() => setShowConfirmModal(false)}
-                 className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 className="px-3 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
                >
                  Cancel
                </button>
                <button
                  onClick={confirmDeactivation}
-                 className="px-4 py-2 border border-red-600 rounded-md text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                 className="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
                >
                  Deactivate
                </button>
@@ -555,14 +577,40 @@ const SellerManagement: React.FC = () => {
          </div>
        )}
 
-             {/* Success/Error Messages */}
+             {/* Removal Confirmation Modal - Simplified */}
+       {showRemoveModal && sellerToRemove && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white p-4 rounded-lg shadow-xl max-w-sm w-full">
+             <h3 className="text-lg font-medium text-gray-900 mb-3">Remove Seller?</h3>
+             <p className="text-gray-600 mb-4">
+               This will permanently delete "{sellerToRemove.name}"
+             </p>
+             <div className="flex justify-end space-x-2">
+               <button
+                 onClick={() => setShowRemoveModal(false)}
+                 className="px-3 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+               >
+                 Cancel
+               </button>
+               <button
+                 onClick={() => removeSeller(sellerToRemove.id, sellerToRemove.name)}
+                 className="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+               >
+                 Remove
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+             {/* Success/Error Messages - Simplified */}
       {successMessage && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-3 py-2 rounded text-sm shadow-lg z-50">
           {successMessage}
         </div>
       )}
       {errorMessage && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-md shadow-lg z-50">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-3 py-2 rounded text-sm shadow-lg z-50">
           {errorMessage}
         </div>
       )}

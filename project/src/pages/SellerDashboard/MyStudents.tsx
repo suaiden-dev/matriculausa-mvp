@@ -10,7 +10,6 @@ interface Student {
   created_at: string;
   status: string;
   latest_activity: string;
-  commission_earned?: number;
   fees_count?: number;
   scholarship_title?: string;
   university_name?: string;

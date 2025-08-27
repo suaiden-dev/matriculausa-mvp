@@ -13,9 +13,7 @@ import {
   Crown,
   CheckCircle,
   User,
-  Search,
-  ChevronDown,
-  Activity
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -37,7 +35,6 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/users')) return 'users';
-    if (path.includes('/performance')) return 'performance';
     if (path.includes('/students')) return 'students';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/profile')) return 'profile';
@@ -49,8 +46,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, path: '/affiliate-admin/dashboard', badge: null },
     { id: 'users', label: 'Seller Management', icon: Users, path: '/affiliate-admin/dashboard/users', badge: null },
-    { id: 'performance', label: 'Performance Tracking', icon: Activity, path: '/affiliate-admin/dashboard/performance', badge: null },
-    { id: 'students', label: 'Student Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
+    { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
     { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
   ];
@@ -172,7 +168,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                 <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Affiliate Admin Overview'}
                   {activeTab === 'users' && 'Seller Management'}
-                  {activeTab === 'students' && 'Student Overview'}
+                  {activeTab === 'students' && 'Seller Tracking'}
                   {activeTab === 'analytics' && 'Analytics & Reports'}
                   {activeTab === 'profile' && 'Profile Settings'}
                 </h1>
@@ -187,18 +183,6 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="hidden lg:block">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-80 pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-purple-600 transition-all duration-200"
-                  />
-                </div>
-              </div>
-
               {/* User Menu */}
               <div className="relative">
                 <button
