@@ -291,6 +291,8 @@ const Overview: React.FC<OverviewProps> = ({
                   </span>
                 )}
               </p>
+              
+              {/* Botão de pagamento sempre visível */}
               <StripeCheckout 
                 productId="selectionProcess"
                 feeType="selection_process"
@@ -300,6 +302,18 @@ const Overview: React.FC<OverviewProps> = ({
                 successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                 cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
               />
+              
+              {/* Aviso para usuários com seller_referral_code */}
+              {/* {userProfile.seller_referral_code && userProfile.seller_referral_code.trim() !== '' && (
+                <div className="mt-3 text-center">
+                  <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-300/30 rounded-lg px-3 py-2">
+                    <Target className="h-4 w-4 text-amber-300" />
+                    <span className="text-amber-200 text-xs">
+                      {t('studentDashboard.selectionProcess.sellerReferralCodeInfo')}
+                    </span>
+                  </div>
+                </div>
+              )} */}
             </div>
           )}
           {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, FileText, Shield, Users, AlertCircle } from 'lucide-react';
+import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -10,6 +11,7 @@ const TermsAndConditions: React.FC = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { recordTermAcceptance, getLatestActiveTerm } = useTermsAcceptance();
 
   useEffect(() => {
     // Check if user is authenticated and has the right role
@@ -62,6 +64,24 @@ const TermsAndConditions: React.FC = () => {
     setError('');
 
     try {
+      // Record acceptance of university terms
+      const universityTerms = await getLatestActiveTerm('university_terms');
+      if (universityTerms) {
+        await recordTermAcceptance(universityTerms.id, 'university_terms');
+      }
+      
+      // Record acceptance of terms of service and privacy policy
+      const termsOfService = await getLatestActiveTerm('terms_of_service');
+      const privacyPolicy = await getLatestActiveTerm('privacy_policy');
+      
+      if (termsOfService) {
+        await recordTermAcceptance(termsOfService.id, 'terms_of_service');
+      }
+      
+      if (privacyPolicy) {
+        await recordTermAcceptance(privacyPolicy.id, 'privacy_policy');
+      }
+
       // Check if university record exists
       const { data: existingUniversity, error: checkError } = await supabase
         .from('universities')

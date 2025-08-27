@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Phone, CheckCircle, X, ArrowLeft, UserCheck, Shield } from 'lucide-react';
+import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -11,6 +12,7 @@ interface SellerRegistrationProps {}
 
 const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
   const { t } = useTranslation();
+  const { recordTermAcceptance, getLatestActiveTerm } = useTermsAcceptance();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -486,7 +488,33 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                     name="terms"
                     type="checkbox"
                     checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    onChange={async (e) => {
+                      if (e.target.checked) {
+                        try {
+                          // Record acceptance of seller terms
+                          const sellerTerms = await getLatestActiveTerm('seller_terms');
+                          if (sellerTerms) {
+                            await recordTermAcceptance(sellerTerms.id, 'seller_terms');
+                          }
+                          
+                          // Record acceptance of terms of service and privacy policy
+                          const termsOfService = await getLatestActiveTerm('terms_of_service');
+                          const privacyPolicy = await getLatestActiveTerm('privacy_policy');
+                          
+                          if (termsOfService) {
+                            await recordTermAcceptance(termsOfService.id, 'terms_of_service');
+                          }
+                          
+                          if (privacyPolicy) {
+                            await recordTermAcceptance(privacyPolicy.id, 'privacy_policy');
+                          }
+                        } catch (error) {
+                          console.error('Error recording term acceptance:', error);
+                          // Still allow user to proceed even if recording fails
+                        }
+                      }
+                      setTermsAccepted(e.target.checked);
+                    }}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     required
                   />

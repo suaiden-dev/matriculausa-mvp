@@ -1120,6 +1120,9 @@
       "description": "Start your journey to American education by completing our comprehensive selection process.",
       "completeApplicationProcess": "Complete your application process",
       "discountApplied": "✨ You have a discount coupon applied!",
+      "sellerReferralCodeBlocked": "Matricula Rewards Blocked",
+      "sellerReferralCodeMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
+      "sellerReferralCodeInfo": "Seller referral code detected - Matricula Rewards not available",
       "startButton": "Start Selection Process"
     },
     "stats": {
@@ -2039,6 +2042,11 @@
     "invalidCode": "Invalid or inactive code",
     "selfReferral": "You cannot use your own referral code",
     "alreadyUsedCode": "You have already used a referral code previously",
+    "sellerReferralCodeBlocked": "You cannot use Matricula Rewards codes because you have a seller referral code",
+    "sellerReferralCodeBlockedTitle": "Matricula Rewards Blocked",
+    "sellerReferralCodeBlockedMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
+    "sellerReferralCodeInfoTitle": "Seller Referral Code Detected",
+    "sellerReferralCodeInfoMessage": "You registered with a seller referral code, so Matricula Rewards codes are not available. You can still proceed with payment at the regular price.",
     "validCode": "Valid code! $50 discount applied",
     "errorValidating": "Error validating code",
     "codeAlreadyUsed": "Code already used",

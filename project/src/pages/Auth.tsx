@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, UserCheck, Zap, Shield, Award, GraduationCap, Users, Globe, MapPin, CheckCircle, X, Scroll, Gift, Target } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -56,8 +57,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const privacyContentRef = useRef<HTMLDivElement>(null);
   
   const { login, register, isAuthenticated, user } = useAuth();
+  const { recordTermAcceptance, getLatestActiveTerm } = useTermsAcceptance();
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Global scroll-to-top on login/register page load
   useEffect(() => {
@@ -284,10 +285,29 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   };
 
   // Handle privacy acceptance
-  const handlePrivacyAccept = () => {
+  const handlePrivacyAccept = async () => {
     if (hasScrolledToBottomPrivacy) {
-      setTermsAccepted(true);
-      setShowPrivacyModal(false);
+      try {
+        // Record acceptance of both terms of service and privacy policy
+        const termsOfServiceTerm = await getLatestActiveTerm('terms_of_service');
+        const privacyPolicyTerm = await getLatestActiveTerm('privacy_policy');
+        
+        if (termsOfServiceTerm) {
+          await recordTermAcceptance(termsOfServiceTerm.id, 'terms_of_service');
+        }
+        
+        if (privacyPolicyTerm) {
+          await recordTermAcceptance(privacyPolicyTerm.id, 'privacy_policy');
+        }
+        
+        setTermsAccepted(true);
+        setShowPrivacyModal(false);
+      } catch (error) {
+        console.error('Error recording term acceptance:', error);
+        // Still allow user to proceed even if recording fails
+        setTermsAccepted(true);
+        setShowPrivacyModal(false);
+      }
     }
   };
 
