@@ -54,6 +54,7 @@ interface StudentInfo {
   has_paid_selection_process_fee?: boolean;
   has_paid_i20_control_fee?: boolean;
   student_process_type?: string;
+  application_status?: string;
 }
 
 interface FeePayment {
@@ -144,6 +145,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [studentDetails, setStudentDetails] = useState<StudentInfo | null>(null);
   const [feeHistory, setFeeHistory] = useState<FeePayment[]>([]);
   const [scholarshipApplication, setScholarshipApplication] = useState<ScholarshipApplication | null>(null);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,15 +193,22 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       // Carregar universidades em paralelo
       await loadUniversities();
 
-      // Se userId estiver disponível, usar funções SQL corrigidas para dados reais
+      // Carregar universidades em paralelo
+      await loadUniversities();
+
+      // Se userId estiver disponível, tentar usar funções SQL corrigidas para dados reais
       if (userId) {
         try {
+          console.log('🔍 Attempting to load data using SQL functions for admin user:', userId);
+          
           // Buscar dados reais usando funções SQL corrigidas
           const { data: realSellersData, error: realSellersError } = await supabase
             .rpc('get_admin_sellers_analytics_fixed', { admin_user_id: userId });
 
-          if (!realSellersError && realSellersData) {
-            setSellers(realSellersData.map((seller: any) => ({
+          console.log('🔍 SQL sellers response:', { data: realSellersData, error: realSellersError });
+
+          if (!realSellersError && realSellersData && realSellersData.length > 0) {
+            const processedSellers = realSellersData.map((seller: any) => ({
               id: seller.seller_id,
               name: seller.seller_name || 'Name not available',
               email: seller.seller_email || 'Email not available',
@@ -208,15 +217,22 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               created_at: seller.last_referral_date || new Date().toISOString(),
               students_count: seller.students_count || 0,
               total_revenue: Number(seller.total_revenue) || 0
-            })));
+            }));
+            
+            console.log('🔍 Processed sellers from SQL:', processedSellers);
+            setSellers(processedSellers);
+          } else {
+            console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
           // Buscar dados reais dos estudantes
           const { data: realStudentsData, error: realStudentsError } = await supabase
             .rpc('get_admin_students_analytics', { admin_user_id: userId });
 
-          if (!realStudentsError && realStudentsData) {
-            setStudents(realStudentsData.map((student: any) => ({
+          console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
+
+          if (!realStudentsError && realStudentsData && realStudentsData.length > 0) {
+            const processedStudents = realStudentsData.map((student: any) => ({
               id: student.student_id,
               user_id: student.student_id,
               full_name: student.student_name,
@@ -229,18 +245,28 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               total_paid: Number(student.total_paid) || 0,
               created_at: student.created_at,
               status: student.status
-            })));
+            }));
+            
+            console.log('🔍 Processed students from SQL:', processedStudents);
+            setStudents(processedStudents);
+          } else {
+            console.log('🔍 SQL students function failed or returned no data, will use fallback');
           }
 
-          if (!realSellersError && !realStudentsError) {
+          // Se ambas as funções SQL funcionaram e retornaram dados, não usar fallback
+          if (!realSellersError && !realStudentsError && 
+              realSellersData && realSellersData.length > 0 && 
+              realStudentsData && realStudentsData.length > 0) {
+            console.log('🔍 SQL functions successful, skipping fallback');
             return;
           }
         } catch (error) {
-          console.warn('Could not load real data using SQL functions, using fallback:', error);
+          console.warn('🔍 SQL functions exception, using fallback:', error);
         }
       }
 
       // Fallback para método antigo se userId não estiver disponível ou se as funções SQL falharem
+      console.log('🔍 Using fallback method to load data directly from tables');
 
       // Buscar sellers ativos
       const { data: sellersData, error: sellersError } = await supabase
@@ -248,6 +274,8 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
+
+      console.log('🔍 Fallback sellers response:', { data: sellersData, error: sellersError });
 
       if (sellersError) {
         console.error('Error loading sellers:', sellersError);
@@ -406,69 +434,194 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       setLoadingStudentDetails(true);
       setSelectedStudent(studentId);
 
-      // Usar as funções SQL criadas para obter detalhes do estudante
+      // Primeiro, tentar usar as funções SQL criadas para obter detalhes do estudante
       console.log('🔍 Calling get_student_detailed_info with studentId:', studentId);
       
-      const { data: studentData, error: studentError } = await supabase.rpc(
-        'get_student_detailed_info',
-        { target_student_id: studentId }
-      );
+      let studentData = null;
+      let studentError = null;
+      
+      try {
+        const { data: sqlData, error: sqlError } = await supabase.rpc(
+          'get_student_detailed_info',
+          { target_student_id: studentId }
+        );
 
-      console.log('🔍 Student details response:', { data: studentData, error: studentError });
+        console.log('🔍 Student details SQL response:', { data: sqlData, error: sqlError });
 
-      if (studentError) {
-        console.error('Error loading student details:', studentError);
-        setError('Failed to load student details');
-        return;
+        if (!sqlError && sqlData && sqlData.length > 0) {
+          studentData = sqlData[0];
+          console.log('🔍 SQL function returned data:', studentData);
+        } else {
+          console.log('🔍 SQL function failed or returned no data, using fallback');
+          studentError = sqlError;
+        }
+      } catch (sqlException) {
+        console.log('🔍 SQL function exception:', sqlException);
+        studentError = sqlException;
       }
 
-      if (studentData && studentData.length > 0) {
-        console.log('🔍 Setting student details:', studentData[0]);
-        console.log('🔍 Student details keys:', Object.keys(studentData[0]));
-        console.log('🔍 Student process type value:', studentData[0].student_process_type);
-        setStudentDetails(studentData[0]);
+      // Se a função SQL falhou ou retornou dados vazios, usar fallback robusto
+      if (!studentData || studentError) {
+        console.log('🔍 Using robust fallback to fetch student data directly from tables');
+        
+        // Buscar dados básicos do estudante
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', studentId)
+          .single();
+
+        if (profileError) {
+          console.error('Error loading user profile:', profileError);
+          setError('Failed to load student profile');
+          return;
+        }
+
+        // Buscar aplicação de bolsa mais recente
+        const { data: applicationData, error: applicationError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            *,
+            scholarships (
+              id,
+              title,
+              universities (
+                id,
+                name
+              )
+            )
+          `)
+          .eq('student_id', studentId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        // Buscar dados do seller
+        let sellerData = null;
+        if (profileData.seller_referral_code) {
+          const { data: sellerResult } = await supabase
+            .from('sellers')
+            .select('seller_name')
+            .eq('referral_code', profileData.seller_referral_code)
+            .single();
+          
+          if (sellerResult) {
+            sellerData = sellerResult;
+          }
+        }
+
+        // Buscar histórico de taxas
+        const { data: feesData, error: feesError } = await supabase
+          .from('stripe_connect_transfers')
+          .select('*')
+          .eq('user_id', studentId)
+          .eq('status', 'succeeded');
+
+        // Buscar documentos do estudante
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('student_documents')
+          .select('*')
+          .eq('user_id', studentId);
+
+        // Construir objeto de dados do estudante
+        studentData = {
+          student_id: profileData.user_id,
+          full_name: profileData.full_name || 'Name not available',
+          email: profileData.email || 'Email not available',
+          phone: profileData.phone || 'Phone not available',
+          country: profileData.country || 'Country not available',
+          field_of_interest: profileData.field_of_interest || 'Field not specified',
+          academic_level: profileData.academic_level || 'Level not specified',
+          gpa: profileData.gpa || 0,
+          english_proficiency: profileData.english_proficiency || 'Not specified',
+          registration_date: profileData.created_at || new Date().toISOString(),
+          current_status: profileData.status || 'active',
+          seller_referral_code: profileData.seller_referral_code || '',
+          seller_name: sellerData?.seller_name || 'Seller not available',
+          total_fees_paid: feesData ? feesData.reduce((sum, fee) => sum + (fee.amount || 0), 0) : 0,
+          fees_count: feesData ? feesData.length : 0,
+          scholarship_title: applicationData?.scholarships?.title || 'Scholarship not specified',
+          university_name: applicationData?.scholarships?.universities?.name || 'University not specified',
+          selected_scholarship_id: applicationData?.scholarship_id || null,
+          documents_status: profileData.documents_status || 'Not started',
+          is_application_fee_paid: profileData.is_application_fee_paid || false,
+          is_scholarship_fee_paid: profileData.is_scholarship_fee_paid || false,
+          has_paid_selection_process_fee: profileData.has_paid_selection_process_fee || false,
+          has_paid_i20_control_fee: profileData.has_paid_i20_control_fee || false,
+          student_process_type: applicationData?.student_process_type || 'Not specified',
+          application_status: applicationData?.status || 'Pending',
+          documents: documentsData || []
+        };
+
+        console.log('🔍 Fallback data constructed:', studentData);
+      }
+
+      if (studentData) {
+        console.log('🔍 Setting student details:', studentData);
+        console.log('🔍 Student details keys:', Object.keys(studentData));
+        console.log('🔍 Student process type value:', studentData.student_process_type);
+        console.log('🔍 Application status value:', studentData.application_status);
+        console.log('🔍 Full student details object:', JSON.stringify(studentData, null, 2));
+        
+        setStudentDetails(studentData);
+        
+        // Definir documentos do estudante
+        if (studentData.documents && Array.isArray(studentData.documents)) {
+          setStudentDocuments(studentData.documents);
+        } else {
+          setStudentDocuments([]);
+        }
+
+        // Definir aplicação de bolsa
+        if (studentData.selected_scholarship_id) {
+          setScholarshipApplication({
+            id: studentData.selected_scholarship_id,
+            status: studentData.application_status || 'pending',
+            student_process_type: studentData.student_process_type || 'Not specified',
+            applied_at: studentData.registration_date || new Date().toISOString(),
+            reviewed_at: new Date().toISOString(),
+            notes: '',
+            documents: studentData.documents || [],
+            acceptance_letter_status: 'pending',
+            acceptance_letter_url: '',
+            is_application_fee_paid: studentData.is_application_fee_paid || false,
+            is_scholarship_fee_paid: studentData.is_scholarship_fee_paid || false,
+            paid_at: new Date().toISOString(),
+            payment_status: 'pending',
+            has_paid_selection_process_fee: studentData.has_paid_selection_process_fee || false,
+            has_paid_i20_control_fee: studentData.has_paid_i20_control_fee || false
+          });
+        }
+
+        // Definir histórico de taxas
+        if (studentData.total_fees_paid > 0) {
+          setFeeHistory([{
+            payment_id: 'fallback',
+            fee_type: 'application',
+            fee_name: 'Application Fee',
+            amount_paid: studentData.total_fees_paid,
+            currency: 'USD',
+            payment_status: 'succeeded',
+            payment_date: studentData.registration_date,
+            stripe_payment_intent: 'fallback',
+            notes: 'Fee payment recorded'
+          }]);
+        } else {
+          setFeeHistory([]);
+        }
       } else {
         setError('Student details not found');
       }
 
-      // Carregar histórico de taxas usando a função SQL
-      const { data: feesData, error: feesError } = await supabase.rpc(
-        'get_student_fee_history',
-        { target_student_id: studentId }
-      );
-
-      if (!feesError) {
-        setFeeHistory(feesData || []);
-      }
-
-      // Carregar aplicação de bolsa
-      const { data: applicationsList, error: listError } = await supabase
-        .from('scholarship_applications')
-        .select('id, status, created_at, student_process_type')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (applicationsList && applicationsList.length > 0) {
-        const latestApplication = applicationsList[0];
-        
-        const { data: appData, error: applicationError } = await supabase
-          .from('scholarship_applications')
-          .select('*')
-          .eq('id', latestApplication.id)
-          .single();
-
-        console.log('🔍 Application details response:', { data: appData, error: applicationError });
-
-        if (!applicationError) {
-          setScholarshipApplication(appData);
-        }
-      }
-
       console.log('🔍 Final state after loading:', {
         selectedStudent: studentId,
-        studentDetails: studentData?.[0],
-        scholarshipApplication: applicationsList?.[0]
+        studentDetails: studentData,
+        scholarshipApplication: studentData?.selected_scholarship_id ? {
+          id: studentData.selected_scholarship_id,
+          status: studentData.application_status || 'pending',
+          student_process_type: studentData.student_process_type || 'Not specified'
+        } : null,
+        studentDocuments: studentData?.documents || []
       });
 
     } catch (error: any) {
@@ -604,6 +757,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     setStudentDetails(null);
     setFeeHistory([]);
     setScholarshipApplication(null);
+    setStudentDocuments([]);
   };
 
   // Formatação
@@ -775,10 +929,21 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                           <div>
                             <dt className="text-sm font-medium text-slate-600">Student Type</dt>
                             <dd className="text-base text-slate-900 mt-1">
-                              {studentDetails.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                               studentDetails.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                               studentDetails.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
-                               studentDetails.student_process_type || 'Not specified'}
+                              {(() => {
+                                console.log('🔍 [ENHANCED_STUDENT_TRACKING] Student process type:', studentDetails?.student_process_type);
+                                if (studentDetails?.student_process_type && studentDetails.student_process_type !== 'Not specified') {
+                                  if (studentDetails.student_process_type === 'initial') {
+                                    return 'Initial - F-1 Visa Required';
+                                  } else if (studentDetails.student_process_type === 'transfer') {
+                                    return 'Transfer - Current F-1 Student';
+                                  } else if (studentDetails.student_process_type === 'change_of_status') {
+                                    return 'Change of Status - From Other Visa';
+                                  } else {
+                                    return studentDetails.student_process_type;
+                                  }
+                                }
+                                return 'Not specified';
+                              })()}
                             </dd>
                           </div>
                           <div>
@@ -862,7 +1027,13 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                         <div className="flex-1">
                           <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
                           <dd className="text-lg font-semibold text-slate-900">
-                            {studentDetails.scholarship_title || 'Scholarship information not available'}
+                            {(() => {
+                              console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship title:', studentDetails?.scholarship_title);
+                              if (studentDetails?.scholarship_title && studentDetails.scholarship_title !== 'Scholarship not specified') {
+                                return studentDetails.scholarship_title;
+                              }
+                              return 'Scholarship information not available';
+                            })()}
                           </dd>
                         </div>
                       </div>
@@ -871,7 +1042,13 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                         <div className="flex-1">
                           <dt className="text-sm font-medium text-slate-600">University</dt>
                           <dd className="text-lg font-semibold text-slate-900">
-                            {studentDetails.university_name || 'University not specified'}
+                            {(() => {
+                              console.log('🔍 [ENHANCED_STUDENT_TRACKING] University name:', studentDetails?.university_name);
+                              if (studentDetails?.university_name && studentDetails.university_name !== 'University not specified') {
+                                return studentDetails.university_name;
+                              }
+                              return 'University not specified';
+                            })()}
                           </dd>
                         </div>
                       </div>
@@ -880,10 +1057,20 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                         <div className="flex-1">
                           <dt className="text-sm font-medium text-slate-600">Application Status</dt>
                           <dd className="text-base text-slate-700">
-                            {scholarshipApplication?.status ? 
-                              scholarshipApplication.status.charAt(0).toUpperCase() + scholarshipApplication.status.slice(1) : 
-                              'Status not available'
-                            }
+                            {(() => {
+                              console.log('🔍 [ENHANCED_STUDENT_TRACKING] Renderizando Application Status:');
+                              console.log('🔍 [ENHANCED_STUDENT_TRACKING] studentDetails:', studentDetails);
+                              console.log('🔍 [ENHANCED_STUDENT_TRACKING] studentDetails.application_status:', studentDetails?.application_status);
+                              
+                              if (studentDetails?.application_status && studentDetails.application_status !== 'Not specified') {
+                                const formattedStatus = studentDetails.application_status.charAt(0).toUpperCase() + studentDetails.application_status.slice(1);
+                                console.log('🔍 [ENHANCED_STUDENT_TRACKING] Status formatado:', formattedStatus);
+                                return formattedStatus;
+                              } else {
+                                console.log('🔍 [ENHANCED_STUDENT_TRACKING] Status não disponível, mostrando fallback');
+                                return 'Pending';
+                              }
+                            })()}
                           </dd>
                         </div>
                       </div>
@@ -917,54 +1104,54 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                     <p className="text-slate-200 text-sm mt-1">View student submitted documents and their current status</p>
                   </div>
                   <div className="p-6">
-                    {scholarshipApplication?.documents && scholarshipApplication.documents.length > 0 ? (
+                    {studentDocuments && studentDocuments.length > 0 ? (
                       <div className="space-y-2">
-                        {scholarshipApplication.documents.map((doc: any, index: number) => (
-                          <div key={doc.id || index}>
-                            <div className="bg-white p-4">
-                              <div className="flex items-start space-x-4">
-                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center space-x-3 mb-1">
-                                    <p className="font-medium text-slate-900">{doc.document_type || 'Document'}</p>
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                      doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                      doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                      'bg-blue-100 text-blue-800'
-                                    }`}>
-                                      {doc.status ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1) : 'Submitted'}
-                                    </span>
+                        {studentDocuments.map((doc: any, index: number) => (
+                            <div key={doc.id || index}>
+                              <div className="bg-white p-4">
+                                <div className="flex items-start space-x-4">
+                                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
                                   </div>
-                                  <p className="text-sm text-slate-600">{doc.description || 'Document description not available'}</p>
-                                  {doc.uploaded_at && (
-                                    <p className="text-xs text-slate-400 mt-1">
-                                      Uploaded: {formatDate(doc.uploaded_at)}
-                                    </p>
-                                  )}
-                                  
-                                  {/* Apenas botões de visualização */}
-                                  <div className="flex items-center space-x-2 mt-3">
-                                    {doc.document_url && (
-                                      <button className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                        View Document
-                                      </button>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-3 mb-1">
+                                      <p className="text-sm font-medium text-slate-600 capitalize">{doc.type || 'Document'}</p>
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                        doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                        doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {doc.status ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1) : 'Submitted'}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-slate-600">Document uploaded for university review</p>
+                                    {doc.uploaded_at && (
+                                      <p className="text-xs text-slate-400 mt-1">
+                                        Uploaded: {formatDate(doc.uploaded_at)}
+                                      </p>
                                     )}
-                                    <button className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                      Download
-                                    </button>
+                                    
+                                    {/* Apenas botões de visualização */}
+                                    <div className="flex items-center space-x-2 mt-3">
+                                      {doc.url && (
+                                        <button className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                                          View Document
+                                        </button>
+                                      )}
+                                      <button className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                                        Download
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
+                              {index < studentDocuments.length - 1 && (
+                                <div className="border-t border-slate-200"></div>
+                              )}
                             </div>
-                            {index < scholarshipApplication.documents.length - 1 && (
-                              <div className="border-t border-slate-200"></div>
-                            )}
-                          </div>
                         ))}
                       </div>
                     ) : (
@@ -1093,71 +1280,71 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                     </h4>
                   </div>
                   
-                  <div className="p-6">
-                    {scholarshipApplication?.documents && scholarshipApplication.documents.length > 0 ? (
-                      <div className="space-y-3">
-                        {scholarshipApplication.documents.map((doc: any, index: number) => (
-                          <div key={doc.id || index} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start space-x-4 flex-1">
-                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-900">{doc.document_type || 'Document'}</p>
-                                  <div className="flex items-center space-x-2 mt-1">
-                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                      {doc.request_type || 'Document Request'}
-                                    </span>
-                                    <span className="text-sm text-slate-500">
-                                      Response to: <span className="font-medium text-slate-700">{doc.request_title || 'Document Request'}</span>
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-slate-400 mt-1">{doc.request_title || 'Document Request'}</p>
-                                  {doc.uploaded_at && (
-                                    <p className="text-xs text-slate-400 mt-1">
-                                      Uploaded: {formatDate(doc.uploaded_at)}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center space-x-3 ml-4">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                  doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                  doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                  doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {doc.status ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1) : 'Under Review'}
-                                </span>
-                                
-                                {/* Apenas botões de visualização */}
-                                <button className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                  Download
-                                </button>
-                                {doc.document_url && (
-                                  <button className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                    View
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <p className="text-slate-600 font-medium">No student responses yet</p>
-                        <p className="text-sm text-slate-500 mt-1">Student document responses will appear here when they upload documents</p>
-                      </div>
-                    )}
-                  </div>
+                                     <div className="p-6">
+                     {studentDocuments && studentDocuments.length > 0 ? (
+                       <div className="space-y-3">
+                         {studentDocuments.map((doc: any, index: number) => (
+                           <div key={doc.id || index} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
+                             <div className="flex items-start justify-between">
+                               <div className="flex items-start space-x-4 flex-1">
+                                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                   </svg>
+                                 </div>
+                                 <div className="flex-1 min-w-0">
+                                   <p className="font-medium text-slate-900 capitalize">{doc.type || 'Document'}</p>
+                                   <div className="flex items-center space-x-2 mt-1">
+                                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                       {doc.status || 'Pending'}
+                                     </span>
+                                     <span className="text-sm text-slate-500">
+                                       Document Type: <span className="font-medium text-slate-700">{doc.type || 'Document'}</span>
+                                     </span>
+                                   </div>
+                                   <p className="text-xs text-slate-400 mt-1">Document uploaded for university review</p>
+                                   {doc.uploaded_at && (
+                                     <p className="text-xs text-slate-400 mt-1">
+                                       Uploaded: {formatDate(doc.uploaded_at)}
+                                     </p>
+                                   )}
+                                 </div>
+                               </div>
+                               
+                               <div className="flex items-center space-x-3 ml-4">
+                                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                   doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                   doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                   doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                   'bg-blue-100 text-blue-800'
+                                 }`}>
+                                   {doc.status ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1) : 'Under Review'}
+                                 </span>
+                                 
+                                 {/* Apenas botões de visualização */}
+                                 <button className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                   Download
+                                 </button>
+                                 {doc.url && (
+                                   <button className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                     View
+                                   </button>
+                                 )}
+                               </div>
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     ) : (
+                       <div className="text-center py-8">
+                         <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                         </svg>
+                         <p className="text-slate-600 font-medium">No student responses yet</p>
+                         <p className="text-sm text-slate-500 mt-1">Student document responses will appear here when they upload documents</p>
+                       </div>
+                     )}
+                   </div>
                 </div>
 
                 {/* Acceptance Letter Section */}

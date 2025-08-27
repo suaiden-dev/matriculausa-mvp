@@ -88,14 +88,17 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
       console.log('🔍 [StripeCheckout] Resultado da verificação:', result);
       
+      // SEMPRE mostrar o modal de verificação, independente de ter desconto ou não
+      // Isso garante que o usuário veja as informações de segurança e aceite os termos
+      console.log('🔍 [StripeCheckout] Mostrando modal de verificação para todos os usuários');
+      setShowPreCheckoutModal(true);
+      
+      // Se há desconto ativo, vamos armazenar para usar depois
       if (result && result.has_discount) {
-        console.log('🔍 [StripeCheckout] ✅ Desconto ativo encontrado, indo direto para checkout');
-        // Se já há desconto, ir direto para checkout
-        handleCheckout();
+        console.log('🔍 [StripeCheckout] ✅ Desconto ativo encontrado, será aplicado automaticamente');
+        // O desconto será aplicado automaticamente no handlePreCheckoutProceed
       } else {
-        console.log('🔍 [StripeCheckout] ❌ Sem desconto ativo, mostrando modal');
-        // Se não há desconto, mostrar modal
-        setShowPreCheckoutModal(true);
+        console.log('🔍 [StripeCheckout] ❌ Sem desconto ativo, usuário pode inserir código');
       }
     } catch (error) {
       console.error('🔍 [StripeCheckout] Erro ao verificar desconto:', error);

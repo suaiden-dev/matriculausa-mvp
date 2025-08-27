@@ -75,7 +75,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
       console.log('[AUTH] Carregando códigos de referência do localStorage...');
       
       // Load Matricula Rewards code
-      const pendingReferralCode = localStorage.getItem('pending_referral_code');
+      const pendingReferralCode = localStorage.getItem('pending_affiliate_code');
       if (pendingReferralCode) {
         console.log('[AUTH] Código de Matricula Rewards encontrado:', pendingReferralCode);
         setFormData(prev => ({ ...prev, affiliateCode: pendingReferralCode }));
@@ -395,7 +395,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         await register(formData.email, formData.password, userData);
 
         // Limpar códigos de referência do localStorage após registro bem-sucedido
-        localStorage.removeItem('pending_referral_code');
+        localStorage.removeItem('pending_affiliate_code');
         localStorage.removeItem('pending_seller_referral_code');
 
         // Se for registro de universidade, mostra modal e retorna
