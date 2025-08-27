@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import AffiliateAdminDashboardLayout from './AffiliateAdminDashboardLayout';
 import Overview from './Overview';
 import SellerManagement from './SellerManagement';
-import SellerPerformanceTracking from './SellerPerformanceTracking';
+
 import EnhancedStudentTracking from './EnhancedStudentTracking';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
@@ -15,7 +15,6 @@ interface AffiliateAdminStats {
   totalRevenue: number;
   totalSellers: number;
   activeSellers: number;
-  monthlyGrowth: number;
 }
 
 
@@ -55,8 +54,7 @@ const AffiliateAdminDashboard: React.FC = () => {
     totalStudents: 0,
     totalRevenue: 0,
     totalSellers: 0,
-    activeSellers: 0,
-    monthlyGrowth: 0
+    activeSellers: 0
   });
 
   const loadAffiliateAdminData = useCallback(async () => {
@@ -64,126 +62,91 @@ const AffiliateAdminDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
 
+
+
       // Verificar se o usuário é affiliate_admin através do role no perfil
       if (userRole !== 'affiliate_admin') {
+        console.error('❌ User role is not affiliate_admin:', userRole);
         throw new Error('Usuário não tem permissão de affiliate admin');
       }
 
-      // Buscar estudantes referenciados
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('affiliate_referrals')
-        .select('*')
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false });
+      // Buscar estatísticas gerais usando a nova função SQL corrigida
+      const { data: analyticsData, error: analyticsError } = await supabase
+        .rpc('get_admin_analytics_fixed', { admin_user_id: userId });
 
-      if (studentsError) {
-        console.error('Error loading students:', studentsError);
-        throw new Error(`Failed to load students: ${studentsError.message}`);
+      if (analyticsError) {
+        console.error('❌ Error loading analytics data:', analyticsError);
+        throw new Error(`Failed to load analytics data: ${analyticsError.message}`);
       }
 
-      // Buscar sellers reais da tabela sellers
+      // Buscar dados detalhados de vendedores usando a função corrigida
       const { data: sellersData, error: sellersError } = await supabase
-        .from('sellers')
-        .select('*')
-        .eq('is_active', true);
+        .rpc('get_admin_sellers_analytics_fixed', { admin_user_id: userId });
 
       if (sellersError) {
-        console.error('Error loading sellers:', sellersError);
-        throw new Error(`Failed to load sellers: ${sellersError.message}`);
+        console.error('❌ Error loading sellers data:', sellersError);
+        throw new Error(`Failed to load sellers data: ${sellersError.message}`);
       }
 
-      // Buscar perfis dos usuários referenciados
-      const studentUserIds = studentsData?.map(ref => ref.referred_id).filter(Boolean) || [];
-      
-      // Para sellers, usar os dados da tabela sellers diretamente
-      let studentProfiles: any[] = [];
+      // Buscar dados de estudantes referenciados usando a função corrigida
+      const { data: studentsData, error: studentsError } = await supabase
+        .rpc('get_admin_students_analytics', { admin_user_id: userId });
 
-      if (studentUserIds.length > 0) {
-        const { data: studentProfilesData, error: studentProfilesError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .in('user_id', studentUserIds);
-
-        if (studentProfilesError) {
-          console.error('Error loading student profiles:', studentProfilesError);
-        } else {
-          studentProfiles = studentProfilesData || [];
-        }
+      if (studentsError) {
+        console.error('Error loading students data:', studentsError);
+        throw new Error(`Failed to load students data: ${studentsError.message}`);
       }
+
+      // Processar dados de analytics
+      const analytics = analyticsData?.[0] || {
+        total_sellers: 0,
+        active_sellers: 0,
+        total_students: 0,
+        total_revenue: 0,
+        monthly_growth: 0,
+        conversion_rate: 0,
+        avg_revenue_per_student: 0
+      };
+
+      // Processar vendedores
+      const processedSellers = (sellersData || []).map((seller: any) => ({
+        id: seller.seller_id,
+        name: seller.seller_name || 'Nome não disponível',
+        referral_code: seller.referral_code || '',
+        email: seller.seller_email || 'Email não disponível',
+        created_at: seller.last_referral_date || new Date().toISOString(),
+        students_count: seller.students_count || 0,
+        total_revenue: seller.total_revenue || 0,
+        avg_revenue_per_student: seller.avg_revenue_per_student || 0,
+        is_active: seller.is_active
+      }));
 
       // Processar estudantes
-      const processedStudents = (studentsData || []).map(referral => {
-        const studentProfile = studentProfiles.find(profile => profile.user_id === referral.referred_id);
-        
-        return {
-          id: referral.referred_id,
-          full_name: studentProfile?.full_name || 'Nome não disponível',
-          email: studentProfile?.email || 'Email não disponível',
-          country: studentProfile?.country || 'País não disponível',
-          referred_by_seller_id: referral.referrer_id,
-          seller_name: 'Vendedor não disponível', // Será preenchido depois
-          seller_referral_code: referral.affiliate_code || '',
-          referral_code_used: referral.affiliate_code || '',
-          total_paid: referral.payment_amount || 0,
-          created_at: referral.created_at,
-          status: 'active'
-        };
-      });
+      const processedStudents = (studentsData || []).map((student: any) => ({
+        id: student.student_id,
+        full_name: student.student_name || 'Nome não disponível',
+        email: student.student_email || 'Email não disponível',
+        country: student.country || 'País não disponível',
+        referred_by_seller_id: student.referred_by_seller_id,
+        seller_name: student.seller_name || 'Vendedor não disponível',
+        seller_referral_code: student.seller_referral_code || '',
+        referral_code_used: student.referral_code_used || '',
+        total_paid: student.total_paid || 0,
+        created_at: student.created_at,
+        status: student.status || 'active'
+      }));
 
-      // Processar vendedores - CORRIGIDO: usar dados da tabela sellers
-      const processedSellers = (sellersData || []).map(seller => {
-        return {
-          id: seller.id,
-          name: seller.name || 'Nome não disponível',
-          referral_code: seller.referral_code || '',
-          email: seller.email || 'Email não disponível',
-          created_at: seller.created_at || new Date().toISOString(),
-          students_count: processedStudents.filter(student => 
-            student.referred_by_seller_id === seller.id
-          ).length
-        };
-      });
+      // Atualizar estatísticas
+      const finalStats = {
+        totalStudents: analytics.total_students || 0,
+        totalRevenue: analytics.total_revenue || 0,
+        totalSellers: analytics.total_sellers || 0,
+        activeSellers: analytics.active_sellers || 0
+      };
 
-      // Atualizar nomes dos sellers nos estudantes
-      processedStudents.forEach(student => {
-        const seller = processedSellers.find(s => s.id === student.referred_by_seller_id);
-        if (seller) {
-          student.seller_name = seller.name;
-        }
-      });
-
-      // Calcular estatísticas
-      const totalStudents = processedStudents.length;
-      const totalRevenue = processedStudents.reduce((sum, s) => sum + s.total_paid, 0);
-      const totalSellers = processedSellers.length;
-      const activeSellers = processedSellers.length; // Todos os sellers da tabela sellers (já filtrados por is_active = true)
-
-      // Calcular crescimento mensal
-      const now = new Date();
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      const studentsLastMonth = processedStudents.filter(s => 
-        new Date(s.created_at) >= lastMonth && new Date(s.created_at) < thisMonth
-      ).length;
-      
-      const studentsThisMonth = processedStudents.filter(s => 
-        new Date(s.created_at) >= thisMonth
-      ).length;
-      
-      const monthlyGrowth = studentsLastMonth > 0 
-        ? ((studentsThisMonth - studentsLastMonth) / studentsLastMonth) * 100
-        : studentsThisMonth > 0 ? 100 : 0;
-
+      setStats(finalStats);
       setStudents(processedStudents);
       setSellers(processedSellers);
-      setStats({
-        totalStudents,
-        totalRevenue,
-        totalSellers,
-        activeSellers,
-        monthlyGrowth: Math.round(monthlyGrowth * 10) / 10 // Arredondar para 1 casa decimal
-      });
 
     } catch (error: any) {
       console.error('Error loading affiliate admin data:', error);
@@ -243,12 +206,11 @@ const AffiliateAdminDashboard: React.FC = () => {
           } 
         />
         <Route path="users" element={<SellerManagement />} />
-        <Route path="performance" element={<SellerPerformanceTracking />} />
 
         <Route 
           path="students" 
           element={
-            <EnhancedStudentTracking />
+            <EnhancedStudentTracking userId={userId} />
           } 
         />
         <Route 
@@ -256,7 +218,9 @@ const AffiliateAdminDashboard: React.FC = () => {
           element={
             <Analytics 
               stats={stats}
+              sellers={sellers}
               students={students}
+              userId={userId}
             />
           } 
         />

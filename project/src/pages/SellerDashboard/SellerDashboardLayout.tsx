@@ -50,7 +50,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
     const path = location.pathname;
     if (path === '/seller/dashboard' || path === '/seller/dashboard/') return 'overview';
     if (path.includes('/students')) return 'students';
-    if (path.includes('/referral-tools')) return 'referral-tools';
+    if (path.includes('/affiliate-tools')) return 'affiliate-tools';
     if (path.includes('/performance')) return 'performance';
     if (path.includes('/profile')) return 'profile';
     return 'overview';
@@ -61,7 +61,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, path: '/seller/dashboard', badge: null },
     { id: 'students', label: 'My Students', icon: GraduationCap, path: '/seller/dashboard/students', badge: null },
-    { id: 'referral-tools', label: 'Referral Tools', icon: Target, path: '/seller/dashboard/referral-tools', badge: null },
+    { id: 'affiliate-tools', label: 'Affiliate Tools', icon: Target, path: '/seller/dashboard/affiliate-tools', badge: null },
     { id: 'performance', label: 'Performance', icon: Activity, path: '/seller/dashboard/performance', badge: null },
     { id: 'profile', label: 'Settings', icon: Settings, path: '/seller/dashboard/profile', badge: null }
   ];

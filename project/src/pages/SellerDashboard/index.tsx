@@ -6,7 +6,7 @@ import SellerDashboardLayout from './SellerDashboardLayout';
 import Overview from './Overview';
 import MyStudents from './MyStudents';
 import StudentDetails from './StudentDetails';
-import ReferralTools from './ReferralTools';
+import AffiliateTools from './AffiliateTools';
 import Performance from './Performance';
 import ProfileSettings from './ProfileSettings';
 
@@ -26,7 +26,6 @@ interface Student {
   created_at: string;
   status: string;
   latest_activity: string;
-  commission_earned?: number;
   fees_count?: number;
   scholarship_title?: string;
   university_name?: string;
@@ -49,7 +48,7 @@ const SellerDashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'overview' | 'students' | 'student-details' | 'referral-tools' | 'performance' | 'profile'>(() => {
+  const [currentView, setCurrentView] = useState<'overview' | 'students' | 'student-details' | 'affiliate-tools' | 'performance' | 'profile'>(() => {
     // Tentar recuperar a view do localStorage
     const savedView = localStorage.getItem('sellerDashboardView');
     return (savedView as any) || 'overview';
@@ -163,7 +162,6 @@ const SellerDashboard: React.FC = () => {
         created_at: referral.registration_date,
         status: referral.student_status,
         total_paid: referral.total_fees_paid || 0,
-        commission_earned: referral.commission_earned || 0,
         fees_count: referral.fees_count || 0,
         latest_activity: referral.registration_date,
         scholarship_title: referral.scholarship_title || 'No scholarship selected',
@@ -314,12 +312,12 @@ const SellerDashboard: React.FC = () => {
             onRefresh={handleStudentRefresh}
           />
         );
-      case 'referral-tools':
+              case 'affiliate-tools':
         return (
-          <ReferralTools 
-            sellerProfile={sellerProfile}
-            stats={stats}
-          />
+                      <AffiliateTools 
+              sellerProfile={sellerProfile}
+              stats={stats}
+            />
         );
       case 'performance':
         return (

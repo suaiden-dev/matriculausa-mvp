@@ -160,6 +160,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
   };
 
   const handleSave = async () => {
+    if (!authUser) {
+      setSaveError('Usuário não autenticado');
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
     setSuccessMessage(null);
@@ -233,12 +238,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
   return (
     <div className="space-y-6 sm:space-y-8 p-3 sm:p-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Affiliate Admin Profile</h2>
-          <p className="text-sm sm:text-base text-slate-600">Manage your affiliate admin profile and preferences</p>
-        </div>
-        
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end space-y-4 sm:space-y-0">
         {!isEditing && (
           <button
             onClick={() => {
@@ -380,12 +380,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Notificações por Email</label>
-                                 <select
-                   value={formData.notifications.email ? 'true' : 'false'}
-                   onChange={(e) => handleInputChange('notifications.email', e.target.value === 'true')}
-                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                   aria-label="Configurar notificações por email"
-                 >
+                <select
+                  value={formData.notifications.email ? 'true' : 'false'}
+                  onChange={(e) => handleInputChange('notifications.email', e.target.value === 'true')}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
+                  aria-label="Configurar notificações por email"
+                >
                   <option value="true">Ativadas</option>
                   <option value="false">Desativadas</option>
                 </select>
@@ -408,13 +408,13 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user }) => {
                     <User className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
                   )}
                 </div>
-                                 <button 
-                   onClick={handleCameraClick}
-                   disabled={uploading}
-                   className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                   title="Alterar foto do perfil"
-                   aria-label="Alterar foto do perfil"
-                 >
+                <button 
+                  onClick={handleCameraClick}
+                  disabled={uploading}
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Alterar foto do perfil"
+                  aria-label="Alterar foto do perfil"
+                >
                   {uploading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                   ) : (

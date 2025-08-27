@@ -23,35 +23,39 @@ const SellerRegistrationsManager: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Carregar registros
+  // Load registrations apenas uma vez
   useEffect(() => {
-    if (user) {
+    console.log('🔄 SellerRegistrationsManager useEffect triggered', { user: user?.id, hasLoaded });
+    if (user && !hasLoaded) {
+      console.log('🔄 Loading registrations for user:', user.id);
       loadRegistrations();
     }
-  }, [user]);
+  }, [user?.id, hasLoaded]); // Depender apenas do ID do usuário e da flag de carregamento
 
   const loadRegistrations = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      // Para admins de afiliados, carregar todos os registros pendentes
-      // independentemente do código usado
+      // For affiliate admins, load all pending registrations
+      // regardless of the code used
       const { data, error } = await supabase
         .from('seller_registrations')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erro ao carregar registros:', error);
-        setError('Erro ao carregar registros');
+        console.error('Error loading registrations:', error);
+        setError('Error loading registrations');
       } else {
         setRegistrations(data || []);
+        setHasLoaded(true); // Marcar que os dados foram carregados
       }
     } catch (err) {
-      console.error('Erro ao carregar registros:', err);
-      setError('Erro ao carregar registros');
+      console.error('Error loading registrations:', err);
+      setError('Error loading registrations');
     } finally {
       setLoading(false);
     }
@@ -59,7 +63,7 @@ const SellerRegistrationsManager: React.FC = () => {
 
   const approveRegistration = async (registrationId: string) => {
     try {
-      // 1. Atualizar status para aprovado
+      // 1. Update status to approved
       const { error: updateError } = await supabase
         .from('seller_registrations')
         .update({
@@ -70,11 +74,11 @@ const SellerRegistrationsManager: React.FC = () => {
         .eq('id', registrationId);
 
       if (updateError) {
-        console.error('Erro ao aprovar registro:', updateError);
+        console.error('Error approving registration:', updateError);
         throw updateError;
       }
 
-      // 2. Buscar o registro para obter o email e user_id
+      // 2. Get the registration to obtain email and user_id
       const { data: registration } = await supabase
         .from('seller_registrations')
         .select('email, full_name, user_id')
@@ -82,53 +86,77 @@ const SellerRegistrationsManager: React.FC = () => {
         .single();
 
       if (registration && registration.user_id) {
-        // 3. Atualizar o role do usuário na tabela user_profiles
+        // 3. Update the user's role in the user_profiles table
         const { error: profileError } = await supabase
           .from('user_profiles')
           .update({ role: 'seller' })
           .eq('user_id', registration.user_id);
 
         if (profileError) {
-          console.error('Erro ao atualizar role do usuário:', profileError);
-          // Não vamos falhar aqui, pois o registro já foi aprovado
+          console.error('Error updating user role:', profileError);
+          // We won't fail here since the registration was already approved
         }
       }
 
-      // 4. Recarregar registros
+      // 4. Reload registrations
       await loadRegistrations();
-      setSuccess('Registro aprovado com sucesso!');
+      setSuccess('Registration approved successfully!');
       setTimeout(() => setSuccess(''), 3000);
 
     } catch (err: any) {
-      console.error('Erro ao aprovar registro:', err);
-      setError(err.message || 'Erro ao aprovar registro');
+      console.error('Error approving registration:', err);
+      setError(err.message || 'Error approving registration');
       setTimeout(() => setError(''), 5000);
     }
   };
 
   const rejectRegistration = async (registrationId: string) => {
     try {
-      const { error } = await supabase
+      // 1. Get the registration to obtain user_id before updating
+      const { data: registration } = await supabase
+        .from('seller_registrations')
+        .select('user_id')
+        .eq('id', registrationId)
+        .single();
+
+      if (!registration) {
+        throw new Error('Registration not found');
+      }
+
+      // 2. Update status to rejected
+      const { error: updateError } = await supabase
         .from('seller_registrations')
         .update({
-          status: 'rejected',
-          rejected_at: new Date().toISOString(),
-          rejected_by: user?.id
+          status: 'rejected'
         })
         .eq('id', registrationId);
 
-      if (error) {
-        console.error('Erro ao rejeitar registro:', error);
-        throw error;
+      if (updateError) {
+        console.error('Error rejecting registration:', updateError);
+        throw updateError;
       }
 
+              // 3. If the user exists, revert the role to 'student'
+      if (registration.user_id) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .update({ role: 'student' })
+          .eq('user_id', registration.user_id);
+
+        if (profileError) {
+          console.error('Error reverting user role:', profileError);
+          // We won't fail here since the registration was already rejected
+        }
+      }
+
+      // 4. Reload registrations
       await loadRegistrations();
-      setSuccess('Registro rejeitado com sucesso!');
+      setSuccess('Registration rejected successfully!');
       setTimeout(() => setSuccess(''), 3000);
 
     } catch (err: any) {
-      console.error('Erro ao rejeitar registro:', err);
-      setError(err.message || 'Erro ao rejeitar registro');
+      console.error('Error rejecting registration:', err);
+      setError(err.message || 'Error rejecting registration');
       setTimeout(() => setError(''), 5000);
     }
   };
@@ -137,23 +165,23 @@ const SellerRegistrationsManager: React.FC = () => {
     switch (status) {
       case 'pending':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
             <Clock className="w-3 h-3 mr-1" />
-            Pendente
+            Pending
           </span>
         );
       case 'approved':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
             <UserCheck className="w-3 h-3 mr-1" />
-            Aprovado
+            Approved
           </span>
         );
       case 'rejected':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
             <UserX className="w-3 h-3 mr-1" />
-            Rejeitado
+            Rejected
           </span>
         );
       default:
@@ -178,10 +206,10 @@ const SellerRegistrationsManager: React.FC = () => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900">
-          Gerenciar Registros de Vendedores
+          Manage Seller Registrations
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Aprove ou rejeite solicitações de registro de vendedores
+          Approve or reject seller registration requests
         </p>
       </div>
 
@@ -200,36 +228,36 @@ const SellerRegistrationsManager: React.FC = () => {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center">
-            <Clock className="w-5 h-5 text-blue-600 mr-2" />
+            <Clock className="w-5 h-5 text-gray-600 mr-2" />
             <div>
-              <p className="text-sm font-medium text-blue-900">Pendentes</p>
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-sm font-medium text-gray-700">Pending</p>
+              <p className="text-2xl font-bold text-gray-900">
                 {registrations.filter(r => r.status === 'pending').length}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center">
-            <UserCheck className="w-5 h-5 text-green-600 mr-2" />
+            <UserCheck className="w-5 h-5 text-gray-600 mr-2" />
             <div>
-              <p className="text-sm font-medium text-green-900">Aprovados</p>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-sm font-medium text-gray-700">Approved</p>
+              <p className="text-2xl font-bold text-gray-900">
                 {registrations.filter(r => r.status === 'approved').length}
               </p>
             </div>
           </div>
         </div>
         
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center">
-            <UserX className="w-5 h-5 text-red-600 mr-2" />
+            <UserX className="w-5 h-5 text-gray-600 mr-2" />
             <div>
-              <p className="text-sm font-medium text-red-900">Rejeitados</p>
-              <p className="text-2xl font-bold text-red-600">
+              <p className="text-sm font-medium text-gray-700">Rejected</p>
+              <p className="text-2xl font-bold text-gray-900">
                 {registrations.filter(r => r.status === 'rejected').length}
               </p>
             </div>
@@ -240,21 +268,15 @@ const SellerRegistrationsManager: React.FC = () => {
       {/* Registrations List */}
       {registrations.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <p>Nenhum registro de vendedor encontrado.</p>
-          <p className="text-sm mt-1">Os registros aparecerão aqui quando vendedores usarem seus códigos.</p>
+          <p>No seller registrations found.</p>
+          <p className="text-sm mt-1">Registrations will appear here when sellers use their codes.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {registrations.map((registration) => (
             <div
               key={registration.id}
-              className={`border rounded-lg p-4 ${
-                registration.status === 'pending'
-                  ? 'border-yellow-200 bg-yellow-50'
-                  : registration.status === 'approved'
-                  ? 'border-green-200 bg-green-50'
-                  : 'border-red-200 bg-red-50'
-              }`}
+              className="border border-gray-200 rounded-lg p-4 bg-white"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -267,13 +289,13 @@ const SellerRegistrationsManager: React.FC = () => {
                   
                   <div className="text-sm text-gray-600 space-y-1">
                     <p>Email: {registration.email}</p>
-                    {registration.phone && <p>Telefone: {registration.phone}</p>}
-                    <p>Código: <span className="font-mono">{registration.registration_code}</span></p>
-                    <p>Registrado em: {new Date(registration.created_at).toLocaleDateString('pt-BR')}</p>
+                    {registration.phone && <p>Phone: {registration.phone}</p>}
+                    <p>Code: <span className="font-mono">{registration.registration_code}</span></p>
+                    <p>Registered on: {new Date(registration.created_at).toLocaleDateString('en-US')}</p>
                     {registration.approved_at && (
                       <p>
-                        {registration.status === 'approved' ? 'Aprovado' : 'Rejeitado'} em: {' '}
-                        {new Date(registration.approved_at).toLocaleDateString('pt-BR')}
+                        {registration.status === 'approved' ? 'Approved' : 'Rejected'} on: {' '}
+                        {new Date(registration.approved_at).toLocaleDateString('en-US')}
                       </p>
                     )}
                   </div>
@@ -282,8 +304,8 @@ const SellerRegistrationsManager: React.FC = () => {
                 <div className="flex items-center space-x-2 ml-4">
                   <button
                     onClick={() => openDetailsModal(registration)}
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    title="Ver detalhes"
+                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    title="View details"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
@@ -292,16 +314,16 @@ const SellerRegistrationsManager: React.FC = () => {
                     <>
                       <button
                         onClick={() => approveRegistration(registration.id)}
-                        className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                        title="Aprovar"
+                        className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                        title="Approve"
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       
                       <button
                         onClick={() => rejectRegistration(registration.id)}
-                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        title="Rejeitar"
+                        className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                        title="Reject"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -320,7 +342,7 @@ const SellerRegistrationsManager: React.FC = () => {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900">
-                Detalhes do Registro
+                Registration Details
               </h3>
               <button
                 onClick={() => setShowDetailsModal(false)}
@@ -332,7 +354,7 @@ const SellerRegistrationsManager: React.FC = () => {
             
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Nome Completo</label>
+                <label className="text-sm font-medium text-gray-700">Full Name</label>
                 <p className="text-sm text-gray-900">{selectedRegistration.full_name}</p>
               </div>
               
@@ -343,13 +365,13 @@ const SellerRegistrationsManager: React.FC = () => {
               
               {selectedRegistration.phone && (
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Telefone</label>
+                  <label className="text-sm font-medium text-gray-700">Phone</label>
                   <p className="text-sm text-gray-900">{selectedRegistration.phone}</p>
                 </div>
               )}
               
               <div>
-                <label className="text-sm font-medium text-gray-700">Código de Registro</label>
+                <label className="text-sm font-medium text-gray-700">Registration Code</label>
                 <p className="text-sm text-gray-900 font-mono">{selectedRegistration.registration_code}</p>
               </div>
               
@@ -359,19 +381,19 @@ const SellerRegistrationsManager: React.FC = () => {
               </div>
               
               <div>
-                <label className="text-sm font-medium text-gray-700">Data de Registro</label>
+                <label className="text-sm font-medium text-gray-700">Registration Date</label>
                 <p className="text-sm text-gray-900">
-                  {new Date(selectedRegistration.created_at).toLocaleDateString('pt-BR')}
+                                      {new Date(selectedRegistration.created_at).toLocaleDateString('en-US')}
                 </p>
               </div>
               
               {selectedRegistration.approved_at && (
                 <div>
                   <label className="text-sm font-medium text-gray-700">
-                    {selectedRegistration.status === 'approved' ? 'Data de Aprovação' : 'Data de Rejeição'}
+                    {selectedRegistration.status === 'approved' ? 'Approval Date' : 'Rejection Date'}
                   </label>
                   <p className="text-sm text-gray-900">
-                    {new Date(selectedRegistration.approved_at).toLocaleDateString('pt-BR')}
+                    {new Date(selectedRegistration.approved_at).toLocaleDateString('en-US')}
                   </p>
                 </div>
               )}
@@ -382,7 +404,7 @@ const SellerRegistrationsManager: React.FC = () => {
                 onClick={() => setShowDetailsModal(false)}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
-                Fechar
+                Close
               </button>
             </div>
           </div>

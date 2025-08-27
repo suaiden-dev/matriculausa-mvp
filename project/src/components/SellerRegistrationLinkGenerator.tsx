@@ -18,16 +18,25 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  // Carregar códigos existentes
+  // Carregar códigos existentes apenas uma vez
   useEffect(() => {
-    if (user) {
+    console.log('🔄 SellerRegistrationLinkGenerator useEffect triggered', { user: user?.id, hasLoaded });
+    if (user && !hasLoaded) {
+      console.log('🔄 Loading codes for user:', user.id);
       loadCodes();
     }
-  }, [user]);
+  }, [user?.id, hasLoaded]); // Depender apenas do ID do usuário e da flag de carregamento
 
   const loadCodes = async () => {
     if (!user) return;
+
+    // Se já temos códigos carregados, não recarregar
+    if (codes.length > 0 && hasLoaded) {
+      console.log('⚠️ Skipping loadCodes - already have codes data');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -38,8 +47,8 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erro ao carregar códigos:', error);
-        setError('Erro ao carregar códigos');
+        console.error('Error loading codes:', error);
+        setError('Error loading codes');
       } else {
         // Buscar contagem de uso para cada código
         const codesWithUsage = await Promise.all(
@@ -54,10 +63,11 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
         );
         
         setCodes(codesWithUsage);
+        setHasLoaded(true); // Marcar que os dados foram carregados
       }
     } catch (err) {
-      console.error('Erro ao carregar códigos:', err);
-      setError('Erro ao carregar códigos');
+      console.error('Error loading codes:', err);
+      setError('Error loading codes');
     } finally {
       setLoading(false);
     }
@@ -68,38 +78,22 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
 
     setGenerating(true);
     try {
-      // Gerar código único usando a função do banco
-      const { data, error } = await supabase.rpc('generate_seller_registration_code');
+      // Usar a nova função que verifica se já existe código ativo
+      const { data, error } = await supabase.rpc('create_seller_registration_code', {
+        admin_id_param: user.id
+      });
 
       if (error) {
-        console.error('Erro ao gerar código:', error);
-        throw error;
-      }
-
-      if (data) {
-        const newCode = data;
-        
-        // Inserir o código na tabela
-        const { error: insertError } = await supabase
-          .from('seller_registration_codes')
-          .insert({
-            admin_id: user.id,
-            code: newCode,
-            is_active: true
-          });
-
-        if (insertError) {
-          console.error('Erro ao inserir código:', insertError);
-          throw insertError;
-        }
-
+        console.error('Error generating code:', error);
+        setError(error.message);
+      } else {
         // Recarregar códigos
         await loadCodes();
         setError('');
       }
     } catch (err: any) {
-      console.error('Erro ao gerar código:', err);
-      setError(err.message || 'Erro ao gerar código');
+      console.error('Error generating code:', err);
+      setError(err.message || 'Error generating code');
     } finally {
       setGenerating(false);
     }
@@ -113,8 +107,8 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
         .eq('id', codeId);
 
       if (error) {
-        console.error('Erro ao atualizar status:', error);
-        setError('Erro ao atualizar status');
+        console.error('Error updating status:', error);
+        setError('Error updating status');
       } else {
         // Atualizar estado local
         setCodes(prev => prev.map(code => 
@@ -122,13 +116,13 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
         ));
       }
     } catch (err) {
-      console.error('Erro ao atualizar status:', err);
-      setError('Erro ao atualizar status');
+      console.error('Error updating status:', err);
+      setError('Error updating status');
     }
   };
 
   const deleteCode = async (codeId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este código? Esta ação não pode ser desfeita.')) {
+    if (!confirm('Are you sure you want to delete this code? This action cannot be undone.')) {
       return;
     }
 
@@ -139,15 +133,15 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
         .eq('id', codeId);
 
       if (error) {
-        console.error('Erro ao excluir código:', error);
-        setError('Erro ao excluir código');
+        console.error('Error deleting code:', error);
+        setError('Error deleting code');
       } else {
         // Remover do estado local
         setCodes(prev => prev.filter(code => code.id !== codeId));
       }
     } catch (err) {
-      console.error('Erro ao excluir código:', err);
-      setError('Erro ao excluir código');
+      console.error('Error deleting code:', err);
+      setError('Error deleting code');
     }
   };
 
@@ -157,7 +151,7 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
       setCopiedCode(text);
       setTimeout(() => setCopiedCode(null), 2000);
     } catch (err) {
-      console.error('Erro ao copiar para clipboard:', err);
+      console.error('Error copying to clipboard:', err);
       // Fallback para navegadores mais antigos
       const textArea = document.createElement('textarea');
       textArea.value = text;
@@ -185,32 +179,13 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Gerador de Links de Registro
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Crie códigos únicos para vendedores se registrarem
-          </p>
-        </div>
-        <button
-          onClick={generateNewCode}
-          disabled={generating}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {generating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Gerando...
-            </>
-          ) : (
-            <>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Código
-            </>
-          )}
-        </button>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Registration Link Generator
+        </h3>
+        <p className="text-sm text-gray-600 mt-1">
+          Create unique codes for sellers to register
+        </p>
       </div>
 
       {/* Error Message */}
@@ -220,96 +195,75 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
         </div>
       )}
 
+      {/* New Code Button */}
+      {!codes.some(code => code.is_active) && (
+        <div className="mb-4">
+          <button
+            onClick={generateNewCode}
+            disabled={generating}
+            className="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {generating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Generating...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                New Code
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Codes List */}
       {codes.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <p>Nenhum código de registro criado ainda.</p>
-          <p className="text-sm mt-1">Clique em "Novo Código" para começar.</p>
+          <p>No registration codes created yet.</p>
+          <p className="text-sm mt-1">Click "New Code" to get started.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {codes.map((code) => (
-            <div
-              key={code.id}
-              className={`border rounded-lg p-4 ${
-                code.is_active ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <span className="font-mono text-lg font-semibold text-gray-900">
-                      {code.code}
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        code.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {code.is_active ? 'Ativo' : 'Inativo'}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {code.usage_count || 0} uso{code.usage_count !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">
-                      Criado em: {new Date(code.created_at).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
+            <div key={code.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="mb-4">
+                <span className="font-mono text-lg font-medium text-gray-900">
+                  {code.code}
+                </span>
+              </div>
+              
+              <div className="mb-4">
+                <span className="text-sm text-gray-500">
+                  Created on: {new Date(code.created_at).toLocaleDateString('en-US')}
+                </span>
+              </div>
 
-                  <div className="mt-3 flex items-center space-x-2">
-                    <button
-                      onClick={() => copyToClipboard(getRegistrationUrl(code.code))}
-                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      {copiedCode === getRegistrationUrl(code.code) ? (
-                        <>
-                          <Check className="w-3 h-3 mr-1" />
-                          Copiado!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3 mr-1" />
-                          Copiar Link
-                        </>
-                      )}
-                    </button>
-                    
-                    <a
-                      href={getRegistrationUrl(code.code)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 rounded-md hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      Testar Link
-                    </a>
-                  </div>
+              <div className="mb-4">
+                <div className="text-sm text-gray-600 mb-2">Registration link:</div>
+                <div className="font-mono text-sm text-gray-800 bg-gray-50 p-3 rounded border">
+                  {getRegistrationUrl(code.code)}
                 </div>
+              </div>
 
-                <div className="flex items-center space-x-2 ml-4">
-                  <button
-                    onClick={() => toggleCodeStatus(code.id, code.is_active)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                      code.is_active
-                        ? 'text-orange-700 bg-orange-100 hover:bg-orange-200 focus:ring-orange-500'
-                        : 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500'
-                    }`}
-                  >
-                    {code.is_active ? 'Desativar' : 'Ativar'}
-                  </button>
-                  
-                  <button
-                    onClick={() => deleteCode(code.id)}
-                    className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => copyToClipboard(getRegistrationUrl(code.code))}
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  {copiedCode === getRegistrationUrl(code.code) ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy Link
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           ))}
@@ -317,17 +271,17 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
       )}
 
       {/* Instructions */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">Como usar:</h4>
-        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-          <li>Clique em "Novo Código" para gerar um código único</li>
-          <li>Compartilhe o link gerado com vendedores</li>
-          <li>Os vendedores se registram usando o código</li>
-          <li>Aprove ou rejeite os registros no painel de gerenciamento</li>
+      <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h4 className="text-sm font-medium text-gray-900 mb-2">How to use:</h4>
+        <ol className="text-sm text-gray-700 space-y-1 list-decimal list-inside">
+          <li>Click "New Code" to generate a unique code</li>
+          <li>Share the generated link with sellers</li>
+          <li>Sellers register using the code</li>
+          <li>Approve or reject registrations in the management panel</li>
         </ol>
       </div>
     </div>
   );
 };
 
-export default SellerRegistrationLinkGenerator;
+export default SellerRegistrationLinkGenerator; 
