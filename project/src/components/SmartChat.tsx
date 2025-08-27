@@ -336,7 +336,8 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask me anything about scholarships, fees, or the application process..."
                 disabled={isLoading}
-                className="flex-1 px-3 py-1.5 border-[1.5px] border-[#2d3c56] rounded-full bg-[#151a23] text-[#f7f7f7] text-[13px] font-['Montserrat',Arial,sans-serif] focus:outline-none focus:border-[#3c4d6d] disabled:opacity-50"
+                className="flex-1 px-3 py-2 border-[1.5px] border-[#2d3c56] rounded-full bg-[#151a23] text-[#f7f7f7] text-[16px] md:text-[13px] font-['Montserrat',Arial,sans-serif] focus:outline-none focus:border-[#3c4d6d] disabled:opacity-50"
+                style={{ WebkitTextSizeAdjust: '100%' }}
               />
               <button
                 onClick={sendMessage}
