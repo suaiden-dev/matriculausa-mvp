@@ -41,6 +41,7 @@ import AuthCallback from './pages/AuthCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
+import SmartAssistantLayout from './components/SmartAssistantLayout';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -122,6 +123,10 @@ const AppContent = () => {
           <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
           {/* Zelle Waiting Page Route */}
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
+          
+          {/* Smart Assistant Route */}
+          <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
+
           {/* Catch-all route for 404 */}
           <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
           </Routes>
@@ -135,6 +140,7 @@ const AppContent = () => {
         <Route path="/test-simple" element={<div className="min-h-screen bg-blue-50 flex items-center justify-center"><div className="text-2xl text-blue-600">Test Simple Page - Working!</div></div>} />
         <Route path="/test-layout" element={<Layout><div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-2xl text-green-600">Test Layout Page - Working!</div></div></Layout>} />
       </Routes>
+      
     </AuthProvider>
   );
 };

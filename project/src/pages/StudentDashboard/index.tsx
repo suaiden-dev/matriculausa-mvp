@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { useSmartChat } from '../../contexts/SmartChatContext';
+
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
 import ScholarshipBrowser from './ScholarshipBrowser';
@@ -68,8 +68,7 @@ const StudentDashboard: React.FC = () => {
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
   
-  // Hook para controlar visibilidade do SmartChat
-  const { isSmartChatOpen } = useSmartChat();
+
   
   // Fase 5: Referral Code System
   const { 
@@ -280,8 +279,8 @@ const StudentDashboard: React.FC = () => {
       <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
         {/* Área de proteção para o botão */}
         <div className="floating-cart-area" />
-        {/* Botão do Carrinho - Oculto quando SmartChat estiver aberto */}
-        {!isSmartChatOpen && (
+        {/* Botão do Carrinho */}
+        {(
           <div
             style={{
               position: 'fixed',
