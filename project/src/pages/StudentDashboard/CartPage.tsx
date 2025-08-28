@@ -8,6 +8,7 @@ import DocumentUploadModal from '../../components/DocumentUploadModal';
 import StudentTypeModal from '../../components/StudentTypeModal';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
+import { formatCentsToDollars } from '../../utils/currency';
 
 const CartPage: React.FC = () => {
   const { t } = useTranslation();
@@ -236,7 +237,7 @@ const CartPage: React.FC = () => {
               feeType="application_fee"
               scholarshipsIds={selectedScholarship ? [selectedScholarship] : []}
               buttonText={`${t('studentDashboard.cartPage.payApplicationFee')} ($${selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
-                ? Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount).toFixed(2)
+                ? (Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount) / 100).toFixed(2)
                 : '350.00'
               })`}
               successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}

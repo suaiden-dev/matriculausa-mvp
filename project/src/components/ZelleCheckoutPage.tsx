@@ -34,6 +34,38 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Estado para desconto ativo
+  const [activeDiscount, setActiveDiscount] = useState<any>(null);
+  const [discountLoading, setDiscountLoading] = useState(true);
+
+  // Verificar desconto ativo do usuário
+  useEffect(() => {
+    const checkActiveDiscount = async () => {
+      if (!user) return;
+      
+      try {
+        setDiscountLoading(true);
+        const { data: discountData, error: discountError } = await supabase
+          .rpc('get_user_active_discount', {
+            user_id_param: user.id
+          });
+
+        if (!discountError && discountData && discountData.has_discount) {
+          setActiveDiscount(discountData);
+          console.log('✅ [ZelleCheckoutPage] Desconto ativo encontrado:', discountData);
+        } else {
+          console.log('⚠️ [ZelleCheckoutPage] Nenhum desconto ativo encontrado');
+        }
+      } catch (error) {
+        console.error('❌ [ZelleCheckoutPage] Erro ao verificar desconto:', error);
+      } finally {
+        setDiscountLoading(false);
+      }
+    };
+
+    checkActiveDiscount();
+  }, [user]);
+
   // Obter parâmetros da URL
   const feeType = searchParams.get('type') || searchParams.get('feeType') || 'selection_process';
   const amount = searchParams.get('amount') || '600';
@@ -44,14 +76,15 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   console.log('🔍 [ZelleCheckoutPage] Componente renderizando');
   console.log('🔍 [ZelleCheckoutPage] feeType:', feeType);
   console.log('🔍 [ZelleCheckoutPage] amount:', amount);
+  console.log('🔍 [ZelleCheckoutPage] activeDiscount:', activeDiscount);
   console.log('🔍 [ZelleCheckoutPage] searchParams:', Object.fromEntries(searchParams.entries()));
 
   // Informações das taxas
   const feeInfo: FeeInfo[] = [
     {
       type: 'selection_process',
-      amount: 600,
-      description: 'Selection Process Fee - Complete your application process',
+      amount: activeDiscount && feeType === 'selection_process' ? 600 - (activeDiscount.discount_amount || 0) : 600,
+      description: `Selection Process Fee - Complete your application process${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
