@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
 import ApplicationChat from '../../components/ApplicationChat';
 import { useApplicationChat } from '../../hooks/useApplicationChat';
@@ -1476,26 +1477,17 @@ const StudentDetails: React.FC = () => {
                           <dt className="text-sm font-medium text-slate-600">Documents Status</dt>
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                student.documents_status === 'approved' ? 'bg-green-500' :
-                                student.documents_status === 'rejected' ? 'bg-red-500' :
-                                student.documents_status === 'pending' ? 'bg-yellow-500' :
-                                student.documents_status === 'analyzing' ? 'bg-blue-500' :
-                                'bg-slate-400'
-                              }`}></div>
-                              <span className={`text-sm font-medium ${
-                                student.documents_status === 'approved' ? 'text-green-700' :
-                                student.documents_status === 'rejected' ? 'text-red-700' :
-                                student.documents_status === 'pending' ? 'text-yellow-700' :
-                                student.documents_status === 'analyzing' ? 'text-blue-700' :
-                                'text-slate-600'
-                              }`}>
-                                {student.documents_status === 'approved' ? 'Approved' :
-                                 student.documents_status === 'rejected' ? 'Rejected' :
-                                 student.documents_status === 'pending' ? 'Pending' :
-                                 student.documents_status === 'analyzing' ? 'Analyzing' :
-                                 student.documents_status || 'Not Started'}
-                              </span>
+                              {(() => {
+                                const statusDisplay = getDocumentStatusDisplay(student.documents_status || '');
+                                return (
+                                  <>
+                                    <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
+                                    <span className={`text-sm font-medium ${statusDisplay.color}`}>
+                                      {statusDisplay.text}
+                                    </span>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </dd>
                         </div>

@@ -26,6 +26,7 @@ import {
   Clock
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 
 interface StudentInfo {
   student_id: string;
@@ -538,26 +539,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
                           <dt className="text-sm font-medium text-slate-600">Documents Status</dt>
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                studentInfo.documents_status === 'approved' ? 'bg-green-500' :
-                                studentInfo.documents_status === 'rejected' ? 'bg-red-500' :
-                                studentInfo.documents_status === 'pending' ? 'bg-yellow-500' :
-                                studentInfo.documents_status === 'analyzing' ? 'bg-blue-500' :
-                                'bg-slate-400'
-                              }`}></div>
-                              <span className={`text-sm font-medium ${
-                                studentInfo.documents_status === 'approved' ? 'text-green-700' :
-                                studentInfo.documents_status === 'rejected' ? 'text-red-700' :
-                                studentInfo.documents_status === 'pending' ? 'text-yellow-700' :
-                                studentInfo.documents_status === 'analyzing' ? 'text-blue-700' :
-                                'text-slate-600'
-                              }`}>
-                                {studentInfo.documents_status === 'approved' ? 'Approved' :
-                                 studentInfo.documents_status === 'rejected' ? 'Rejected' :
-                                 studentInfo.documents_status === 'pending' ? 'Pending' :
-                                 studentInfo.documents_status === 'analyzing' ? 'Analyzing' :
-                                 studentInfo.documents_status || 'Not Started'}
-                              </span>
+                              {(() => {
+                                const statusDisplay = getDocumentStatusDisplay(studentInfo.documents_status || '');
+                                return (
+                                  <>
+                                    <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
+                                    <span className={`text-sm font-medium ${statusDisplay.color}`}>
+                                      {statusDisplay.text}
+                                    </span>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </dd>
                         </div>
@@ -637,22 +629,6 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
                          </dd>
                        </div>
                      </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <dt className="text-sm font-medium text-slate-600">Process Type</dt>
-                        <dd className="text-base text-slate-700">
-                          {studentInfo.student_process_type ? (
-                            studentInfo.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                            studentInfo.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                            studentInfo.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
-                            studentInfo.student_process_type
-                          ) : (
-                            <span className="text-slate-500 italic">Not specified</span>
-                          )}
-                        </dd>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>

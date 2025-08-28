@@ -28,6 +28,7 @@ import {
   Filter as FilterIcon
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 
 interface StudentInfo {
   student_id: string;
@@ -965,26 +966,17 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                             <dt className="text-sm font-medium text-slate-600">Documents Status</dt>
                             <dd className="mt-1">
                               <div className="flex items-center space-x-2">
-                                <div className={`w-2 h-2 rounded-full ${
-                                  studentDetails.documents_status === 'approved' ? 'bg-green-500' :
-                                  studentDetails.documents_status === 'rejected' ? 'bg-red-500' :
-                                  studentDetails.documents_status === 'pending' ? 'bg-yellow-500' :
-                                  studentDetails.documents_status === 'analyzing' ? 'bg-blue-500' :
-                                  'bg-slate-400'
-                                }`}></div>
-                                <span className={`text-sm font-medium ${
-                                  studentDetails.documents_status === 'approved' ? 'text-green-700' :
-                                  studentDetails.documents_status === 'rejected' ? 'text-red-700' :
-                                  studentDetails.documents_status === 'pending' ? 'text-yellow-700' :
-                                  studentDetails.documents_status === 'analyzing' ? 'text-blue-700' :
-                                  'text-slate-600'
-                                }`}>
-                                  {studentDetails.documents_status === 'approved' ? 'Approved' :
-                                   studentDetails.documents_status === 'rejected' ? 'Rejected' :
-                                   studentDetails.documents_status === 'pending' ? 'Pending' :
-                                   studentDetails.documents_status === 'analyzing' ? 'Analyzing' :
-                                   studentDetails.documents_status || 'Not Started'}
-                                </span>
+                                {(() => {
+                                  const statusDisplay = getDocumentStatusDisplay(studentDetails.documents_status || '');
+                                  return (
+                                    <>
+                                      <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
+                                      <span className={`text-sm font-medium ${statusDisplay.color}`}>
+                                        {statusDisplay.text}
+                                      </span>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </dd>
                           </div>
@@ -1074,27 +1066,13 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                           </dd>
                         </div>
                       </div>
-                      {studentDetails.student_process_type && (
-                        <div className="flex items-start space-x-3">
-                          <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
-                          <div className="flex-1">
-                            <dt className="text-sm font-medium text-slate-600">Process Type</dt>
-                            <dd className="text-base text-slate-700">
-                              {studentDetails.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                               studentDetails.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                               studentDetails.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
-                               studentDetails.student_process_type}
-                            </dd>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Student Documents Section */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                  <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
+                <div className="bg-white rounded-2xl  shadow-sm border border-slate-200">
+                  <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#041f38] px-6 py-4">
                     <h2 className="text-xl font-semibold text-white flex items-center">
                       <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

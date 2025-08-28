@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import StudentDashboardLayout from './StudentDashboardLayout';
-import { useAuth } from '../../hooks/useAuth';
 import CustomLoading from '../../components/CustomLoading';
 
 type VerificationStatus = 'loading' | 'success' | 'error';
@@ -14,7 +12,6 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(350.00);
-  const { user, userProfile, loading } = useAuth();
 
   useEffect(() => {
     const verifySession = async () => {
@@ -107,13 +104,11 @@ const ApplicationFeeSuccess: React.FC = () => {
   };
 
   return (
-    <StudentDashboardLayout user={user} profile={userProfile} loading={loading}>
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           {renderContent()}
         </div>
       </div>
-    </StudentDashboardLayout>
   );
 };
 

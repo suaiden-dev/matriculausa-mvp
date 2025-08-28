@@ -4,6 +4,7 @@ import type { Scholarship, Application, UserProfile } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { supabase } from '../../lib/supabase';
+import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 // import { useApplicationChat } from '../../hooks/useApplicationChat'; // Removido pois não está sendo usado
 import { useAuth } from '../../hooks/useAuth';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
@@ -1871,26 +1872,17 @@ const SelectionProcess: React.FC = () => {
                                       <dt className="text-xs sm:text-sm font-medium text-slate-600">Documents Status</dt>
                                       <dd className="mt-1">
                                         <div className="flex items-center space-x-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            selectedStudent.user_profiles.documents_status === 'approved' ? 'bg-green-500' :
-                                            selectedStudent.user_profiles.documents_status === 'rejected' ? 'bg-red-500' :
-                                            selectedStudent.user_profiles.documents_status === 'pending' ? 'bg-yellow-500' :
-                                            selectedStudent.user_profiles.documents_status === 'analyzing' ? 'bg-blue-500' :
-                                            'bg-slate-400'
-                                          }`}></div>
-                                          <span className={`text-xs sm:text-sm font-medium ${
-                                            selectedStudent.user_profiles.documents_status === 'approved' ? 'text-green-700' :
-                                            selectedStudent.user_profiles.documents_status === 'rejected' ? 'text-red-700' :
-                                            selectedStudent.user_profiles.documents_status === 'pending' ? 'text-yellow-700' :
-                                            selectedStudent.user_profiles.documents_status === 'analyzing' ? 'text-blue-700' :
-                                            'text-slate-600'
-                                          }`}>
-                                            {selectedStudent.user_profiles.documents_status === 'approved' ? 'Approved' :
-                                             selectedStudent.user_profiles.documents_status === 'rejected' ? 'Rejected' :
-                                             selectedStudent.user_profiles.documents_status === 'pending' ? 'Pending' :
-                                             selectedStudent.user_profiles.documents_status === 'analyzing' ? 'Analyzing' :
-                                             selectedStudent.user_profiles.documents_status || 'Not Started'}
-                                          </span>
+                                          {(() => {
+                                            const statusDisplay = getDocumentStatusDisplay(selectedStudent.user_profiles.documents_status || '');
+                                            return (
+                                              <>
+                                                <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
+                                                <span className={`text-xs sm:text-sm font-medium ${statusDisplay.color}`}>
+                                                  {statusDisplay.text}
+                                                </span>
+                                              </>
+                                            );
+                                          })()}
                                         </div>
                                       </dd>
                                     </div>
