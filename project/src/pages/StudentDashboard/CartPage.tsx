@@ -243,7 +243,11 @@ const CartPage: React.FC = () => {
               cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
               disabled={!selectedScholarship}
               beforeCheckout={createOrGetApplication}
-              metadata={{ selected_scholarship_id: selectedScholarship }}
+              metadata={{ 
+                selected_scholarship_id: selectedScholarship,
+                student_process_type: studentType || window.localStorage.getItem('studentProcessType') || null
+              }}
+              studentProcessType={studentType || window.localStorage.getItem('studentProcessType') || null}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
             />
             <div className="mt-3 text-center">

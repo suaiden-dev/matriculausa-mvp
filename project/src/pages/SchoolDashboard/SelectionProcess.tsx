@@ -4,6 +4,7 @@ import type { Scholarship, Application, UserProfile } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { supabase } from '../../lib/supabase';
+import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 // import { useApplicationChat } from '../../hooks/useApplicationChat'; // Removido pois não está sendo usado
 import { useAuth } from '../../hooks/useAuth';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
@@ -62,12 +63,13 @@ const SelectionProcess: React.FC = () => {
   
   // const chat = useApplicationChat(selectedStudent?.id); // Removido pois não está sendo usado
 
-  // Filtrar apenas estudantes em processo de seleção (documents_status === 'under_review' E ainda não pagaram ambas as taxas)
+  // Filtrar estudantes em processo de seleção OU aprovados que ainda não pagaram as taxas
   const selectionProcessApplications = useMemo(() => {
     return applications.filter(app => {
       const userProfile = (app as any).user_profiles;
       const hasPaidApplicationFee = userProfile?.is_application_fee_paid;
       const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
+      const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
       
       // Debug: log dos valores para verificar
       if (userProfile?.full_name) {
@@ -75,11 +77,17 @@ const SelectionProcess: React.FC = () => {
         console.log(`Application Fee: ${hasPaidApplicationFee}`);
         console.log(`Scholarship Fee: ${hasPaidScholarshipFee}`);
         console.log(`Documents Status: ${userProfile.documents_status}`);
+        console.log(`Application Status: ${app.status}`);
+        console.log(`Both Fees Paid: ${bothFeesPaid}`);
       }
       
-      // Estudante deve estar em processo de seleção E ainda não ter pago ambas as taxas
-      return userProfile?.documents_status === 'under_review' && 
-             (!hasPaidApplicationFee || !hasPaidScholarshipFee);
+      // Incluir estudantes que:
+      // 1. Estão em processo de seleção (documents_status === 'under_review') E ainda não pagaram ambas as taxas
+      // 2. OU foram aprovados (status === 'approved') mas ainda não pagaram ambas as taxas
+      return (!bothFeesPaid) && (
+        userProfile?.documents_status === 'under_review' || 
+        app.status === 'approved'
+      );
     });
   }, [applications]);
 
@@ -211,45 +219,85 @@ const SelectionProcess: React.FC = () => {
     try {
       setUpdating(type);
       
-      // Atualizar o status do documento
-      await updateApplicationDocStatus(type, 'approved');
+      // Buscar a aplicação atual para obter os documentos existentes
+      const { data: currentApp, error: fetchError } = await supabase
+        .from('scholarship_applications')
+        .select('documents')
+        .eq('id', selectedStudent.id)
+        .single();
       
-      // Buscar o estado atualizado dos documentos
-      const currentDocs = studentDocs.map(doc => {
+      if (fetchError) {
+        throw new Error('Failed to fetch current application: ' + fetchError.message);
+      }
+
+      // Preparar os documentos atualizados
+      let updatedDocuments = currentApp?.documents || [];
+      
+      // Garantir que updatedDocuments seja sempre um array
+      if (!Array.isArray(updatedDocuments)) {
+        console.warn('currentApp.documents is not an array:', updatedDocuments);
+        // Se for um objeto vazio {}, converter para array vazio
+        if (updatedDocuments && typeof updatedDocuments === 'object' && Object.keys(updatedDocuments).length === 0) {
+          updatedDocuments = [];
+        } else {
+          updatedDocuments = [];
+        }
+      }
+      
+      const existingDocIndex = updatedDocuments.findIndex((d: any) => d.type === type);
+      
+      if (existingDocIndex >= 0) {
+        // Atualizar documento existente
+        updatedDocuments[existingDocIndex] = {
+          ...updatedDocuments[existingDocIndex],
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        };
+      } else {
+        // Adicionar novo documento aprovado
+        updatedDocuments.push({
+          type,
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        });
+      }
+
+      // Salvar no banco de dados - scholarship_applications.documents
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: updatedDocuments })
+        .eq('id', selectedStudent.id);
+
+      if (updateError) {
+        throw new Error('Failed to update application documents: ' + updateError.message);
+      }
+
+      console.log('Documents saved to scholarship_applications:', updatedDocuments);
+
+      // Atualizar o estado local dos documentos
+      const updatedStudentDocs = studentDocs.map(doc => {
         if (doc.type === type) {
           return { ...doc, status: 'approved' };
         }
         return doc;
       });
       
-      console.log('Documents after approval:', currentDocs);
+      setStudentDocs(updatedStudentDocs);
+      console.log('Updated studentDocs:', updatedStudentDocs);
       
       // Verificar se todos os documentos foram aprovados
       const allDocsApproved = ['passport', 'diploma', 'funds_proof']
         .every((docType) => {
-          const doc = currentDocs.find((d) => d.type === docType);
+          const doc = updatedStudentDocs.find((d) => d.type === docType);
           return doc && doc.status === 'approved';
         });
       
       console.log('All documents approved?', allDocsApproved);
       
       if (allDocsApproved) {
-        // Atualizar o status do perfil do usuário
-        await supabase
-          .from('user_profiles')
-          .update({ documents_status: 'approved' })
-          .eq('user_id', selectedStudent.user_profiles.user_id);
-        
-        console.log('User profile documents_status updated to approved');
-        
-        // Atualizar o selectedStudent para refletir a mudança
-        setSelectedStudent((prev) => prev ? ({ 
-          ...prev, 
-          user_profiles: {
-            ...prev.user_profiles,
-            documents_status: 'approved'
-          }
-        } as any) : prev);
+        console.log('All documents approved - no need to update user_profiles.documents_status');
         
         // Atualizar o contexto global para refletir as mudanças
         console.log('Refreshing global data after all documents approved...');
@@ -270,7 +318,77 @@ const SelectionProcess: React.FC = () => {
     if (!selectedStudent) return;
     try {
       setUpdating(type);
-      await updateApplicationDocStatus(type, 'changes_requested', reason || undefined);
+      
+      // Buscar a aplicação atual para obter os documentos existentes
+      const { data: currentApp, error: fetchError } = await supabase
+        .from('scholarship_applications')
+        .select('documents')
+        .eq('id', selectedStudent.id)
+        .single();
+      
+      if (fetchError) {
+        throw new Error('Failed to fetch current application: ' + fetchError.message);
+      }
+
+      // Preparar os documentos atualizados
+      let updatedDocuments = currentApp?.documents || [];
+      
+      // Garantir que updatedDocuments seja sempre um array
+      if (!Array.isArray(updatedDocuments)) {
+        console.warn('currentApp.documents is not an array:', updatedDocuments);
+        // Se for um objeto vazio {}, converter para array vazio
+        if (updatedDocuments && typeof updatedDocuments === 'object' && Object.keys(updatedDocuments).length === 0) {
+          updatedDocuments = [];
+        } else {
+          updatedDocuments = [];
+        }
+      }
+      
+      const existingDocIndex = updatedDocuments.findIndex((d: any) => d.type === type);
+      
+      if (existingDocIndex >= 0) {
+        // Atualizar documento existente
+        updatedDocuments[existingDocIndex] = {
+          ...updatedDocuments[existingDocIndex],
+          status: 'changes_requested',
+          changes_requested_at: new Date().toISOString(),
+          changes_requested_by: user?.id,
+          review_notes: reason || undefined
+        };
+      } else {
+        // Adicionar novo documento com mudanças solicitadas
+        updatedDocuments.push({
+          type,
+          status: 'changes_requested',
+          changes_requested_at: new Date().toISOString(),
+          changes_requested_by: user?.id,
+          review_notes: reason || undefined
+        });
+      }
+
+      // Salvar no banco de dados - scholarship_applications.documents
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: updatedDocuments })
+        .eq('id', selectedStudent.id);
+
+      if (updateError) {
+        throw new Error('Failed to update application documents: ' + updateError.message);
+      }
+
+      console.log('Documents saved to scholarship_applications:', updatedDocuments);
+
+      // Atualizar o estado local dos documentos
+      const updatedStudentDocs = studentDocs.map(doc => {
+        if (doc.type === type) {
+          return { ...doc, status: 'changes_requested' };
+        }
+        return doc;
+      });
+      
+      setStudentDocs(updatedStudentDocs);
+      
+      // Manter o fluxo do aluno em revisão
       await supabase
         .from('user_profiles')
         .update({ documents_status: 'under_review' })
@@ -365,10 +483,6 @@ const SelectionProcess: React.FC = () => {
     if (!selectedStudent) return;
     try {
       setAcceptanceLoading(true);
-      await supabase
-        .from('user_profiles')
-        .update({ documents_status: 'approved' })
-        .eq('user_id', selectedStudent.user_profiles.user_id);
       
       await supabase
         .from('scholarship_applications')
@@ -449,13 +563,19 @@ const SelectionProcess: React.FC = () => {
         // Atualizar o status na aplicação local
         const updatedStudent = {
           ...selectedStudent,
-          status: 'approved' as const,
-          user_profiles: {
-            ...selectedStudent.user_profiles,
-            documents_status: 'approved' as const
-          }
+          status: 'approved' as const
         };
         setSelectedStudent(updatedStudent);
+        
+        // Também atualizar o estado local dos documentos para refletir que estão aprovados
+        const updatedStudentDocs = studentDocs.map(doc => ({
+          ...doc,
+          status: 'approved'
+        }));
+        setStudentDocs(updatedStudentDocs);
+        
+        console.log('Updated local state - status: approved, documents_status: approved');
+        console.log('Updated studentDocs to approved status');
       }
       
       // Atualizar o contexto global para refletir as mudanças
@@ -503,6 +623,15 @@ const SelectionProcess: React.FC = () => {
 
   const allApproved = selectedStudent && ['passport', 'diploma', 'funds_proof']
     .every((k) => {
+      // Priorizar documentos da aplicação específica
+      const applicationDocuments = selectedStudent.documents || [];
+      const appDoc = applicationDocuments.find((d: any) => d.type === k);
+      
+      if (appDoc && (appDoc as any).status === 'approved') {
+        return true;
+      }
+      
+      // Fallback para studentDocs se não encontrar na aplicação
       const d = studentDocs.find(doc => doc.type === k);
       return d && d.file_url && (d.status || '').toLowerCase() === 'approved';
     });
@@ -1193,6 +1322,7 @@ const SelectionProcess: React.FC = () => {
       console.log('Selected student:', selectedStudent);
       console.log('Student user_id:', selectedStudent.user_profiles?.user_id);
       console.log('Application id:', selectedStudent.id);
+      console.log('Documents status:', selectedStudent.user_profiles?.documents_status);
       
       // Debug: verificar todas as tabelas relacionadas
       debugAllTables();
@@ -1211,6 +1341,8 @@ const SelectionProcess: React.FC = () => {
       checkIfStudentShouldBeMoved(selectedStudent);
     }
   }, [selectedStudent]);
+  
+
   
   // Função para verificar se o estudante deve ser movido para a página Students
   const checkIfStudentShouldBeMoved = (student: ApplicationDetails) => {
@@ -1504,20 +1636,24 @@ const SelectionProcess: React.FC = () => {
               <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex-1">
                   <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                    Students in the Process
+                    Students in Process & Approved
                   </h1>
                   <p className="mt-2 text-sm sm:text-base text-slate-600">
-                    The students are interested in your college and are participating in the admissions process. By accepting them, you authorize them to complete the enrollment process.
+                    Students in the selection process or already approved. Approved students are waiting for fee payments to complete enrollment.
                   </p>
                   <p className="mt-3 text-sm text-slate-500">
-                    The student must be informed that the university will only be notified after both fees are paid: the application fee and the scholarship fee.
+                    Students will be moved to the Students page after both fees are paid: the application fee and the scholarship fee.
                   </p>
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-center space-x-3">
                   <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
                     <Clock className="w-5 h-5 mr-2" />
-                    {filteredApplications.length} Pending Fees
+                    {selectionProcessApplications.filter(app => app.status !== 'approved').length} In Process
+                  </div>
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm">
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    {selectionProcessApplications.filter(app => app.status === 'approved').length} Approved
                   </div>
                 </div>
               </div>
@@ -1582,15 +1718,21 @@ const SelectionProcess: React.FC = () => {
                     <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Selection Process Active</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Selection Process & Approved Students</h3>
                     <p className="text-xs sm:text-sm text-slate-600">
-                      {selectionProcessApplications.length} students are pending fee payments to complete enrollment
+                      {selectionProcessApplications.filter(app => app.status !== 'approved').length} students in process, {selectionProcessApplications.filter(app => app.status === 'approved').length} approved - all waiting for fee payments
                     </p>
                   </div>
                 </div>
-                <div className="text-center sm:text-right">
-                  <div className="text-xl sm:text-2xl font-bold text-blue-600">{selectionProcessApplications.length}</div>
-                  <div className="text-xs sm:text-sm text-slate-600">Pending Fees</div>
+                <div className="flex flex-col sm:flex-row gap-3 text-center sm:text-right">
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{selectionProcessApplications.filter(app => app.status !== 'approved').length}</div>
+                    <div className="text-xs sm:text-sm text-slate-600">In Process</div>
+                  </div>
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{selectionProcessApplications.filter(app => app.status === 'approved').length}</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Approved</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1603,7 +1745,7 @@ const SelectionProcess: React.FC = () => {
                 {selectionProcessApplications.length === 0 ? (
                   <>
                     <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students pending fees</h3>
+                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students in process or approved</h3>
                     <p className="text-sm sm:text-base text-slate-600">All students have completed their fee payments and moved to the Students page.</p>
                   </>
                 ) : (
@@ -1670,7 +1812,12 @@ const SelectionProcess: React.FC = () => {
                                   Documents: {progress.reviewed}/{progress.total} reviewed
                                 </span>
                               </div>
-                              {hasUrgentAction && (
+                              {app.status === 'approved' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  Waiting for Fees
+                                </span>
+                              ) : hasUrgentAction && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                                   <AlertCircle className="w-3 h-3 mr-1" />
                                   Needs Review
@@ -1690,9 +1837,17 @@ const SelectionProcess: React.FC = () => {
                         </div>
                       
                         <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-3">
-                          <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
-                            In Review
+                          <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border ${
+                            app.status === 'approved' 
+                              ? 'bg-green-50 text-green-700 border-green-200' 
+                              : 'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            {app.status === 'approved' ? (
+                              <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                            ) : (
+                              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                            )}
+                            {app.status === 'approved' ? 'Approved' : 'In Review'}
                           </span>
                           <div className="text-xs sm:text-sm text-slate-500 text-right">
                             Applied: {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
@@ -1709,7 +1864,7 @@ const SelectionProcess: React.FC = () => {
 
         {/* Student Details View */}
         {selectedStudent && (
-          <div className="fixed inset-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto pt-20">
+          <div className="fixed inset-0 lg:left-72 bg-black bg-opacity-50 z-40 overflow-y-auto">
             <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200">
               
 
@@ -1733,7 +1888,12 @@ const SelectionProcess: React.FC = () => {
                         <X className="w-4 h-4 mr-1.5" />
                         Close
                       </button>
-                      {selectedStudent.status === 'enrolled' || selectedStudent.acceptance_letter_status === 'approved' ? (
+                      {selectedStudent.status === 'approved' ? (
+                        <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
+                          <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                          Approved
+                        </div>
+                      ) : selectedStudent.status === 'enrolled' || selectedStudent.acceptance_letter_status === 'approved' ? (
                         <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
                           <CheckCircle2 className="w-4 h-4 mr-1.5" />
                           Enrolled
@@ -1871,26 +2031,49 @@ const SelectionProcess: React.FC = () => {
                                       <dt className="text-xs sm:text-sm font-medium text-slate-600">Documents Status</dt>
                                       <dd className="mt-1">
                                         <div className="flex items-center space-x-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            selectedStudent.user_profiles.documents_status === 'approved' ? 'bg-green-500' :
-                                            selectedStudent.user_profiles.documents_status === 'rejected' ? 'bg-red-500' :
-                                            selectedStudent.user_profiles.documents_status === 'pending' ? 'bg-yellow-500' :
-                                            selectedStudent.user_profiles.documents_status === 'analyzing' ? 'bg-blue-500' :
-                                            'bg-slate-400'
-                                          }`}></div>
-                                          <span className={`text-xs sm:text-sm font-medium ${
-                                            selectedStudent.user_profiles.documents_status === 'approved' ? 'text-green-700' :
-                                            selectedStudent.user_profiles.documents_status === 'rejected' ? 'text-red-700' :
-                                            selectedStudent.user_profiles.documents_status === 'pending' ? 'text-yellow-700' :
-                                            selectedStudent.user_profiles.documents_status === 'analyzing' ? 'text-blue-700' :
-                                            'text-slate-600'
-                                          }`}>
-                                            {selectedStudent.user_profiles.documents_status === 'approved' ? 'Approved' :
-                                             selectedStudent.user_profiles.documents_status === 'rejected' ? 'Rejected' :
-                                             selectedStudent.user_profiles.documents_status === 'pending' ? 'Pending' :
-                                             selectedStudent.user_profiles.documents_status === 'analyzing' ? 'Analyzing' :
-                                             selectedStudent.user_profiles.documents_status || 'Not Started'}
-                                          </span>
+                                          {(() => {
+                                            // Calcular o status baseado nos documentos da aplicação específica
+                                            const applicationDocuments = selectedStudent.documents || [];
+                                            const requiredDocs = ['passport', 'diploma', 'funds_proof'];
+                                            
+                                            let documentsStatus = 'under_review';
+                                            
+                                            if (Array.isArray(applicationDocuments) && applicationDocuments.length > 0) {
+                                              const allApproved = requiredDocs.every(docType => {
+                                                const doc = applicationDocuments.find((d: any) => d.type === docType);
+                                                return doc && (doc as any).status === 'approved';
+                                              });
+                                              
+                                              if (allApproved) {
+                                                documentsStatus = 'approved';
+                                              } else {
+                                                const hasRejected = requiredDocs.some(docType => {
+                                                  const doc = applicationDocuments.find((d: any) => d.type === docType);
+                                                  return doc && (doc as any).status === 'changes_requested';
+                                                });
+                                                
+                                                if (hasRejected) {
+                                                  documentsStatus = 'changes_requested';
+                                                }
+                                              }
+                                            }
+                                            
+                                            const statusDisplay = getDocumentStatusDisplay(documentsStatus);
+                                            console.log('Rendering Documents Status:', {
+                                              applicationDocuments,
+                                              documentsStatus,
+                                              user_profiles_documents_status: selectedStudent.user_profiles.documents_status,
+                                              selectedStudent_status: selectedStudent.status
+                                            });
+                                            return (
+                                              <>
+                                                <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
+                                                <span className={`text-xs sm:text-sm font-medium ${statusDisplay.color}`}>
+                                                  {statusDisplay.text}
+                                                </span>
+                                              </>
+                                            );
+                                          })()}
                                         </div>
                                       </dd>
                                     </div>
@@ -1899,6 +2082,7 @@ const SelectionProcess: React.FC = () => {
                                       <dd className="mt-1">
                                         <div className="flex items-center space-x-2">
                                           <div className={`w-2 h-2 rounded-full ${
+                                            selectedStudent.status === 'approved' ? 'bg-green-500' :
                                             selectedStudent.acceptance_letter_status === 'approved' ? 'bg-green-500' :
                                             selectedStudent.acceptance_letter_status === 'sent' ? 'bg-blue-500' :
                                             selectedStudent.acceptance_letter_status === 'signed' ? 'bg-purple-500' :
@@ -1906,13 +2090,15 @@ const SelectionProcess: React.FC = () => {
                                             'bg-slate-400'
                                           }`}></div>
                                           <span className={`text-sm font-medium ${
+                                            selectedStudent.status === 'approved' ? 'text-green-700' :
                                             selectedStudent.acceptance_letter_status === 'approved' ? 'text-green-700' :
                                             selectedStudent.acceptance_letter_status === 'sent' ? 'text-blue-700' :
                                             selectedStudent.acceptance_letter_status === 'signed' ? 'text-purple-700' :
                                             selectedStudent.acceptance_letter_status === 'pending' ? 'text-yellow-700' :
                                             'text-slate-600'
                                           }`}>
-                                            {selectedStudent.acceptance_letter_status === 'approved' ? 'Enrolled' :
+                                            {selectedStudent.status === 'approved' ? 'Approved' :
+                                             selectedStudent.acceptance_letter_status === 'approved' ? 'Enrolled' :
                                              selectedStudent.acceptance_letter_status === 'sent' ? 'Letter Sent' :
                                              selectedStudent.acceptance_letter_status === 'signed' ? 'Letter Signed' :
                                              selectedStudent.acceptance_letter_status === 'pending' ? 'Pending' :
@@ -2039,38 +2225,38 @@ const SelectionProcess: React.FC = () => {
                                                 </div>
                                               )}
                                               
-                                              {/* Botões de Approve e Request Changes */}
-                                              <div className="flex gap-2">
-                                                <button
-                                                  disabled={!d || updating === d.type || status === 'approved'}
-                                                  onClick={() => {
-                                                    console.log('Approve button clicked for:', d);
-                                                    if (d) approveDoc(d.type);
-                                                  }}
-                                                  className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
-                                                    status === 'approved' 
-                                                      ? 'bg-green-600 text-white' 
-                                                      : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
-                                                  }`}
-                                                >
-                                                  <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
-                                                  {status === 'approved' ? 'Approved' : 'Approve'}
-                                                </button>
-                                                <button
-                                                  disabled={!d || updating === d.type || status === 'approved'}
-                                                  onClick={() => {
-                                                    if (d) {
-                                                      setPendingRejectType(d.type);
-                                                      setShowReasonModal(true);
-                                                    }
-                                                  }}
-                                                  className="flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-                                                >
-                                                  <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
-                                                  <span className="hidden sm:inline">Request Changes</span>
-                                                  <span className="sm:hidden">Changes</span>
-                                                </button>
-                                              </div>
+                                                                              {/* Botões de Approve e Request Changes */}
+                                <div className="flex gap-2">
+                                  <button
+                                    disabled={!d || updating === d.type || status === 'approved' || selectedStudent?.status === 'approved'}
+                                    onClick={() => {
+                                      console.log('Approve button clicked for:', d);
+                                      if (d) approveDoc(d.type);
+                                    }}
+                                    className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
+                                      status === 'approved' 
+                                        ? 'bg-green-600 text-white' 
+                                        : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
+                                    }`}
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                                    {status === 'approved' ? 'Approved' : 'Approve'}
+                                  </button>
+                                  <button
+                                    disabled={!d || updating === d.type || status === 'approved' || selectedStudent?.status === 'approved'}
+                                    onClick={() => {
+                                      if (d) {
+                                        setPendingRejectType(d.type);
+                                        setShowReasonModal(true);
+                                      }
+                                    }}
+                                    className="flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                                  >
+                                    <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                                    <span className="hidden sm:inline">Request Changes</span>
+                                    <span className="sm:hidden">Changes</span>
+                                  </button>
+                                </div>
                                             </div>
                                           </div>
                                         </div>
@@ -2097,26 +2283,28 @@ const SelectionProcess: React.FC = () => {
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm sm:text-base text-slate-900 font-medium">
-                                    {allApproved ? 'All documents have been approved' : 'Approve all documents to proceed'}
+                                    {selectedStudent?.status === 'approved' ? 'Student application has been approved' : 
+                                     allApproved ? 'All documents have been approved' : 'Approve all documents to proceed'}
                                   </p>
                                   <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                                    This will approve the student's application and allow them to proceed with the next steps.
+                                    {selectedStudent?.status === 'approved' ? 'The student can now proceed with the next steps in the enrollment process.' :
+                                     'This will approve the student\'s application and allow them to proceed with the next steps.'}
                                   </p>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                   <button
                                     onClick={() => setShowRejectStudentModal(true)}
-                                    disabled={acceptanceLoading || rejectingLoading}
+                                    disabled={acceptanceLoading || rejectingLoading || selectedStudent?.status === 'approved'}
                                     className="px-4 sm:px-5 py-2 rounded-lg font-semibold text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors text-center"
                                   >
-                                    Reject Application
+                                    {selectedStudent?.status === 'approved' ? 'Application Approved' : 'Reject Application'}
                                   </button>
                                   <button
-                                    disabled={!allApproved || acceptanceLoading || rejectingLoading}
+                                    disabled={!allApproved || acceptanceLoading || rejectingLoading || selectedStudent?.status === 'approved'}
                                     onClick={approveStudent}
                                     className="px-4 sm:px-5 py-2 rounded-lg font-semibold bg-[#05294E] text-white hover:bg-[#041f38] disabled:opacity-50 transition-colors text-center"
                                   >
-                                    {acceptanceLoading ? 'Approving...' : 'Approve Student'}
+                                    {selectedStudent?.status === 'approved' ? 'Approved' : (acceptanceLoading ? 'Approving...' : 'Approve Student')}
                                   </button>
                                 </div>
                               </div>

@@ -365,7 +365,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               .insert({ 
                 student_id: profile.id, 
                 scholarship_id: scholarshipId, 
-                status: 'pending' 
+                status: 'pending',
+                student_process_type: localStorage.getItem('studentProcessType') || null
               })
               .select('id')
               .single();

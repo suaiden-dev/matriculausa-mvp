@@ -181,7 +181,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
                   if (!applicationId) {
                     const { data: newApp } = await supabase
                       .from('scholarship_applications')
-                      .insert({ student_id: profile.id, scholarship_id: scholarshipId, status: 'pending' })
+                      .insert({ 
+                        student_id: profile.id, 
+                        scholarship_id: scholarshipId, 
+                        status: 'pending',
+                        student_process_type: localStorage.getItem('studentProcessType') || null
+                      })
                       .select('id')
                       .single();
                     applicationId = newApp?.id || null;
@@ -323,7 +328,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
                   if (!applicationId) {
                     const { data: newApp } = await supabase
                       .from('scholarship_applications')
-                      .insert({ student_id: profile.id, scholarship_id: scholarshipId, status: 'pending' })
+                      .insert({ 
+                        student_id: profile.id, 
+                        scholarship_id: scholarshipId, 
+                        status: 'pending',
+                        student_process_type: localStorage.getItem('studentProcessType') || null
+                      })
                       .select('id')
                       .single();
                     applicationId = newApp?.id || null;

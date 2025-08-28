@@ -786,7 +786,12 @@ const getLevelColor = (level: any) => {
                   cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
                   disabled={false}
                   scholarshipsIds={[pendingApplication.scholarship_id]}
-                  metadata={{ application_id: pendingApplication.id, selected_scholarship_id: pendingApplication.scholarship_id }}
+                  metadata={{ 
+                    application_id: pendingApplication.id, 
+                    selected_scholarship_id: pendingApplication.scholarship_id,
+                    student_process_type: localStorage.getItem('studentProcessType') || null
+                  }}
+                  studentProcessType={localStorage.getItem('studentProcessType') || null}
                 />
                 <button
                   type="button"
