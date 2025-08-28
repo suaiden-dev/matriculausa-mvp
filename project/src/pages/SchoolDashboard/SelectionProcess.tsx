@@ -232,6 +232,18 @@ const SelectionProcess: React.FC = () => {
 
       // Preparar os documentos atualizados
       let updatedDocuments = currentApp?.documents || [];
+      
+      // Garantir que updatedDocuments seja sempre um array
+      if (!Array.isArray(updatedDocuments)) {
+        console.warn('currentApp.documents is not an array:', updatedDocuments);
+        // Se for um objeto vazio {}, converter para array vazio
+        if (updatedDocuments && typeof updatedDocuments === 'object' && Object.keys(updatedDocuments).length === 0) {
+          updatedDocuments = [];
+        } else {
+          updatedDocuments = [];
+        }
+      }
+      
       const existingDocIndex = updatedDocuments.findIndex((d: any) => d.type === type);
       
       if (existingDocIndex >= 0) {
@@ -320,6 +332,18 @@ const SelectionProcess: React.FC = () => {
 
       // Preparar os documentos atualizados
       let updatedDocuments = currentApp?.documents || [];
+      
+      // Garantir que updatedDocuments seja sempre um array
+      if (!Array.isArray(updatedDocuments)) {
+        console.warn('currentApp.documents is not an array:', updatedDocuments);
+        // Se for um objeto vazio {}, converter para array vazio
+        if (updatedDocuments && typeof updatedDocuments === 'object' && Object.keys(updatedDocuments).length === 0) {
+          updatedDocuments = [];
+        } else {
+          updatedDocuments = [];
+        }
+      }
+      
       const existingDocIndex = updatedDocuments.findIndex((d: any) => d.type === type);
       
       if (existingDocIndex >= 0) {
