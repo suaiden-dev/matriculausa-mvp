@@ -168,7 +168,7 @@ export const mockScholarships: Scholarship[] = [
     id: '2',
     title: 'STEM Innovation Grant',
     description: 'Full scholarship for international students in STEM fields.',
-    amount: 35000,
+            amount: 350,
     deadline: '2024-11-30',
     requirements: ['STEM major', 'Research experience', 'GRE 320+'],
     field_of_study: 'STEM',
@@ -182,7 +182,7 @@ export const mockScholarships: Scholarship[] = [
     updated_at: '2024-01-01T00:00:00Z',
     needcpt: true,
     visaassistance: 'Available',
-    scholarshipvalue: 35000,
+            scholarshipvalue: 350,
     universities: {
         id: '2',
         name: 'Stanford University',

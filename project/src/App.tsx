@@ -39,6 +39,8 @@ import ForUniversities from './pages/ForUniversities';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
+import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
+import { ZelleWaitingPage } from './components/ZelleWaitingPage';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -111,20 +113,28 @@ const AppContent = () => {
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/for-universities" element={<ForUniversities />} />
           <Route path="/success" element={<SuccessPage />} />
-          <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
           <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
           <Route path="/payment-error" element={<PaymentErrorPage />} />
-          <Route path="/application-fee-error" element={<ApplicationFeeError />} />
-          <Route path="/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
-          <Route path="/i20-control-fee-error" element={<I20ControlFeeError />} />
           <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
+          {/* Zelle Checkout Route */}
+          <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
+          {/* Zelle Waiting Page Route */}
+          <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
           {/* Catch-all route for 404 */}
           <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
           </Routes>
         </Layout>
       </AuthRedirect>
+      
+      {/* Rotas da I-20 Control Fee fora do AuthRedirect para teste */}
+      <Routes>
+        <Route path="/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
+        <Route path="/i20-control-fee-error" element={<I20ControlFeeError />} />
+        <Route path="/test-simple" element={<div className="min-h-screen bg-blue-50 flex items-center justify-center"><div className="text-2xl text-blue-600">Test Simple Page - Working!</div></div>} />
+        <Route path="/test-layout" element={<Layout><div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-2xl text-green-600">Test Layout Page - Working!</div></div></Layout>} />
+      </Routes>
     </AuthProvider>
   );
 };

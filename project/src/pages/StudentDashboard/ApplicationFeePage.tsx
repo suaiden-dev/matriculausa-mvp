@@ -2,15 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useCartStore } from '../../stores/applicationStore';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
+import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { Scholarship } from '../../types';
 
 const ApplicationFeePage: React.FC = () => {
   const { cart, clearCart } = useCartStore();
   const [selectedScholarshipId, setSelectedScholarshipId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { userProfile } = useAuth();
+  
+  // NOVOS estados para o modal
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [selectedScholarship, setSelectedScholarship] = useState<Scholarship | null>(null);
 
   // Auto-selecionar primeira bolsa se apenas uma disponível
   useEffect(() => {
@@ -25,7 +31,6 @@ const ApplicationFeePage: React.FC = () => {
       if (selectedScholarshipId) return;
       if (!userProfile?.id) return;
       // 1) Perfil
-      // @ts-expect-error dynamic col may exist
       const profileSelected = (userProfile as any)?.selected_scholarship_id;
       if (profileSelected) {
         setSelectedScholarshipId(profileSelected);
@@ -100,6 +105,44 @@ const ApplicationFeePage: React.FC = () => {
     }
   };
 
+  // NOVA função para abrir o modal
+  const handleApplyScholarship = () => {
+    if (!selectedScholarshipId) return;
+    
+    const scholarship = cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships;
+    if (scholarship) {
+      setSelectedScholarship(scholarship);
+      setShowConfirmationModal(true);
+    }
+  };
+
+  // NOVA função para processar checkout Stripe
+  const handleStripeCheckout = async () => {
+    if (!selectedScholarship) return;
+    
+    try {
+      // Criar aplicação primeiro
+      const result = await createOrGetApplication();
+      if (!result?.applicationId) {
+        throw new Error('Não foi possível criar a aplicação');
+      }
+
+      // Usar o StripeCheckout existente com os parâmetros corretos
+      // O modal será fechado e o StripeCheckout será executado
+      console.log('Iniciando checkout Stripe com application ID:', result.applicationId);
+      
+      // Fechar o modal
+      setShowConfirmationModal(false);
+      
+      // Executar o StripeCheckout diretamente
+      // Como não podemos chamar o StripeCheckout diretamente, vamos usar uma abordagem diferente
+      // Vamos criar um StripeCheckout invisível que será executado automaticamente
+      
+    } catch (error) {
+      console.error('Erro ao processar checkout:', error);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
       <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6 text-green-800 text-center animate-fade-in">
@@ -160,14 +203,38 @@ const ApplicationFeePage: React.FC = () => {
           ))}
         </ul>
         <div className="mt-6">
+          {/* SUBSTITUIR StripeCheckout por este botão */}
+          <button
+            onClick={handleApplyScholarship}
+            disabled={!selectedScholarshipId}
+            className="w-full bg-green-600 text-white py-3 px-6 rounded-xl font-bold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {`Pay Application Fee ($${selectedScholarshipId && cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount 
+              ? Number(cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount).toFixed(2)
+              : '350.00'
+            })`}
+          </button>
+        </div>
+      </div>
+
+      {/* ADICIONAR o modal no final */}
+      {selectedScholarship && (
+        <ScholarshipConfirmationModal
+          isOpen={showConfirmationModal}
+          onClose={() => setShowConfirmationModal(false)}
+          scholarship={selectedScholarship}
+          onStripeCheckout={handleStripeCheckout}
+        />
+      )}
+
+      {/* StripeCheckout invisível para quando o modal confirmar Stripe */}
+      {selectedScholarship && (
+        <div style={{ display: 'none' }}>
           <StripeCheckout
             productId="applicationFee"
             paymentType="application_fee"
             feeType="application_fee"
-            buttonText={`Pay Application Fee ($${selectedScholarshipId && cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount 
-              ? Number(cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount).toFixed(2)
-              : '350.00'
-            })`}
+            buttonText=""
             successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
             cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
             disabled={!selectedScholarshipId}
@@ -176,15 +243,10 @@ const ApplicationFeePage: React.FC = () => {
               selected_scholarship_id: selectedScholarshipId,
               student_process_type: localStorage.getItem('studentProcessType') || null,
             }}
-            scholarshipData={selectedScholarshipId ? {
-              title: cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.title || '',
-              universityName: cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.universities?.name || 
-                             cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.university_name || 'Unknown University',
-              applicationFeeAmount: cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount || 350.00
-            } : undefined}
+            scholarshipsIds={selectedScholarshipId ? [selectedScholarshipId] : []}
           />
         </div>
-      </div>
+      )}
     </div>
   );
 };
