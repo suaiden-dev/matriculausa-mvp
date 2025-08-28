@@ -589,6 +589,11 @@ const StudentDetails: React.FC = () => {
         console.error('Error sending approval notification:', notificationError);
       }
 
+      // Atualizar o estado local dos documentos do aluno
+      setStudentDocuments(prev => prev.map(doc => 
+        doc.id === documentId ? { ...doc, status: 'approved' } : doc
+      ));
+
       // Recarregar os dados para mostrar o novo status
       fetchStudentDocuments();
 
@@ -675,34 +680,81 @@ const StudentDetails: React.FC = () => {
   const approveDoc = async (type: string) => {
     try {
       setUpdating(type);
-      await updateApplicationDocStatus(type, 'approved');
       
-      // Buscar a aplicação atualizada para verificar o status real
-      const { data: updatedApp } = await supabase
+      // Buscar a aplicação atual para obter os documentos existentes
+      const { data: currentApp, error: fetchError } = await supabase
         .from('scholarship_applications')
         .select('documents')
         .eq('id', applicationId)
         .single();
       
-      if (updatedApp?.documents) {
-        // Verificar se todos os documentos foram aprovados usando os dados atualizados
-        const allDocsApproved = ['passport', 'diploma', 'funds_proof']
-          .every((docType) => {
-            const doc = updatedApp.documents.find((d: any) => d.type === docType);
-            return doc && doc.status === 'approved';
-          });
-        
-        // Se todos os documentos foram aprovados, atualizar status geral
-        if (allDocsApproved) {
-          await supabase
-            .from('user_profiles')
-            .update({ documents_status: 'approved' })
-            .eq('user_id', student.user_id);
-          
-          // Atualizar o estado local também
-          setApplication((prev) => prev ? ({ ...prev, documents: updatedApp.documents } as any) : prev);
-        }
+      if (fetchError) {
+        throw new Error('Failed to fetch current application: ' + fetchError.message);
       }
+
+      // Preparar os documentos atualizados
+      let updatedDocuments = currentApp?.documents || [];
+      const existingDocIndex = updatedDocuments.findIndex((d: any) => d.type === type);
+      
+      if (existingDocIndex >= 0) {
+        // Atualizar documento existente
+        updatedDocuments[existingDocIndex] = {
+          ...updatedDocuments[existingDocIndex],
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        };
+      } else {
+        // Adicionar novo documento aprovado
+        updatedDocuments.push({
+          type,
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        });
+      }
+
+      // Salvar no banco de dados
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: updatedDocuments })
+        .eq('id', applicationId);
+
+      if (updateError) {
+        throw new Error('Failed to update application documents: ' + updateError.message);
+      }
+
+      // Verificar se todos os documentos foram aprovados
+      const allDocsApproved = ['passport', 'diploma', 'funds_proof']
+        .every((docType) => {
+          const doc = updatedDocuments.find((d: any) => d.type === docType);
+          return doc && doc.status === 'approved';
+        });
+      
+      // Se todos os documentos foram aprovados, atualizar status geral
+      if (allDocsApproved) {
+        await supabase
+          .from('user_profiles')
+          .update({ documents_status: 'approved' })
+          .eq('user_id', student.user_id);
+        
+        // Atualizar o estado local da aplicação
+        setApplication((prev) => prev ? ({ ...prev, documents: updatedDocuments } as any) : prev);
+      }
+
+      // Atualizar o estado local dos documentos do aluno
+      setStudentDocs(prev => prev.map(doc => 
+        doc.type === type ? { ...doc, status: 'approved' } : doc
+      ));
+
+      // Recarregar dados da aplicação para sincronizar estado
+      await fetchApplicationDetails();
+      
+      console.log(`Document ${type} approved successfully`);
+      
+    } catch (error: any) {
+      console.error(`Error approving document ${type}:`, error);
+      alert(`Failed to approve document: ${error.message}`);
     } finally {
       setUpdating(null);
     }
@@ -803,6 +855,13 @@ const StudentDetails: React.FC = () => {
         .from('scholarship_applications')
         .update({ status: 'rejected', notes: rejectStudentReason || null })
         .eq('id', applicationId);
+      
+      // Atualizar o estado local da aplicação
+      setApplication(prev => prev ? ({
+        ...prev,
+        status: 'rejected'
+      } as any) : prev);
+      
       await fetchApplicationDetails();
       setActiveTab('details');
       setShowRejectStudentModal(false);
@@ -855,6 +914,11 @@ const StudentDetails: React.FC = () => {
       }
 
       console.log('Status atualizado com sucesso');
+
+      // Atualizar o estado local dos documentos do aluno
+      setStudentDocuments(prev => prev.map(doc => 
+        doc.id === documentId ? { ...doc, status: 'rejected' } : doc
+      ));
 
       // Enviar notificação ao aluno
       try {
@@ -1069,6 +1133,16 @@ const StudentDetails: React.FC = () => {
       }
 
       console.log('Application updated successfully');
+
+      // Atualizar o estado local da aplicação
+      setApplication(prev => prev ? ({
+        ...prev,
+        acceptance_letter_status: 'approved',
+        status: 'enrolled'
+      } as any) : prev);
+
+      // Atualizar o estado local da carta de aceite
+      setAcceptanceLetterUploaded(true);
 
       // Atualizar o perfil do usuário
       const { error: profileError } = await supabase
@@ -1611,7 +1685,7 @@ const StudentDetails: React.FC = () => {
                                  {/* Botões posicionados abaixo das informações */}
                                  <div className="flex items-center space-x-2 mt-3">
                                    {/* Botões de ação para documentos Under Review */}
-                                   {d?.file_url && status !== 'approved' && (
+                                   {d?.file_url && status !== 'approved' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
                                      <div className="flex items-center space-x-2 mr-3">
                                        <button
                                          onClick={() => d && approveDoc(d.type)}
@@ -1962,7 +2036,7 @@ const StudentDetails: React.FC = () => {
                                 </span>
                                 
                                 {/* Botões de ação para documentos Under Review */}
-                                {doc.status === 'under_review' && (
+                                {doc.status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
                                   <div className="flex items-center space-x-2">
                                     <button
                                       onClick={() => handleApproveDocument(doc.id)}
