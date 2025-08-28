@@ -243,6 +243,7 @@ const ApplicationFeePage: React.FC = () => {
               selected_scholarship_id: selectedScholarshipId,
               student_process_type: localStorage.getItem('studentProcessType') || null,
             }}
+            studentProcessType={localStorage.getItem('studentProcessType') || null}
             scholarshipsIds={selectedScholarshipId ? [selectedScholarshipId] : []}
           />
         </div>

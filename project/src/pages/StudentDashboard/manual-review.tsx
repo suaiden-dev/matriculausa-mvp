@@ -164,6 +164,7 @@ const ManualReview: React.FC = () => {
                       student_id: profile.id,
                       scholarship_id: scholarshipId,
                       status: 'pending',
+                      student_process_type: localStorage.getItem('studentProcessType') || null
                     })
                     .select('id, documents')
                     .single();
