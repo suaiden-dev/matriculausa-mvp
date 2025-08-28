@@ -30,6 +30,7 @@ import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import ManualReview from './manual-review';
+import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 
 interface StudentProfile {
   id: string;
@@ -410,6 +411,7 @@ const StudentDashboard: React.FC = () => {
           <Route path="rewards" element={<MatriculaRewards />} />
           <Route path="rewards/store" element={<RewardsStore />} />
           <Route path="manual-review" element={<ManualReview />} />
+          <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
         </Routes>
         
         {/* Fase 5: Modal de Parabéns para Código de Referência */}

@@ -368,7 +368,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'application',
-          amount: 35000, // $350.00 em centavos
+          amount: 350, // $350.00
           status: student.is_application_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_application_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
