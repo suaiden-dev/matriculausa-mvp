@@ -229,6 +229,19 @@ const NewScholarship: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Validação específica para o campo deadline
+    if (name === 'deadline' && value) {
+      const selectedDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      
+      if (selectedDate < today) {
+        // Se a data selecionada for anterior a hoje, não atualizar o formData
+        return;
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -463,6 +476,17 @@ const NewScholarship: React.FC = () => {
 
     if (!formData.deadline.trim()) {
       setError('Application deadline is required');
+      setLoading(false);
+      return;
+    }
+
+    // Validar se a data não é anterior a hoje
+    const selectedDate = new Date(formData.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
+    
+    if (selectedDate < today) {
+      setError('Application deadline cannot be in the past');
       setLoading(false);
       return;
     }
@@ -849,10 +873,23 @@ const NewScholarship: React.FC = () => {
                       name="deadline"
                       value={formData.deadline}
                       onChange={handleInputChange}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                      min={new Date().toISOString().split('T')[0]}
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 ${
+                        formData.deadline && new Date(formData.deadline) < new Date() 
+                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-slate-200'
+                      }`}
                       required
                     />
                   </div>
+                  {formData.deadline && new Date(formData.deadline) < new Date() && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      Application deadline cannot be in the past
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
