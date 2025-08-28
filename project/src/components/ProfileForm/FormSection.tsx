@@ -82,7 +82,7 @@ const FormSection: React.FC<FormSectionProps> = ({
           )}
           
           {/* Botão de edição */}
-          {!isEditing && onEdit && (
+          {/* {!isEditing && onEdit && (
             <button
               onClick={onEdit}
               className="text-[#05294E] hover:text-[#05294E]/80 font-medium text-sm flex items-center"
@@ -90,7 +90,7 @@ const FormSection: React.FC<FormSectionProps> = ({
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </button>
-          )}
+          )} */}
         </div>
       </div>
 

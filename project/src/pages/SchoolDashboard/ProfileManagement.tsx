@@ -403,7 +403,7 @@ const ProfileManagement: React.FC = () => {
           )}
           
           {/* Banner Upload Section - Quando não há banner */}
-          {!bannerUrl && isEditing && (
+          {!bannerUrl && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -415,27 +415,6 @@ const ProfileManagement: React.FC = () => {
                     Add New
                   </span>
                 </div>
-                
-                {/* Botão de Upload Prominente */}
-                <button
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e) => {
-                      const file = (e.target as HTMLInputElement).files?.[0];
-                      if (file) {
-                        handleImageUpload(file, 'banner');
-                      }
-                    };
-                    input.click();
-                  }}
-                  className="bg-white text-[#05294E] px-4 py-2 rounded-lg hover:bg-blue-50 transition-all duration-300 font-medium flex items-center gap-2 shadow-lg hover:shadow-xl"
-                  title="Upload university banner"
-                >
-                  <Plus className="h-4 w-4" />
-                  Upload Banner
-                </button>
               </div>
               
               {/* Indicador de Dimensões Recomendadas */}
@@ -449,10 +428,6 @@ const ProfileManagement: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <span className="text-blue-100">Hero:</span>
                       <span className="font-mono bg-white/20 px-2 py-1 rounded">1920×640px</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-blue-100">Ratio:</span>
-                      <span className="font-mono bg-white/20 px-2 py-1 rounded">3:1</span>
                     </div>
                   </div>
                 </div>
@@ -480,7 +455,6 @@ const ProfileManagement: React.FC = () => {
                   <Globe className="h-16 w-16 mx-auto mb-3 text-slate-400 group-hover:text-slate-600 transition-colors" />
                   <p className="text-lg font-medium mb-1">Click here to upload banner</p>
                   <p className="text-sm text-slate-500 group-hover:text-slate-700">JPG, PNG, WebP (max 5MB)</p>
-                  <p className="text-xs text-slate-400 mt-2">Recommended: 1920×640px</p>
                 </div>
               </div>
               
