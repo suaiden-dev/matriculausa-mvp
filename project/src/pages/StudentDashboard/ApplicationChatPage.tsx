@@ -180,8 +180,8 @@ const ApplicationChatPage: React.FC = () => {
             'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
-            success_url: window.location.origin + '/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url: window.location.origin + '/i20-control-fee-error',
+            success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
           }),
         });
