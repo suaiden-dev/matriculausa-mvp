@@ -63,12 +63,13 @@ const SelectionProcess: React.FC = () => {
   
   // const chat = useApplicationChat(selectedStudent?.id); // Removido pois não está sendo usado
 
-  // Filtrar apenas estudantes em processo de seleção (documents_status === 'under_review' E ainda não pagaram ambas as taxas)
+  // Filtrar estudantes em processo de seleção OU aprovados que ainda não pagaram as taxas
   const selectionProcessApplications = useMemo(() => {
     return applications.filter(app => {
       const userProfile = (app as any).user_profiles;
       const hasPaidApplicationFee = userProfile?.is_application_fee_paid;
       const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
+      const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
       
       // Debug: log dos valores para verificar
       if (userProfile?.full_name) {
@@ -76,11 +77,17 @@ const SelectionProcess: React.FC = () => {
         console.log(`Application Fee: ${hasPaidApplicationFee}`);
         console.log(`Scholarship Fee: ${hasPaidScholarshipFee}`);
         console.log(`Documents Status: ${userProfile.documents_status}`);
+        console.log(`Application Status: ${app.status}`);
+        console.log(`Both Fees Paid: ${bothFeesPaid}`);
       }
       
-      // Estudante deve estar em processo de seleção E ainda não ter pago ambas as taxas
-      return userProfile?.documents_status === 'under_review' && 
-             (!hasPaidApplicationFee || !hasPaidScholarshipFee);
+      // Incluir estudantes que:
+      // 1. Estão em processo de seleção (documents_status === 'under_review') E ainda não pagaram ambas as taxas
+      // 2. OU foram aprovados (status === 'approved') mas ainda não pagaram ambas as taxas
+      return (!bothFeesPaid) && (
+        userProfile?.documents_status === 'under_review' || 
+        app.status === 'approved'
+      );
     });
   }, [applications]);
 
@@ -1605,20 +1612,24 @@ const SelectionProcess: React.FC = () => {
               <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex-1">
                   <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                    Students in the Process
+                    Students in Process & Approved
                   </h1>
                   <p className="mt-2 text-sm sm:text-base text-slate-600">
-                    The students are interested in your college and are participating in the admissions process. By accepting them, you authorize them to complete the enrollment process.
+                    Students in the selection process or already approved. Approved students are waiting for fee payments to complete enrollment.
                   </p>
                   <p className="mt-3 text-sm text-slate-500">
-                    The student must be informed that the university will only be notified after both fees are paid: the application fee and the scholarship fee.
+                    Students will be moved to the Students page after both fees are paid: the application fee and the scholarship fee.
                   </p>
                 </div>
 
-                <div className="flex items-center">
+                <div className="flex items-center space-x-3">
                   <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
                     <Clock className="w-5 h-5 mr-2" />
-                    {filteredApplications.length} Pending Fees
+                    {selectionProcessApplications.filter(app => app.status !== 'approved').length} In Process
+                  </div>
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm">
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    {selectionProcessApplications.filter(app => app.status === 'approved').length} Approved
                   </div>
                 </div>
               </div>
@@ -1683,15 +1694,21 @@ const SelectionProcess: React.FC = () => {
                     <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Selection Process Active</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Selection Process & Approved Students</h3>
                     <p className="text-xs sm:text-sm text-slate-600">
-                      {selectionProcessApplications.length} students are pending fee payments to complete enrollment
+                      {selectionProcessApplications.filter(app => app.status !== 'approved').length} students in process, {selectionProcessApplications.filter(app => app.status === 'approved').length} approved - all waiting for fee payments
                     </p>
                   </div>
                 </div>
-                <div className="text-center sm:text-right">
-                  <div className="text-xl sm:text-2xl font-bold text-blue-600">{selectionProcessApplications.length}</div>
-                  <div className="text-xs sm:text-sm text-slate-600">Pending Fees</div>
+                <div className="flex flex-col sm:flex-row gap-3 text-center sm:text-right">
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{selectionProcessApplications.filter(app => app.status !== 'approved').length}</div>
+                    <div className="text-xs sm:text-sm text-slate-600">In Process</div>
+                  </div>
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{selectionProcessApplications.filter(app => app.status === 'approved').length}</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Approved</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1704,7 +1721,7 @@ const SelectionProcess: React.FC = () => {
                 {selectionProcessApplications.length === 0 ? (
                   <>
                     <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students pending fees</h3>
+                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students in process or approved</h3>
                     <p className="text-sm sm:text-base text-slate-600">All students have completed their fee payments and moved to the Students page.</p>
                   </>
                 ) : (
@@ -1771,7 +1788,12 @@ const SelectionProcess: React.FC = () => {
                                   Documents: {progress.reviewed}/{progress.total} reviewed
                                 </span>
                               </div>
-                              {hasUrgentAction && (
+                              {app.status === 'approved' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  Waiting for Fees
+                                </span>
+                              ) : hasUrgentAction && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                                   <AlertCircle className="w-3 h-3 mr-1" />
                                   Needs Review
@@ -1791,9 +1813,17 @@ const SelectionProcess: React.FC = () => {
                         </div>
                       
                         <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-3">
-                          <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
-                            In Review
+                          <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border ${
+                            app.status === 'approved' 
+                              ? 'bg-green-50 text-green-700 border-green-200' 
+                              : 'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            {app.status === 'approved' ? (
+                              <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                            ) : (
+                              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                            )}
+                            {app.status === 'approved' ? 'Approved' : 'In Review'}
                           </span>
                           <div className="text-xs sm:text-sm text-slate-500 text-right">
                             Applied: {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
