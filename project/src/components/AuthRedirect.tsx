@@ -56,7 +56,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     }
     
     // Páginas públicas que não precisam de verificação
-    const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities', '/i20-control-fee-success', '/i20-control-fee-error'];
+    const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];
     if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) {
       console.log('🔀 [AUTHREDIRECT] Rota pública detectada:', currentPath);
       return;

@@ -128,10 +128,8 @@ const AppContent = () => {
         </Layout>
       </AuthRedirect>
       
-      {/* Rotas da I-20 Control Fee fora do AuthRedirect para teste */}
+      {/* Rotas de teste fora do AuthRedirect */}
       <Routes>
-        <Route path="/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
-        <Route path="/i20-control-fee-error" element={<I20ControlFeeError />} />
         <Route path="/test-simple" element={<div className="min-h-screen bg-blue-50 flex items-center justify-center"><div className="text-2xl text-blue-600">Test Simple Page - Working!</div></div>} />
         <Route path="/test-layout" element={<Layout><div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-2xl text-green-600">Test Layout Page - Working!</div></div></Layout>} />
       </Routes>

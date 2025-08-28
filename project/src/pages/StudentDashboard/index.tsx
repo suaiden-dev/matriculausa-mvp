@@ -31,6 +31,8 @@ import ReferralCongratulationsModal from '../../components/ReferralCongratulatio
 import { useReferralCode } from '../../hooks/useReferralCode';
 import ManualReview from './manual-review';
 import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
+import I20ControlFeeSuccess from './I20ControlFeeSuccess';
+import I20ControlFeeError from './I20ControlFeeError';
 
 interface StudentProfile {
   id: string;
@@ -407,6 +409,8 @@ const StudentDashboard: React.FC = () => {
           <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
           <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
           <Route path="/application-fee-error" element={<ApplicationFeeError />} />
+          <Route path="i20-control-fee-success" element={<I20ControlFeeSuccess />} />
+          <Route path="i20-control-fee-error" element={<I20ControlFeeError />} />
           <Route path="application-fee" element={<ApplicationFeePage />} />
           <Route path="rewards" element={<MatriculaRewards />} />
           <Route path="rewards/store" element={<RewardsStore />} />
