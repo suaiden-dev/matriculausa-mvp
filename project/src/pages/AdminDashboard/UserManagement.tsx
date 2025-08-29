@@ -702,24 +702,24 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       Contact Information
                     </h5>
                     <div className="space-y-3">
-                      <div className="flex items-center text-sm">
+                    <div className="flex items-center text-sm">
                         <Mail className="h-4 w-4 mr-3 text-slate-400" />
-                        <span className="text-slate-600">{selectedUser.email}</span>
-                      </div>
-                      {selectedUser.phone && (
-                        <div className="flex items-center text-sm">
-                          <Phone className="h-4 w-4 mr-3 text-slate-400" />
-                          <span className="text-slate-600">{selectedUser.phone}</span>
-                        </div>
-                      )}
-                      {selectedUser.country && (
-                        <div className="flex items-center text-sm">
-                          <MapPin className="h-4 w-4 mr-3 text-slate-400" />
-                          <span className="text-slate-600">{selectedUser.country}</span>
-                        </div>
-                      )}
+                      <span className="text-slate-600">{selectedUser.email}</span>
                     </div>
+                    {selectedUser.phone && (
+                      <div className="flex items-center text-sm">
+                          <Phone className="h-4 w-4 mr-3 text-slate-400" />
+                        <span className="text-slate-600">{selectedUser.phone}</span>
+                      </div>
+                    )}
+                    {selectedUser.country && (
+                      <div className="flex items-center text-sm">
+                          <MapPin className="h-4 w-4 mr-3 text-slate-400" />
+                        <span className="text-slate-600">{selectedUser.country}</span>
+                      </div>
+                    )}
                   </div>
+                </div>
 
                   {/* Informações da Conta */}
                   <div className="bg-slate-50 rounded-xl p-4">
@@ -728,18 +728,18 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       Account Information
                     </h5>
                     <div className="space-y-3">
-                      <div className="flex items-center text-sm">
+                    <div className="flex items-center text-sm">
                         <Calendar className="h-4 w-4 mr-3 text-slate-400" />
-                        <span className="text-slate-600">
-                          Joined {new Date(selectedUser.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-sm">
+                      <span className="text-slate-600">
+                        Joined {new Date(selectedUser.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-sm">
                         <Activity className="h-4 w-4 mr-3 text-slate-400" />
-                        <span className="text-slate-600">
-                          Last active {new Date(selectedUser.last_active).toLocaleDateString()}
-                        </span>
-                      </div>
+                      <span className="text-slate-600">
+                        Last active {new Date(selectedUser.last_active).toLocaleDateString()}
+                      </span>
+                    </div>
                       {selectedUser.updated_at && (
                         <div className="flex items-center text-sm">
                           <Calendar className="h-4 w-4 mr-3 text-slate-400" />
@@ -852,21 +852,21 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         Academic Information
                       </h5>
                       <div className="space-y-3">
-                        {selectedUser.field_of_interest && (
-                          <div className="flex items-center text-sm">
+                    {selectedUser.field_of_interest && (
+                      <div className="flex items-center text-sm">
                             <GraduationCap className="h-4 w-4 mr-3 text-slate-400" />
                             <span className="text-slate-600">
                               <span className="font-medium">Field:</span> {selectedUser.field_of_interest}
                             </span>
-                          </div>
-                        )}
+                      </div>
+                    )}
                         {selectedUser.academic_level && (
                           <div className="flex items-center text-sm">
                             <GraduationCap className="h-4 w-4 mr-3 text-slate-400" />
                             <span className="text-slate-600">
                               <span className="font-medium">Level:</span> {selectedUser.academic_level}
                             </span>
-                          </div>
+                  </div>
                         )}
                         {selectedUser.gpa && (
                           <div className="flex items-center text-sm">
@@ -874,7 +874,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             <span className="text-slate-600">
                               <span className="font-medium">GPA:</span> {selectedUser.gpa}
                             </span>
-                          </div>
+                </div>
                         )}
                         {selectedUser.english_proficiency && (
                           <div className="flex items-center text-sm">
@@ -882,7 +882,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             <span className="text-slate-600">
                               <span className="font-medium">English:</span> {selectedUser.english_proficiency}
                             </span>
-                          </div>
+              </div>
                         )}
                       </div>
                     </div>
