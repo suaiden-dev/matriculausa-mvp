@@ -114,12 +114,16 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
       console.log('🔍 [StripeCheckout] Resultado da verificação:', result);
       
-      // SEMPRE mostrar o modal de verificação, independente de ter desconto ou não
-      // Isso garante que o usuário veja as informações de segurança e aceite os termos
-      console.log('🔍 [StripeCheckout] Mostrando modal de verificação para todos os usuários');
-      if (feeType === 'scholarship_fee') {
+      // CORREÇÃO: Para selection_process fee, SEMPRE mostrar o modal de verificação
+      // Isso garante consistência no comportamento
+      if (feeType === 'selection_process') {
+        console.log('🔍 [StripeCheckout] 🎯 Selection Process Fee: SEMPRE mostrar modal de verificação');
+        setShowPreCheckoutModal(true);
+      } else if (feeType === 'scholarship_fee') {
+        console.log('🔍 [StripeCheckout] 🎯 Scholarship Fee: mostrando modal específico');
         setShowScholarshipFeeModal(true);
       } else {
+        console.log('🔍 [StripeCheckout] 🎯 Outros tipos: mostrando modal padrão');
         setShowPreCheckoutModal(true);
       }
       

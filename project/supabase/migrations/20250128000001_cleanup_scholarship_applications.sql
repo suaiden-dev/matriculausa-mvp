@@ -135,7 +135,7 @@ SELECT
     -- Map payment amounts (default values)
     50 as selection_process_fee_amount,
     CASE WHEN up.has_paid_selection_process_fee THEN up.updated_at ELSE NULL END as selection_process_fee_paid_at,
-    100 as application_fee_amount,
+    35000 as application_fee_amount,
     CASE WHEN sa.is_application_fee_paid THEN sa.updated_at ELSE NULL END as application_fee_paid_at,
     500 as scholarship_fee_amount,
     CASE WHEN sa.is_scholarship_fee_paid THEN sa.updated_at ELSE NULL END as scholarship_fee_paid_at,

@@ -20,6 +20,7 @@ import { Application, Scholarship } from '../../types';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useCartStore } from '../../stores/applicationStore';
 import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
+import { formatCentsToDollars } from '../../utils/currency';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -1118,7 +1119,7 @@ const getLevelColor = (level: any) => {
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.applicationFee')}</span>
                           <span className="text-base font-bold text-gray-700">
-                            ${scholarship.application_fee_amount ? (Number(scholarship.application_fee_amount) / 100).toFixed(2) : '350.00'}
+                            ${scholarship.application_fee_amount ? formatCentsToDollars(scholarship.application_fee_amount) : '350.00'}
                           </span>
                         </div>
                         {applicationFeePaid ? (

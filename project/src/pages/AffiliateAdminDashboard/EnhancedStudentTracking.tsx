@@ -56,6 +56,10 @@ interface StudentInfo {
   has_paid_i20_control_fee?: boolean;
   student_process_type?: string;
   application_status?: string;
+  scholarship?: {
+    application_fee_amount?: number;
+    scholarship_fee_amount?: number;
+  };
 }
 
 interface FeePayment {
@@ -486,6 +490,8 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
             scholarships (
               id,
               title,
+              application_fee_amount,
+              scholarship_fee_amount,
               universities (
                 id,
                 name
@@ -551,7 +557,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           has_paid_i20_control_fee: profileData.has_paid_i20_control_fee || false,
           student_process_type: applicationData?.student_process_type || 'Not specified',
           application_status: applicationData?.status || 'Pending',
-          documents: documentsData || []
+          documents: documentsData || [],
+          scholarship: applicationData?.scholarships ? {
+            application_fee_amount: applicationData.scholarships.application_fee_amount,
+            scholarship_fee_amount: applicationData.scholarships.scholarship_fee_amount
+          } : undefined
         };
 
         console.log('🔍 Fallback data constructed:', studentData);
@@ -1205,6 +1215,92 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                         <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Fee Status Card */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                  <div className="bg-gradient-to-r rounded-t-2xl from-slate-500 to-slate-600 px-6 py-4">
+                    <h3 className="text-lg font-semibold text-white">Fee Status</h3>
+                  </div>
+                  <div className="p-6">
+                                       <div className="space-y-3">
+                     {/* Selection Process Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center justify-between w-full">
+                         <div className="flex items-center space-x-3">
+                           <div className={`w-3 h-3 rounded-full ${studentDetails?.has_paid_selection_process_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                           <span className="text-sm font-medium text-slate-900">Selection Process Fee</span>
+                         </div>
+                         <div className="flex flex-col items-end">
+                           <span className={`text-sm font-medium ${studentDetails?.has_paid_selection_process_fee ? 'text-green-700' : 'text-red-700'}`}>
+                             {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
+                           </span>
+                           {studentDetails?.has_paid_selection_process_fee && (
+                             <span className="text-xs text-slate-500">$600.00</span>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* Application Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center space-x-3">
+                         <div className={`w-3 h-3 rounded-full ${studentDetails?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                         <span className="text-sm font-medium text-slate-900">Application Fee</span>
+                       </div>
+                       <div className="flex flex-col items-end">
+                         <span className={`text-sm font-medium ${studentDetails?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                           {studentDetails?.is_application_fee_paid ? 'Paid' : 'Pending'}
+                         </span>
+                         {studentDetails?.is_application_fee_paid && (
+                           <span className="text-xs text-slate-500">
+                             ${studentDetails?.scholarship?.application_fee_amount ? 
+                               (Number(studentDetails.scholarship.application_fee_amount) / 100).toFixed(2) : 
+                               '350.00'}
+                           </span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* Scholarship Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center space-x-3">
+                         <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                         <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
+                       </div>
+                       <div className="flex flex-col items-end">
+                         <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                           {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
+                         </span>
+                         {studentDetails?.is_scholarship_fee_paid && (
+                           <span className="text-xs text-slate-500">
+                             ${studentDetails?.scholarship?.scholarship_fee_amount ? 
+                               (Number(studentDetails.scholarship.scholarship_fee_amount) / 100).toFixed(2) : 
+                               '850.00'}
+                           </span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* I-20 Control Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center justify-between w-full">
+                         <div className="flex items-center space-x-3">
+                           <div className={`w-3 h-3 rounded-full ${studentDetails?.has_paid_i20_control_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                           <span className="text-sm font-medium text-slate-900">I-20 Control Fee</span>
+                         </div>
+                         <div className="flex flex-col items-end">
+                           <span className={`text-sm font-medium ${studentDetails?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
+                             {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
+                           </span>
+                           {studentDetails?.has_paid_i20_control_fee && (
+                             <span className="text-xs text-slate-500">$1,250.00</span>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
                   </div>
                 </div>
               </div>

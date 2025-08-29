@@ -162,10 +162,13 @@ Deno.serve(async (req) => {
         });
         
         if (!scholarshipError && scholarshipData) {
-          applicationFeeAmount = scholarshipData.application_fee_amount || 350.00;
+          // O valor já está em centavos no banco, converter para dólares
+          const feeAmountInCents = scholarshipData.application_fee_amount || 35000;
+          applicationFeeAmount = feeAmountInCents / 100; // Converter centavos para dólares
           universityId = scholarshipData.university_id;
           
           console.log('[stripe-checkout-application-fee] Valores extraídos da bolsa:', {
+            originalAmountInCents: feeAmountInCents,
             applicationFeeAmount,
             universityId
           });

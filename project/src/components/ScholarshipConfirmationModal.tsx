@@ -3,6 +3,7 @@ import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CreditCard, Smartphone, CheckCircle, X } from 'lucide-react';
 import { Scholarship } from '../types';
+import { formatCentsToDollars } from '../utils/currency';
 
 interface ScholarshipConfirmationModalProps {
   isOpen: boolean;
@@ -26,10 +27,24 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   // Valor dinâmico baseado no tipo de taxa
   const getFeeAmount = () => {
-         if (feeType === 'scholarship_fee') {
-       return scholarship.scholarship_fee_amount || 850; // Valor padrão para scholarship fee ($850.00)
-     }
-    return scholarship.application_fee_amount || 350; // Valor padrão para application fee ($350.00)
+    if (feeType === 'scholarship_fee') {
+      return scholarship.scholarship_fee_amount || 850; // Valor padrão para scholarship fee ($850.00)
+    }
+    
+    // Para application fee, usar o valor real da bolsa ou valor padrão se não existir
+    let applicationFeeAmount = scholarship.application_fee_amount;
+    
+    // Se não houver valor definido pela universidade, usar valor padrão
+    if (!applicationFeeAmount) {
+      applicationFeeAmount = 35000; // $350.00 em centavos (valor padrão)
+    }
+    
+    // Se o valor for maior que 1000, provavelmente está em centavos, converter para dólares
+    if (applicationFeeAmount > 1000) {
+      applicationFeeAmount = applicationFeeAmount / 100;
+    }
+    
+    return applicationFeeAmount;
   };
 
   const feeAmount = getFeeAmount();
@@ -45,7 +60,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         subtitle: 'Choose your payment method to complete your enrollment',
         feeLabel: 'Scholarship Fee:',
         feeDescription: 'Final fee to complete your scholarship enrollment',
-        buttonText: `Pay Scholarship Fee ($${feeAmount.toFixed(2)})`,
+        buttonText: `Pay Scholarship Fee ($${formatCentsToDollars(feeAmount * 100)})`,
         warningText: 'By proceeding with this payment, you\'re completing your scholarship enrollment.'
       };
     }
@@ -55,7 +70,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       subtitle: 'Choose your payment method and secure your scholarship',
       feeLabel: 'Application Fee:',
       feeDescription: 'Fee to secure your approved scholarship spot',
-              buttonText: `Yes, Secure My Scholarship ($${feeAmount.toFixed(2)})`,
+      buttonText: `Yes, Secure My Scholarship ($${feeAmount.toFixed(2)})`,
       warningText: 'By proceeding with this payment, you\'re making this your final scholarship choice. This action cannot be undone.'
     };
   };
@@ -159,7 +174,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">{modalContent.feeLabel}</span>
-                    <span className="font-bold text-lg text-green-600">${feeAmount.toFixed(2)} USD</span>
+                    <span className="font-bold text-lg text-green-600">${formatCentsToDollars(feeAmount * 100)} USD</span>
                   </div>
                 </div>
               </div>

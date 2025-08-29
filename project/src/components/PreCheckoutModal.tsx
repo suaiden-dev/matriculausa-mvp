@@ -217,19 +217,31 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     const hasTerms = await loadActiveTerms();
     console.log('🔍 [PreCheckoutModal] Termos carregados:', hasTerms);
     
-    if (hasTerms) {
-      console.log('🔍 [PreCheckoutModal] Abrindo modal de termos');
-      setShowTermsModal(true);
-      setHasScrolledToBottom(false);
-      
-      // Check if content needs scrolling after a short delay to ensure DOM is rendered
-      setTimeout(() => {
-        checkIfContentNeedsScroll();
-      }, 100);
-    } else {
-      console.log('🔍 [PreCheckoutModal] Nenhum termo ativo encontrado');
-      alert('Nenhum termo ativo encontrado');
+    // CORREÇÃO: Se não há termos ativos, criar um termo padrão para garantir consistência
+    if (!hasTerms) {
+      console.log('🔍 [PreCheckoutModal] Nenhum termo ativo encontrado, criando termo padrão');
+      const defaultTerm = {
+        id: 'default-checkout-terms',
+        title: 'Checkout Terms and Conditions',
+        content: 'By proceeding with this payment, you agree to our checkout terms and conditions.',
+        status: true,
+        version: 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setActiveTerm(defaultTerm);
+      console.log('🔍 [PreCheckoutModal] Termo padrão criado');
     }
+    
+    // CORREÇÃO: Sempre mostrar o modal de termos para garantir consistência
+    console.log('🔍 [PreCheckoutModal] Abrindo modal de termos');
+    setShowTermsModal(true);
+    setHasScrolledToBottom(false);
+    
+    // Check if content needs scrolling after a short delay to ensure DOM is rendered
+    setTimeout(() => {
+      checkIfContentNeedsScroll();
+    }, 100);
   };
 
   // Handle terms acceptance

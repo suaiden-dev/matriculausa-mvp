@@ -7,6 +7,7 @@ import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
+import { formatCentsToDollars } from '../../utils/currency';
 
 const ApplicationFeePage: React.FC = () => {
   const { cart, clearCart } = useCartStore();
@@ -210,7 +211,7 @@ const ApplicationFeePage: React.FC = () => {
             className="w-full bg-green-600 text-white py-3 px-6 rounded-xl font-bold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {`Pay Application Fee ($${selectedScholarshipId && cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount 
-              ? Number(cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount).toFixed(2)
+              ? formatCentsToDollars(cart.find(item => item.scholarships.id === selectedScholarshipId)?.scholarships.application_fee_amount)
               : '350.00'
             })`}
           </button>
