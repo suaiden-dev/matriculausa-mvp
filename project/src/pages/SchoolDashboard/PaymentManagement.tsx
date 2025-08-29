@@ -153,76 +153,67 @@ const PaymentManagement: React.FC = () => {
       const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
       setUniversityPaymentRequests(requests);
       
-      // Calcular saldo disponível baseado no faturamento real da universidade
-      // O saldo deve considerar apenas requests já pagos (não pending/approved)
-      const totalPaidOut = requests
-        .filter((r: any) => r.status === 'paid')
-        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
-      
-      // SOLUÇÃO FINAL: Buscar apenas as bolsas únicas que têm aplicações pagas
-      // Usar uma query mais eficiente para evitar duplicatas
-      const { data: scholarshipsWithPaidApps, error: revenueError } = await supabase
-        .from('scholarships')
-        .select(`
-          id,
-          application_fee_amount,
-          university_id
-        `)
-        .eq('university_id', university.id);
-      
-      if (revenueError) {
-        console.error('Error fetching scholarships:', revenueError);
-      }
-      
-      // Buscar quais bolsas têm pelo menos uma aplicação paga
-      const { data: paidApplications, error: paidError } = await supabase
-        .from('scholarship_applications')
-        .select('scholarship_id')
-        .eq('is_application_fee_paid', true);
-      
-      if (paidError) {
-        console.error('Error fetching paid applications:', paidError);
-      }
-      
-      // Criar um Set com os IDs das bolsas que têm aplicações pagas
-      const paidScholarshipIds = new Set(paidApplications?.map(app => app.scholarship_id) || []);
-      
-      // Filtrar apenas as bolsas que têm aplicações pagas e somar seus valores
-      const totalApplicationFeesReceived = scholarshipsWithPaidApps
-        ?.filter(scholarship => paidScholarshipIds.has(scholarship.id))
-        .reduce((sum: number, scholarship: any) => {
-          const feeAmount = scholarship.application_fee_amount || 0;
-          return sum + feeAmount;
+      // USAR O NOVO SISTEMA DE SALDO AUTOMÁTICO
+      try {
+        const balanceData = await UniversityPaymentRequestService.getUniversityBalance(university.id);
+        setUniversityBalance(balanceData.available_balance);
+        
+        console.log('💰 [Balance] New automatic system:', {
+          totalRevenue: balanceData.total_revenue,
+          totalReserved: balanceData.total_reserved,
+          totalPaidOut: balanceData.total_paid_out,
+          availableBalance: balanceData.available_balance,
+          lastUpdated: balanceData.last_updated,
+          requestsCount: requests.length,
+          paidRequests: requests.filter(r => r.status === 'paid').length,
+          pendingRequests: requests.filter(r => r.status === 'pending').length,
+          approvedRequests: requests.filter(r => r.status === 'approved').length,
+          cancelledRequests: requests.filter(r => r.status === 'cancelled').length
+        });
+      } catch (balanceError: any) {
+        console.error('❌ [Balance] Error getting balance:', balanceError);
+        // Fallback para cálculo manual se a função RPC falhar
+        const totalPaidOut = requests
+          .filter((r: any) => r.status === 'paid')
+          .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
+        
+        const totalApproved = requests
+          .filter((r: any) => r.status === 'approved')
+          .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
+        
+        // Calcular receita baseada em aplicações pagas (sem duplicatas)
+        const { data: paidApplications, error: paidError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            scholarship_id,
+            scholarships!inner(
+              university_id,
+              application_fee_amount
+            )
+          `)
+          .eq('is_application_fee_paid', true)
+          .eq('scholarships.university_id', university.id);
+        
+        if (paidError) {
+          console.error('Error fetching paid applications:', paidError);
+        }
+        
+        // Calcular receita total (sem duplicatas)
+        const totalRevenue = paidApplications?.reduce((sum: number, app: any) => {
+          return sum + (app.scholarships?.application_fee_amount || 0);
         }, 0) || 0;
-      
-      // O saldo disponível é: Faturamento Real - Pago - Aprovado (reservado)
-      const totalApproved = requests
-        .filter((r: any) => r.status === 'approved')
-        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
-      
-      // Saldo disponível = Faturamento Real - Pago - Aprovado (reservado)
-      const availableBalance = Math.max(0, totalApplicationFeesReceived - totalPaidOut - totalApproved);
-      
-      console.log('💰 [Balance] Calculation (FIXED):', {
-        totalApplicationFeesReceived,
-        totalPaidOut,
-        totalApproved,
-        availableBalance,
-        uniqueScholarshipsWithPaidApplications: paidScholarshipIds.size,
-        totalScholarships: scholarshipsWithPaidApps?.length || 0,
-        totalApplicationsPaid: paidApplications?.length || 0,
-        requestsCount: requests.length,
-        paidRequests: requests.filter(r => r.status === 'paid').length,
-        pendingRequests: requests.filter(r => r.status === 'pending').length,
-        approvedRequests: requests.filter(r => r.status === 'approved').length,
-        requests: requests.map(r => ({
-          id: r.id.slice(0, 8),
-          status: r.status,
-          amount: r.amount_usd
-        }))
-      });
-      
-      setUniversityBalance(availableBalance);
+        
+        const availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved);
+        setUniversityBalance(availableBalance);
+        
+        console.log('💰 [Balance] Fallback calculation:', {
+          totalRevenue,
+          totalPaidOut,
+          totalApproved,
+          availableBalance,
+          paidApplicationsCount: paidApplications?.length || 0
+        });
+      }
     } catch (error: any) {
       console.error('Error loading university payment requests:', error);
     } finally {
@@ -1011,6 +1002,31 @@ const PaymentManagement: React.FC = () => {
                             <Eye className="w-3 h-3 mr-1" />
                             View Details
                           </button>
+                          
+                          {/* Botão de cancelamento para requests pendentes */}
+                          {request.status === 'pending' && (
+                            <button
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to cancel this payment request for ${formatCurrency(request.amount_usd)}? The amount will be returned to your available balance.`)) {
+                                  try {
+                                    await UniversityPaymentRequestService.cancelPaymentRequest(request.id, user!.id);
+                                    // Recarregar requests e saldo
+                                    await loadUniversityPaymentRequests();
+                                    setSuccessMessage('Payment request cancelled successfully. Amount returned to your balance.');
+                                    setTimeout(() => setSuccessMessage(null), 5000);
+                                  } catch (error: any) {
+                                    setError(error.message || 'Failed to cancel payment request');
+                                    setTimeout(() => setError(null), 5000);
+                                  }
+                                }
+                              }}
+                              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                              title="Cancel this payment request and return amount to balance"
+                            >
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Cancel
+                            </button>
+                          )}
                           
                           {/* Alertas quando há notas do admin */}
                           {request.admin_notes && (
