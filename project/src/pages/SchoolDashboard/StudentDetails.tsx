@@ -1032,7 +1032,7 @@ const StudentDetails: React.FC = () => {
       // Recarregar documentos do estudante
       console.log('Recarregando documentos...');
       fetchStudentDocuments();
-      alert('Document rejected successfully! The student will be notified.');
+      
     } catch (err: any) {
       console.error("Error rejecting document:", err);
       alert(`Failed to reject document: ${err.message}`);
@@ -1230,7 +1230,6 @@ const StudentDetails: React.FC = () => {
       }
 
       setAcceptanceLetterUploaded(true);
-      alert('Acceptance letter processed successfully! The student is now enrolled and will be notified.');
       
       // Recarregar dados da aplicação
       fetchApplicationDetails();
@@ -1393,7 +1392,6 @@ const StudentDetails: React.FC = () => {
       // Recarregar solicitações de documentos
       fetchDocumentRequests();
       
-      alert('Document request created successfully! The student will be notified.');
     } catch (err: any) {
       console.error("Error creating document request:", err);
       alert(`Failed to create document request: ${err.message}`);
