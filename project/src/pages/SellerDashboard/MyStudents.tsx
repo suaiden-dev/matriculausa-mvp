@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 
 interface Student {
   id: string;
+  profile_id: string;
   full_name: string;
   email: string;
   country?: string;
@@ -56,7 +57,7 @@ interface MyStudentsProps {
   students: Student[];
   sellerProfile: any;
   onRefresh: () => void;
-  onViewStudent: (studentId: string) => void;
+  onViewStudent: (studentId: {id: string, profile_id: string}) => void;
 }
 
 const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefresh, onViewStudent }) => {
@@ -110,6 +111,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
         });
       }
     });
+    console.log(students)
     return Array.from(uniqueUniversities.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [students]);
 
@@ -538,7 +540,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
               <div 
                 key={`${student.id}-${index}`}
                 className="p-6 hover:bg-slate-50 transition-colors cursor-pointer"
-                onClick={() => onViewStudent(student.id)}
+                onClick={() => onViewStudent({id: student.id, profile_id: student.profile_id})}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="flex items-center space-x-4">

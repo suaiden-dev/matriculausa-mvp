@@ -56,6 +56,7 @@ interface StudentInfo {
   has_paid_i20_control_fee?: boolean;
   student_process_type?: string;
   application_status?: string;
+  documents?: any[];
   scholarship?: {
     application_fee_amount?: number;
     scholarship_fee_amount?: number;
@@ -105,6 +106,7 @@ interface Seller {
 
 interface Student {
   id: string;
+  profile_id: string;
   full_name: string;
   email: string;
   country?: string;
@@ -157,6 +159,10 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [showStudentDetails, setShowStudentDetails] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  useEffect(() => {
+    console.log('🔍 studentDocuments:', studentDocuments);
+  }, [studentDocuments]);
   
   // Estado dos filtros
   const [filters, setFilters] = useState<FilterState>({
@@ -212,8 +218,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
           console.log('🔍 SQL sellers response:', { data: realSellersData, error: realSellersError });
 
+          let processedSellers: any[] = [];
+          let processedStudents: any[] = [];
+
           if (!realSellersError && realSellersData && realSellersData.length > 0) {
-            const processedSellers = realSellersData.map((seller: any) => ({
+            processedSellers = realSellersData.map((seller: any) => ({
               id: seller.seller_id,
               name: seller.seller_name || 'Name not available',
               email: seller.seller_email || 'Email not available',
@@ -225,7 +234,6 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
             }));
             
             console.log('🔍 Processed sellers from SQL:', processedSellers);
-            setSellers(processedSellers);
           } else {
             console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
@@ -237,22 +245,38 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
 
           if (!realStudentsError && realStudentsData && realStudentsData.length > 0) {
-            const processedStudents = realStudentsData.map((student: any) => ({
-              id: student.student_id,
-              user_id: student.student_id,
-              full_name: student.student_name,
-              email: student.student_email,
-              country: student.country,
-              referred_by_seller_id: student.referred_by_seller_id,
-              seller_name: student.seller_name,
-              seller_referral_code: student.seller_referral_code,
-              referral_code_used: student.referral_code_used,
-              total_paid: Number(student.total_paid) || 0,
-              created_at: student.created_at,
-              status: student.status
-            }));
+            // Processar estudantes e calcular receita real
+            const studentsWithRevenue = await Promise.all(
+              realStudentsData.map(async (student: any) => {
+                const realRevenue = await calculateStudentRevenue(student.student_id, student.profile_id);
+                return {
+                  id: student.student_id,
+                  profile_id: student.profile_id,
+                  user_id: student.student_id,
+                  full_name: student.student_name,
+                  email: student.student_email,
+                  country: student.country,
+                  referred_by_seller_id: student.referred_by_seller_id,
+                  seller_name: student.seller_name,
+                  seller_referral_code: student.seller_referral_code,
+                  referral_code_used: student.referral_code_used,
+                  total_paid: realRevenue, // Usar receita real calculada
+                  created_at: student.created_at,
+                  status: student.status
+                };
+              })
+            );
             
-            console.log('🔍 Processed students from SQL:', processedStudents);
+            processedStudents = studentsWithRevenue;
+            
+            console.log('🔍 Processed students from SQL with real revenue:', processedStudents);
+            console.log('🔍 SQL Students debug - referred_by_seller_id values:', processedStudents.map((s: any) => ({
+              name: s.full_name,
+              referred_by_seller_id: s.referred_by_seller_id,
+              seller_name: s.seller_name,
+              total_paid: s.total_paid
+            })));
+            
             setStudents(processedStudents);
           } else {
             console.log('🔍 SQL students function failed or returned no data, will use fallback');
@@ -263,6 +287,37 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               realSellersData && realSellersData.length > 0 && 
               realStudentsData && realStudentsData.length > 0) {
             console.log('🔍 SQL functions successful, skipping fallback');
+            console.log('🔍 Final state - Students loaded via SQL:', realStudentsData.length);
+            console.log('🔍 Final state - Sellers loaded via SQL:', realSellersData.length);
+            
+            // Debug: verificar se os dados estão sendo mapeados corretamente
+            console.log('🔍 Final processed students:', processedStudents);
+            console.log('🔍 Final processed sellers:', processedSellers);
+            
+            // Verificar se os estudantes têm referred_by_seller_id
+            const studentsWithSellerId = processedStudents.filter((s: any) => s.referred_by_seller_id);
+            console.log('🔍 Students with referred_by_seller_id:', studentsWithSellerId.length);
+            console.log('🔍 Students without referred_by_seller_id:', processedStudents.length - studentsWithSellerId.length);
+            
+            // Calcular receita real para vendedores SQL
+            const sellersWithRealRevenue = processedSellers.map((seller: any) => {
+              const sellerStudents = processedStudents.filter((student: any) => 
+                student.referred_by_seller_id === seller.id
+              );
+              
+              const actualRevenue = sellerStudents.reduce((sum, student) => sum + (student.total_paid || 0), 0);
+              
+              return {
+                ...seller,
+                students_count: sellerStudents.length,
+                total_revenue: actualRevenue
+              };
+            });
+            
+            console.log('🔍 Sellers with real revenue:', sellersWithRealRevenue);
+            
+            setSellers(sellersWithRealRevenue);
+            setStudents(processedStudents);
             return;
           }
         } catch (error) {
@@ -296,13 +351,17 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         .order('created_at', { ascending: false });
 
       // Buscar vendedores ativos para filtrar estudantes
+      console.log('🔍 About to query sellers table with select: referral_code, id, name');
       const { data: activeSellersData, error: activeSellersError } = await supabase
         .from('sellers')
-        .select('referral_code, seller_id, seller_name')
+        .select('referral_code, id, name')
         .eq('is_active', true);
 
+      console.log('🔍 Query completed. Data:', activeSellersData?.length, 'Error:', activeSellersError);
+      
       if (activeSellersError) {
-        console.error('Error loading active sellers:', activeSellersError);
+        console.error('❌ Error loading active sellers:', activeSellersError);
+        console.error('❌ Full error object:', JSON.stringify(activeSellersError, null, 2));
         throw new Error(`Failed to load active sellers: ${activeSellersError.message}`);
       }
 
@@ -316,31 +375,37 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       }
 
       // Processar estudantes com dados reais - filtrar apenas aqueles referenciados por vendedores ativos
-      const processedStudents = (studentsData || [])
-        .filter((studentProfile: any) => {
-          const isReferencedByActiveSeller = activeSellerCodes.has(studentProfile.seller_referral_code);
-          if (!isReferencedByActiveSeller) {
-            console.log(`⚠️ Filtering out student ${studentProfile.full_name} (${studentProfile.email}) - referenced by inactive seller with code: ${studentProfile.seller_referral_code}`);
-          }
-          return isReferencedByActiveSeller;
-        })
-        .map((studentProfile: any) => {
-          // Processando estudante
-          return {
-            id: studentProfile.id, // Usar o ID da tabela user_profiles
-            user_id: studentProfile.user_id,
-            full_name: studentProfile.full_name || 'Name not available',
-            email: studentProfile.email || 'Email not available',
-            country: studentProfile.country || 'Country not available',
-            referred_by_seller_id: null, // Será definido depois
-            seller_name: 'Seller not available',
-            seller_referral_code: studentProfile.seller_referral_code || '',
-            referral_code_used: studentProfile.seller_referral_code || '',
-            total_paid: Number(studentProfile.total_paid) || 0, // Usar dados reais se disponíveis
-            created_at: studentProfile.created_at || new Date().toISOString(),
-            status: studentProfile.status || 'active'
-          };
-        });
+      const processedStudents = await Promise.all(
+        (studentsData || [])
+          .filter((studentProfile: any) => {
+            const isReferencedByActiveSeller = activeSellerCodes.has(studentProfile.seller_referral_code);
+            if (!isReferencedByActiveSeller) {
+              console.log(`⚠️ Filtering out student ${studentProfile.full_name} (${studentProfile.email}) - referenced by inactive seller with code: ${studentProfile.seller_referral_code}`);
+            }
+            return isReferencedByActiveSeller;
+          })
+          .map(async (studentProfile: any) => {
+            // Calcular receita real para cada estudante
+            const realRevenue = await calculateStudentRevenue(studentProfile.user_id, studentProfile.id);
+            
+            // Processando estudante
+            return {
+              id: studentProfile.id, // Usar o ID da tabela user_profiles
+              profile_id: studentProfile.profile_id, // profile_id é o mesmo que id para user_profiles
+              user_id: studentProfile.user_id,
+              full_name: studentProfile.full_name || 'Name not available',
+              email: studentProfile.email || 'Email not available',
+              country: studentProfile.country || 'Country not available',
+              referred_by_seller_id: null, // Será definido depois
+              seller_name: 'Seller not available',
+              seller_referral_code: studentProfile.seller_referral_code || '',
+              referral_code_used: studentProfile.seller_referral_code || '',
+              total_paid: realRevenue, // Usar receita real calculada
+              created_at: studentProfile.created_at || new Date().toISOString(),
+              status: studentProfile.status || 'active'
+            };
+          })
+      );
 
       // Debug: verificar dados processados
       console.log('🔍 Students filtering results:', {
@@ -352,6 +417,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       
       console.log('🔍 Processed Students Data:', processedStudents.map(s => ({
         name: s.full_name,
+        profile_id: s.profile_id,
         total_paid: s.total_paid,
         seller_code: s.seller_referral_code
       })));
@@ -359,20 +425,23 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       // Processar vendedores com dados reais
       const processedSellers = (sellersData || []).map((seller: any) => {
         const sellerStudents = processedStudents.filter((student: any) => 
-          student.referred_by_seller_id === seller.seller_id
+          student.referred_by_seller_id === seller.id
         );
         
-        console.log(`🔍 Processing seller: ${seller.seller_name} with code: ${seller.referral_code}, found ${sellerStudents.length} students, total revenue: ${seller.total_revenue}`);
+        // Calcular receita real baseada nos pagamentos dos estudantes
+        const actualRevenue = sellerStudents.reduce((sum, student) => sum + (student.total_paid || 0), 0);
+        
+        console.log(`🔍 Processing seller: ${seller.seller_name} with code: ${seller.referral_code}, found ${sellerStudents.length} students, actual revenue: ${actualRevenue}`);
         
         return {
-          id: seller.seller_id,
-          name: seller.seller_name || 'Name not available',
-          email: seller.seller_email || 'Email not available',
+          id: seller.id,
+          name: seller.name || 'Name not available',
+          email: seller.email || 'Email not available',
           referral_code: seller.referral_code || '',
           is_active: seller.is_active,
-          created_at: seller.last_referral_date || new Date().toISOString(),
-          students_count: seller.students_count || 0,
-          total_revenue: Number(seller.total_revenue) || 0
+          created_at: seller.created_at || new Date().toISOString(),
+          students_count: sellerStudents.length, // Usar contagem real dos estudantes
+          total_revenue: actualRevenue // Usar receita real calculada
         };
       });
 
@@ -391,6 +460,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       console.log('🔍 Final processed data:', {
         students: processedStudents.map((s: any) => ({
           name: s.full_name,
+          profile_id: s.profile_id,
           sellerCode: s.seller_referral_code,
           sellerId: s.referred_by_seller_id,
           sellerName: s.seller_name
@@ -416,6 +486,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         })),
         studentDetails: processedStudents.map((s: any) => ({
           id: s.id,
+          profile_id: s.profile_id,
           name: s.full_name,
           sellerCode: s.seller_referral_code,
           sellerName: s.seller_name
@@ -433,7 +504,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   }, [loadUniversities]);
 
   // Carregar detalhes de um estudante específico
-  const loadStudentDetails = useCallback(async (studentId: string) => {
+  const loadStudentDetails = useCallback(async (studentId: string, profile_id: string) => {
     try {
       console.log('🔍 Loading details for student:', studentId);
       setLoadingStudentDetails(true);
@@ -444,6 +515,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       
       let studentData = null;
       let studentError = null;
+      let documentsData: any[] = [];
       
       try {
         const { data: sqlData, error: sqlError } = await supabase.rpc(
@@ -466,7 +538,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       }
 
       // Se a função SQL falhou ou retornou dados vazios, usar fallback robusto
-      if (!studentData || studentError) {
+      if (!studentData) {
         console.log('🔍 Using robust fallback to fetch student data directly from tables');
         
         // Buscar dados básicos do estudante
@@ -498,17 +570,19 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               )
             )
           `)
-          .eq('student_id', studentId)
+          .eq('student_id', profile_id)
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
 
-        // Buscar dados do seller
+        console.log('🔍 Application data 13:', applicationData);
+
+
         let sellerData = null;
         if (profileData.seller_referral_code) {
           const { data: sellerResult } = await supabase
             .from('sellers')
-            .select('seller_name')
+            .select('name')
             .eq('referral_code', profileData.seller_referral_code)
             .single();
           
@@ -524,11 +598,22 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           .eq('user_id', studentId)
           .eq('status', 'succeeded');
 
-        // Buscar documentos do estudante
-        const { data: documentsData, error: documentsError } = await supabase
-          .from('student_documents')
-          .select('*')
-          .eq('user_id', studentId);
+        // Extrair documentos da aplicação principal
+        let documentsData: any = applicationData[0].documents;
+        // if (applicationsData && applicationsData.length > 0) {
+        //   applicationsData.forEach((application: any) => {
+        //     if (application.documents && Array.isArray(application.documents)) {
+        //       // Adicionar metadados da aplicação aos documentos
+        //       const documentsWithMetadata = application.documents.map((doc: any) => ({
+        //         ...doc,
+        //         application_id: application.id,
+        //         application_created_at: application.created_at
+        //       }));
+        //       documentsData = [...documentsData, ...documentsWithMetadata];
+        //     }
+        //   });
+        // }
+        console.log('🔍 Applications data:', documentsData);
 
         // Construir objeto de dados do estudante
         studentData = {
@@ -544,7 +629,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           registration_date: profileData.created_at || new Date().toISOString(),
           current_status: profileData.status || 'active',
           seller_referral_code: profileData.seller_referral_code || '',
-          seller_name: sellerData?.seller_name || 'Seller not available',
+          seller_name: sellerData?.name || 'Seller not available',
           total_fees_paid: feesData ? feesData.reduce((sum, fee) => sum + (fee.amount || 0), 0) : 0,
           fees_count: feesData ? feesData.length : 0,
           scholarship_title: applicationData?.scholarships?.title || 'Scholarship not specified',
@@ -559,13 +644,17 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           application_status: applicationData?.status || 'Pending',
           documents: documentsData || [],
           scholarship: applicationData?.scholarships ? {
-            application_fee_amount: applicationData.scholarships.application_fee_amount,
-            scholarship_fee_amount: applicationData.scholarships.scholarship_fee_amount
+            application_fee_amount: applicationData.scholarships[0]?.application_fee_amount,
+            scholarship_fee_amount: applicationData.scholarships[0]?.scholarship_fee_amount
           } : undefined
         };
 
+        setStudentDocuments(applicationData?.documents);
+
         console.log('🔍 Fallback data constructed:', studentData);
       }
+      
+      console.log('🔍 Student Documents 1:', studentData);
 
       if (studentData) {
         console.log('🔍 Setting student details:', studentData);
@@ -573,15 +662,34 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         console.log('🔍 Student process type value:', studentData.student_process_type);
         console.log('🔍 Application status value:', studentData.application_status);
         console.log('🔍 Full student details object:', JSON.stringify(studentData, null, 2));
-        
+
+        const { data: applicationData, error: applicationError } = await supabase
+          .from('scholarship_applications')
+          .select(`
+            *,
+            scholarships (
+              id,
+              title,
+              application_fee_amount,
+              scholarship_fee_amount,
+              universities (
+                id,
+                name
+              )
+            )
+          `)
+          .eq('student_id', profile_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+          studentData.documents = applicationData?.documents;
+
+          setStudentDocuments(applicationData?.documents);
+
         setStudentDetails(studentData);
         
-        // Definir documentos do estudante
-        if (studentData.documents && Array.isArray(studentData.documents)) {
-          setStudentDocuments(studentData.documents);
-        } else {
-          setStudentDocuments([]);
-        }
+        console.log('🔍 Student Documents 2:', studentData);
 
         // Definir aplicação de bolsa
         if (studentData.selected_scholarship_id) {
@@ -655,17 +763,37 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       return true;
     });
 
-    let filteredStudents = students.filter(student => {
+    let filteredStudents = students.filter((student: any) => {
+      console.log(`🔍 Filtering student: ${student.full_name} (${student.id})`);
+      console.log(`🔍 Student data:`, {
+        referred_by_seller_id: student.referred_by_seller_id,
+        status: student.status,
+        created_at: student.created_at,
+        university_id: student.university_id
+      });
+      
       // Filtro por vendedor
-      if (filters.sellerFilter !== 'all' && student.referred_by_seller_id !== filters.sellerFilter) return false;
+      if (filters.sellerFilter !== 'all' && student.referred_by_seller_id !== filters.sellerFilter) {
+        console.log(`🔍 Student ${student.full_name} filtered out by seller filter: ${student.referred_by_seller_id} !== ${filters.sellerFilter}`);
+        return false;
+      }
       
       // Filtro por termo de busca
       if (filters.searchTerm && 
           !student.full_name.toLowerCase().includes(filters.searchTerm.toLowerCase()) && 
-          !student.email.toLowerCase().includes(filters.searchTerm.toLowerCase())) return false;
+          !student.email.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+        console.log(`🔍 Student ${student.full_name} filtered out by search term: ${filters.searchTerm}`);
+        return false;
+      }
       
-      // Filtro por universidade
-      if (filters.universityFilter !== 'all' && student.university_id !== filters.universityFilter) return false;
+      // Filtro por universidade - corrigido para tratar valores null
+      if (filters.universityFilter !== 'all' && student.university_id !== filters.universityFilter) {
+        // Se o filtro não é 'all' e o student.university_id é null, não filtrar
+        if (student.university_id !== null) {
+          console.log(`🔍 Student ${student.full_name} filtered out by university filter: ${student.university_id} !== ${filters.universityFilter}`);
+          return false;
+        }
+      }
       
       // Filtro por período
       if (filters.dateRange.start || filters.dateRange.end) {
@@ -673,13 +801,23 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         const startDate = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
         const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
         
-        if (startDate && studentDate < startDate) return false;
-        if (endDate && studentDate > endDate) return false;
+        if (startDate && studentDate < startDate) {
+          console.log(`🔍 Student ${student.full_name} filtered out by start date: ${studentDate} < ${startDate}`);
+          return false;
+        }
+        if (endDate && studentDate > endDate) {
+          console.log(`🔍 Student ${student.full_name} filtered out by end date: ${studentDate} > ${endDate}`);
+          return false;
+        }
       }
       
       // Filtro por status
-      if (filters.statusFilter !== 'all' && student.status !== filters.statusFilter) return false;
+      if (filters.statusFilter !== 'all' && student.status !== filters.statusFilter) {
+        console.log(`🔍 Student ${student.full_name} filtered out by status filter: ${student.status} !== ${filters.statusFilter}`);
+        return false;
+      }
       
+      console.log(`🔍 Student ${student.full_name} passed all filters`);
       return true;
     });
 
@@ -734,6 +872,36 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
   // Obter dados filtrados e ordenados
   const { filteredSellers, filteredStudents } = getFilteredAndSortedData();
+  
+  // Debug: verificar estado dos dados
+  console.log('🔍 Data state check:', {
+    totalStudents: students.length,
+    totalSellers: sellers.length,
+    filteredStudents: filteredStudents.length,
+    filteredSellers: filteredSellers.length,
+    filters: filters
+  });
+  
+  // Debug: verificar se há estudantes com referred_by_seller_id
+  if (students.length > 0) {
+    console.log('🔍 Students with referred_by_seller_id:', students.map((s: any) => ({
+      name: s.full_name,
+      referred_by_seller_id: s.referred_by_seller_id,
+      type: typeof s.referred_by_seller_id
+    })));
+  }
+  
+  // Debug: verificar se há problemas nos filtros
+  if (filteredStudents.length === 0 && students.length > 0) {
+    console.log('🔍 WARNING: All students filtered out!');
+    console.log('🔍 Filter details:', filters);
+    console.log('🔍 First few students:', students.slice(0, 3).map((s: any) => ({
+      name: s.full_name,
+      referred_by_seller_id: s.referred_by_seller_id,
+      status: s.status,
+      created_at: s.created_at
+    })));
+  }
 
   // Resetar filtros
   const resetFilters = () => {
@@ -777,6 +945,161 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       style: 'currency',
       currency: 'USD'
     }).format(amount || 0);
+  };
+
+  // Função para calcular a receita real baseada nas taxas pagas
+  const calculateStudentRevenue = async (studentId: string, profileId: string) => {
+    try {
+      console.log('🔍 Calculating revenue for student:', studentId, 'profile:', profileId);
+      
+      let totalRevenue = 0;
+      
+      // Buscar aplicação de bolsa do estudante
+      const { data: applicationData, error: applicationError } = await supabase
+        .from('scholarship_applications')
+        .select(`
+          id,
+          is_application_fee_paid,
+          is_scholarship_fee_paid,
+          scholarships (
+            application_fee_amount
+          )
+        `)
+        .eq('student_id', profileId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (applicationError) {
+        console.log('🔍 No scholarship application found, using fallback calculation');
+      } else {
+        console.log('🔍 Application data found:', applicationData);
+        
+        // Application Fee (variável - definida pela universidade)
+        if (applicationData.is_application_fee_paid) {
+          const appFeeAmount = applicationData.scholarships?.[0]?.application_fee_amount || 35000; // Default $350.00
+          const appFeeUSD = Number(appFeeAmount) / 100; // Converter de centavos para dólares
+          totalRevenue += appFeeUSD;
+          console.log(`🔍 Application fee added: $${appFeeUSD}`);
+        }
+        
+        // Scholarship Fee (fixa - $850)
+        if (applicationData.is_scholarship_fee_paid) {
+          totalRevenue += 850;
+          console.log('🔍 Scholarship fee added: $850');
+        }
+      }
+      
+      // Buscar perfil do usuário para taxas fixas
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select(`
+          has_paid_selection_process_fee,
+          has_paid_i20_control_fee
+        `)
+        .eq('id', profileId)
+        .single();
+
+      if (!profileError && profileData) {
+        console.log('🔍 Profile data found:', profileData);
+        
+        // Selection Process Fee (fixa - $600)
+        if (profileData.has_paid_selection_process_fee) {
+          totalRevenue += 600;
+          console.log('🔍 Selection process fee added: $600');
+        }
+        
+        // I-20 Control Fee (fixa - $1,250)
+        if (profileData.has_paid_i20_control_fee) {
+          totalRevenue += 1250;
+          console.log('🔍 I-20 control fee added: $1,250');
+        }
+      }
+      
+      console.log(`🔍 Total revenue calculated for student ${studentId}: $${totalRevenue}`);
+      return totalRevenue;
+      
+    } catch (error) {
+      console.error('🔍 Error calculating student revenue:', error);
+      return 0;
+    }
+  };
+
+  // Funções para visualizar e baixar documentos
+  const handleViewDocument = (doc: any) => {
+    console.log('=== DEBUG handleViewDocument ===');
+    console.log('Documento recebido:', doc);
+    
+    // Verificação de segurança adicional
+    if (!doc || !doc.url) {
+      console.log('Documento ou url está vazio ou undefined');
+      return;
+    }
+    
+    console.log('url:', doc.url);
+    console.log('Tipo de url:', typeof doc.url);
+    
+    // Converter a URL do storage para URL pública se necessário
+    try {
+      // Se url é um path do storage, converter para URL pública
+      if (doc.url && !doc.url.startsWith('http')) {
+        const publicUrl = supabase.storage
+          .from('student-documents')
+          .getPublicUrl(doc.url)
+          .data.publicUrl;
+        
+        console.log('URL pública gerada:', publicUrl);
+        window.open(publicUrl, '_blank');
+      } else {
+        // Se já é uma URL completa, usar diretamente
+        console.log('Usando URL existente:', doc.url);
+        window.open(doc.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Erro ao gerar URL pública:', error);
+      // Fallback: tentar usar a URL original
+      window.open(doc.url, '_blank');
+    }
+  };
+
+  const handleDownloadDocument = async (doc: any) => {
+    if (!doc.url) return;
+    
+    try {
+      console.log('=== DEBUG handleDownloadDocument ===');
+      console.log('Documento para download:', doc);
+      console.log('url:', doc.url);
+      
+      // Se url é um path do storage, converter para URL pública
+      let downloadUrl = doc.url;
+      if (doc.url && !doc.url.startsWith('http')) {
+        const publicUrl = supabase.storage
+          .from('student-documents')
+          .getPublicUrl(doc.url)
+          .data.publicUrl;
+        downloadUrl = publicUrl;
+        console.log('URL pública para download:', downloadUrl);
+      }
+      
+      // Fazer download usando a URL pública
+      const response = await fetch(downloadUrl);
+      if (!response.ok) {
+        throw new Error('Failed to download document: ' + response.statusText);
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${doc.type || 'document'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Erro no download:', err);
+      alert(`Failed to download document: ${err.message}`);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -1122,21 +1445,29 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                       </p>
                                     )}
                                     
-                                    {/* Apenas botões de visualização */}
-                                    <div className="flex items-center space-x-2 mt-3">
-                                      {doc.url && (
-                                        <button className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                          View Document
-                                        </button>
-                                      )}
-                                      <button className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                        Download
-                                      </button>
-                                    </div>
+                                                                         {/* Botões de visualização e download */}
+                                     <div className="flex items-center space-x-2 mt-3">
+                                       {doc.url && (
+                                         <button 
+                                           onClick={() => handleViewDocument(doc)}
+                                           className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                         >
+                                           View Document
+                                         </button>
+                                       )}
+                                       {doc.url && (
+                                         <button 
+                                           onClick={() => handleDownloadDocument(doc)}
+                                           className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                         >
+                                           Download
+                                         </button>
+                                       )}
+                                     </div>
                                   </div>
                                 </div>
                               </div>
-                              {index < studentDocuments.length - 1 && (
+                              {index < (studentDetails.documents?.length || 0) - 1 && (
                                 <div className="border-t border-slate-200"></div>
                               )}
                             </div>
@@ -1367,13 +1698,13 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                    </svg>
                                  </div>
                                  <div className="flex-1 min-w-0">
-                                   <p className="font-medium text-slate-900 capitalize">{doc.type || 'Document'}</p>
+                                   <p className="font-medium text-slate-900 capitalize">{doc.type || doc.document_type || 'Document'}</p>
                                    <div className="flex items-center space-x-2 mt-1">
                                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                        {doc.status || 'Pending'}
                                      </span>
                                      <span className="text-sm text-slate-500">
-                                       Document Type: <span className="font-medium text-slate-700">{doc.type || 'Document'}</span>
+                                       Document Type: <span className="font-medium text-slate-700">{doc.type || doc.document_type || 'Document'}</span>
                                      </span>
                                    </div>
                                    <p className="text-xs text-slate-400 mt-1">Document uploaded for university review</p>
@@ -1395,12 +1726,33 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                    {doc.status ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1) : 'Under Review'}
                                  </span>
                                  
-                                 {/* Apenas botões de visualização */}
-                                 <button className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                   Download
-                                 </button>
-                                 {doc.url && (
-                                   <button className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                 {/* Botões de visualização e download */}
+                                 {doc.file_url && (
+                                   <button 
+                                     onClick={() => {
+                                       if (doc.file_url) {
+                                         const link = document.createElement('a');
+                                         link.href = doc.file_url;
+                                         link.download = `${doc.type || 'document'}.pdf`;
+                                         document.body.appendChild(link);
+                                         link.click();
+                                         document.body.removeChild(link);
+                                       }
+                                     }}
+                                     className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                   >
+                                     Download
+                                   </button>
+                                 )}
+                                 {doc.file_url && (
+                                   <button 
+                                     onClick={() => {
+                                       if (doc.file_url) {
+                                         window.open(doc.file_url, '_blank');
+                                       }
+                                     }}
+                                     className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                   >
                                      View
                                    </button>
                                  )}
@@ -1740,9 +2092,31 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           {/* Lista de vendedores */}
           <div className="space-y-4">
             {filteredSellers.map((seller) => {
-              const sellerStudents = filteredStudents.filter(student => 
-                student.referred_by_seller_id === seller.id
-              );
+              console.log(`🔍 Processing seller: ${seller.name} (${seller.id})`);
+              console.log(`🔍 All filtered students:`, filteredStudents.map((s: any) => ({
+                name: s.full_name,
+                id: s.id,
+                referred_by_seller_id: s.referred_by_seller_id,
+                type: typeof s.referred_by_seller_id
+              })));
+              
+              const sellerStudents = filteredStudents.filter((student: any) => {
+                const matches = student.referred_by_seller_id === seller.id;
+                console.log(`🔍 Comparing: student.referred_by_seller_id (${student.referred_by_seller_id}, type: ${typeof student.referred_by_seller_id}) === seller.id (${seller.id}, type: ${typeof seller.id}) = ${matches}`);
+                if (!matches) {
+                  console.log(`🔍 Student ${student.full_name} (${student.id}) not matching seller ${seller.name} (${seller.id}) - referred_by_seller_id: ${student.referred_by_seller_id}`);
+                }
+                return matches;
+              });
+
+              console.log('🔍 Seller mapping debug:', {
+                sellerId: seller.id,
+                sellerName: seller.name,
+                sellerReferralCode: seller.referral_code,
+                totalStudents: filteredStudents.length,
+                matchingStudents: sellerStudents.length,
+                studentIds: sellerStudents.map(s => ({ id: s.id, referred_by: s.referred_by_seller_id, name: s.full_name }))
+              });
               
               return (
                 <div key={seller.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1770,7 +2144,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                         </div>
                         <div className="text-center">
                           <p className="text-sm text-slate-500">Revenue</p>
-                          <p className="text-2xl font-bold text-green-600">{formatCurrency(seller.total_revenue)}</p>
+                          <p className="text-2xl font-bold text-green-600">
+                            {formatCurrency(seller.total_revenue)}
+                          </p>
                         </div>
                         <div className="text-center">
                           <p className="text-sm text-slate-500">Registered</p>
@@ -1858,7 +2234,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <button
-                                      onClick={() => loadStudentDetails(student.id)}
+                                      onClick={() => loadStudentDetails(student.id, student.profile_id)}
                                       className="text-[#05294E] hover:text-[#041f38] flex items-center space-x-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                                     >
                                       <Eye className="h-4 w-4" />
