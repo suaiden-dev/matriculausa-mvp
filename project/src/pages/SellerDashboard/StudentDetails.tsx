@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 
 interface StudentInfo {
   student_id: string;
@@ -54,6 +55,10 @@ interface StudentInfo {
   has_paid_i20_control_fee?: boolean;
   student_process_type?: string;
   application_status?: string;
+  scholarship?: {
+    application_fee_amount?: number;
+    scholarship_fee_amount?: number;
+  };
 }
 
 interface FeePayment {
@@ -112,6 +117,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const TABS = [
     { id: 'details', label: 'Details', icon: User },
@@ -170,33 +176,56 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
         setFeeHistory(feesData || []);
       }
 
-      // Verificando aplicação de bolsa
-      const { data: applicationsList, error: listError } = await supabase
-        .from('scholarship_applications')
-        .select('id, status, created_at')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+             // Verificando aplicação de bolsa
+       const { data: applicationsList, error: listError } = await supabase
+         .from('scholarship_applications')
+         .select('id, status, created_at')
+         .eq('student_id', studentId)
+         .order('created_at', { ascending: false })
+         .limit(1);
 
-      if (applicationsList && applicationsList.length > 0) {
-        const latestApplication = applicationsList[0];
-        
-        const { data: appData, error: applicationError } = await supabase
-          .from('scholarship_applications')
-          .select('*')
-          .eq('id', latestApplication.id)
-          .single();
+       if (applicationsList && applicationsList.length > 0) {
+         const latestApplication = applicationsList[0];
+         
+         const { data: appData, error: applicationError } = await supabase
+           .from('scholarship_applications')
+           .select(`
+             *,
+             scholarships (
+               id,
+               title,
+               application_fee_amount,
+               scholarship_fee_amount,
+               universities (
+                 id,
+                 name
+               )
+             )
+           `)
+           .eq('id', latestApplication.id)
+           .single();
 
-        if (!applicationError) {
-          setScholarshipApplication(appData);
-        }
-      }
+         if (!applicationError) {
+           setScholarshipApplication(appData);
+           
+           // Atualizar studentInfo com os detalhes da bolsa
+           if (studentInfo && appData.scholarships) {
+             setStudentInfo(prev => prev ? {
+               ...prev,
+               scholarship: {
+                 application_fee_amount: appData.scholarships.application_fee_amount,
+                 scholarship_fee_amount: appData.scholarships.scholarship_fee_amount
+               }
+             } : null);
+           }
+           
+           // Carregar documentos imediatamente após definir scholarshipApplication
+           await loadStudentDocuments(appData.id);
+         }
+       }
 
-      // Carregar solicitações de documentos
-      await loadDocumentRequests();
-      
-      // Carregar documentos do estudante
-      await loadStudentDocuments();
+       // Carregar solicitações de documentos
+       await loadDocumentRequests();
 
     } catch (err) {
       console.error('❌ [STUDENT_DETAILS] Erro ao carregar detalhes do estudante:', err);
@@ -247,39 +276,81 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
     }
   }, [scholarshipApplication?.id, studentInfo?.university_name]);
 
-  const loadStudentDocuments = useCallback(async () => {
-    if (!scholarshipApplication?.id) {
+  const loadStudentDocuments = useCallback(async (applicationId?: string) => {
+    const targetId = applicationId || scholarshipApplication?.id;
+    if (!targetId) {
       return;
     }
 
     try {
-      // Primeiro, buscar as document_requests para esta aplicação
-      const { data: requests, error: requestsError } = await supabase
-        .from('document_requests')
-        .select('id')
-        .eq('scholarship_application_id', scholarshipApplication.id);
+      console.log('=== [STUDENT_DETAILS] Buscando documentos para aplicação:', targetId);
+      
+      // Usar a mesma abordagem do dashboard da universidade
+      // Buscar documentos através de document_request_uploads
+      const { data: uploads, error: uploadsError } = await supabase
+        .from('document_request_uploads')
+        .select(`
+          *,
+          document_requests!inner(
+            id,
+            title,
+            description,
+            created_at,
+            is_global,
+            university_id,
+            scholarship_application_id
+          )
+        `);
 
-      if (requestsError || !requests || requests.length === 0) {
+      if (uploadsError) {
+        console.error('❌ [STUDENT_DETAILS] Erro ao buscar uploads:', uploadsError);
+        return;
+      }
+
+      console.log('=== [STUDENT_DETAILS] Todos os uploads encontrados:', uploads);
+
+      if (!uploads || uploads.length === 0) {
+        console.log('=== [STUDENT_DETAILS] Nenhum upload encontrado');
         setStudentDocuments([]);
         return;
       }
 
-      // Agora buscar os documentos baseados nos IDs das document_requests
-      const requestIds = requests.map(r => r.id);
-      const { data, error } = await supabase
-        .from('document_request_uploads')
-        .select(`
-          *,
-          document_requests (
-            title,
-            description
-          )
-        `)
-        .in('document_request_id', requestIds);
+      // Filtrar uploads para esta aplicação específica
+      const applicationUploads = uploads.filter(upload => 
+        upload.document_requests?.scholarship_application_id === targetId
+      );
 
-      if (!error) {
-        setStudentDocuments(data || []);
-      }
+      console.log('=== [STUDENT_DETAILS] Uploads filtrados para esta aplicação:', applicationUploads);
+
+      // Formatar os documentos para exibição (igual ao dashboard da universidade)
+      const formattedDocuments = applicationUploads.map(upload => {
+        console.log('=== [STUDENT_DETAILS] Formatando upload:', upload);
+        
+        return {
+          id: upload.id,
+          document_type: upload.document_type || 'document',
+          file_url: upload.file_url,
+          document_url: upload.document_url,
+          status: upload.status || 'under_review',
+          uploaded_at: upload.uploaded_at || upload.created_at,
+          title: upload.document_requests?.title,
+          description: upload.document_requests?.description,
+          request_created_at: upload.document_requests?.created_at,
+          is_global: upload.document_requests?.is_global || false
+        };
+      });
+
+      console.log('=== [STUDENT_DETAILS] Documentos formatados:', formattedDocuments);
+
+      // Atualizar scholarshipApplication com os documentos
+      setScholarshipApplication(prev => prev ? {
+        ...prev,
+        documents: formattedDocuments
+      } : null);
+      
+      // Também definir studentDocuments para compatibilidade
+      setStudentDocuments(formattedDocuments);
+
     } catch (err) {
       console.error('❌ [STUDENT_DETAILS] Erro ao carregar documentos do estudante:', err);
     }
@@ -323,6 +394,135 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
       case 'rejected': return <XCircle className="h-4 w-4" />;
       case 'pending': return <Clock className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
+    }
+  };
+
+  // Função para buscar o documento mais recente por tipo
+  const latestDocByType = (type: string) => {
+    console.log('=== DEBUG latestDocByType ===');
+    console.log('Tipo buscado:', type);
+    console.log('scholarshipApplication?.documents:', scholarshipApplication?.documents);
+    console.log('studentDocuments:', studentDocuments);
+    
+    // Primeiro, tentar buscar nos documentos da aplicação
+    const docs = (scholarshipApplication as any)?.documents as any[] | undefined;
+    console.log('Documentos da aplicação:', docs);
+    
+    if (Array.isArray(docs) && docs.length > 0) {
+      // Buscar por document_type (campo principal)
+      let appDoc = docs.find((d) => d.document_type === type);
+      
+      // Se não encontrar, tentar por outros campos
+      if (!appDoc) {
+        appDoc = docs.find((d) => 
+          d.type === type ||
+          d.title?.toLowerCase().includes(type.toLowerCase()) ||
+          d.description?.toLowerCase().includes(type.toLowerCase())
+        );
+      }
+      
+      if (appDoc) {
+        console.log('Documento encontrado na aplicação:', appDoc);
+        return { 
+          id: appDoc.id || `${type}`, 
+          type, 
+          file_url: appDoc.file_url || appDoc.document_url || appDoc.url, 
+          status: appDoc.status || 'under_review',
+          uploaded_at: appDoc.uploaded_at || appDoc.created_at || null
+        };
+      }
+    }
+    
+    // Fallback: buscar nos documentos do estudante
+    if (Array.isArray(studentDocuments) && studentDocuments.length > 0) {
+      const fallbackDoc = studentDocuments.find((d) => 
+        d.document_type === type ||
+        d.type === type ||
+        d.title?.toLowerCase().includes(type.toLowerCase()) ||
+        d.description?.toLowerCase().includes(type.toLowerCase())
+      );
+      
+      if (fallbackDoc) {
+        console.log('Documento encontrado no fallback:', fallbackDoc);
+        return {
+          ...fallbackDoc,
+          type,
+          file_url: fallbackDoc.file_url || fallbackDoc.document_url,
+          uploaded_at: fallbackDoc.uploaded_at || fallbackDoc.created_at || null
+        };
+      }
+    }
+    
+    console.log('Nenhum documento encontrado para o tipo:', type);
+    return null;
+  };
+
+  // Informações dos documentos principais
+  const DOCUMENTS_INFO = [
+    {
+      key: 'passport',
+      label: 'Passport',
+      description: 'A valid copy of the student\'s passport. Used for identification and visa purposes.'
+    },
+    {
+      key: 'diploma',
+      label: 'High School Diploma',
+      description: 'Proof of high school graduation. Required for university admission.'
+    },
+    {
+      key: 'funds_proof',
+      label: 'Proof of Funds',
+      description: 'A bank statement or financial document showing sufficient funds for study.'
+    }
+  ];
+
+  // Funções para manipular documentos
+  const handleViewDocument = (doc: any) => {
+    console.log('=== DEBUG handleViewDocument ===');
+    console.log('Documento recebido:', doc);
+    
+    // Verificar se o documento existe e tem file_url
+    if (!doc || !doc.file_url) {
+      console.log('Documento ou file_url está vazio ou undefined');
+      console.log('Documento:', doc);
+      console.log('file_url:', doc?.file_url);
+      return;
+    }
+    
+    console.log('file_url:', doc.file_url);
+    console.log('Tipo de file_url:', typeof doc.file_url);
+    
+    // Converter a URL do storage para URL pública
+    try {
+      // Se file_url é um path do storage, converter para URL pública
+      if (doc.file_url && !doc.file_url.startsWith('http')) {
+        const publicUrl = supabase.storage
+          .from('document-attachments')
+          .getPublicUrl(doc.file_url)
+          .data.publicUrl;
+        
+        console.log('URL pública gerada:', publicUrl);
+        setPreviewUrl(publicUrl);
+      } else {
+        // Se já é uma URL completa, usar diretamente
+        console.log('Usando URL existente:', doc.file_url);
+        setPreviewUrl(doc.file_url);
+      }
+    } catch (error) {
+      console.error('Erro ao gerar URL pública:', error);
+      // Fallback: tentar usar a URL original
+      setPreviewUrl(doc.file_url);
+    }
+  };
+
+  const handleDownloadDocument = (doc: any) => {
+    if (doc?.file_url) {
+      const link = document.createElement('a');
+      link.href = doc.file_url;
+      link.download = `${doc.type || 'document'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -633,7 +833,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
                 </div>
               </div>
 
-              {/* Student Documents Section */}
+                            {/* Student Documents Section */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
@@ -642,13 +842,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
                     </svg>
                     Student Documents
                   </h2>
-                  <p className="text-slate-200 text-sm mt-1">View student submitted documents and their current status</p>
+                  <p className="text-slate-200 text-sm mt-1">Review each document and their current status</p>
                 </div>
                 <div className="p-6">
-                  {scholarshipApplication?.documents && scholarshipApplication.documents.length > 0 ? (
-                    <div className="space-y-2">
-                      {scholarshipApplication.documents.map((doc: any, index: number) => (
-                        <div key={doc.id || index}>
+                  <div className="space-y-2">
+                    {DOCUMENTS_INFO.map((doc, index) => {
+                      const d = latestDocByType(doc.key);
+                      const status = d?.status || 'not_submitted';
+                      
+                      return (
+                        <div key={doc.key}>
                           <div className="bg-white p-4">
                             <div className="flex items-start space-x-4">
                               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -658,52 +861,55 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-3 mb-1">
-                                  <p className="font-medium text-slate-900">{doc.document_type || 'Document'}</p>
+                                  <p className="font-medium text-slate-900">{doc.label}</p>
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                    doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                    doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-blue-100 text-blue-800'
+                                    status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    status === 'changes_requested' ? 'bg-red-100 text-red-800' :
+                                    status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-slate-100 text-slate-700'
                                   }`}>
-                                    {doc.status ? doc.status.charAt(0).toUpperCase() + doc.status.slice(1) : 'Submitted'}
+                                    {status === 'approved' ? 'Approved' :
+                                     status === 'changes_requested' ? 'Changes Requested' :
+                                     status === 'under_review' ? 'Under Review' :
+                                     d?.file_url ? 'Submitted' : 'Not Submitted'}
                                   </span>
                                 </div>
-                                <p className="text-sm text-slate-600">{doc.description || 'Document description not available'}</p>
-                                {doc.uploaded_at && (
+                                <p className="text-sm text-slate-600">{doc.description}</p>
+                                {d?.file_url && (
                                   <p className="text-xs text-slate-400 mt-1">
-                                    Uploaded: {formatDate(doc.uploaded_at)}
+                                    Uploaded: {d.uploaded_at ? formatDate(d.uploaded_at) : new Date().toLocaleDateString()}
                                   </p>
                                 )}
                                 
-                                {/* Apenas botões de visualização */}
+                                {/* Botões de ação */}
                                 <div className="flex items-center space-x-2 mt-3">
-                                  {doc.document_url && (
-                                    <button className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                                  {d?.file_url && (
+                                    <button 
+                                      onClick={() => handleViewDocument(d)}
+                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                    >
                                       View Document
                                     </button>
                                   )}
-                                  <button className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                                    Download
-                                  </button>
+                                  {d?.file_url && (
+                                    <button 
+                                      onClick={() => handleDownloadDocument(d)}
+                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                      Download
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
                           </div>
-                          {index < scholarshipApplication.documents.length - 1 && (
+                          {index < DOCUMENTS_INFO.length - 1 && (
                             <div className="border-t border-slate-200"></div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <p className="text-slate-600 font-medium">No documents uploaded yet</p>
-                      <p className="text-sm text-slate-500 mt-1">Documents will appear here when the student uploads them</p>
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -768,6 +974,92 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
                       <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* Fee Status Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r rounded-t-2xl from-slate-500 to-slate-600 px-6 py-4">
+                  <h3 className="text-lg font-semibold text-white">Fee Status</h3>
+                </div>
+                <div className="p-6">
+                                     <div className="space-y-3">
+                     {/* Selection Process Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center justify-between w-full">
+                         <div className="flex items-center space-x-3">
+                           <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_selection_process_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                           <span className="text-sm font-medium text-slate-900">Selection Process Fee</span>
+                         </div>
+                         <div className="flex flex-col items-end">
+                           <span className={`text-sm font-medium ${studentInfo?.has_paid_selection_process_fee ? 'text-green-700' : 'text-red-700'}`}>
+                             {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
+                           </span>
+                           {studentInfo?.has_paid_selection_process_fee && (
+                             <span className="text-xs text-slate-500">$600.00</span>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* Application Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center space-x-3">
+                         <div className={`w-3 h-3 rounded-full ${studentInfo?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                         <span className="text-sm font-medium text-slate-900">Application Fee</span>
+                       </div>
+                       <div className="flex flex-col items-end">
+                         <span className={`text-sm font-medium ${studentInfo?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                           {studentInfo?.is_application_fee_paid ? 'Paid' : 'Pending'}
+                         </span>
+                         {studentInfo?.is_application_fee_paid && (
+                           <span className="text-xs text-slate-500">
+                             ${studentInfo?.scholarship?.application_fee_amount ? 
+                               (Number(studentInfo.scholarship.application_fee_amount) / 100).toFixed(2) : 
+                               '350.00'}
+                           </span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* Scholarship Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center space-x-3">
+                         <div className={`w-3 h-3 rounded-full ${studentInfo?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                         <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
+                       </div>
+                       <div className="flex flex-col items-end">
+                         <span className={`text-sm font-medium ${studentInfo?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                           {studentInfo?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
+                         </span>
+                         {studentInfo?.is_scholarship_fee_paid && (
+                           <span className="text-xs text-slate-500">
+                             ${studentInfo?.scholarship?.scholarship_fee_amount ? 
+                               (Number(studentInfo.scholarship.scholarship_fee_amount) / 100).toFixed(2) : 
+                               '850.00'}
+                           </span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* I-20 Control Fee Status */}
+                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                       <div className="flex items-center justify-between w-full">
+                         <div className="flex items-center space-x-3">
+                           <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_i20_control_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                           <span className="text-sm font-medium text-slate-900">I-20 Control Fee</span>
+                         </div>
+                         <div className="flex flex-col items-end">
+                           <span className={`text-sm font-medium ${studentInfo?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
+                             {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
+                           </span>
+                           {studentInfo?.has_paid_i20_control_fee && (
+                             <span className="text-xs text-slate-500">$1,250.00</span>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
                 </div>
               </div>
             </div>
@@ -937,10 +1229,15 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, onRefresh })
               </div>
             </div>
           </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default StudentDetails;
+                 )}
+       </div>
+       
+       {/* Modal de visualização de documentos */}
+       {previewUrl && (
+         <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+       )}
+     </div>
+   );
+ };
+ 
+ export default StudentDetails;
