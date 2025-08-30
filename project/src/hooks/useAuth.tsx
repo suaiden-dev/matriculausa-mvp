@@ -45,6 +45,7 @@ export interface UserProfile {
   // Referral codes
   affiliate_code?: string | null; // Matricula Rewards code
   seller_referral_code?: string | null; // Seller referral code
+
   // ... outras colunas se existirem
 }
 

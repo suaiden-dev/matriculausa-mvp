@@ -98,6 +98,66 @@
     -ms-user-select: none !important;
   }
   
+  /* CSS específico para o DocumentViewerModal - garantir overlay completo */
+  .document-viewer-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background-color: rgba(0, 0, 0, 0.75) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    /* ✅ CORREÇÃO: Garantir que funcione mesmo em containers com overflow */
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+    will-change: transform !important;
+  }
+  
+  /* Garantir que o modal esteja acima de todos os outros elementos */
+  .document-viewer-overlay > div {
+    z-index: 10000 !important;
+    position: relative !important;
+    /* ✅ CORREÇÃO: Adicionar transform para forçar contexto de empilhamento */
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+  }
+  
+  /* Forçar o overlay a cobrir toda a viewport */
+  .document-viewer-overlay::before {
+    content: '';
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: rgba(0, 0, 0, 0.75) !important;
+    z-index: -1 !important;
+    /* ✅ CORREÇÃO: Adicionar transform para garantir cobertura completa */
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+  }
+  
+  /* ✅ NOVO: Forçar contexto de empilhamento no body quando modal estiver aberto */
+  body:has(.document-viewer-overlay) {
+    overflow: hidden !important;
+    position: relative !important;
+  }
+  
+  /* ✅ NOVO: Garantir que containers pais não interfiram com o modal */
+  .document-viewer-overlay {
+    /* Forçar criação de novo contexto de empilhamento */
+    isolation: isolate !important;
+    contain: layout style paint !important;
+  }
+  
   /* Prevenir quebras de layout em containers de arquivo */
   .file-upload-container {
     position: relative !important;

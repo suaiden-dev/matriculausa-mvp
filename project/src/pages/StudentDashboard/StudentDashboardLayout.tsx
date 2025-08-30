@@ -410,7 +410,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 bg-slate-50 px-3 sm:px-6 lg:px-10 pb-6 max-w-full overflow-y-auto overflow-x-hidden min-h-0">
+        <main className="flex-1 bg-slate-50 px-3 sm:px-6 lg:px-10 pb-6 max-w-full min-h-0">
           {children}
         </main>
       </div>

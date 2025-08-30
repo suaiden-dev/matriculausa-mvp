@@ -33,11 +33,11 @@ const ManualReview: React.FC = () => {
       setFieldErrors(e || {});
       setPrevDocs(Array.isArray(d) ? d : []);
       
-      // If a field had error, default to not using previous file
+      // Se há erros, forçar checkboxes como desmarcados para exigir escolha explícita
       const usePrevState = {
-        passport: e?.passport ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'passport')),
-        diploma: e?.diploma ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'diploma')),
-        funds_proof: e?.funds_proof ? false : !!(Array.isArray(d) && d.find((x: any) => x.type === 'funds_proof')),
+        passport: false, // Sempre false por padrão quando há erros
+        diploma: false,  // Sempre false por padrão quando há erros
+        funds_proof: false, // Sempre false por padrão quando há erros
       };
       
       console.log('usePrev state:', usePrevState);
@@ -112,6 +112,12 @@ const ManualReview: React.FC = () => {
         newFileUrls[key] = fileUrl;
       }
 
+      // Verificar se TODOS os 3 documentos foram selecionados (checkbox marcado OU novo arquivo)
+      const allDocumentsSelected = Object.keys(usePrev).every(key => usePrev[key] || newFileUrls[key]);
+      if (!allDocumentsSelected) {
+        throw new Error('Please select ALL 3 documents to submit. Either check "Use current file" for existing documents or upload new replacement files.');
+      }
+
       if (confirmAllTrue) {
         // Mark documents as pending manual review
         await supabase
@@ -129,10 +135,18 @@ const ManualReview: React.FC = () => {
 
           const scholarshipIds: string[] = [];
           {
-            const { data: cartRows } = await supabase
+            console.log('🔍 [manual-review] Buscando carrinho para user_id:', user.id);
+            const { data: cartRows, error: cartError } = await supabase
               .from('user_cart')
               .select('scholarship_id')
               .eq('user_id', user.id);
+            
+            if (cartError) {
+              console.error('❌ [manual-review] Erro ao buscar carrinho:', cartError);
+            } else {
+              console.log('✅ [manual-review] Carrinho encontrado:', cartRows);
+            }
+            
             if (Array.isArray(cartRows)) {
               for (const row of cartRows) {
                 if (row?.scholarship_id && !scholarshipIds.includes(row.scholarship_id)) {
@@ -141,6 +155,7 @@ const ManualReview: React.FC = () => {
               }
             }
           }
+          console.log('🔍 [manual-review] Scholarship IDs encontrados:', scholarshipIds);
           if (scholarshipIds.length === 0 && (userProfile?.selected_scholarship_id || profile?.selected_scholarship_id)) {
             const sel = userProfile?.selected_scholarship_id || profile?.selected_scholarship_id;
             if (sel) scholarshipIds.push(sel as string);
@@ -158,7 +173,15 @@ const ManualReview: React.FC = () => {
                 let applicationId: string | null = existingApp?.id || null;
                 let currentDocs: any[] = (existingApp as any)?.documents || [];
                 if (!applicationId) {
-                  const { data: newApp } = await supabase
+                  console.log('🔍 [manual-review] Criando nova aplicação para scholarship_id:', scholarshipId);
+                  console.log('🔍 [manual-review] Dados da aplicação:', {
+                    student_id: profile.id,
+                    scholarship_id: scholarshipId,
+                    status: 'pending',
+                    student_process_type: localStorage.getItem('studentProcessType') || null
+                  });
+                  
+                  const { data: newApp, error: insertError } = await supabase
                     .from('scholarship_applications')
                     .insert({
                       student_id: profile.id,
@@ -168,10 +191,23 @@ const ManualReview: React.FC = () => {
                     })
                     .select('id, documents')
                     .single();
-                  applicationId = newApp?.id || null;
-                  currentDocs = (newApp as any)?.documents || [];
+                  
+                  if (insertError) {
+                    console.error('❌ [manual-review] Erro ao criar aplicação:', insertError);
+                    console.error('❌ [manual-review] Detalhes do erro:', {
+                      code: insertError.code,
+                      message: insertError.message,
+                      details: insertError.details,
+                      hint: insertError.hint
+                    });
+                  } else {
+                    console.log('✅ [manual-review] Aplicação criada com sucesso:', newApp);
+                    applicationId = newApp?.id || null;
+                    currentDocs = (newApp as any)?.documents || [];
+                  }
                 }
                 if (applicationId) {
+                  console.log('🔍 [manual-review] Atualizando aplicação com documentos:', applicationId);
                   const finalDocs = ['passport','diploma','funds_proof']
                     .map((k) => {
                       const fromPrev = docByType(k)?.url || (appDocs.find((d:any)=>d.type===k)?.url);
@@ -183,26 +219,46 @@ const ManualReview: React.FC = () => {
                       return { type: k, url, uploaded_at: new Date().toISOString(), status };
                     })
                     .filter(Boolean);
+                  
+                  console.log('🔍 [manual-review] Documentos finais a serem salvos:', finalDocs);
+                  
                   if (finalDocs.length > 0) {
-                    await supabase
+                    const { error: updateError } = await supabase
                       .from('scholarship_applications')
                       .update({ documents: finalDocs })
                       .eq('id', applicationId);
+                    
+                    if (updateError) {
+                      console.error('❌ [manual-review] Erro ao atualizar documentos da aplicação:', updateError);
+                    } else {
+                      console.log('✅ [manual-review] Documentos da aplicação atualizados com sucesso');
+                    }
                   }
                 }
               }
             } else {
               // Fallback: se não houver carrinho/seleção, usa a aplicação mais recente
-              const { data: latestApp } = await supabase
+              console.log('🔍 [manual-review] Fallback: buscando aplicação mais recente para profile.id:', profile.id);
+              const { data: latestApp, error: latestAppError } = await supabase
                 .from('scholarship_applications')
                 .select('id, documents')
                 .eq('student_id', profile.id)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
+              
+              if (latestAppError) {
+                console.error('❌ [manual-review] Erro ao buscar aplicação mais recente:', latestAppError);
+              } else if (latestApp) {
+                console.log('✅ [manual-review] Aplicação mais recente encontrada:', latestApp);
+              } else {
+                console.log('⚠️ [manual-review] Nenhuma aplicação encontrada para o usuário');
+              }
+              
               const applicationId = (latestApp as any)?.id || null;
               const currentDocs: any[] = (latestApp as any)?.documents || [];
               if (applicationId) {
+                console.log('🔍 [manual-review] Fallback: atualizando aplicação com documentos:', applicationId);
                 const finalDocs = ['passport','diploma','funds_proof']
                   .map((k) => {
                     const fromPrev = docByType(k)?.url || (appDocs.find((d:any)=>d.type===k)?.url);
@@ -214,11 +270,20 @@ const ManualReview: React.FC = () => {
                     return { type: k, url, uploaded_at: new Date().toISOString(), status };
                   })
                   .filter(Boolean);
+                
+                console.log('🔍 [manual-review] Fallback: documentos finais a serem salvos:', finalDocs);
+                
                 if (finalDocs.length > 0) {
-                  await supabase
+                  const { error: updateError } = await supabase
                     .from('scholarship_applications')
                     .update({ documents: finalDocs })
                     .eq('id', applicationId);
+                  
+                  if (updateError) {
+                    console.error('❌ [manual-review] Fallback: erro ao atualizar documentos da aplicação:', updateError);
+                  } else {
+                    console.log('✅ [manual-review] Fallback: documentos da aplicação atualizados com sucesso');
+                  }
                 }
               }
             }
@@ -461,8 +526,15 @@ const ManualReview: React.FC = () => {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={submitting || (!confirmAllTrue && !Object.entries(files).some(([k, f]) => !usePrev[k] && f))}
+            disabled={submitting || !confirmAllTrue || !Object.keys(usePrev).every(key => usePrev[key] || files[key])}
             className="px-8 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            title={
+              !confirmAllTrue 
+                ? "Please check the Declaration of Accuracy" 
+                : !Object.keys(usePrev).every(key => usePrev[key] || files[key])
+                ? "Please select ALL 3 documents to submit (either check 'Use current file' or upload new files)"
+                : ""
+            }
           >
             {submitting ? (
               <span className="flex items-center justify-center gap-2">

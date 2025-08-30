@@ -47,11 +47,12 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
       }
       setError(null);
       
-      // Load university data
+      // Load university data - ensure only one result
       const { data: universityData, error: universityError } = await supabase
         .from('universities')
         .select('*')
         .eq('user_id', user.id)
+        .limit(1)
         .maybeSingle();
 
       if (universityError) throw universityError;

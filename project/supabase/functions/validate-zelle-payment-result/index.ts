@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
         }
 
         // Se for i20_control, atualizar perfil do usuário
-        if (payment.fee_type === 'i20_control') {
+        if (payment.fee_type === 'i20_control' || payment.fee_type === 'i-20_control_fee') {
           const { error: profileError } = await supabase
             .from('user_profiles')
             .update({ 

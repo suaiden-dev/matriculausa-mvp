@@ -1868,6 +1868,7 @@
         "downloadTransferForm": "Download Transfer Form",
         "view": "View",
         "enrolledMessage": "You have been enrolled! Check your dashboard for next steps.",
+        "noFilesUploadedYet": "No files uploaded yet.",
         "documentRequestsDescription": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
         "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."
       },

@@ -33,7 +33,7 @@ interface PaymentRecord {
   university_name: string;
   scholarship_id?: string;
   scholarship_title?: string;
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control_fee';
   amount: number;
   status: 'paid' | 'pending' | 'failed';
   payment_date?: string;
@@ -60,7 +60,7 @@ const FEE_TYPES = [
   { value: 'selection_process', label: 'Selection Process Fee', color: 'bg-blue-100 text-blue-800' },
   { value: 'application', label: 'Application Fee', color: 'bg-green-100 text-green-800' },
   { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-blue-100 text-[#05294E]' },
-  { value: 'i20_control', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
+  { value: 'i20_control_fee', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
 ];
 
 const STATUS_OPTIONS = [
@@ -743,7 +743,7 @@ const PaymentManagement = (): React.JSX.Element => {
           university_name: universityName,
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
-          fee_type: 'i20_control',
+          fee_type: 'i20_control_fee',
           amount: 125000, // $1,250.00 em centavos
           status: 'pending',
           created_at: app.created_at
@@ -830,8 +830,8 @@ const PaymentManagement = (): React.JSX.Element => {
             university_name: 'Stanford University',
             scholarship_id: 'sample-scholarship-3',
             scholarship_title: 'Business Leadership Scholarship',
-            fee_type: 'i20_control',
-            amount: 150,
+            fee_type: 'i20_control_fee',
+            amount: 125000, // $1,250.00 em centavos
             status: 'pending',
             created_at: '2024-01-25T11:00:00Z'
           }

@@ -471,12 +471,22 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
     // eslint-disable-next-line
   }, [requests]);
 
+  // Função utilitária para extrair caminho relativo da URL completa
+  const getRelativePath = (fullUrl: string) => {
+    const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+    if (fullUrl.startsWith(baseUrl)) {
+      return fullUrl.replace(baseUrl, '');
+    }
+    return fullUrl; // Se já for relativo
+  };
+
   // Gerar signedUrl para acceptance_letter_url
   useEffect(() => {
     const fetchSignedUrls = async () => {
       if (acceptanceLetter?.acceptance_letter_url && !acceptanceLetterSignedUrls['acceptance_letter_url']) {
         setLoadingAcceptanceUrls(prev => ({ ...prev, acceptance_letter_url: true }));
-        const { data, error } = await supabase.storage.from('document-attachments').createSignedUrl(acceptanceLetter.acceptance_letter_url, 60 * 60);
+        const filePath = getRelativePath(acceptanceLetter.acceptance_letter_url);
+        const { data, error } = await supabase.storage.from('document-attachments').createSignedUrl(filePath, 60 * 60);
         setAcceptanceLetterSignedUrls(prev => ({ ...prev, acceptance_letter_url: error ? null : data.signedUrl }));
         setLoadingAcceptanceUrls(prev => ({ ...prev, acceptance_letter_url: false }));
       }
@@ -737,7 +747,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
           {!isSchool && (
             <div className="flex flex-col items-center gap-4">
 
-              {acceptanceLetter && acceptanceLetter.acceptance_letter_status === 'approved' ? (
+              {acceptanceLetter && (acceptanceLetter.acceptance_letter_status === 'approved' || acceptanceLetter.acceptance_letter_status === 'sent') ? (
                 <div className="text-center">
                   <div className="mb-4">
                     <span className="px-6 py-3 bg-green-100 text-green-800 border border-green-300 rounded-xl text-base font-semibold">
@@ -759,9 +769,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                             console.log('File URL:', acceptanceLetter.acceptance_letter_url);
                             
                             // Gerar signed URL diretamente
+                            const filePath = getRelativePath(acceptanceLetter.acceptance_letter_url);
                             const { data, error } = await supabase.storage
                               .from('document-attachments')
-                              .createSignedUrl(acceptanceLetter.acceptance_letter_url, 60 * 60);
+                              .createSignedUrl(filePath, 60 * 60);
                             
                             if (error) {
                               console.error('Erro ao gerar signed URL:', error);
@@ -815,9 +826,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                             console.log('File URL:', acceptanceLetter.acceptance_letter_url);
                             
                             // Gerar signed URL diretamente
+                            const filePath = getRelativePath(acceptanceLetter.acceptance_letter_url);
                             const { data, error } = await supabase.storage
                               .from('document-attachments')
-                              .createSignedUrl(acceptanceLetter.acceptance_letter_url, 60 * 60);
+                              .createSignedUrl(filePath, 60 * 60);
                             
                             if (error) {
                               console.error('Erro ao gerar signed URL:', error);

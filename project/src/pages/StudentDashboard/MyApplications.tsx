@@ -82,6 +82,21 @@ const MyApplications: React.FC = () => {
     }));
   };
 
+  // Função para verificar se há documentos rejeitados e abrir automaticamente o checklist
+  const checkAndOpenRejectedDocuments = (application: ApplicationWithScholarship) => {
+    const docs = parseApplicationDocuments((application as any).documents);
+    const hasRejectedDocuments = docs.some(doc => 
+      (doc.status || '').toLowerCase() === 'changes_requested' || 
+      (doc.status || '').toLowerCase() === 'rejected'
+    );
+    
+    if (hasRejectedDocuments && !openChecklists[application.id]) {
+      setOpenChecklists(prev => ({
+        ...prev,
+        [application.id]: true
+      }));
+    }
+  };
 
   useEffect(() => {
     setUserProfileId(userProfile?.id || null);
@@ -108,6 +123,12 @@ const MyApplications: React.FC = () => {
           if (isMounted) setError('Erro ao buscar aplicações.');
         } else {
           if (isMounted) setApplications(data || []);
+          // Verificar e abrir automaticamente checklists de documentos rejeitados
+          if (data && data.length) {
+            data.forEach(application => {
+              checkAndOpenRejectedDocuments(application);
+            });
+          }
           // Buscar uploads de Document Requests do aluno e agrupar por aplicação
           if (data && data.length && user?.id) {
             try {
