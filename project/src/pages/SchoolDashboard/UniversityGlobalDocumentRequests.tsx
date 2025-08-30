@@ -82,8 +82,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
 
   // Carrega os requests globais da universidade logada
   useEffect(() => {
-    if (userProfile === undefined) return; // contexto ainda carregando
-    if (!userProfile?.university_id) {
+    if (!university?.id) {
       setLoading(false);
       setRequests([]);
       return;
@@ -95,7 +94,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
         .from('document_requests')
         .select('*')
         .eq('is_global', true)
-        .eq('university_id', userProfile.university_id)
+        .eq('university_id', university.id)
         .order('created_at', { ascending: false });
       console.log('[DEBUG] Requests retornados:', data);
       if (error) setError('Failed to fetch document requests');
@@ -103,10 +102,10 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
       setLoading(false);
     };
     fetchRequests();
-  }, [userProfile?.university_id, userProfile]);
+  }, [university?.id]);
 
   const handleNewRequest = async () => {
-    console.log('handleNewRequest called', { userProfile, newRequest, university });
+    console.log('handleNewRequest called', { university, newRequest });
     
     // Verificar se a universidade está aprovada
     if (!isUniversityApproved) {
@@ -114,8 +113,8 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
       return;
     }
     
-    if (!userProfile?.university_id || !newRequest.title) {
-      console.log('Blocked: missing university_id or title', { userProfile, newRequest });
+    if (!university?.id || !newRequest.title) {
+      console.log('Blocked: missing university_id or title', { university, newRequest });
       return;
     }
     setCreating(true);
@@ -134,9 +133,9 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
       const payload = {
         title: newRequest.title,
         description: newRequest.description,
-        university_id: userProfile.university_id,
+        university_id: university.id,
         is_global: true,
-        created_by: userProfile.user_id,
+        created_by: userProfile?.user_id || university.user_id, // Usar university.user_id como fallback
         scholarship_application_id: null,
         applicable_student_types: newRequest.applicable_student_types,
         attachment_url
@@ -171,7 +170,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
         .from('document_requests')
         .select('*')
         .eq('is_global', true)
-        .eq('university_id', userProfile.university_id)
+        .eq('university_id', university.id)
         .order('created_at', { ascending: false });
       setRequests(updated || []);
       if (fetchError) setError('Failed to refresh list: ' + fetchError.message);
@@ -323,7 +322,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
         )}
 
         {/* No University State */}
-        {!loading && !userProfile?.university_id && requests.length === 0 && (
+        {!loading && !university?.id && requests.length === 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,7 +334,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
         )}
 
         {/* Empty State */}
-        {!loading && requests.length === 0 && userProfile?.university_id && (
+        {!loading && requests.length === 0 && university?.id && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -653,8 +652,8 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                       .update(updatePayload)
                       .eq('id', editingRequest.id)
                       .eq('is_global', true)
-                      .eq('university_id', userProfile?.university_id || '')
-                      .eq('created_by', userProfile?.user_id || '');
+                      .eq('university_id', university?.id || '')
+                      .eq('created_by', userProfile?.user_id || university?.user_id || '');
                     if (updError) {
                       setError('Failed to update request: ' + updError.message);
                       setCreating(false);
@@ -665,7 +664,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                       .from('document_requests')
                       .select('*')
                       .eq('is_global', true)
-                      .eq('university_id', userProfile?.university_id)
+                      .eq('university_id', university?.id)
                       .order('created_at', { ascending: false });
                     setRequests(updated || []);
                     setEditingRequest(null);

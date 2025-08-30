@@ -110,11 +110,44 @@ export class UniversityPaymentRequestService {
       const requestsWithUsers = await Promise.all(
         data.map(async (request) => {
           try {
-            const { data: userData } = await supabase
-              .from('profiles')
-              .select('full_name, email')
-              .eq('id', request.requested_by)
-              .single();
+            // CORREÇÃO: Buscar primeiro na tabela auth.users (onde está o email real)
+            // e depois na user_profiles como fallback
+            let userData = null;
+            
+            try {
+              // Primeiro tentar buscar na tabela auth.users
+              const { data: authUserData } = await supabase
+                .from('auth.users')
+                .select('email, raw_user_meta_data')
+                .eq('id', request.requested_by)
+                .single();
+              
+              if (authUserData) {
+                userData = {
+                  full_name: authUserData.raw_user_meta_data?.full_name || authUserData.email,
+                  email: authUserData.email
+                };
+              }
+            } catch (authError) {
+              console.warn('⚠️ [Service] Failed to fetch from auth.users:', authError);
+            }
+            
+            // Se não encontrou na auth.users, tentar na user_profiles
+            if (!userData) {
+              try {
+                const { data: profileUserData } = await supabase
+                  .from('user_profiles')
+                  .select('full_name, email')
+                  .eq('user_id', request.requested_by)
+                  .single();
+                
+                if (profileUserData) {
+                  userData = profileUserData;
+                }
+              } catch (profileError) {
+                console.warn('⚠️ [Service] Failed to fetch from user_profiles:', profileError);
+              }
+            }
 
             return {
               ...request,
@@ -159,11 +192,42 @@ export class UniversityPaymentRequestService {
       
       // Get user details separately since requested_by is a reference to auth.users
       try {
-        const { data: userData } = await supabase
-          .from('profiles')
-          .select('full_name, email')
-          .eq('id', data.requested_by)
-          .single();
+        let userData = null;
+        
+        try {
+          // Primeiro tentar buscar na tabela auth.users
+          const { data: authUserData } = await supabase
+            .from('auth.users')
+            .select('email, raw_user_meta_data')
+            .eq('id', data.requested_by)
+            .single();
+          
+          if (authUserData) {
+            userData = {
+              full_name: authUserData.raw_user_meta_data?.full_name || authUserData.email,
+              email: authUserData.email
+            };
+          }
+        } catch (authError) {
+          console.warn('⚠️ [Service] Failed to fetch from auth.users:', authError);
+        }
+        
+        // Se não encontrou na auth.users, tentar na user_profiles
+        if (!userData) {
+          try {
+            const { data: profileUserData } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', data.requested_by)
+              .single();
+            
+            if (profileUserData) {
+              userData = profileUserData;
+            }
+          } catch (profileError) {
+            console.warn('⚠️ [Service] Failed to fetch from user_profiles:', profileError);
+          }
+        }
         
         return {
           ...data,
@@ -310,11 +374,42 @@ export class UniversityPaymentRequestService {
       const requestsWithUsers = await Promise.all(
         data.map(async (request) => {
           try {
-            const { data: userData } = await supabase
-              .from('profiles')
-              .select('full_name, email')
-              .eq('id', request.requested_by)
-              .single();
+            let userData = null;
+            
+            try {
+              // Primeiro tentar buscar na tabela auth.users
+              const { data: authUserData } = await supabase
+                .from('auth.users')
+                .select('email, raw_user_meta_data')
+                .eq('id', request.requested_by)
+                .single();
+              
+              if (authUserData) {
+                userData = {
+                  full_name: authUserData.raw_user_meta_data?.full_name || authUserData.email,
+                  email: authUserData.email
+                };
+              }
+            } catch (authError) {
+              console.warn('⚠️ [Service] Failed to fetch from auth.users:', authError);
+            }
+            
+            // Se não encontrou na auth.users, tentar na user_profiles
+            if (!userData) {
+              try {
+                const { data: profileUserData } = await supabase
+                  .from('user_profiles')
+                  .select('full_name, email')
+                  .eq('user_id', request.requested_by)
+                  .single();
+                
+                if (profileUserData) {
+                  userData = profileUserData;
+                }
+              } catch (profileError) {
+                console.warn('⚠️ [Service] Failed to fetch from user_profiles:', profileError);
+              }
+            }
 
             return {
               ...request,

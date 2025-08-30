@@ -104,7 +104,7 @@ const PaymentManagement = (): React.JSX.Element => {
   const [loadingUniversityRequests, setLoadingUniversityRequests] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UniversityPaymentRequest | null>(null);
   const [showRequestDetails, setShowRequestDetails] = useState(false);
-  const [universityRequestsViewMode, setUniversityRequestsViewMode] = useState<'grid' | 'list'>('grid');
+  const [universityRequestsViewMode, setUniversityRequestsViewMode] = useState<'grid' | 'list'>('list');
   const [adminBalance, setAdminBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState(false);
 
@@ -405,6 +405,8 @@ const PaymentManagement = (): React.JSX.Element => {
     try {
       await UniversityPaymentRequestService.adminApprove(id, user!.id);
       await loadUniversityPaymentRequests();
+      // Recarregar saldo do admin também
+      await loadAdminBalance();
     } catch (error: any) {
       console.error('Error approving request:', error);
     }
@@ -415,6 +417,8 @@ const PaymentManagement = (): React.JSX.Element => {
       setActionLoading(true);
       await UniversityPaymentRequestService.adminReject(id, user!.id, rejectReason);
       await loadUniversityPaymentRequests();
+      // Recarregar saldo do admin também
+      await loadAdminBalance();
       setShowRejectModal(false);
       setRejectReason('');
     } catch (error: any) {
@@ -1806,7 +1810,6 @@ const PaymentManagement = (): React.JSX.Element => {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
                                 <div className="font-medium">${request.amount_usd.toLocaleString()}</div>
-                                <div className="text-gray-500">{request.amount_coins} coins</div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">

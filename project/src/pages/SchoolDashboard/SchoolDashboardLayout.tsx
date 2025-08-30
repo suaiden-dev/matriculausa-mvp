@@ -30,7 +30,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
-import PaymentNotifications from '../../components/PaymentNotifications';
+
 import { useEnvironment } from '../../hooks/useEnvironment';
 import FeatureBlockedMessage from '../../components/FeatureBlockedMessage';
 
@@ -465,8 +465,26 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Payment Notifications */}
-              <PaymentNotifications />
+              {/* Notifications */}
+              <div className="relative notifications-container">
+                <button
+                  onClick={() => {
+                    // Em mobile, abre modal; em desktop, abre modal também (simples)
+                    setShowNotificationsModal(true);
+                  }}
+                  className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Notifications"
+                >
+                  <Bell className="h-5 w-5 text-slate-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium min-w-[20px]">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+
 
               {/* User Menu */}
               <div className="relative">

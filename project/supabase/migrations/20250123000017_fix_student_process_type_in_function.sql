@@ -4,6 +4,7 @@
 CREATE OR REPLACE FUNCTION get_student_detailed_info(target_student_id uuid)
 RETURNS TABLE (
   student_id uuid,
+  profile_id uuid,
   full_name text,
   email text,
   phone text,
@@ -96,6 +97,7 @@ BEGIN
   )
   SELECT 
     sp.user_id as student_id,
+    sp.profile_id as profile_id,
     sp.full_name,
     sp.email,
     sp.phone,

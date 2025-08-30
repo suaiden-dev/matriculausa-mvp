@@ -19,6 +19,7 @@ interface SellerStats {
 
 interface Student {
   id: string;
+  profile_id: string;
   full_name: string;
   email: string;
   country?: string;
@@ -156,7 +157,8 @@ const SellerDashboard: React.FC = () => {
 
       // Convert referrals to student format with fee information
       const studentsData = (referralsData || []).map((referral: any) => ({
-        id: referral.student_id,
+        id: referral.user_id,
+        profile_id: referral.profile_id,
         full_name: referral.student_name,
         email: referral.student_email,
         created_at: referral.registration_date,
@@ -297,10 +299,10 @@ const SellerDashboard: React.FC = () => {
             students={students}
             sellerProfile={sellerProfile}
             onRefresh={handleRefresh}
-            onViewStudent={(studentId) => {
-              setSelectedStudentId(studentId);
+            onViewStudent={(student: {id: string, profile_id: string}) => {
+              setSelectedStudentId(student.id);
               setCurrentView('student-details');
-              saveStateToStorage('student-details', studentId);
+              saveStateToStorage('student-details', student.id);
             }}
           />
         );
@@ -309,6 +311,7 @@ const SellerDashboard: React.FC = () => {
           <StudentDetails 
             key={selectedStudentId} 
             studentId={selectedStudentId!} 
+            profileId={students.find(s => s.id === selectedStudentId)?.profile_id || ''}
             onRefresh={handleStudentRefresh}
           />
         );
