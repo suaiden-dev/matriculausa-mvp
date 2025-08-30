@@ -1,5 +1,6 @@
 import React from 'react';
 import { supabase } from '../lib/supabase';
+import { createPortal } from 'react-dom';
 
 interface DocumentViewerModalProps {
   documentUrl: string;
@@ -16,9 +17,6 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   // Função para tentar gerar signed URL se a URL pública falhar
   const getSignedUrl = async (originalUrl: string): Promise<string | null> => {
     try {
-      console.log('=== DEBUG getSignedUrl ===');
-      console.log('Original URL:', originalUrl);
-      
       // Tentar diferentes buckets
       const buckets = ['document-attachments', 'student-documents'];
       
@@ -27,30 +25,24 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
           const urlParts = originalUrl.split(`/storage/v1/object/public/${bucket}/`);
           if (urlParts.length === 2) {
             const filePath = urlParts[1];
-            console.log(`Tentando bucket ${bucket} com path:`, filePath);
             
             const { data, error } = await supabase.storage
               .from(bucket)
               .createSignedUrl(filePath, 60 * 60); // 1 hora
             
             if (error) {
-              console.error(`Error creating signed URL for bucket ${bucket}:`, error);
               continue;
             }
             
-            console.log(`Signed URL criada com sucesso para bucket ${bucket}:`, data.signedUrl);
             return data.signedUrl;
           }
         } catch (e) {
-          console.error(`Exception creating signed URL for bucket ${bucket}:`, e);
           continue;
         }
       }
       
-      console.log('Nenhum bucket funcionou para criar signed URL');
       return null;
     } catch (e) {
-      console.error('Exception creating signed URL:', e);
       return null;
     }
   };
@@ -60,23 +52,45 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     const fullName = name || url;
     const lowerName = fullName.toLowerCase();
     
-    console.log('=== DEBUG detectDocumentType ===');
-    console.log('URL:', url);
-    console.log('Name:', name);
-    console.log('Full name:', fullName);
-    console.log('Lower name:', lowerName);
+    // ✅ CORREÇÃO: Extrair extensão da URL mesmo com parâmetros de query
+    const extractFileExtension = (url: string): string | null => {
+      try {
+        // Remover parâmetros de query (tudo após ?)
+        const urlWithoutQuery = url.split('?')[0];
+        // Extrair nome do arquivo
+        const fileName = urlWithoutQuery.split('/').pop() || '';
+        // Extrair extensão
+        const extension = fileName.split('.').pop() || '';
+        return extension.toLowerCase();
+      } catch (e) {
+        return null;
+      }
+    };
     
-    if (lowerName.includes('.pdf')) {
-      console.log('Tipo detectado: PDF');
+    // Extrair extensão da URL
+    const fileExtension = extractFileExtension(url);
+    
+    // Verificar extensões de PDF
+    if (fileExtension === 'pdf' || lowerName.includes('.pdf') || lowerName.endsWith('pdf')) {
       return 'pdf';
     }
     
-    if (lowerName.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/)) {
-      console.log('Tipo detectado: IMAGE');
+    // Verificar extensões de imagem
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff', 'tif'];
+    if (fileExtension && imageExtensions.includes(fileExtension)) {
       return 'image';
     }
     
-    console.log('Tipo detectado: UNKNOWN');
+    // Fallback: verificar se contém extensões na URL
+    if (lowerName.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/)) {
+      return 'image';
+    }
+    
+    // Fallback: verificar palavras-chave
+    if (lowerName.includes('image') || lowerName.includes('photo') || lowerName.includes('captura') || lowerName.includes('wordmark')) {
+      return 'image';
+    }
+    
     return 'unknown';
   };
 
@@ -86,34 +100,69 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       setLoading(true);
       setError(null);
       
+      // ✅ CORREÇÃO: Garantir que documentUrl seja sempre uma URL completa
+      let finalDocumentUrl = documentUrl;
+      
+      // Se documentUrl é um caminho relativo (não começa com http), converter para URL completa
+      if (documentUrl && !documentUrl.startsWith('http')) {
+        // Verificar se é um caminho do storage (começa com 'uploads/' ou similar)
+        if (documentUrl.includes('/') && !documentUrl.startsWith('http')) {
+          // ✅ CORREÇÃO: Tentar primeiro document-attachments (onde são salvos os documentos de new request)
+          // e depois student-documents como fallback
+          const buckets = ['document-attachments', 'student-documents'];
+          
+          for (const bucket of buckets) {
+            const testUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/${bucket}/${documentUrl}`;
+            
+            try {
+              const response = await fetch(testUrl, { method: 'HEAD' });
+              if (response.ok) {
+                finalDocumentUrl = testUrl;
+                break;
+              }
+            } catch (e) {
+              // Continuar para o próximo bucket
+            }
+          }
+          
+          // Se nenhum bucket funcionou, usar document-attachments como padrão
+          if (!finalDocumentUrl.startsWith('http')) {
+            finalDocumentUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/${documentUrl}`;
+          }
+        }
+      }
+      
       // Detectar tipo de documento
-      const type = detectDocumentType(documentUrl, fileName);
+      const type = detectDocumentType(finalDocumentUrl, fileName);
       setDocumentType(type);
       
       try {
         // Primeiro tenta carregar a URL original
-        const response = await fetch(documentUrl, { method: 'HEAD' });
+        const response = await fetch(finalDocumentUrl, { method: 'HEAD' });
+        
         if (response.ok) {
-          setActualUrl(documentUrl);
+          setActualUrl(finalDocumentUrl);
           setLoading(false);
           return;
         }
       } catch (e) {
-        console.log('Public URL failed, trying signed URL...');
+        // Erro ao testar URL original
       }
       
-      // Se a URL pública falhar, tenta gerar signed URL
-      const signedUrl = await getSignedUrl(documentUrl);
+      // Se a URL original falhou, tentar signed URL
+      const signedUrl = await getSignedUrl(finalDocumentUrl);
       if (signedUrl) {
         setActualUrl(signedUrl);
         setLoading(false);
       } else {
-        setError('Não foi possível carregar o documento. Por favor, tente novamente.');
+        setError('Failed to load document');
         setLoading(false);
       }
     };
     
-    testUrl();
+    if (documentUrl) {
+      testUrl();
+    }
   }, [documentUrl, fileName]);
 
   const handleDownload = async () => {
@@ -183,19 +232,15 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
 
     // Para imagens, usa img tag
     if (documentType === 'image') {
-      console.log('=== Renderizando imagem ===');
-      console.log('URL da imagem:', actualUrl);
-      
       return (
         <img 
           src={actualUrl} 
           alt="Document preview" 
           className="object-contain w-full h-full max-h-[80vh]"
           onLoad={() => {
-            console.log('Imagem carregada com sucesso');
+            // Imagem carregada com sucesso
           }}
           onError={(e) => {
-            console.error('Erro ao carregar imagem:', e);
             setError('Erro ao carregar imagem. Tente fazer o download.');
           }}
         />
@@ -221,10 +266,19 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     );
   };
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 transition-opacity p-4"
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] transition-opacity p-4 document-viewer-overlay"
       onClick={onClose}
+      style={{ 
+        zIndex: 9999,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        position: 'fixed',
+        backgroundColor: 'rgba(0, 0, 0, 0.75)'
+      }}
     >
       <div 
         className="relative bg-white rounded-lg shadow-2xl max-w-6xl max-h-[95vh] w-full h-full flex flex-col overflow-hidden"
@@ -268,6 +322,9 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       </div>
     </div>
   );
+
+  // Usar Portal para renderizar o modal diretamente no body
+  return createPortal(modalContent, document.body);
 };
 
 export default DocumentViewerModal;

@@ -22,6 +22,16 @@ interface FeeInfo {
   icon: React.ReactNode;
 }
 
+interface WebhookPayload {
+  user_id?: string;
+  image_url: string;
+  value: string;
+  currency: string;
+  fee_type: string;
+  timestamp: string;
+  scholarship_application_id?: string;
+}
+
 export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   onSuccess,
   onError
@@ -100,13 +110,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       icon: <CreditCard className="w-6 h-6" />
     },
     {
-      type: 'enrollment_fee',
-      amount: 1250,
-      description: 'I-20 Control Fee - Start your I-20 and document validation',
-      icon: <CreditCard className="w-6 h-6" />
-    },
-    {
-      type: 'i20_control_fee',
+      type: 'i-20_control_fee',
       amount: 1250,
       description: 'I-20 Control Fee - Document processing and validation',
       icon: <CreditCard className="w-6 h-6" />
@@ -116,6 +120,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const currentFee = feeInfo.find(fee => fee.type === feeType) || feeInfo[0];
   
   console.log('🔍 [ZelleCheckoutPage] currentFee:', currentFee);
+  console.log('🔍 [ZelleCheckoutPage] feeType recebido:', feeType);
+  console.log('🔍 [ZelleCheckoutPage] feeInfo tipos disponíveis:', feeInfo.map(fee => fee.type));
+  console.log('🔍 [ZelleCheckoutPage] Match encontrado:', feeInfo.find(fee => fee.type === feeType) ? 'SIM' : 'NÃO');
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -167,7 +174,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         .insert({
           user_id: user?.id,
           fee_type: feeType,
-          amount: parseFloat(amount),
+          amount: currentFee.amount, // Usar o valor da taxa definida, não o parâmetro da URL
           recipient_name: 'To be verified from screenshot',
           recipient_email: 'To be verified from screenshot',
           confirmation_code: 'To be verified from screenshot',
@@ -182,10 +189,44 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       // Enviar webhook para n8n
       const imageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
-      const webhookPayload = {
+      
+      // Payload padronizado para o webhook
+      const webhookPayload: WebhookPayload = {
+        user_id: user?.id,
         image_url: imageUrl,
-        value: `${currentFee.amount}$ USD`
+        value: currentFee.amount.toString(), // Apenas o número, sem símbolos
+        currency: 'USD',
+        fee_type: feeType === 'i20_control_fee' ? 'i-20_control_fee' : feeType,
+        timestamp: new Date().toISOString()
       };
+
+      // Adicionar scholarship_application_id se for taxa de bolsa
+      if (feeType === 'application_fee' || feeType === 'scholarship_fee') {
+        console.log('🔍 [ZelleCheckout] Buscando scholarship_application_id para taxa de bolsa');
+        console.log('🔍 [ZelleCheckout] scholarshipsIds:', scholarshipsIds);
+        console.log('🔍 [ZelleCheckout] user.id:', user?.id);
+        
+        if (scholarshipsIds) {
+          // Se temos scholarshipsIds, buscar a candidatura correspondente
+          const { data: applicationData } = await supabase
+            .from('scholarship_applications')
+            .select('id')
+            .eq('student_id', user?.id)
+            .in('scholarship_id', scholarshipsIds.split(','))
+            .limit(1);
+          
+          if (applicationData && applicationData[0]) {
+            webhookPayload.scholarship_application_id = applicationData[0].id;
+            console.log('✅ [ZelleCheckout] scholarship_application_id encontrado:', applicationData[0].id);
+          } else {
+            console.log('⚠️ [ZelleCheckout] Nenhuma candidatura encontrada para os scholarshipsIds');
+          }
+        } else {
+          console.log('⚠️ [ZelleCheckout] scholarshipsIds não disponível');
+        }
+      } else {
+        console.log('ℹ️ [ZelleCheckout] Taxa global - não precisa de scholarship_application_id');
+      }
 
       console.log('📤 [ZelleCheckout] Enviando webhook para n8n:', webhookPayload);
       

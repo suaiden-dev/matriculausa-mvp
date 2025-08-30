@@ -384,6 +384,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   };
 
+  // Função para calcular dias até o deadline
   const getDaysUntilDeadline = (deadline: string) => {
     const today = new Date();
     const deadlineDate = new Date(deadline);
@@ -392,11 +393,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     return diffDays;
   };
 
+  // Função para obter status e cor do deadline
   const getDeadlineStatus = (deadline: string) => {
     const days = getDaysUntilDeadline(deadline);
     if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
     if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50' };
-    if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50' };
+    if (days <= 30) return { status: 'warning', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   };
 

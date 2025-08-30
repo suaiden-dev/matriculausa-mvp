@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     }
 
     // Validar tipo de taxa
-    const validFeeTypes = ['selection_process', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control'];
+    const validFeeTypes = ['selection_process', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control', 'i-20_control_fee'];
     if (!validFeeTypes.includes(fee_type)) {
       return corsResponse({ error: 'Invalid fee_type' }, 400);
     }

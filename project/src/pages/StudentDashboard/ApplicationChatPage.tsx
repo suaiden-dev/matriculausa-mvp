@@ -87,22 +87,36 @@ const ApplicationChatPage: React.FC = () => {
   useEffect(() => {
     async function fetchScholarshipFeeDeadline() {
       if (!userProfile?.id) return;
-      const { data } = await supabase
-        .from('scholarship_applications')
-        .select('id, updated_at, is_scholarship_fee_paid')
-        .eq('student_id', userProfile.id)
-        .eq('is_scholarship_fee_paid', true)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-      if (data?.updated_at) {
-        const paidDate = new Date(data.updated_at);
-        const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000);
-        setScholarshipFeeDeadline(deadline);
-      } else {
+      
+      try {
+        const { data, error } = await supabase
+          .from('scholarship_applications')
+          .select('id, updated_at, is_scholarship_fee_paid')
+          .eq('student_id', userProfile.id)
+          .eq('is_scholarship_fee_paid', true)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        
+        if (error) {
+          console.error('Erro ao buscar scholarship fee deadline:', error);
+          setScholarshipFeeDeadline(null);
+          return;
+        }
+        
+        // Verificar se há dados e pegar o primeiro resultado
+        if (data && data.length > 0 && data[0]?.updated_at) {
+          const paidDate = new Date(data[0].updated_at);
+          const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000);
+          setScholarshipFeeDeadline(deadline);
+        } else {
+          setScholarshipFeeDeadline(null);
+        }
+      } catch (error) {
+        console.error('Erro inesperado ao buscar scholarship fee deadline:', error);
         setScholarshipFeeDeadline(null);
       }
     }
+    
     fetchScholarshipFeeDeadline();
   }, [userProfile]);
 
@@ -239,6 +253,15 @@ const ApplicationChatPage: React.FC = () => {
     } catch (e) {
       alert(t('studentDashboard.applicationChatPage.errors.downloadFailed'));
     }
+  };
+
+  // Função utilitária para garantir que a URL seja completa
+  const ensureCompleteUrl = (url: string) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // ✅ CORREÇÃO: Usar a URL correta do Supabase
+    return `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/${url}`;
   };
 
   // Montar as abas dinamicamente com ícones distintos

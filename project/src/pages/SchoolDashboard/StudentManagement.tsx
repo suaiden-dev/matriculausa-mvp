@@ -52,8 +52,7 @@ const StudentManagement: React.FC = () => {
       }
     });
     
-    // Filtra baseado no status de pagamento das taxas
-    // Inclui alunos que já pagaram AMBAS as taxas (Application Fee + Scholarship Fee)
+    // MOSTRAR APENAS ESTUDANTES QUE PAGARAM AMBAS AS TAXAS
     let filtered = applications.filter(app => {
       const student = (app as any).user_profiles;
       const hasPaidApplicationFee = student?.is_application_fee_paid;
@@ -147,13 +146,13 @@ const StudentManagement: React.FC = () => {
                   <div className="flex items-center space-x-3">
                     <Users className="w-5 h-5 text-[#05294E] flex-shrink-0" />
                     <div>
-                      <h2 className="text-base sm:text-lg font-semibold text-slate-900">All Students</h2>
-                      <p className="text-xs text-slate-600 mt-0.5 block md:hidden">
-                        (Paid Application & Scholarship Fee)
-                      </p>
-                      <p className="text-xs sm:text-sm text-slate-600 hidden md:block">
-                        (students who have paid both Application Fee and Scholarship Fee)
-                      </p>
+                                             <h2 className="text-base sm:text-lg font-semibold text-slate-900">Students with Both Fees Paid</h2>
+                       <p className="text-xs text-slate-600 mt-0.5 block md:hidden">
+                         (Application & Scholarship Fee Paid)
+                       </p>
+                       <p className="text-xs sm:text-sm text-slate-600 hidden md:block">
+                         (Students who have paid both Application Fee and Scholarship Fee)
+                       </p>
                     </div>
                   </div>
                   <div className="flex items-center self-end sm:self-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 flex-shrink-0">

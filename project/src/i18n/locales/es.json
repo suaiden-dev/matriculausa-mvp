@@ -1988,6 +1988,7 @@
         "downloadTransferForm": "Descargar Formulario de Transferencia",
         "view": "Ver",
         "enrolledMessage": "¡Has sido matriculado! Verifica tu panel para los próximos pasos.",
+        "noFilesUploadedYet": "No se han subido archivos aún.",
         "documentRequestsDescription": "Ahora que has llegado a esta etapa, debes revisar y subir los documentos solicitados por tu universidad para continuar tu proceso. Después de esto, la escuela podrá analizar tu aplicación y enviar tu carta de aceptación.",
         "acceptanceLetterInstructions": "La universidad enviará tu carta de aceptación aquí cuando esté lista. Una vez subida, serás automáticamente matriculado."
       },
