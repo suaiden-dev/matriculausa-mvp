@@ -119,9 +119,10 @@ interface StudentDetailsProps {
   studentId: string;
   profileId: string;
   onRefresh?: () => void;
+  onBack?: () => void; // ✅ CORREÇÃO: Adicionar callback para voltar
 }
 
-const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, onRefresh }) => {
+const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, onRefresh, onBack }) => {
   const navigate = useNavigate();
   
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
@@ -926,7 +927,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate(-1)}
+                onClick={() => onBack ? onBack() : navigate(-1)}
                 className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100"
               >
                 <ArrowLeft className="h-5 w-5" />
