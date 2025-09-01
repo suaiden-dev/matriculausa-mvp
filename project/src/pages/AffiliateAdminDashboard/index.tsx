@@ -6,7 +6,7 @@ import AffiliateAdminDashboardLayout from './AffiliateAdminDashboardLayout';
 import Overview from './Overview';
 import SellerManagement from './SellerManagement';
 
-import EnhancedStudentTracking from './EnhancedStudentTracking';
+import EnhancedStudentTracking from './EnhancedStudentTrackingRefactored';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
 
