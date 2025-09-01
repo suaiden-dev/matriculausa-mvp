@@ -17,14 +17,33 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Webhook URL do n8n - IMPORTANTE: não modificar este ID
   const webhookUrl = "https://nwh.suaiden.com/webhook/21b3f55c-ae5f-4acd-b4d0-5a4ea7615d29";
 
+  // Detectar se é mobile
   useEffect(() => {
-    if (isChatOpen) {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+      const isAndroid = /Android/.test(userAgent);
+      const isMobileDevice = /Mobi|Android/i.test(userAgent);
+      const isSmallScreen = window.innerWidth <= 768;
+      
+      setIsMobile(isIOS || isAndroid || isMobileDevice || isSmallScreen);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (isChatOpen && !isMobile) {
       // Gerar ID único para o chat
       setChatId('chat_' + Date.now() + '_' + Math.floor(Math.random() * 100000));
       
@@ -42,7 +61,7 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
         }
       }, 100);
     }
-  }, [isChatOpen]);
+  }, [isChatOpen, isMobile]);
 
   useEffect(() => {
     if (chatRef.current) {
@@ -99,7 +118,14 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
   };
 
   const openChat = () => {
-    setIsChatOpen(true);
+    if (isMobile) {
+      // No mobile, abrir em nova aba
+      const smartAssistantUrl = '/smart-assistant';
+      window.open(smartAssistantUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      // No desktop, abrir modal
+      setIsChatOpen(true);
+    }
   };
 
   const closeChat = () => {
@@ -165,7 +191,9 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
       {/* Smart Assistant Chat Bubble - Com animação de dropdown */}
       <div
         onClick={openChat}
-        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center cursor-pointer z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out group relative hover:scale-105`}
+        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center cursor-pointer z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out group relative hover:scale-105 ${
+          isMobile ? 'active:scale-95' : 'hover:scale-105'
+        }`}
         style={{
           position: 'fixed',
           bottom: isHelpExpanded 
@@ -178,13 +206,18 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           background: 'linear-gradient(135deg, #193156 60%, #a41e22 100%)',
           boxShadow: '0 0 0 2.5px #f7f7f7, 0 6px 20px rgba(10,20,40,0.6)',
           transform: `translateY(${isHelpExpanded ? '0px' : '0px'})`,
-          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          // Melhorias para iOS
+          WebkitTapHighlightColor: 'transparent',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none'
         }}
-        title="Smart Assistant - Ask me anything!"
+        title={isMobile ? "Smart Assistant - Opens in new tab" : "Smart Assistant - Ask me anything!"}
       >
         {/* Tooltip */}
         <div className="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-3 py-1 bg-[#161d29] text-[#f7f7f7] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap border border-[#2e3f60] shadow-lg">
-          Smart Assistant
+          {isMobile ? 'Smart Assistant (New Tab)' : 'Smart Assistant'}
           <div className="absolute top-1/2 left-full transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-[#161d29]"></div>
         </div>
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -197,7 +230,9 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
 
       {/* WhatsApp Button - Com animação de dropdown */}
       <div
-        className="fixed rounded-full bg-[#25D366] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_0,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] hover:scale-105 transition-all duration-500 ease-out border-[3px] border-white group relative"
+        className={`fixed rounded-full bg-[#25D366] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_0,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out border-[3px] border-white group relative ${
+          isMobile ? 'active:scale-95' : 'hover:scale-105'
+        }`}
         style={{
           position: 'fixed',
           bottom: isHelpExpanded 
@@ -210,7 +245,12 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           backgroundColor: '#25D366',
           boxShadow: '0 0 0 0, 0 6px 20px rgba(10,20,40,0.6)',
           transform: `translateY(${isHelpExpanded ? '0px' : '0px'})`,
-          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          // Melhorias para iOS
+          WebkitTapHighlightColor: 'transparent',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none'
         }}
         title="Contact us via WhatsApp"
       >
@@ -225,6 +265,13 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           rel="noopener noreferrer"
           className="w-full h-full flex items-center justify-center"
           aria-label="Contact us via WhatsApp"
+          style={{
+            // Melhorias para iOS
+            WebkitTapHighlightColor: 'transparent',
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none'
+          }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="30" height="30" fill="white">
             <path d="M16.001 3.2c-7.11 0-12.8 5.689-12.8 12.8 0 2.226.584 4.344 1.696 6.24L3.2 28.8l6.832-1.744c1.824.96 3.872 1.472 5.969 1.472 7.11 0 12.8-5.689 12.8-12.8s-5.69-12.8-12.8-12.8zm0 23.2c-1.761 0-3.481-.455-5.024-1.328l-.36-.2-4.063 1.04 1.072-3.952-.208-.376c-1.016-1.808-1.552-3.856-1.552-5.936 0-6.065 4.935-11 11-11s11 4.935 11 11-4.936 11-11 11zm6.225-8.145c-.339-.17-2.004-.988-2.316-1.104-.311-.113-.536-.17-.76.17-.226.339-.87 1.104-1.068 1.33-.197.226-.394.254-.733.085s-1.429-.526-2.723-1.678c-1.006-.896-1.684-2.003-1.881-2.343-.197-.34-.021-.522.149-.691.154-.152.339-.395.509-.593.17-.198.226-.34.339-.566.113-.226.057-.425-.028-.593-.084-.17-.76-1.833-1.04-2.512-.273-.654-.55-.566-.76-.577l-.648-.011c-.226 0-.593.085-.903.425s-1.184 1.155-1.184 2.82 1.211 3.267 1.379 3.494c.17.226 2.379 3.632 5.767 5.088.807.348 1.438.557 1.929.713.81.258 1.548.221 2.131.134.65-.097 2.004-.818 2.288-1.608.283-.79.283-1.47.198-1.609-.085-.14-.311-.226-.65-.396z"/>
@@ -232,8 +279,8 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
         </a>
       </div>
 
-      {/* Modal do Smart Assistant */}
-      {isChatOpen && (
+      {/* Modal do Smart Assistant - APENAS para Desktop */}
+      {isChatOpen && !isMobile && (
         <div className="fixed inset-0 z-[10003] flex items-end justify-end p-4 pb-24">
           {/* Overlay de fundo */}
           <div 
@@ -436,6 +483,46 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
 
           .animate-fade-in {
             animation: fade-in 0.5s ease-out forwards;
+          }
+
+          /* Melhorias específicas para iOS */
+          @supports (-webkit-touch-callout: none) {
+            .fixed {
+              /* Evita problemas de posicionamento no iOS */
+              position: fixed !important;
+            }
+            
+            /* Melhora a responsividade do touch no iOS */
+            button, div[onClick] {
+              -webkit-tap-highlight-color: transparent;
+              -webkit-touch-callout: none;
+              -webkit-user-select: none;
+              user-select: none;
+            }
+            
+            /* Otimiza scroll no iOS */
+            .overflow-y-auto {
+              -webkit-overflow-scrolling: touch;
+            }
+          }
+
+          /* Melhorias para dispositivos móveis em geral */
+          @media (max-width: 768px) {
+            .fixed {
+              /* Ajusta posicionamento para mobile */
+              position: fixed !important;
+            }
+            
+            /* Remove hover effects em dispositivos touch */
+            @media (hover: none) {
+              .hover\\:scale-105:hover {
+                transform: scale(1);
+              }
+              
+              .hover\\:shadow-xl:hover {
+                box-shadow: inherit;
+              }
+            }
           }
         `
       }} />
