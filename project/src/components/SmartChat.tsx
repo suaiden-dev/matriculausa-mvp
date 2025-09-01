@@ -1,16 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface SmartChatProps {
   isStudentPage?: boolean;
 }
 
+interface Message {
+  sender: 'You' | 'AI';
+  content: string;
+  timestamp: Date;
+}
+
 const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
   const [isHelpExpanded, setIsHelpExpanded] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Webhook URL do n8n - IMPORTANTE: não modificar este ID
+  const webhookUrl = "https://nwh.suaiden.com/webhook/21b3f55c-ae5f-4acd-b4d0-5a4ea7615d29";
+
+  useEffect(() => {
+    if (isChatOpen) {
+      // Gerar ID único para o chat
+      setChatId('chat_' + Date.now() + '_' + Math.floor(Math.random() * 100000));
+      
+      // Adicionar mensagem de boas-vindas
+      setMessages([{
+        sender: 'AI',
+        content: 'Hello! I\'m your Smart Assistant. How can I help you today? I can answer questions about scholarships, fees, application process and much more.',
+        timestamp: new Date()
+      }]);
+
+      // Focus no input após renderização
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
+    }
+  }, [isChatOpen]);
+
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const appendMessage = (sender: 'You' | 'AI', content: string) => {
+    const newMessage: Message = {
+      sender,
+      content,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
+  const sendMessage = async () => {
+    const text = inputValue.trim();
+    if (!text || isLoading) return;
+
+    setIsLoading(true);
+    appendMessage('You', text);
+    setInputValue('');
+
+    try {
+      const payload = { chatId, message: text };
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = { response: '(Invalid server response)' };
+      }
+
+      const formattedResponse = (data.response || '(no response)').replace(/\n/g, '<br>');
+      appendMessage('AI', formattedResponse);
+    } catch (err) {
+      appendMessage('AI', '<span style="color:#ff8181">Error sending message. Please try again.</span>');
+    } finally {
+      setIsLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  };
 
   const openChat = () => {
-    // Abrir Smart Assistant em uma nova aba
-    const smartAssistantUrl = '/smart-assistant';
-    window.open(smartAssistantUrl, '_blank', 'noopener,noreferrer');
+    setIsChatOpen(true);
+  };
+
+  const closeChat = () => {
+    setIsChatOpen(false);
+    setMessages([]);
+    setInputValue('');
+    setIsLoading(false);
   };
 
   const toggleHelp = () => {
@@ -135,6 +231,214 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           </svg>
         </a>
       </div>
+
+      {/* Modal do Smart Assistant */}
+      {isChatOpen && (
+        <div className="fixed inset-0 z-[10003] flex items-end justify-end p-4 pb-24">
+          {/* Overlay de fundo */}
+          <div 
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            onClick={closeChat}
+          />
+          
+          {/* Modal do Chat */}
+          <div className="relative w-full max-w-md h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-slide-in-up">
+            {/* Header do Modal */}
+            <div className="bg-white border-b border-gray-100 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#05294E] flex items-center justify-center shadow-lg">
+                  <svg width="24" height="24" className="text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
+                    <path d="M7 9H17V11H7V9ZM7 12H13V14H7V12Z" fill="currentColor"/>
+                    <circle cx="9" cy="9" r="1" fill="currentColor"/>
+                    <circle cx="15" cy="9" r="1" fill="currentColor"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Smart Assistant</h3>
+                  <p className="text-xs text-gray-500">Your intelligent companion</p>
+                </div>
+              </div>
+              
+              {/* Botão de fechar */}
+              <button
+                onClick={closeChat}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors duration-200"
+                title="Close chat"
+              >
+                <svg width="20" height="20" className="text-gray-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Área de Mensagens */}
+            <div 
+              ref={chatRef}
+              className="flex-1 overflow-y-auto p-4 bg-gradient-to-br from-gray-50 to-white flex flex-col gap-3"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#e5e7eb transparent'
+              }}
+            >
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`max-w-[85%] transform transition-all duration-500 ease-out ${
+                    message.sender === 'You' 
+                      ? 'self-end ml-auto animate-slide-in-right' 
+                      : 'self-start animate-slide-in-left'
+                  }`}
+                  style={{
+                    animationDelay: `${index * 0.1}s`
+                  }}
+                >
+                  <div className={`p-3 rounded-2xl shadow-lg border ${
+                    message.sender === 'You' 
+                      ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
+                      : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
+                  } transition-all duration-300 hover:shadow-xl`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                        message.sender === 'You' 
+                          ? 'bg-white/20 text-white' 
+                          : 'bg-[#05294E] text-white'
+                      }`}>
+                        {message.sender === 'You' ? 'Y' : 'AI'}
+                      </div>
+                      <span className="font-semibold text-xs truncate flex-1">
+                        {message.sender === 'You' ? 'You' : 'Smart Assistant'}
+                      </span>
+                      <span className="text-xs opacity-70 flex-shrink-0">
+                        {message.timestamp.toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                    </div>
+                    <div 
+                      className="text-xs leading-relaxed break-words"
+                      dangerouslySetInnerHTML={{ __html: message.content }}
+                    />
+                  </div>
+                </div>
+              ))}
+              
+              {isLoading && (
+                <div className="self-start bg-white text-gray-800 border border-gray-200 rounded-2xl p-3 max-w-[85%] shadow-lg animate-fade-in">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-[#05294E] flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                      AI
+                    </div>
+                    <span className="font-semibold text-xs flex-1">Smart Assistant</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-[#05294E] rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                    <span className="font-medium">Typing...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Área de Input */}
+            <div className="bg-white border-t border-gray-100 p-4">
+              <div className="flex gap-3">
+                <div className="flex-1 relative group">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask me anything..."
+                    disabled={isLoading}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:outline-none focus:border-[#05294E] focus:bg-white transition-all duration-300 disabled:opacity-50 group-hover:border-gray-300 group-hover:bg-white"
+                  />
+                </div>
+                <button
+                  onClick={sendMessage}
+                  disabled={isLoading || !inputValue.trim()}
+                  className="px-6 py-3 bg-[#05294E] text-white border-none rounded-xl cursor-pointer font-semibold text-sm shadow-lg transition-all duration-300 hover:bg-[#041f3f] hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <span>Send</span>
+                  <svg width="18" height="18" className="group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estilos CSS para animações */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes slide-in-up {
+            from {
+              opacity: 0;
+              transform: translateY(100%);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes slide-in-right {
+            from {
+              opacity: 0;
+              transform: translateX(30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          @keyframes slide-in-left {
+            from {
+              opacity: 0;
+              transform: translateX(-30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .animate-slide-in-up {
+            animation: slide-in-up 0.3s ease-out forwards;
+          }
+
+          .animate-slide-in-right {
+            animation: slide-in-right 0.5s ease-out forwards;
+          }
+
+          .animate-slide-in-left {
+            animation: slide-in-left 0.5s ease-out forwards;
+          }
+
+          .animate-fade-in {
+            animation: fade-in 0.5s ease-out forwards;
+          }
+        `
+      }} />
     </>
   );
 };
