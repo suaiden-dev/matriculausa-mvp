@@ -18,7 +18,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   const getSignedUrl = async (originalUrl: string): Promise<string | null> => {
     try {
       // Tentar diferentes buckets
-      const buckets = ['document-attachments', 'student-documents'];
+      const buckets = ['document-attachments', 'student-documents', 'zelle_comprovantes'];
       
       for (const bucket of buckets) {
         try {
@@ -108,8 +108,8 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         // Verificar se é um caminho do storage (começa com 'uploads/' ou similar)
         if (documentUrl.includes('/') && !documentUrl.startsWith('http')) {
           // ✅ CORREÇÃO: Tentar primeiro document-attachments (onde são salvos os documentos de new request)
-          // e depois student-documents como fallback
-          const buckets = ['document-attachments', 'student-documents'];
+          // depois zelle_comprovantes (para comprovantes Zelle) e student-documents como fallback
+          const buckets = ['document-attachments', 'zelle_comprovantes', 'student-documents'];
           
           for (const bucket of buckets) {
             const testUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/${bucket}/${documentUrl}`;
@@ -240,7 +240,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
           onLoad={() => {
             // Imagem carregada com sucesso
           }}
-          onError={(e) => {
+          onError={() => {
             setError('Erro ao carregar imagem. Tente fazer o download.');
           }}
         />

@@ -6,6 +6,56 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+// Função para verificar se a resposta do n8n indica uma validação positiva
+function checkForValidProof(n8nData: any): { isValid: boolean; proofType?: string; feeType?: string } {
+  try {
+    // Verificar diferentes formatos de resposta do n8n
+    const dataStr = JSON.stringify(n8nData).toLowerCase();
+    
+    // Verificar se há indicação de validação positiva
+    const positiveIndicators = [
+      'valid', 'true', 'approved', 'accepted', 'success', 'pass',
+      'válido', 'aprovado', 'aceito', 'sucesso', 'passou'
+    ];
+    
+    const hasPositiveIndicator = positiveIndicators.some(indicator => 
+      dataStr.includes(indicator)
+    );
+    
+    if (!hasPositiveIndicator) {
+      return { isValid: false };
+    }
+    
+    // Determinar o tipo de proof baseado no conteúdo
+    let proofType = 'document_validation';
+    let feeType = 'selection_process'; // Default
+    
+    if (dataStr.includes('selection') || dataStr.includes('seleção')) {
+      proofType = 'selection_process_proof';
+      feeType = 'selection_process';
+    } else if (dataStr.includes('scholarship') || dataStr.includes('bolsa')) {
+      proofType = 'scholarship_fee_proof';
+      feeType = 'scholarship_fee';
+    } else if (dataStr.includes('application') || dataStr.includes('aplicação')) {
+      proofType = 'application_fee_proof';
+      feeType = 'application_fee';
+    } else if (dataStr.includes('enrollment') || dataStr.includes('matrícula')) {
+      proofType = 'enrollment_fee_proof';
+      feeType = 'enrollment_fee';
+    } else if (dataStr.includes('i20') || dataStr.includes('i-20')) {
+      proofType = 'i20_control_proof';
+      feeType = 'i20_control';
+    }
+    
+    console.log(`[Edge] Proof válido detectado - Tipo: ${proofType}, Fee: ${feeType}`);
+    return { isValid: true, proofType, feeType };
+    
+  } catch (error) {
+    console.error('[Edge] Erro ao verificar validação de proof:', error);
+    return { isValid: false };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -63,6 +113,67 @@ Deno.serve(async (req) => {
 
     const n8nText = await n8nRes.text();
     console.log('[Edge] Resposta do n8n:', n8nRes.status, n8nText);
+
+    // Processar resposta do n8n para validação automática de taxas
+    if (n8nRes.ok && n8nText) {
+      try {
+        let n8nData;
+        try {
+          n8nData = JSON.parse(n8nText);
+        } catch (e) {
+          // Se não for JSON, tentar extrair informações do texto
+          n8nData = { response: n8nText };
+        }
+
+        // Verificar se há validação de proof que precisa ser processada
+        if (n8nData && body.user_id) {
+          console.log('[Edge] Verificando se precisa processar validação de proof...');
+          
+          // Verificar diferentes formatos de resposta do n8n
+          const hasValidProof = checkForValidProof(n8nData);
+          
+          if (hasValidProof.isValid) {
+            console.log('[Edge] Proof válido detectado, processando atualização automática...');
+            
+            // Chamar a função de processamento de validação
+            const proofValidationPayload = {
+              user_id: body.user_id,
+              proof_type: hasValidProof.proofType || 'document_validation',
+              is_valid: true,
+              validation_details: n8nData,
+              fee_type: hasValidProof.feeType,
+              metadata: {
+                original_n8n_response: n8nData,
+                processed_at: new Date().toISOString()
+              }
+            };
+
+            try {
+              const supabaseUrl = Deno.env.get('SUPABASE_URL');
+              const proofValidationResponse = await fetch(`${supabaseUrl}/functions/v1/process-n8n-proof-validation`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+                },
+                body: JSON.stringify(proofValidationPayload)
+              });
+
+              if (proofValidationResponse.ok) {
+                const proofResult = await proofValidationResponse.json();
+                console.log('[Edge] Validação de proof processada com sucesso:', proofResult);
+              } else {
+                console.error('[Edge] Erro ao processar validação de proof:', await proofValidationResponse.text());
+              }
+            } catch (proofError) {
+              console.error('[Edge] Erro ao chamar função de validação de proof:', proofError);
+            }
+          }
+        }
+      } catch (processingError) {
+        console.error('[Edge] Erro ao processar resposta do n8n:', processingError);
+      }
+    }
 
     return new Response(JSON.stringify({
       status: n8nRes.status,

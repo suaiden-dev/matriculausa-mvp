@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, DollarSign, Calendar, User, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Upload, DollarSign, CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -105,7 +105,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       const filePath = `zelle-payments/${user?.id}/${fileName}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('comprovantes')
+        .from('zelle_comprovantes')
         .upload(filePath, comprovanteFile);
       
       if (uploadError) {
@@ -113,7 +113,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       }
       
       const { data: { publicUrl } } = supabase.storage
-        .from('comprovantes')
+        .from('zelle_comprovantes')
         .getPublicUrl(filePath);
       
       return publicUrl;
@@ -123,48 +123,50 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     }
   };
 
-  const createZellePayment = async (comprovanteUrl: string) => {
+  const sendToN8n = async (comprovanteUrl: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      // Gerar ID temporário para o n8n
+      const tempPaymentId = `temp_${Date.now()}_${user?.id}`;
       
-      if (!token) {
-        throw new Error('User not authenticated');
-      }
+      // Payload para o n8n
+      const webhookPayload = {
+        user_id: user?.id,
+        image_url: comprovanteUrl,
+        value: amount.toString(),
+        currency: 'USD',
+        fee_type: feeType,
+        timestamp: new Date().toISOString(),
+        temp_payment_id: tempPaymentId,
+        confirmation_code: paymentDetails.confirmationCode,
+        payment_date: paymentDetails.paymentDate,
+        recipient_email: paymentDetails.recipientEmail,
+        recipient_name: paymentDetails.recipientName,
+        scholarships_ids: scholarshipsIds,
+        metadata: {
+          ...metadata,
+          payment_method: 'zelle',
+          comprovante_uploaded_at: new Date().toISOString()
+        }
+      };
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-zelle-payment`, {
+      console.log('📤 [ZelleCheckout] Enviando para n8n:', webhookPayload);
+
+      const response = await fetch('https://nwh.suaiden.com/webhook/zelle-global', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          fee_type: feeType,
-          amount: amount,
-          currency: 'USD',
-          recipient_email: paymentDetails.recipientEmail,
-          recipient_name: paymentDetails.recipientName,
-          comprovante_url: comprovanteUrl,
-          confirmation_code: paymentDetails.confirmationCode,
-          payment_date: paymentDetails.paymentDate,
-          scholarships_ids: scholarshipsIds,
-          metadata: {
-            ...metadata,
-            payment_method: 'zelle',
-            comprovante_uploaded_at: new Date().toISOString()
-          }
-        }),
+        body: JSON.stringify(webhookPayload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create Zelle payment');
+        throw new Error(`n8n webhook failed: ${response.status} ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return result.payment_id;
+      console.log('✅ [ZelleCheckout] Enviado para n8n com sucesso');
+      return tempPaymentId;
     } catch (error) {
-      console.error('Error creating Zelle payment:', error);
+      console.error('Error sending to n8n:', error);
       throw error;
     }
   };
@@ -182,9 +184,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         throw new Error('Failed to upload payment confirmation');
       }
       
-      // Create Zelle payment record
-      const paymentId = await createZellePayment(comprovanteUrl);
-      setZellePaymentId(paymentId);
+      // Enviar apenas para n8n - sem INSERT direto no banco
+      const tempPaymentId = await sendToN8n(comprovanteUrl);
+      setZellePaymentId(tempPaymentId);
       
       // Move to success step
       setStep('success');

@@ -113,7 +113,7 @@ export class TuitionRewardsService {
     return data;
   }
 
-  // Notificar universidade sobre resgate de desconto
+  // Notificar universidade sobre resgate de desconto via webhook n8n
   private static async notifyUniversityOfRedemption(redemptionData: {
     user_id?: string;
     university_id?: string;
@@ -135,6 +135,7 @@ export class TuitionRewardsService {
       console.error('  - redemption_id:', !!redemptionData.redemption_id, '->', redemptionData.redemption_id);
       throw new Error('Campos obrigatórios ausentes para notificação da universidade');
     }
+    
     try {
       // Buscar dados adicionais necessários para a notificação
       const userProfileResult = await supabase
@@ -157,47 +158,58 @@ export class TuitionRewardsService {
         console.warn('Could not fetch discount data for notification:', discountDataResult.error);
       }
 
+      // Buscar email da universidade
+      const universityResult = await supabase
+        .from('universities')
+        .select('contact')
+        .eq('id', redemptionData.university_id)
+        .single();
+
+      let universityEmail = '';
+      if (!universityResult.error && universityResult.data?.contact) {
+        universityEmail = universityResult.data.contact.admissionsEmail || universityResult.data.contact.email || '';
+      }
+
       // Log para debug dos dados recebidos
       console.log('🔍 ===== DADOS DO RESGATE RECEBIDOS =====');
       console.log('📋 Redemption Data:', redemptionData);
       console.log('👤 User Profile Data:', userProfileResult.data);
       console.log('🏫 Discount Data:', discountDataResult.data);
+      console.log('📧 University Email:', universityEmail);
 
-      // Preparar payload para a Edge Function
-      const notificationPayload = {
-        student_id: redemptionData.user_id,
-        student_name: userProfileResult.data?.full_name || 'Unknown Student',
-        student_email: userProfileResult.data?.email || '',
-        university_id: redemptionData.university_id,
-        university_name: redemptionData.university_name || 'Unknown University',
-        university_email: '', // Será buscado pela Edge Function se não fornecido
-        discount_amount: redemptionData.discount_amount,
-        discount_type: discountDataResult.data?.discount_type || 'Tuition Discount',
-        cost_coins: redemptionData.cost_coins,
-        redemption_id: redemptionData.redemption_id
+      // Preparar payload para webhook n8n seguindo o padrão
+      const n8nPayload = {
+        tipo_notf: "Resgate de desconto de tuition",
+        email_aluno: userProfileResult.data?.email || '',
+        nome_aluno: userProfileResult.data?.full_name || 'Unknown Student',
+        email_universidade: universityEmail,
+        o_que_enviar: `O aluno ${userProfileResult.data?.full_name || 'Unknown Student'} resgatou um desconto de tuition de $${redemptionData.discount_amount} para a universidade ${redemptionData.university_name}. O desconto foi pago com ${redemptionData.cost_coins} Matricula Coins.`,
+        payment_id: redemptionData.redemption_id,
+        fee_type: "tuition_discount_redemption",
+        amount: redemptionData.discount_amount,
+        approved_by: "Matricula Rewards System"
       };
 
       // Log para debug do payload final
-      console.log('📦 ===== PAYLOAD FINAL PARA NOTIFICAÇÃO =====');
-      console.log('📋 Notification Payload:', notificationPayload);
-      console.log('🔍 Campos obrigatórios verificados:');
-      console.log('  - student_id:', !!notificationPayload.student_id, '->', notificationPayload.student_id);
-      console.log('  - student_name:', !!notificationPayload.student_name, '->', notificationPayload.student_name);
-      console.log('  - university_id:', !!notificationPayload.university_id, '->', notificationPayload.university_id);
-      console.log('  - university_name:', !!notificationPayload.university_name, '->', notificationPayload.university_name);
-      console.log('  - discount_amount:', !!notificationPayload.discount_amount, '->', notificationPayload.discount_amount);
-      console.log('  - redemption_id:', !!notificationPayload.redemption_id, '->', notificationPayload.redemption_id);
+      console.log('📦 ===== PAYLOAD PARA WEBHOOK N8N =====');
+      console.log('📋 N8N Payload:', n8nPayload);
 
-      console.log('📧 Sending university notification:', notificationPayload);
+      console.log('📧 Enviando notificação via webhook n8n...');
 
-      // Chamar Edge Function de notificação
-      const notificationResult = await supabase.functions.invoke('notify-university-discount-redemption', {
-        body: notificationPayload
+      // Enviar webhook para n8n
+      const n8nResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(n8nPayload),
       });
 
-      if (notificationResult.error) {
-        throw new Error(`Notification failed: ${notificationResult.error.message}`);
+      if (!n8nResponse.ok) {
+        throw new Error(`N8N webhook failed: ${n8nResponse.status} ${n8nResponse.statusText}`);
       }
+
+      console.log('✅ Notificação enviada com sucesso via webhook n8n');
 
     } catch (error) {
       console.error('Error in notifyUniversityOfRedemption:', error);

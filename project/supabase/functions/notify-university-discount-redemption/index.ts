@@ -1,33 +1,20 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
-// Validação das variáveis de ambiente obrigatórias
-console.log('🔧 ===== VERIFICANDO VARIÁVEIS DE AMBIENTE =====');
+// Configurações do webhook n8n
+console.log('🔧 ===== VERIFICANDO CONFIGURAÇÕES DO WEBHOOK N8N =====');
 
-const mailerSendApiKey = Deno.env.get('MAILERSEND_API_KEY');
-console.log('🔑 MAILERSEND_API_KEY configurada:', !!mailerSendApiKey);
-if (!mailerSendApiKey) {
-  console.log('❌ MAILERSEND_API_KEY não encontrada!');
-  throw new Error('Missing required environment variable: MAILERSEND_API_KEY');
-}
+const n8nWebhookUrl = 'https://nwh.suaiden.com/webhook/notfmatriculausa';
+console.log('🌐 N8N Webhook URL:', n8nWebhookUrl);
 
-// Configurações do MailerSend com fallbacks
-const mailerSendUrl = Deno.env.get('MAILERSEND_URL') || 'https://api.mailersend.com/v1/email';
-const fromEmail = Deno.env.get('FROM_EMAIL') || 'support@matriculausa.com';
-const fromName = Deno.env.get('FROM_NAME') || 'Matrícula USA';
-
-console.log('🌐 MAILERSEND_URL:', mailerSendUrl);
-console.log('📧 FROM_EMAIL:', fromEmail);
-console.log('📛 FROM_NAME:', fromName);
-
-// Verificar outras variáveis importantes
+// Verificar variáveis do Supabase
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 console.log('🔑 SUPABASE_URL configurada:', !!supabaseUrl);
 console.log('🔑 SUPABASE_SERVICE_ROLE_KEY configurada:', !!supabaseKey);
 
-console.log('✅ ===== VARIÁVEIS DE AMBIENTE VERIFICADAS =====');
+console.log('✅ ===== CONFIGURAÇÕES VERIFICADAS =====');
 
 // Headers CORS
 function corsHeaders(origin: string | null) {
