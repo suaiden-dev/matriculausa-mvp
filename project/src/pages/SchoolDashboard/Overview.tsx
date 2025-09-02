@@ -15,7 +15,8 @@ import {
   ArrowUpRight,
   Clock,
   AlertTriangle,
-  PlusCircle
+  PlusCircle,
+  Home
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -225,9 +226,9 @@ const Overview: React.FC = () => {
       title="Complete your profile to access the dashboard"
       description="Finish setting up your university profile to view analytics, manage scholarships, and connect with students"
     >
-      <div className="space-y-4 sm:space-y-6 lg:space-y-8 pt-4 sm:pt-6 lg:pt-10 px-4 sm:px-6 lg:px-0">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="space-y-6 lg:space-y-8">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">

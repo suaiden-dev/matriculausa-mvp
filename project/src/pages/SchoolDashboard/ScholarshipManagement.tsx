@@ -121,24 +121,99 @@ const ScholarshipManagement: React.FC = () => {
       title="Profile setup required"
       description="Complete your university profile to start creating and managing scholarships"
     >
-      <div className="space-y-8 max-w-7xl">
-        {/* Header with Actions */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div>
-            {scholarships.length > 0 && (
-              <p className="text-slate-600">
-                {`${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`}
-              </p>
-            )}
+      <div className="space-y-6 lg:space-y-8">
+        {/* Header + Filters Section */}
+        <div className="w-full">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div className="max-w-full mx-auto bg-slate-50">
+              {/* Header: title + note + counter */}
+              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    Manage Scholarships
+                  </h1>
+                  <p className="mt-2 text-sm sm:text-base text-slate-600">
+                    Create and manage scholarship opportunities for international students
+                  </p>
+                  {scholarships.length > 0 && (
+                    <p className="mt-3 text-sm text-slate-500">
+                      {`${scholarships.length} scholarship${scholarships.length > 1 ? 's' : ''} created, ${scholarships.filter(s => s.is_active).length} active`}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                    <Award className="w-5 h-5 mr-2" />
+                    {scholarships.length} Total
+                  </div>
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm">
+                    <Zap className="w-5 h-5 mr-2" />
+                    {scholarships.filter(s => s.is_active).length} Active
+                  </div>
+                </div>
+              </div>
+
+              {/* Separation and Filters row */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    {/* Search and Filters */}
+                    <div className="flex flex-col lg:flex-row gap-4 flex-1">
+                      <div className="flex-1">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                          <input
+                            type="text"
+                            placeholder="Search scholarships..."
+                            className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-4">
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          title="Filter by status"
+                          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                        
+                        <button 
+                          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors flex items-center"
+                          aria-label="Filter scholarships"
+                        >
+                          <Filter className="h-5 w-5 text-slate-500" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* New Scholarship Button */}
+                    <Link
+                      to="/school/dashboard/scholarship/new"
+                      className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      New Scholarship
+                    </Link>
+                  </div>
+
+                  <div className="mt-4 flex items-center text-sm text-slate-600">
+                    <span className="font-medium">{filteredScholarships.length}</span>
+                    <span className="ml-1">
+                      scholarship{filteredScholarships.length !== 1 ? 's' : ''} found
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <Link
-            to="/school/dashboard/scholarship/new"
-            className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            New Scholarship
-          </Link>
         </div>
 
       {scholarships.length === 0 ? (
@@ -178,53 +253,10 @@ const ScholarshipManagement: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Filters and Search */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search scholarships..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-4">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  title="Filter by status"
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                
-                <button 
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors flex items-center"
-                  aria-label="Filter scholarships"
-                >
-                  <Filter className="h-5 w-5 text-slate-500" />
-                </button>
-              </div>
-            </div>
 
-            <div className="mt-4 flex items-center text-sm text-slate-600">
-              <span className="font-medium">{filteredScholarships.length}</span>
-              <span className="ml-1">
-                scholarship{filteredScholarships.length !== 1 ? 's' : ''} found
-              </span>
-            </div>
-          </div>
 
           {/* Scholarships Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
             {filteredScholarships.map((scholarship) => {
               const deadlineInfo = getDeadlineStatus(scholarship.deadline);
               const daysLeft = getDaysUntilDeadline(scholarship.deadline);

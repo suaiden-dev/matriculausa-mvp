@@ -31,35 +31,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header Section */}
-      <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={onBack}
-                className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="text-sm md:text-base">Back to list</span>
-              </button>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                  Student Application
-                </h1>
-                <p className="mt-1 text-sm text-slate-600">
-                  Review and manage {studentDetails.full_name}'s application details
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
-                <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                {scholarshipApplication?.status === 'enrolled' ? 'Enrolled' : 'Active'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
