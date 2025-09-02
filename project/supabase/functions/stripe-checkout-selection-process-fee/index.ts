@@ -151,8 +151,7 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] 📋 Metadata atualizada:', sessionMetadata);
     } else {
       console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto para aplicar');
-      // Só permite códigos de promoção se não houver desconto aplicado
-      sessionConfig.allow_promotion_codes = true;
+      // Códigos promocionais removidos - não permitir entrada manual de cupons
     }
 
     console.log('[stripe-checkout-selection-process-fee] 🚀 Criando sessão do Stripe...');

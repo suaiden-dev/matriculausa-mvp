@@ -119,10 +119,9 @@ const AppContent = () => {
           <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
-          {/* Zelle Checkout Route */}
-          <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
-          {/* Zelle Waiting Page Route */}
+          {/* Zelle Checkout Routes */}
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
+          <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
           
           {/* Smart Assistant Route */}
           <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
