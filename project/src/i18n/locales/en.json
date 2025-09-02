@@ -1559,6 +1559,7 @@
       "step2Title": "Upload Required Documents",
       "step2Description": "Please upload the following documents to proceed with your application process.",
       "step2Note": "All files must be clear and legible. Each field accepts only one file.",
+      "step2LanguageNote": "⚠️ IMPORTANT: All documents must be in English. If your documents are in another language, please provide certified English translations.",
       "passport": "Passport",
       "passportDescription": "Valid passport document",
       "diploma": "High School Diploma",

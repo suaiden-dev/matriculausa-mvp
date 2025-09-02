@@ -1678,6 +1678,7 @@
       "step2Title": "Subir Documentos Requeridos",
       "step2Description": "Por favor, sube los siguientes documentos para proceder con tu proceso de aplicación.",
       "step2Note": "Todos los archivos deben estar claros y legibles. Cada campo acepta solo un archivo.",
+      "step2LanguageNote": "⚠️ IMPORTANTE: Todos los documentos deben estar en inglés. Si tus documentos están en otro idioma, proporciona traducciones certificadas en inglés.",
       "passport": "Pasaporte",
       "passportDescription": "Documento de pasaporte válido",
       "diploma": "Diploma de Secundaria",

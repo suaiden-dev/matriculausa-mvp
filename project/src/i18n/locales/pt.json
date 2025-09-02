@@ -1556,6 +1556,7 @@
       "step2Title": "Fazer Upload dos Documentos Necessários",
       "step2Description": "Por favor, faça upload dos seguintes documentos para prosseguir com seu processo de aplicação.",
       "step2Note": "Todos os arquivos devem estar claros e legíveis. Cada campo aceita apenas um arquivo.",
+      "step2LanguageNote": "⚠️ IMPORTANTE: Todos os documentos devem estar em inglês. Se seus documentos estiverem em outro idioma, forneça traduções certificadas em inglês.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
       "diploma": "Diploma do Ensino Médio",

@@ -622,6 +622,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               <p className="text-xs sm:text-sm text-slate-500 px-2">
                 <strong>{t('studentDashboard.documentsAndScholarshipChoice.step2Note')}</strong>
               </p>
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+                <p className="text-sm text-amber-800 font-medium">
+                  {t('studentDashboard.documentsAndScholarshipChoice.step2LanguageNote')}
+                </p>
+              </div>
             </div>
 
             {/* Document Upload List */}
