@@ -313,6 +313,10 @@ const SellerDashboard: React.FC = () => {
             studentId={selectedStudentId!} 
             profileId={students.find(s => s.id === selectedStudentId)?.profile_id || ''}
             onRefresh={handleStudentRefresh}
+            onBack={() => {
+              setCurrentView('students');
+              setSelectedStudentId(null);
+            }}
           />
         );
               case 'affiliate-tools':

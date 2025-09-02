@@ -99,15 +99,30 @@ interface DocumentRequest {
   status: string;
   created_at: string;
   attachment_url: string;
+  // ✅ CORREÇÃO: Adicionar propriedades para compatibilidade com a nova estrutura
+  document_requests?: {
+    id: string;
+    title: string;
+    description: string;
+    created_at: string;
+    is_global: boolean;
+    university_id: string;
+    scholarship_application_id: string;
+    attachment_url: string;
+    due_date: string;
+  };
+  file_url?: string;
+  uploaded_at?: string;
 }
 
 interface StudentDetailsProps {
   studentId: string;
   profileId: string;
   onRefresh?: () => void;
+  onBack?: () => void; // ✅ CORREÇÃO: Adicionar callback para voltar
 }
 
-const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, onRefresh }) => {
+const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, onRefresh, onBack }) => {
   const navigate = useNavigate();
   
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
@@ -197,27 +212,31 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
        console.log('🔍 [STUDENT_DETAILS] Aplicações encontradas:', applicationsList);
 
-       if (applicationsList && applicationsList.length > 0) {
-         const latestApplication = applicationsList[0];
-         
-         const { data: appData, error: applicationError } = await supabase
-           .from('scholarship_applications')
-           .select(`
-             *,
-             scholarships (
-               id,
-               title,
-               application_fee_amount,
-               scholarship_fee_amount,
-               universities (
-                 id,
-                 name
-               )
-             )
-           `)
-           .eq('id', latestApplication.id)
-           .single();
-
+               if (applicationsList && applicationsList.length > 0) {
+          const studentProfile = applicationsList[0];
+          console.log("studentProfile", studentProfile);
+          
+          // ✅ CORREÇÃO: Usar profile_id (student_id na tabela) para buscar a aplicação de bolsa
+          const { data: appData, error: applicationError } = await supabase
+            .from('scholarship_applications')
+            .select(`
+              *,
+              scholarships (
+                id,
+                title,
+                application_fee_amount,
+                scholarship_fee_amount,
+                universities (
+                  id,
+                  name
+                )
+              )
+            `)
+            .eq('student_id', studentProfile.profile_id)  // ✅ Usar profile_id, não user_id
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+           console.log("appData", appData);
          if (!applicationError) {
            setScholarshipApplication(appData);
            
@@ -268,7 +287,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
   }, [studentId]); // Remover loadStudentDetails das dependências
 
-  const loadDocumentRequests = async () => {
+  const loadDocumentRequests = useCallback(async () => {
     console.log('🔍 [STUDENT_DETAILS] loadDocumentRequests iniciada');
     console.log('🔍 [STUDENT_DETAILS] scholarshipApplication?.id:', scholarshipApplication?.id);
     console.log('🔍 [STUDENT_DETAILS] studentInfo?.university_name:', studentInfo?.university_name);
@@ -279,33 +298,261 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     }
 
     try {
-      // Primeiro, buscar document_requests específicas para esta aplicação
-      const { data: specificRequests, error: specificError } = await supabase
+      // ✅ CORREÇÃO: Seguir o mesmo padrão da universidade
+      // Primeiro, buscar document_requests para esta aplicação
+      const { data: requestsForApp, error: requestsError } = await supabase
         .from('document_requests')
         .select('*')
         .eq('scholarship_application_id', scholarshipApplication.id);
-
-      // Também buscar document_requests globais da universidade
-      let globalRequests: any[] = [];
-      if (studentInfo?.university_name) {
-        const { data: globalData, error: globalError } = await supabase
-          .from('document_requests')
+      
+      if (requestsError) {
+        console.log('❌ [DOCUMENT REQUEST] Error fetching requests:', requestsError);
+      } else {
+        console.log('✅ [DOCUMENT REQUEST] Requests found:', requestsForApp);
+      }
+      
+      // ✅ CORREÇÃO: Buscar uploads para cada request encontrado
+      let uploads: any[] = [];
+      if (requestsForApp && requestsForApp.length > 0) {
+        const requestIds = requestsForApp.map(req => req.id);
+        console.log('🔍 [DOCUMENT REQUEST] Request IDs to search uploads:', requestIds);
+        
+        const { data: uploadsForRequests, error: uploadsError } = await supabase
+          .from('document_request_uploads')
           .select('*')
-          .eq('is_global', true);
+          .in('document_request_id', requestIds);
+        
+        if (uploadsError) {
+          console.log('❌ [DOCUMENT REQUEST] Error fetching uploads for requests:', uploadsError);
+        } else {
+          console.log('✅ [DOCUMENT REQUEST] Uploads found for requests:', uploadsForRequests);
+          uploads = uploadsForRequests || [];
+        }
+      }
+      
+      // ✅ CORREÇÃO: Se não encontrou nada pelos requests, tentar buscar por uploaded_by
+      if (uploads.length === 0) {
+        console.log('🔄 [DOCUMENT REQUEST] No uploads found for requests, trying uploaded_by =', studentId);
+        
+        // Teste 1: Buscar apenas document_request_uploads
+        console.log('🔍 [DOCUMENT REQUEST] Test 1: Simple query on document_request_uploads');
+        let { data: simpleUploads, error: simpleError } = await supabase
+          .from('document_request_uploads')
+          .select('*')
+          .eq('uploaded_by', studentId);
+        
+        console.log('🔍 [DOCUMENT REQUEST] Simple query result:', {
+          data: simpleUploads,
+          error: simpleError,
+          count: simpleUploads?.length || 0
+        });
+        
+        // Teste 2: Buscar com join para document_requests
+        console.log('🔍 [DOCUMENT REQUEST] Test 2: Query with join to document_requests');
+        let { data: uploadsByUser, error: error1 } = await supabase
+          .from('document_request_uploads')
+          .select(`
+            *,
+            document_requests(
+              id,
+              title,
+              description,
+              created_at,
+              is_global,
+              university_id,
+              scholarship_application_id,
+              attachment_url,
+              due_date
+            )
+          `)
+          .eq('uploaded_by', studentId);
+        
+        console.log('🔍 [DOCUMENT REQUEST] Join query result:', {
+          data: uploadsByUser,
+          error: error1,
+          count: uploadsByUser?.length || 0
+        });
 
-        if (!globalError) {
-          globalRequests = globalData || [];
+        // ✅ CORREÇÃO: Só atualizar se os dados realmente mudaram
+        if (JSON.stringify(uploadsByUser) !== JSON.stringify(documentRequests)) {
+          setDocumentRequests(uploadsByUser || []);
+        }
+        
+        let { data: allUploadsDebug, error: allError } = await supabase
+          .from('document_request')
+          .select('*')
+          .eq('scholarship_application_id', scholarshipApplication.id);
+        
+        console.log('🔍 [DOCUMENT REQUEST] All uploads debug:', {
+          data: allUploadsDebug,
+          error: allError
+        });
+        
+        // Teste 4: Verificar se o studentId existe na tabela
+        console.log('🔍 [DOCUMENT REQUEST] Test 4: Check if studentId exists in any upload');
+        if (allUploadsDebug && allUploadsDebug.length > 0) {
+          const foundStudent = allUploadsDebug.find(upload => upload.uploaded_by === studentId);
+          console.log('🔍 [DOCUMENT REQUEST] Student found in debug data:', foundStudent);
+          
+          // Verificar todos os uploaded_by únicos
+          const uniqueUploadedBy = [...new Set(allUploadsDebug.map(u => u.uploaded_by))];
+          console.log('🔍 [DOCUMENT REQUEST] Unique uploaded_by values in debug:', uniqueUploadedBy);
+        }
+        
+        if (error1) {
+          console.log('❌ [DOCUMENT REQUEST] Error fetching by uploaded_by:', error1);
+        } else if (uploadsByUser && uploadsByUser.length > 0) {
+          console.log('✅ [DOCUMENT REQUEST] Uploads found by uploaded_by:', uploadsByUser);
+          uploads = uploadsByUser;
+        } else {
+          console.log('⚠️ [DOCUMENT REQUEST] No uploads found by uploaded_by');
+          
+          // Se ainda não encontrou, usar os dados simples se disponível
+          if (simpleUploads && simpleUploads.length > 0) {
+            console.log('🔄 [DOCUMENT REQUEST] Using simple query results instead');
+            uploads = simpleUploads;
+          }
+        }
+      }
+      
+      // Se ainda não encontrou nada, tentar buscar todos os uploads
+      if (uploads.length === 0) {
+        console.log('🔄 [DOCUMENT REQUEST] Trying to fetch all uploads for debug');
+        
+        let { data: allUploads, error: error2 } = await supabase
+          .from('document_request_uploads')
+          .select('*');
+        
+        if (error2) {
+          console.log('❌ [DOCUMENT REQUEST] Error fetching all uploads:', error2);
+        } else if (allUploads && allUploads.length > 0) {
+          console.log('📊 [DOCUMENT REQUEST] Total uploads in table:', allUploads.length);
+          console.log('📄 [DOCUMENT REQUEST] First 3 uploads:', allUploads.slice(0, 3));
+          uploads = allUploads;
         }
       }
 
-      // Combinar as duas listas
-      const allRequests = [...(specificRequests || []), ...globalRequests];
-      console.log('🔍 [STUDENT_DETAILS] Document requests encontrados:', allRequests);
-      setDocumentRequests(allRequests);
-    } catch (err) {
-      console.error('❌ [STUDENT_DETAILS] Erro ao carregar solicitações de documentos:', err);
+      console.log('📋 [DOCUMENT REQUEST] Final uploads count:', uploads.length);
+
+      // Buscar também a carta de aceite da aplicação
+      let acceptanceLetterDoc = null;
+      if (scholarshipApplication.acceptance_letter_url && scholarshipApplication.acceptance_letter_url.trim() !== '') {
+        acceptanceLetterDoc = {
+          id: `acceptance_letter_${scholarshipApplication.id}`,
+          filename: scholarshipApplication.acceptance_letter_url?.split('/').pop() || 'Acceptance Letter',
+          file_url: scholarshipApplication.acceptance_letter_url,
+          status: scholarshipApplication.acceptance_letter_status || 'sent',
+          uploaded_at: new Date().toISOString(), // Usar data atual como fallback
+          request_title: 'Acceptance Letter',
+          request_description: 'Official acceptance letter from the university',
+          request_created_at: new Date().toISOString(), // Usar data atual como fallback
+          is_global: false,
+          request_type: 'Acceptance Letter',
+          is_acceptance_letter: true
+        };
+        console.log('✅ [DOCUMENT REQUEST] Acceptance letter found:', acceptanceLetterDoc);
+      }
+
+      // Combinar uploads com a carta de aceite
+      let allDocuments = [...uploads];
+      if (acceptanceLetterDoc) {
+        allDocuments.unshift(acceptanceLetterDoc);
+      }
+
+      console.log('📊 [DOCUMENT REQUEST] Summary:', {
+        uploadsCount: uploads.length,
+        acceptanceLetterFound: !!acceptanceLetterDoc,
+        totalDocuments: allDocuments.length
+      });
+
+                  if (!allDocuments || allDocuments.length === 0) {
+              console.log('⚠️ [DOCUMENT REQUEST] No documents found for student');
+              // ✅ CORREÇÃO: Só atualizar se os dados realmente mudaram
+              if (documentRequests.length > 0) {
+                setDocumentRequests([]);
+              }
+            } else {
+        // ✅ CORREÇÃO: Usar os requests encontrados para estruturar os documentos
+        const documentRequestsMap = new Map();
+        
+        // Primeiro, adicionar os requests encontrados
+        if (requestsForApp && requestsForApp.length > 0) {
+          requestsForApp.forEach(request => {
+            documentRequestsMap.set(request.id, {
+              id: request.id,
+              title: request.title,
+              description: request.description,
+              is_global: request.is_global,
+              status: 'open',
+              attachment_url: request.attachment_url,
+              due_date: request.due_date,
+              document_request_uploads: []
+            });
+          });
+        }
+        
+        // Depois, adicionar a carta de aceite se existir
+        if (acceptanceLetterDoc) {
+          if (!documentRequestsMap.has('acceptance_letter')) {
+            documentRequestsMap.set('acceptance_letter', {
+              id: 'acceptance_letter',
+              title: 'Acceptance Letter',
+              description: 'Official acceptance letter from the university',
+              is_global: false,
+              status: 'open',
+              attachment_url: null,
+              due_date: null,
+              document_request_uploads: []
+            });
+          }
+          documentRequestsMap.get('acceptance_letter').document_request_uploads.push(acceptanceLetterDoc);
+        }
+        
+        // Por fim, distribuir os uploads pelos requests correspondentes
+        uploads.forEach(upload => {
+          const requestId = upload.document_request_id;
+          if (requestId && documentRequestsMap.has(requestId)) {
+            // Formatar o upload para exibição
+            let filename = 'Document';
+            if (upload.file_url) {
+              const urlParts = upload.file_url.split('/');
+              filename = urlParts[urlParts.length - 1] || 'Document';
+            }
+            
+            const formattedUpload = {
+              id: upload.id,
+              filename: filename,
+              file_url: upload.file_url,
+              status: upload.status || 'under_review',
+              uploaded_at: upload.uploaded_at || upload.created_at,
+              request_title: documentRequestsMap.get(requestId)?.title || 'Document Request',
+              request_description: documentRequestsMap.get(requestId)?.description || '',
+              request_created_at: documentRequestsMap.get(requestId)?.created_at || upload.created_at,
+              is_global: documentRequestsMap.get(requestId)?.is_global || false,
+              request_type: 'document',
+              is_acceptance_letter: false
+            };
+            
+            documentRequestsMap.get(requestId).document_request_uploads.push(formattedUpload);
+          }
+        });
+        
+        const finalDocumentRequests = Array.from(documentRequestsMap.values());
+        console.log('🎯 [DOCUMENT REQUEST] Final document requests:', finalDocumentRequests);
+        // ✅ CORREÇÃO: Só atualizar se os dados realmente mudaram
+        if (JSON.stringify(finalDocumentRequests) !== JSON.stringify(documentRequests)) {
+          setDocumentRequests(finalDocumentRequests);
+        }
+      }
+      
+    } catch (error) {
+      console.error("❌ [DOCUMENT REQUEST] Error in document requests logic:", error);
+      // ✅ CORREÇÃO: Só atualizar se os dados realmente mudaram
+      if (documentRequests.length > 0) {
+        setDocumentRequests([]);
+      }
     }
-  };
+  }, [scholarshipApplication?.id, studentId, documentRequests]);
 
   const loadStudentDocuments = async (targetStudentId?: string) => {
     console.log('🚀 [STUDENT_DETAILS] loadStudentDocuments INICIADA');
@@ -418,7 +665,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     if (scholarshipApplication?.id) {
       loadDocumentRequests();
     }
-  }, [scholarshipApplication?.id, loadDocumentRequests]);
+  }, [scholarshipApplication?.id]); 
 
   // Remover este useEffect duplicado - os documentos já são carregados em loadStudentDetails
 
@@ -618,7 +865,6 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-slate-600">Loading data...</p>
       </div>
     );
   }
@@ -681,7 +927,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate(-1)}
+                onClick={() => onBack ? onBack() : navigate(-1)}
                 className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100"
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -1203,13 +1449,127 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 </div>
                 
                 <div className="p-6">
-                  <div className="text-center py-8 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                    <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <p className="text-slate-600 font-medium">No document requests yet</p>
-                    <p className="text-sm text-slate-500 mt-1">Document requests will appear here when created by university staff</p>
-                  </div>
+                  {documentRequests && documentRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {documentRequests.map((request) => (
+                        <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h5 className="text-base font-medium text-slate-900 mb-2">
+                                {request.document_requests?.title || request.title || 'Document Request'}
+                              </h5>
+                              {request.document_requests?.description && (
+                                <p className="text-sm text-slate-600 mb-2">
+                                  {request.document_requests.description}
+                                </p>
+                              )}
+                              <div className="flex items-center space-x-4 text-xs text-slate-500">
+                                {request.document_requests?.due_date && (
+                                  <span>
+                                    <span className="font-medium">Due Date:</span> {formatDate(request.document_requests.due_date)}
+                                  </span>
+                                )}
+                                <span>
+                                  <span className="font-medium">Type:</span> {request.document_requests?.is_global ? 'Global' : 'Specific'}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* University Template */}
+                            {request.document_requests?.attachment_url && (
+                              <div className="ml-4">
+                                <button
+                                  onClick={() => handleViewDocument({ file_url: request.document_requests!.attachment_url, type: 'template' })}
+                                  className="inline-flex items-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                  View Template
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Documents Submitted by Student */}
+                          <div className="mt-4">
+                            <h6 className="text-sm font-medium text-slate-700 mb-2">
+                              Submitted Documents:
+                            </h6>
+                            <div className="space-y-2">
+                              {/* ✅ GAMBIARRA: Tratar cada upload individualmente */}
+                              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                                <div className="flex items-center space-x-3">
+                                  <div className="flex-shrink-0">
+                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    {/* ✅ GAMBIARRA: Usar nome extraído do file_url */}
+                                    <p className="text-sm font-medium text-slate-900">
+                                      {request.file_url ? request.file_url.split('/').pop() || 'Document' : 'Document'}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      Submitted on {formatDate(request.uploaded_at || request.created_at)}
+                                    </p>
+                                    {/* ✅ GAMBIARRA: Mostrar informações do document_request */}
+                                    <p className="text-xs text-slate-400 mt-1">
+                                      Request: {request.document_requests?.title || request.title || 'Document Request'}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                    request.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-slate-100 text-slate-800'
+                                  }`}>
+                                    {request.status === 'approved' ? 'Approved' :
+                                     request.status === 'rejected' ? 'Rejected' :
+                                     request.status === 'under_review' ? 'Under Review' :
+                                     'Pending'}
+                                  </span>
+                                  
+                                  {/* ✅ GAMBIARRA: Passar documento com URL completa para as funções */}
+                                  <button
+                                    onClick={() => handleViewDocument({
+                                      ...request,
+                                      file_url: `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/${request.file_url}`,
+                                      filename: request.file_url ? request.file_url.split('/').pop() || 'Document' : 'Document'
+                                    })}
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  >
+                                    View
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => handleDownloadDocument({
+                                      ...request,
+                                      file_url: `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/${request.file_url}`,
+                                      filename: request.file_url ? request.file_url.split('/').pop() || 'Document' : 'Document'
+                                    })}
+                                    className="text-green-600 hover:text-green-800 text-sm font-medium"
+                                  >
+                                    Download
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                      <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="text-slate-600 font-medium">No document requests yet</p>
+                      <p className="text-sm text-slate-500 mt-1">Document requests will appear here when created by university staff</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

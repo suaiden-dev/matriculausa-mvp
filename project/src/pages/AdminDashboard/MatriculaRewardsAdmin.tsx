@@ -151,6 +151,13 @@ const MatriculaRewardsAdmin: React.FC = () => {
   const [currentStudentsPage, setCurrentStudentsPage] = useState(1);
   const [studentsPerPage, setStudentsPerPage] = useState(15);
 
+  // Modal states
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
+  const [selectedPayoutId, setSelectedPayoutId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
+
   const formatActivityDate = (iso?: string | null) => {
     if (!iso) return '—';
     try {
@@ -411,13 +418,28 @@ const MatriculaRewardsAdmin: React.FC = () => {
   const approve = async (id: string) => {
     try { await PayoutService.adminApprove(id, user!.id); await loadPayoutRequests(); } catch(e:any){ setError(e.message); }
   };
-  const markPaid = async (id: string) => {
-    const ref = prompt('Payment reference (optional)') || undefined;
-    try { await PayoutService.adminMarkPaid(id, user!.id, ref); await loadPayoutRequests(); } catch(e:any){ setError(e.message); }
+  const markPaid = async (id: string, reference?: string) => {
+    try { 
+      await PayoutService.adminMarkPaid(id, user!.id, reference); 
+      await loadPayoutRequests(); 
+      setShowMarkPaidModal(false);
+      setSelectedPayoutId(null);
+      setPaymentReference('');
+    } catch(e:any){ 
+      setError(e.message); 
+    }
   };
-  const reject = async (id: string) => {
-    const reason = prompt('Reason to reject') || 'No reason';
-    try { await PayoutService.adminReject(id, user!.id, reason); await loadPayoutRequests(); } catch(e:any){ setError(e.message); }
+  
+  const reject = async (id: string, reason: string) => {
+    try { 
+      await PayoutService.adminReject(id, user!.id, reason); 
+      await loadPayoutRequests(); 
+      setShowRejectModal(false);
+      setSelectedPayoutId(null);
+      setRejectReason('');
+    } catch(e:any){ 
+      setError(e.message); 
+    }
   };
 
   const loadMatriculaRewardsStats = async () => {
@@ -1172,150 +1194,163 @@ const MatriculaRewardsAdmin: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {paginatedPayouts.map((request: any) => {
-                  const statusConfig = getPayoutStatusConfig(request.status);
-                  const methodConfig = getPayoutMethodConfig(request.payout_method);
-                  const StatusIcon = statusConfig.icon;
-                  const MethodIcon = methodConfig.icon;
-                  
-                  return (
-                    <div 
-                      key={request.id} 
-                      className="bg-white border border-slate-200 rounded-lg p-6 hover:shadow-sm transition-all duration-200"
-                    >
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-lg ${statusConfig.color}`}>
-                            <StatusIcon className="h-5 w-5" />
-                          </div>
-                          <div>
-                                                         <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusConfig.color}`}>
-                               {request.status === 'pending' ? 'Pending' :
-                                request.status === 'approved' ? 'Approved' :
-                                request.status === 'paid' ? 'Paid' :
-                                request.status === 'rejected' ? 'Rejected' : 'Cancelled'}
-                             </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs text-slate-500">Invoice</div>
-                          <div className="font-mono text-sm text-slate-700">
-                            {request.payout_invoices?.[0]?.invoice_number || request.id.slice(0, 8)}
-                          </div>
-                        </div>
-                      </div>
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          University
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Invoice
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Method
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {paginatedPayouts.map((request: any) => {
+                        const statusConfig = getPayoutStatusConfig(request.status);
+                        const methodConfig = getPayoutMethodConfig(request.payout_method);
+                        const StatusIcon = statusConfig.icon;
+                        const MethodIcon = methodConfig.icon;
+                        
+                        return (
+                          <tr key={request.id} className="hover:bg-slate-50 transition-colors duration-150">
+                            {/* University */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                    <svg className="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-slate-900">
+                                    {request.universities?.name || 'University not found'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
 
-                      {/* University Info */}
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 rounded-lg bg-slate-100">
-                          <svg className="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-900 truncate">
-                            {request.universities?.name || 'University not found'}
-                          </h3>
-                        </div>
-                      </div>
+                            {/* Invoice */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-slate-900 font-mono">
+                                {request.payout_invoices?.[0]?.invoice_number || request.id.slice(0, 8)}
+                              </div>
+                            </td>
 
-                                            {/* Amount */}
-                      <div className="bg-slate-50 rounded-lg p-4 mb-4 border border-slate-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div className="p-1.5 rounded-lg bg-yellow-100">
-                              <svg className="h-4 w-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                              </svg>
-                            </div>
-                            <span className="text-sm font-medium text-slate-600">Amount</span>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-slate-900">
-                              {request.amount_coins} coins
-                            </div>
-                            <div className="text-sm text-slate-600">
-                              ${Number(request.amount_usd).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                            {/* Amount */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-slate-900">
+                                <div className="font-semibold">{request.amount_coins} coins</div>
+                                <div className="text-slate-500">${Number(request.amount_usd).toFixed(2)}</div>
+                              </div>
+                            </td>
 
-                      {/* Payment Method */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-2">
-                          <div className={`p-1.5 rounded-lg ${methodConfig.bgColor}`}>
-                            <MethodIcon className={`h-4 w-4 ${methodConfig.color}`} />
-                          </div>
-                          <span className="text-sm font-medium text-slate-600">Method</span>
-                        </div>
-                        <span className="text-sm font-medium text-slate-800 capitalize">
-                          {String(request.payout_method).replace('_', ' ')}
-                        </span>
-                      </div>
+                            {/* Method */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className={`p-1.5 rounded-lg ${methodConfig.bgColor}`}>
+                                  <MethodIcon className={`h-4 w-4 ${methodConfig.color}`} />
+                                </div>
+                                <span className="ml-2 text-sm text-slate-900 capitalize">
+                                  {String(request.payout_method).replace('_', ' ')}
+                                </span>
+                              </div>
+                            </td>
 
-                                              {/* Payment Details */}
-                        <div className="mb-4">
-                          <div className="text-sm font-medium text-slate-600 mb-2">Payment Details</div>
-                          <div className="bg-slate-50 rounded-lg p-3">
-                            {formatPaymentDetails(request.payout_details_preview, request.payout_method) || (
-                              <span className="text-slate-400 text-xs">No payment details</span>
-                            )}
-                          </div>
-                        </div>
+                            {/* Status */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className={`p-1.5 rounded-lg ${statusConfig.color}`}>
+                                  <StatusIcon className="h-4 w-4" />
+                                </div>
+                                <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                                  {request.status === 'pending' ? 'Pending' :
+                                   request.status === 'approved' ? 'Approved' :
+                                   request.status === 'paid' ? 'Paid' :
+                                   request.status === 'rejected' ? 'Rejected' : 'Cancelled'}
+                                </span>
+                              </div>
+                            </td>
 
-                      {/* Date */}
-                      <div className="flex items-center space-x-2 mb-4">
-                        <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-sm text-slate-600">
-                          {formatActivityDate(request.created_at)}
-                        </span>
-                      </div>
+                            {/* Date */}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                              {formatActivityDate(request.created_at)}
+                            </td>
 
-                      {/* Actions */}
-                      {request.status === 'pending' && (
-                        <div className="flex space-x-2 pt-4 border-t border-slate-200">
-                                                    <button
-                            onClick={() => approve(request.id)}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>Approve</span>
-                          </button>
-                          <button
-                            onClick={() => reject(request.id)}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            <span>Reject</span>
-                          </button>
-                        </div>
-                      )}
+                            {/* Actions */}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              {request.status === 'pending' && (
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => approve(request.id)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1.5 px-3 rounded-md transition-colors duration-200 flex items-center space-x-1"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>Approve</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPayoutId(request.id);
+                                      setRejectReason('');
+                                      setShowRejectModal(true);
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-3 rounded-md transition-colors duration-200 flex items-center space-x-1"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    <span>Reject</span>
+                                  </button>
+                                </div>
+                              )}
 
-                      {request.status === 'approved' && (
-                        <div className="pt-4 border-t border-slate-200">
-                                                    <button
-                            onClick={() => markPaid(request.id)}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>Mark as Paid</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                              {request.status === 'approved' && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedPayoutId(request.id);
+                                    setPaymentReference('');
+                                    setShowMarkPaidModal(true);
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1.5 px-3 rounded-md transition-colors duration-200 flex items-center space-x-1"
+                                >
+                                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  <span>Mark as Paid</span>
+                                </button>
+                              )}
+
+                              {(request.status === 'paid' || request.status === 'rejected' || request.status === 'cancelled') && (
+                                <span className="text-slate-400 text-xs">No actions available</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -1745,6 +1780,119 @@ const MatriculaRewardsAdmin: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Reject Payout Request</h3>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setSelectedPayoutId(null);
+                  setRejectReason('');
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="rejectReason" className="block text-sm font-medium text-slate-700 mb-2">
+                Reason for rejection
+              </label>
+              <textarea
+                id="rejectReason"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter the reason for rejecting this payout request..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setSelectedPayoutId(null);
+                  setRejectReason('');
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded-md hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => selectedPayoutId && reject(selectedPayoutId, rejectReason || 'No reason provided')}
+                disabled={!rejectReason.trim()}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Reject Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark as Paid Modal */}
+      {showMarkPaidModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Mark Payout as Paid</h3>
+              <button
+                onClick={() => {
+                  setShowMarkPaidModal(false);
+                  setSelectedPayoutId(null);
+                  setPaymentReference('');
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="paymentReference" className="block text-sm font-medium text-slate-700 mb-2">
+                Payment Reference (Optional)
+              </label>
+              <input
+                type="text"
+                id="paymentReference"
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+                placeholder="Enter payment reference, transaction ID, or any notes..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowMarkPaidModal(false);
+                  setSelectedPayoutId(null);
+                  setPaymentReference('');
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded-md hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => selectedPayoutId && markPaid(selectedPayoutId, paymentReference || undefined)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
+              >
+                Mark as Paid
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
