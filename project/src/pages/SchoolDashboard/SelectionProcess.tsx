@@ -1256,50 +1256,7 @@ const SelectionProcess: React.FC = () => {
         console.error('Error updating user profile:', profileError);
       }
 
-      // Enviar notificação ao aluno
-      try {
-        const { data: userData } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('user_id', selectedStudent.user_profiles.user_id)
-          .single();
 
-        if (userData?.email) {
-          const webhookPayload = {
-            tipo_notf: "Carta de aceite enviada",
-            email_aluno: userData.email,
-            nome_aluno: selectedStudent.user_profiles.full_name,
-            email_universidade: user?.email,
-            o_que_enviar: `Congratulations! Your acceptance letter has been processed and you are now enrolled. Please check your dashboard for next steps.`
-          };
-
-          console.log('Enviando webhook...');
-          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
-          console.log('Webhook payload:', webhookPayload);
-          
-          try {
-            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(webhookPayload),
-            });
-            
-            console.log('Webhook response status:', webhookResponse.status);
-            console.log('Webhook response ok:', webhookResponse.ok);
-            
-            if (!webhookResponse.ok) {
-              const webhookErrorText = await webhookResponse.text();
-              console.error('Webhook error:', webhookErrorText);
-            } else {
-              console.log('Webhook enviado com sucesso');
-            }
-          } catch (webhookError) {
-            console.error('Erro ao enviar webhook:', webhookError);
-          }
-        }
-      } catch (notificationError) {
-        console.error('Error sending acceptance notification:', notificationError);
-      }
 
       setAcceptanceLetterUploaded(true);
       alert('Acceptance letter processed successfully! The student is now enrolled and will be notified.');

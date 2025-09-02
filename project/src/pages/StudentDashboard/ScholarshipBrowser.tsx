@@ -31,6 +31,8 @@ import { PreCheckoutModal } from '../../components/PreCheckoutModal';
 import FavoriteButton from '../../components/FavoriteButton';
 import FavoritesFilter from '../../components/FavoritesFilter';
 import PaymentRequiredBlocker from '../../components/PaymentRequiredBlocker';
+import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlockedMessage';
+import { useApplicationFeeStatus } from '../../hooks/useApplicationFeeStatus';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -42,6 +44,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   applications
 }) => {
   const { t } = useTranslation();
+  
+  // Hook para verificar se usuário já tem application fee paga
+  const { 
+    hasPaidApplicationFee, 
+    committedUniversity, 
+    committedScholarship, 
+    loading: applicationFeeLoading 
+  } = useApplicationFeeStatus();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
@@ -690,6 +700,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     const isInFeatured = featuredScholarships.some(fs => fs.id === s.id);
     return !isInFeatured;
   });
+
+  // Se usuário já tem application fee paga, mostrar mensagem de bloqueio
+  if (!applicationFeeLoading && hasPaidApplicationFee) {
+    return (
+      <ApplicationFeeBlockedMessage 
+        committedUniversity={committedUniversity}
+        committedScholarship={committedScholarship}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 pt-4 sm:pt-6 md:pt-10 px-4 sm:px-6 lg:px-0 pb-8 sm:pb-12" data-testid="scholarship-list">

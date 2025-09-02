@@ -30,9 +30,47 @@ export const ZelleWaitingPage: React.FC = () => {
   // Ref para controlar se o useEffect deve executar
   const shouldCheckDatabase = useRef(true);
 
-  const paymentId = searchParams.get('payment_id');
+  // Função para chamar a Edge Function de aprovação automática
+  const approvePaymentAutomatically = async () => {
+    try {
+      console.log('🚀 [ZelleWaiting] Iniciando aprovação automática...');
+      console.log('🔍 [ZelleWaiting] Parâmetros:', {
+        user_id: user?.id,
+        fee_type_global: feeType,
+        temp_payment_id: paymentId,
+        scholarshipsIds
+      });
+
+      if (!user?.id || !feeType) {
+        throw new Error('Parâmetros obrigatórios não encontrados');
+      }
+
+      const { data, error } = await supabase.functions.invoke('approve-zelle-payment-automatic', {
+        body: {
+          user_id: user.id,
+          fee_type_global: feeType,
+          temp_payment_id: paymentId,
+          scholarship_ids: scholarshipsIds
+        }
+      });
+
+      if (error) {
+        console.error('❌ [ZelleWaiting] Erro na Edge Function:', error);
+        throw error;
+      }
+
+      console.log('✅ [ZelleWaiting] Aprovação automática concluída:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ [ZelleWaiting] Erro ao aprovar pagamento automaticamente:', error);
+      throw error;
+    }
+  };
+
+  const paymentId = searchParams.get('temp_payment_id');
   const feeType = searchParams.get('fee_type');
   const amount = searchParams.get('amount');
+  const scholarshipsIds = searchParams.get('scholarshipsIds');
 
   // Simular contador de tempo
   useEffect(() => {
@@ -78,21 +116,23 @@ export const ZelleWaitingPage: React.FC = () => {
             console.log('🎯 [ZelleWaiting] webhookResponseReceived definido como true');
             
             // Processar imediatamente a resposta
-            if (responseData.response.toLowerCase().includes('not valid') || 
-                responseData.response.toLowerCase().includes('invalid') ||
-                responseData.response.toLowerCase().includes('rejected')) {
-              // Resposta negativa - vai para revisão manual
-              console.log('❌ [ZelleWaiting] Resposta negativa detectada - mudando para revisão manual');
-              setPaymentStatus({
-                status: 'under_review',
-                message: 'Under Manual Review',
-                details: 'Your payment proof requires additional verification. Our team will review it within 24 hours.'
-              });
-              // Desabilitar verificação do banco para evitar sobrescrita
-              shouldCheckDatabase.current = false;
-            } else {
-              // Resposta positiva - aprovar automaticamente
-              console.log('✅ [ZelleWaiting] Resposta positiva detectada - aprovando automaticamente');
+            const response = responseData.response.toLowerCase();
+            console.log('🔍 [ZelleWaiting] Analisando resposta:', response);
+            
+            // Verificar se é especificamente "The proof of payment is valid"
+            if (response === 'the proof of payment is valid.') {
+              // Resposta positiva específica - aprovar automaticamente
+              console.log('✅ [ZelleWaiting] Resposta positiva específica detectada - aprovando automaticamente');
+              
+              // Chamar Edge Function para aprovar automaticamente
+              try {
+                await approvePaymentAutomatically();
+                console.log('✅ [ZelleWaiting] Pagamento aprovado automaticamente via Edge Function');
+              } catch (error) {
+                console.error('❌ [ZelleWaiting] Erro ao aprovar automaticamente:', error);
+                // Continuar mesmo com erro, pois o n8n já validou
+              }
+              
               setPaymentStatus({
                 status: 'approved',
                 message: 'Payment Approved! 🎉',
@@ -102,8 +142,19 @@ export const ZelleWaitingPage: React.FC = () => {
               shouldCheckDatabase.current = false;
               // Redirecionar para página de sucesso após 3 segundos
               setTimeout(() => {
-                navigate('/checkout/success?method=zelle&status=approved');
+                navigate(`/zelle/success?method=zelle&status=approved&fee_type=${feeType}&amount=${amount}`);
               }, 3000);
+            } else {
+              // Qualquer outra resposta - vai para revisão manual
+              console.log('❌ [ZelleWaiting] Resposta não é "valid" - mudando para revisão manual');
+              console.log('❌ [ZelleWaiting] Resposta recebida:', responseData.response);
+              setPaymentStatus({
+                status: 'under_review',
+                message: 'Processing Payment',
+                details: 'Your payment proof requires additional verification. Our team will review it within 24 hours.'
+              });
+              // Desabilitar verificação do banco para evitar sobrescrita
+              shouldCheckDatabase.current = false;
             }
           }
         } else {
@@ -135,81 +186,19 @@ export const ZelleWaitingPage: React.FC = () => {
     }
 
     const checkPaymentStatus = async () => {
-      // Verificar novamente se já temos resposta do n8n (dupla verificação)
-      if (n8nAnalysisResult && webhookResponseReceived) {
-        console.log('🎯 [ZelleWaiting] Resposta do n8n já processada, cancelando verificação do banco');
-        return;
-      }
-      
-      setIsChecking(true);
-      try {
-        const { data, error } = await supabase
-          .from('zelle_payments')
-          .select('status, updated_at, admin_notes')
-          .eq('id', paymentId)
-          .single();
-
-        if (error) throw error;
-
-        if (data.status === 'approved') {
-          setPaymentStatus({
-            status: 'approved',
-            message: 'Payment Approved! 🎉',
-            details: 'Your payment has been successfully verified and approved.'
-          });
-          // Redirecionar para página de sucesso após 3 segundos
-          setTimeout(() => {
-            navigate('/checkout/success?method=zelle&status=approved');
-          }, 3000);
-        } else if (data.status === 'rejected') {
-          setPaymentStatus({
-            status: 'rejected',
-            message: 'Payment Requires Attention',
-            details: 'Your payment proof needs to be resubmitted. Please ensure all required information is clearly visible.'
-          });
-        } else if (data.status === 'pending_verification') {
-          console.log('🔍 [ZelleWaiting] Status: pending_verification');
-          console.log('🔍 [ZelleWaiting] n8nAnalysisResult:', n8nAnalysisResult);
-          console.log('🔍 [ZelleWaiting] webhookResponseReceived:', webhookResponseReceived);
-          
-          // Se já temos resposta do n8n, não fazer nada (deixar o estado atual)
-          if (n8nAnalysisResult && webhookResponseReceived) {
-            console.log('🎯 [ZelleWaiting] Resposta do n8n já processada, mantendo estado atual');
-            return; // Não alterar o status se já foi processado
-          }
-          
-          // Verificação adicional: se o status atual já é 'under_review', não alterar
-          if (paymentStatus.status === 'under_review') {
-            console.log('🎯 [ZelleWaiting] Status já é under_review, não alterando');
-            return;
-          }
-          
-          // Ainda não recebemos resposta do n8n - continuar análise
-          setPaymentStatus({
-            status: 'analyzing',
-            message: 'Processing your payment verification...',
-            details: 'Our automated system is analyzing your payment proof.'
-          });
-        }
-      } catch (error) {
-        console.error('Error checking payment status:', error);
-        setPaymentStatus({
-          status: 'error',
-          message: 'Verification Error',
-          details: 'There was an issue checking your payment status. Please try again.'
-        });
-      } finally {
-        setIsChecking(false);
-      }
+      // Esta função foi desabilitada para evitar conflitos com a aprovação automática
+      // A aprovação automática já gerencia o status do pagamento
+      console.log('🎯 [ZelleWaiting] checkPaymentStatus desabilitada - usando apenas aprovação automática');
+      return;
     };
 
-    // Verificar imediatamente
-    checkPaymentStatus();
+    // Verificar imediatamente (desabilitado)
+    // checkPaymentStatus();
 
-    // Verificar a cada 5 segundos para análise mais responsiva
-    const interval = setInterval(checkPaymentStatus, 5000);
+    // Verificar a cada 5 segundos para análise mais responsiva (desabilitado)
+    // const interval = setInterval(checkPaymentStatus, 5000);
 
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [paymentId, navigate]);
 
   const formatTime = (seconds: number) => {

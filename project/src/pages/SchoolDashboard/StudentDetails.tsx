@@ -1287,6 +1287,39 @@ const StudentDetails: React.FC = () => {
             console.error('Erro ao enviar webhook:', webhookError);
           }
 
+          // Segundo webhook: Notificar sobre I-20 Control Fee disponível
+          try {
+            const i20ControlFeePayload = {
+              tipo_notf: "I-20 Control Fee Disponível",
+              email_aluno: userData.email,
+              nome_aluno: application.user_profiles.full_name,
+              email_universidade: user?.email,
+              o_que_enviar: `Great news! Your I-20 Control Fee is now available for payment. This fee is required for the issuance of your I-20 document, essential for your F-1 visa. You have 10 days to complete this payment. Please check your dashboard to proceed.`
+            };
+
+            console.log('Enviando webhook I-20 Control Fee...');
+            console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
+            console.log('I-20 Control Fee payload:', i20ControlFeePayload);
+            
+            const i20WebhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(i20ControlFeePayload),
+            });
+            
+            console.log('I-20 Control Fee webhook response status:', i20WebhookResponse.status);
+            console.log('I-20 Control Fee webhook response ok:', i20WebhookResponse.ok);
+            
+            if (!i20WebhookResponse.ok) {
+              const i20WebhookErrorText = await i20WebhookResponse.text();
+              console.error('I-20 Control Fee webhook error:', i20WebhookErrorText);
+            } else {
+              console.log('I-20 Control Fee webhook enviado com sucesso');
+            }
+          } catch (i20WebhookError) {
+            console.error('Erro ao enviar webhook I-20 Control Fee:', i20WebhookError);
+          }
+
           // Notificação in-app no sino do aluno
           try {
             const { data: { session } } = await supabase.auth.getSession();
