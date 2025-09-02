@@ -555,7 +555,7 @@ const TermsManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-4 sm:px-6 lg:px-8">
       {/* Estilos personalizados para o React Quill */}
       <style>{quillStyles}</style>
       
