@@ -79,6 +79,116 @@
     "learnHowItWorks": "Learn How It Works",
     "contentLockedMessage": "This content is locked until payment is completed"
   },
+  "zelleCheckout": {
+    "title": "Zelle Payment Checkout",
+    "subtitle": "Complete your payment via Zelle transfer",
+    "backToPaymentSelection": "Back to Payment Selection",
+    "paymentSummary": "Payment Summary",
+    "paymentMethod": "Payment Method",
+    "amount": "Amount",
+    "instructions": "Payment Instructions",
+    "step1": "Step 1: Open your Zelle app",
+    "step2": "Step 2: Send payment to",
+    "step3": "Step 3: Use the exact amount shown above",
+    "step4": "Step 4: Add a reference note",
+    "uploadReceipt": "Upload Receipt",
+    "uploadReceiptDescription": "Upload your Zelle payment receipt",
+    "dragAndDrop": "Drag and drop your file here, or click to select",
+    "supportedFormats": "Supported formats: JPG, PNG, PDF (max 10MB)",
+    "removeFile": "Remove file",
+    "paymentDetails": "Payment Details",
+    "confirmationCode": "Confirmation Code",
+    "confirmationCodePlaceholder": "Enter Zelle confirmation code",
+    "paymentDate": "Payment Date",
+    "recipientEmail": "Recipient Email",
+    "recipientEmailPlaceholder": "Email used in Zelle",
+    "recipientName": "Recipient Name",
+    "recipientNamePlaceholder": "Name used in Zelle",
+    "submitPayment": "Submit Payment",
+    "processing": "Processing...",
+    "activeDiscount": "Active Discount",
+    "discountApplied": "Discount applied",
+    "originalAmount": "Original amount",
+    "discountedAmount": "Discounted amount",
+    "savings": "You saved",
+    "error": {
+      "fileRequired": "Please select a receipt file",
+      "detailsRequired": "Please fill in all payment details",
+      "uploadFailed": "Failed to upload receipt",
+      "paymentFailed": "Error processing payment"
+    },
+    "importantInfo": {
+      "title": "Important Information",
+      "securePayment": "Secure Payment",
+      "securePaymentDesc": "Your payment information is encrypted and secure",
+      "verificationRequired": "Verification Required",
+      "verificationRequiredDesc": "Payment will be verified automatically within 24 hours",
+      "zelleTransfer": "Zelle Transfer",
+      "zelleTransferDesc": "Complete the transfer and upload your confirmation",
+      "paymentInstructions": "Payment Instructions",
+      "step1": "Complete Zelle transfer to the provided recipient",
+      "step2": "Save the confirmation screenshot",
+      "step3": "Upload your confirmation screenshot",
+      "step4": "Submit for automatic verification"
+    },
+    "requirements": {
+      "title": "Important: Your payment confirmation MUST include:",
+      "confirmationCode": "Confirmation Code",
+      "confirmationCodeDesc": "The unique transaction code from Zelle",
+      "paymentDate": "Payment Date",
+      "paymentDateDesc": "When the transfer was completed",
+      "paymentAmount": "Payment Amount",
+      "paymentAmountDesc": "The exact amount transferred",
+      "recipient": "Recipient",
+      "recipientDesc": "Who received the payment"
+    },
+    "steps": {
+      "title": "Complete these steps:",
+      "step1": "Complete your Zelle transfer of",
+      "step2": "Save the payment confirmation screenshot that shows all required information",
+      "step3": "Upload your confirmation screenshot below",
+      "step4": "Submit for automatic verification (completed within 24 hours)"
+    },
+    "reviewDetails": "Review your payment details"
+  },
+  "zelleWaiting": {
+    "title": "Waiting for Verification",
+    "subtitle": "We are analyzing your payment receipt",
+    "analyzingPayment": "Analyzing your payment receipt...",
+    "waitTime": "Wait time",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "error": "Error"
+    },
+    "messages": {
+      "analyzing": "Analyzing your payment receipt...",
+      "approved": "Payment approved! 🎉",
+      "rejected": "Payment rejected ❌",
+      "error": "Error verifying payment"
+    },
+    "details": {
+      "analyzing": "Our team is verifying your receipt. This may take a few minutes.",
+      "approved": "Your payment has been verified and approved successfully.",
+      "rejected": "Your receipt was not approved. Please check that all information is visible.",
+      "error": "An error occurred while verifying your payment. Please try again."
+    },
+    "actions": {
+      "tryAgain": "Try Again",
+      "contactSupport": "Contact Support",
+      "backToCheckout": "Back to Dashboard"
+    },
+    "redirecting": "Redirecting to success page...",
+    "analysisTime": "Analysis time: ~40 seconds",
+    "paymentInfo": {
+      "title": "Payment Information",
+      "feeType": "Fee Type:",
+      "amount": "Amount:",
+      "paymentId": "Payment ID:"
+    },
+    "helpText": "If the process takes longer than 2 minutes, please contact support."
+  },
   "home": {
     "hero": {
       "title": "Your Gateway to American Universities",

@@ -79,6 +79,116 @@
     "learnHowItWorks": "Aprender Como Funciona",
     "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
   },
+  "zelleCheckout": {
+    "title": "Checkout de Pagamento Zelle",
+    "subtitle": "Complete seu pagamento via transferência Zelle",
+    "backToPaymentSelection": "Voltar à Seleção de Pagamento",
+    "paymentSummary": "Resumo do Pagamento",
+    "paymentMethod": "Método de Pagamento",
+    "amount": "Valor",
+    "instructions": "Instruções de Pagamento",
+    "step1": "Passo 1: Abra seu aplicativo Zelle",
+    "step2": "Passo 2: Envie o pagamento para",
+    "step3": "Passo 3: Use o valor exato mostrado acima",
+    "step4": "Passo 4: Adicione uma nota de referência",
+    "uploadReceipt": "Enviar Comprovante",
+    "uploadReceiptDescription": "Faça upload do comprovante de pagamento do Zelle",
+    "dragAndDrop": "Arraste e solte seu arquivo aqui, ou clique para selecionar",
+    "supportedFormats": "Formatos suportados: JPG, PNG, PDF (máx. 10MB)",
+    "removeFile": "Remover arquivo",
+    "paymentDetails": "Detalhes do Pagamento",
+    "confirmationCode": "Código de Confirmação",
+    "confirmationCodePlaceholder": "Digite o código de confirmação do Zelle",
+    "paymentDate": "Data do Pagamento",
+    "recipientEmail": "Email do Destinatário",
+    "recipientEmailPlaceholder": "Email usado no Zelle",
+    "recipientName": "Nome do Destinatário",
+    "recipientNamePlaceholder": "Nome usado no Zelle",
+    "submitPayment": "Enviar Pagamento",
+    "processing": "Processando...",
+    "activeDiscount": "Desconto Ativo",
+    "discountApplied": "Desconto aplicado",
+    "originalAmount": "Valor original",
+    "discountedAmount": "Valor com desconto",
+    "savings": "Você economizou",
+    "error": {
+      "fileRequired": "Por favor, selecione um arquivo de comprovante",
+      "detailsRequired": "Por favor, preencha todos os detalhes do pagamento",
+      "uploadFailed": "Falha ao fazer upload do comprovante",
+      "paymentFailed": "Erro ao processar o pagamento"
+    },
+    "importantInfo": {
+      "title": "Informações Importantes",
+      "securePayment": "Pagamento Seguro",
+      "securePaymentDesc": "Suas informações de pagamento são criptografadas e seguras",
+      "verificationRequired": "Verificação Necessária",
+      "verificationRequiredDesc": "O pagamento será verificado automaticamente em até 24 horas",
+      "zelleTransfer": "Transferência Zelle",
+      "zelleTransferDesc": "Complete a transferência e envie seu comprovante",
+      "paymentInstructions": "Instruções de Pagamento",
+      "step1": "Complete a transferência Zelle para o destinatário fornecido",
+      "step2": "Salve a captura de tela de confirmação",
+      "step3": "Envie sua captura de tela de confirmação",
+      "step4": "Envie para verificação automática"
+    },
+    "requirements": {
+      "title": "Importante: Seu comprovante de pagamento DEVE incluir:",
+      "confirmationCode": "Código de Confirmação",
+      "confirmationCodeDesc": "O código único da transação do Zelle",
+      "paymentDate": "Data do Pagamento",
+      "paymentDateDesc": "Quando a transferência foi concluída",
+      "paymentAmount": "Valor do Pagamento",
+      "paymentAmountDesc": "O valor exato transferido",
+      "recipient": "Destinatário",
+      "recipientDesc": "Quem recebeu o pagamento"
+    },
+    "steps": {
+      "title": "Complete estes passos:",
+      "step1": "Complete sua transferência Zelle de",
+      "step2": "Salve a captura de tela de confirmação do pagamento que mostra todas as informações necessárias",
+      "step3": "Envie sua captura de tela de confirmação abaixo",
+      "step4": "Envie para verificação automática (concluída em até 24 horas)"
+    },
+    "reviewDetails": "Revise os detalhes do seu pagamento"
+  },
+  "zelleWaiting": {
+    "title": "Aguardando Verificação",
+    "subtitle": "Estamos analisando seu comprovante de pagamento",
+    "analyzingPayment": "Analisando seu comprovante de pagamento...",
+    "waitTime": "Tempo de espera",
+    "status": {
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado",
+      "error": "Erro"
+    },
+    "messages": {
+      "analyzing": "Analisando seu comprovante de pagamento...",
+      "approved": "Pagamento aprovado! 🎉",
+      "rejected": "Pagamento rejeitado ❌",
+      "error": "Erro ao verificar pagamento"
+    },
+    "details": {
+      "analyzing": "Nossa equipe está verificando seu comprovante. Isso pode levar alguns minutos.",
+      "approved": "Seu pagamento foi verificado e aprovado com sucesso.",
+      "rejected": "Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.",
+      "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente."
+    },
+    "actions": {
+      "tryAgain": "Tentar Novamente",
+      "contactSupport": "Contatar Suporte",
+      "backToCheckout": "Voltar ao Dashboard"
+    },
+    "redirecting": "Redirecionando para página de sucesso...",
+    "analysisTime": "Tempo de análise: ~40 segundos",
+    "paymentInfo": {
+      "title": "Informações do Pagamento",
+      "feeType": "Tipo de Taxa:",
+      "amount": "Valor:",
+      "paymentId": "ID do Pagamento:"
+    },
+    "helpText": "Se o processo demorar mais de 2 minutos, entre em contato com o suporte."
+  },
   "home": {
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
