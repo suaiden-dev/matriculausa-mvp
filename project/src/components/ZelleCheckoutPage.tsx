@@ -30,12 +30,14 @@ interface WebhookPayload {
   fee_type: string;
   timestamp: string;
   scholarship_application_id?: string;
+  temp_payment_id?: string;
 }
 
 export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   onSuccess,
   onError
 }) => {
+
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -153,7 +155,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     try {
       // Upload do arquivo para Supabase Storage
       const fileName = `zelle-payment-${Date.now()}.${selectedFile.name.split('.').pop()}`;
-      const filePath = `${user?.id}/${fileName}`;
+      const filePath = `zelle-payments/${user?.id}/${fileName}`;
       
       console.log('📁 [ZelleCheckout] Tentando upload para:', filePath);
       console.log('🪣 [ZelleCheckout] Bucket: zelle_comprovantes');
@@ -164,36 +166,22 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       if (uploadError) throw uploadError;
 
-      // Criar registro do pagamento
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('zelle_payments')
-        .insert({
-          user_id: user?.id,
-          fee_type: feeType,
-          amount: currentFee.amount, // Usar o valor da taxa definida, não o parâmetro da URL
-          recipient_name: 'To be verified from screenshot',
-          recipient_email: 'To be verified from screenshot',
-          confirmation_code: 'To be verified from screenshot',
-          payment_date: new Date().toISOString().split('T')[0],
-          payment_amount: `${currentFee.amount} USD`,
-          screenshot_url: uploadData.path,
-          status: 'pending_verification',
-          scholarships_ids: scholarshipsIds ? scholarshipsIds.split(',') : []
-        });
-
-      if (paymentError) throw paymentError;
+      // Não criar registro do pagamento aqui - deixar apenas o n8n gerenciar
+      console.log('📤 [ZelleCheckout] Enviando apenas para n8n - sem INSERT direto no banco');
 
       // Enviar webhook para n8n
       const imageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
       
       // Payload padronizado para o webhook
+      const tempPaymentId = `temp_${Date.now()}_${user?.id}`;
       const webhookPayload: WebhookPayload = {
         user_id: user?.id,
         image_url: imageUrl,
         value: currentFee.amount.toString(), // Apenas o número, sem símbolos
         currency: 'USD',
         fee_type: feeType === 'i20_control_fee' ? 'i-20_control_fee' : feeType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        temp_payment_id: tempPaymentId // ID temporário para o n8n usar
       };
 
       // Adicionar scholarship_application_id se for taxa de bolsa
@@ -224,28 +212,213 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         console.log('ℹ️ [ZelleCheckout] Taxa global - não precisa de scholarship_application_id');
       }
 
-      console.log('📤 [ZelleCheckout] Enviando webhook para n8n:', webhookPayload);
+      console.log('📤 [ZelleCheckout] Enviando webhooks para n8n:', webhookPayload);
       
-      const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/zelle-global', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload),
-      });
+      // Buscar nome completo do usuário
+      let userName = user?.email || 'Usuário';
+      try {
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('user_id', user?.id)
+          .single();
+        
+        if (userProfile?.full_name) {
+          userName = userProfile.full_name;
+          console.log('✅ [ZelleCheckout] Nome do usuário encontrado:', userName);
+        } else {
+          console.log('⚠️ [ZelleCheckout] Nome completo não encontrado, usando email');
+        }
+      } catch (error) {
+        console.log('⚠️ [ZelleCheckout] Erro ao buscar nome do usuário:', error);
+      }
 
-      if (!webhookResponse.ok) {
-        console.warn('Webhook não foi enviado, mas o pagamento foi registrado');
+      // Criar payload de notificação para admin específico
+      const notificationPayload = {
+        tipo_notf: 'Pagamento Zelle pendente para avaliação',
+        email_aluno: user?.email,
+        nome_aluno: userName,
+        email_universidade: 'newvicturibdev@gmail.com', // Admin específico
+        o_que_enviar: `Novo pagamento Zelle de ${currentFee.amount} USD foi enviado para avaliação.`,
+        temp_payment_id: tempPaymentId,
+        fee_type: feeType,
+        amount: currentFee.amount,
+        uploaded_at: new Date().toISOString()
+      };
+
+      console.log('📧 [ZelleCheckout] Payload de notificação para admin:', notificationPayload);
+
+      // Função para enviar webhooks - primeiro apenas o Zelle Validator
+      const sendWebhooks = async () => {
+        const webhooks = [
+          {
+            url: 'https://nwh.suaiden.com/webhook/zelle-global',
+            payload: webhookPayload,
+            name: 'Zelle Validator'
+          }
+        ];
+        
+        console.log('📤 [ZelleCheckout] Enviando webhooks em paralelo...');
+        
+        // Enviar webhooks em paralelo
+        const results = await Promise.allSettled(
+          webhooks.map(async (webhook) => {
+            try {
+              console.log(`📤 [ZelleCheckout] Enviando ${webhook.name}...`);
+              const response = await fetch(webhook.url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(webhook.payload),
+              });
+              
+              if (!response.ok) {
+                throw new Error(`${webhook.name} failed: ${response.status} ${response.statusText}`);
+              }
+              
+              console.log(`✅ [ZelleCheckout] ${webhook.name} enviado com sucesso!`);
+              return { success: true, webhook: webhook.name, response };
+            } catch (error) {
+              console.error(`❌ [ZelleCheckout] ${webhook.name} falhou:`, error);
+              return { success: false, webhook: webhook.name, error };
+            }
+          })
+        );
+        
+        // Log dos resultados
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            if (result.value.success) {
+              console.log(`✅ [ZelleCheckout] ${result.value.webhook}: Sucesso`);
+            } else {
+              console.error(`❌ [ZelleCheckout] ${result.value.webhook}: Falhou`);
+            }
+          } else {
+            console.error(`❌ [ZelleCheckout] ${webhooks[index].name}: Erro inesperado`);
+          }
+        });
+        
+        return results;
+      };
+
+      // Enviar webhooks
+      const webhookResults = await sendWebhooks();
+      
+      // Verificar se pelo menos o webhook do Zelle foi enviado com sucesso
+      const zelleWebhookSuccess = webhookResults[0]?.status === 'fulfilled' && 
+                                 webhookResults[0]?.value?.success;
+      
+      if (!zelleWebhookSuccess) {
+        console.warn('❌ [ZelleCheckout] Webhook do Zelle não foi enviado, mas o pagamento foi registrado');
+      } else {
+        console.log('✅ [ZelleCheckout] Webhook do Zelle enviado com sucesso!');
+        
+        // Capturar e mostrar a resposta do n8n (apenas do webhook do Zelle)
+        try {
+          const zelleWebhookResult = webhookResults[0];
+          if (zelleWebhookResult?.status === 'fulfilled' && zelleWebhookResult.value?.response) {
+            const responseText = await zelleWebhookResult.value.response.text();
+            console.log('📥 [ZelleCheckout] Resposta bruta do n8n:', responseText);
+            
+            // Tentar fazer parse da resposta JSON
+            try {
+              const responseJson = JSON.parse(responseText);
+              console.log('📥 [ZelleCheckout] Resposta JSON do n8n:', responseJson);
+            
+              // Verificar se tem o campo 'response' que você mencionou
+              if (responseJson.response) {
+                console.log('🎯 [ZelleCheckout] RESPOSTA DO N8N:', responseJson.response);
+                console.log('🎯 [ZelleCheckout] Tipo da resposta:', typeof responseJson.response);
+                
+                // Verificar se a resposta é negativa (pagamento inválido)
+                const isNegativeResponse = responseJson.response.toLowerCase().includes('not valid') || 
+                                         responseJson.response.toLowerCase().includes('invalid') ||
+                                         responseJson.response.toLowerCase().includes('rejected');
+                
+                if (isNegativeResponse) {
+                  console.log('❌ [ZelleCheckout] Resposta negativa detectada - enviando notificação para admin');
+                  
+                  // Enviar notificação para admin apenas se o pagamento for inválido
+                  try {
+                    const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(notificationPayload),
+                    });
+                    
+                    if (adminNotificationResponse.ok) {
+                      console.log('✅ [ZelleCheckout] Notificação para admin enviada com sucesso!');
+                    } else {
+                      console.warn('⚠️ [ZelleCheckout] Erro ao enviar notificação para admin:', adminNotificationResponse.status);
+                    }
+                  } catch (error) {
+                    console.error('❌ [ZelleCheckout] Erro ao enviar notificação para admin:', error);
+                  }
+                } else {
+                  console.log('✅ [ZelleCheckout] Resposta positiva - pagamento aprovado automaticamente, não enviando notificação para admin');
+                }
+                
+                // Armazenar a resposta do n8n no localStorage para a página de waiting
+                localStorage.setItem(`n8n_response_${tempPaymentId}`, JSON.stringify(responseJson));
+                localStorage.setItem('latest_n8n_response', JSON.stringify(responseJson));
+                console.log('💾 [ZelleCheckout] Resposta do n8n armazenada no localStorage');
+                console.log('💾 [ZelleCheckout] Chave:', `n8n_response_${tempPaymentId}`);
+                console.log('💾 [ZelleCheckout] Valor:', JSON.stringify(responseJson));
+
+                // Atualizar o screenshot_url na tabela zelle_payments (salvar apenas o path relativo)
+                try {
+                  console.log('🔄 [ZelleCheckout] Atualizando screenshot_url na tabela zelle_payments...');
+                  // Extrair apenas o path relativo da URL completa
+                  const relativePath = uploadData.path; // Já é o path relativo: zelle-payments/user_id/filename
+                  console.log('📁 [ZelleCheckout] Path relativo a ser salvo:', relativePath);
+                  
+                  const { error: updateError } = await supabase
+                    .from('zelle_payments')
+                    .update({ screenshot_url: relativePath })
+                    .eq('user_id', user?.id)
+                    .eq('amount', amount.toString())
+                    .eq('status', 'pending_verification')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                  if (updateError) {
+                    console.error('❌ [ZelleCheckout] Erro ao atualizar screenshot_url:', updateError);
+                  } else {
+                    console.log('✅ [ZelleCheckout] screenshot_url atualizado com sucesso!');
+                  }
+                } catch (error) {
+                  console.error('❌ [ZelleCheckout] Erro ao atualizar screenshot_url:', error);
+                }
+              }
+              
+              // Verificar outros campos possíveis
+              if (responseJson.status) {
+                console.log('📊 [ZelleCheckout] Status do n8n:', responseJson.status);
+              }
+              if (responseJson.details) {
+                console.log('📋 [ZelleCheckout] Detalhes do n8n:', responseJson.details);
+              }
+              if (responseJson.confidence) {
+                console.log('🎯 [ZelleCheckout] Confiança da análise:', responseJson.confidence);
+              }
+              
+            } catch (jsonError) {
+              console.log('⚠️ [ZelleCheckout] Resposta não é JSON válido:', jsonError);
+              console.log('⚠️ [ZelleCheckout] Resposta como texto:', responseText);
+            }
+          }
+        } catch (responseError) {
+          console.error('❌ [ZelleCheckout] Erro ao ler resposta do webhook:', responseError);
+        }
       }
 
       onSuccess?.();
-      // Redirecionar para página de aguardo em vez de success
-      if (paymentData && paymentData[0]) {
-        const payment = paymentData[0] as any;
-        navigate(`/checkout/zelle/waiting?payment_id=${payment.id}&fee_type=${feeType}&amount=${currentFee.amount}`);
-      } else {
-        navigate(`/checkout/zelle/waiting?fee_type=${feeType}&amount=${currentFee.amount}`);
-      }
+      // Redirecionar para página de aguardo
+      console.log('🔄 [ZelleCheckout] Redirecionando para waiting page com temp_payment_id:', tempPaymentId);
+      navigate(`/checkout/zelle/waiting?temp_payment_id=${tempPaymentId}&fee_type=${feeType}&amount=${currentFee.amount}`);
     } catch (error) {
       console.error('Error processing Zelle payment:', error);
       onError?.(error instanceof Error ? error.message : 'Error processing payment');

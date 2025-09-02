@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>✅ Payment Approved</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    .wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #fff;
+    }
+    .header {
+      background-color: #28a745;
+      padding: 20px;
+      text-align: center;
+    }
+    .header img {
+      max-width: 120px;
+      height: auto;
+    }
+    .content {
+      padding: 30px 20px;
+      line-height: 1.6;
+    }
+    .content p {
+      margin-bottom: 15px;
+    }
+    .approval-details {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      color: #155724;
+    }
+    .payment-info {
+      background-color: #e7f3ff;
+      border: 1px solid #b3d9ff;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      color: #004085;
+    }
+    .footer {
+      padding: 15px;
+      background-color: #f0f0f0;
+      text-align: center;
+      font-size: 12px;
+      color: #777;
+    }
+    a {
+      color: #0052cc;
+      text-decoration: none;
+    }
+    .success-icon {
+      font-size: 24px;
+      color: #28a745;
+      margin-right: 10px;
+    }
+    @media screen and (max-width:600px) {
+      .wrapper {
+        width: 100% !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA">
+    </div>
+    <div class="content">
+      <strong><span class="success-icon">✅</span>Payment Approved</strong>
+      <br><br>
+      
+      <p>Hello {{ $item("0").$node["Webhook"].json["body"]["nome_aluno"] }},</p>
+
+      <p>Great news! Your payment has been successfully approved and processed by our team.</p>
+
+      <div class="approval-details">
+        <strong>Payment Details:</strong><br>
+        <strong>Fee Type:</strong> {{ $item("0").$node["Webhook"].json["body"]["fee_type"] }}<br>
+        <strong>Amount:</strong> ${{ $item("0").$node["Webhook"].json["body"]["amount"] }}<br>
+        <strong>Approved By:</strong> {{ $item("0").$node["Webhook"].json["body"]["approved_by"] }}
+      </div>
+
+      <div class="payment-info">
+        <strong>What happens next?</strong><br>
+        • Your payment has been confirmed and recorded in our system<br>
+        • You can now proceed with the next steps in your application process<br>
+        • You will receive further instructions via email regarding your application status
+      </div>
+
+      <p>Thank you for your payment and for choosing Matrícula USA for your educational journey. We're excited to help you achieve your academic goals!</p>
+
+      <p>If you have any questions about your payment or application status, please don't hesitate to contact our support team.</p>
+
+      <p><strong>Please do not reply to this email.</strong></p>
+      
+      <br>
+      <p>Best regards,<br>
+      <strong>Matrícula USA</strong><br>
+      <a href="https://matriculausa.com/">https://matriculausa.com/</a></p>
+    </div>
+    <div class="footer">
+      You are receiving this message because you registered on the Matrícula USA platform.<br>
+      © 2025 Matrícula USA. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>

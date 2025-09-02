@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>❌ Payment Rejected</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    .wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #fff;
+    }
+    .header {
+      background-color: #dc3545;
+      padding: 20px;
+      text-align: center;
+    }
+    .header img {
+      max-width: 120px;
+      height: auto;
+    }
+    .content {
+      padding: 30px 20px;
+      line-height: 1.6;
+    }
+    .content p {
+      margin-bottom: 15px;
+    }
+    .rejection-reason {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      color: #721c24;
+    }
+    .payment-info {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      color: #856404;
+    }
+    .footer {
+      padding: 15px;
+      background-color: #f0f0f0;
+      text-align: center;
+      font-size: 12px;
+      color: #777;
+    }
+    a {
+      color: #0052cc;
+      text-decoration: none;
+    }
+    .error-icon {
+      font-size: 24px;
+      color: #dc3545;
+      margin-right: 10px;
+    }
+    @media screen and (max-width:600px) {
+      .wrapper {
+        width: 100% !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <img src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg" alt="Matrícula USA">
+    </div>
+    <div class="content">
+      <strong><span class="error-icon">❌</span>Payment Rejected</strong>
+      <br><br>
+      
+      <p>Hello {{ $item("0").$node["Webhook"].json["body"]["nome_aluno"] }},</p>
+
+      <p>We regret to inform you that your payment has been rejected by our review team.</p>
+
+      <div class="payment-info">
+        <strong>Payment Details:</strong><br>
+        <strong>Fee Type:</strong> {{ $item("0").$node["Webhook"].json["body"]["fee_type"] }}<br>
+        <strong>Amount:</strong> ${{ $item("0").$node["Webhook"].json["body"]["amount"] }}<br>
+        <strong>Rejected By:</strong> {{ $item("0").$node["Webhook"].json["body"]["rejected_by"] }}
+      </div>
+
+      <div class="rejection-reason">
+        <strong>Rejection Reason:</strong><br>
+        {{ $item("0").$node["Webhook"].json["body"]["rejection_reason"] }}
+      </div>
+
+      <p>Please review the feedback above and resubmit your payment with the necessary corrections. If you have any questions about the rejection reason, please contact our support team.</p>
+
+      <p><strong>Please do not reply to this email.</strong></p>
+      
+      <br>
+      <p>Best regards,<br>
+      <strong>Matrícula USA</strong><br>
+      <a href="https://matriculausa.com/">https://matriculausa.com/</a></p>
+    </div>
+    <div class="footer">
+      You are receiving this message because you registered on the Matrícula USA platform.<br>
+      © 2025 Matrícula USA. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
