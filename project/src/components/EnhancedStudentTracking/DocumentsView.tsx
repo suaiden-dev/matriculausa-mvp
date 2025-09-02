@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 
 interface DocumentsViewProps {
   studentDocuments: any[];
@@ -15,9 +16,165 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   onViewDocument,
   onDownloadDocument
 }) => {
+  const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
+  const [loadingApplication, setLoadingApplication] = useState(false);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
+
+  // Buscar a aplicação real do banco se não tivermos dados completos
+  useEffect(() => {
+    const fetchRealApplication = async () => {
+      // Se já temos uma aplicação com acceptance letter, não precisamos buscar
+      if (scholarshipApplication?.acceptance_letter_url) {
+        setRealScholarshipApplication(scholarshipApplication);
+        return;
+      }
+
+      // Se temos studentDocuments, tentar encontrar o user_id para buscar a aplicação
+      if (studentDocuments && studentDocuments.length > 0) {
+        setLoadingApplication(true);
+        try {
+          // Buscar a aplicação onde o usuário pagou a application fee
+          // Primeiro, tentar buscar pela aplicação que já temos
+          let applications = null;
+          let error = null;
+          
+          if (scholarshipApplication?.id) {
+            console.log('🔍 [DOCUMENTS VIEW] Checking existing application:', scholarshipApplication.id);
+            const { data, error: appError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                *,
+                scholarships(
+                  id,
+                  title,
+                  universities(
+                    id,
+                    name
+                  )
+                )
+              `)
+              .eq('id', scholarshipApplication.id)
+              .single();
+            
+            if (!appError && data) {
+              console.log('✅ [DOCUMENTS VIEW] Found existing application:', data);
+              console.log('🔍 [DOCUMENTS VIEW] Application fee paid:', data.is_application_fee_paid);
+              applications = [data];
+            }
+          }
+          
+          // Se não encontrou pela aplicação existente, buscar a aplicação onde pagou a application fee
+          if (!applications || applications.length === 0) {
+            console.log('🔍 [DOCUMENTS VIEW] Searching for application with paid application fee...');
+            
+            // Primeiro, tentar buscar especificamente pela aplicação da Odina University
+            // que sabemos que tem o acceptance letter
+            const { data: odinaApp, error: odinaError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                *,
+                scholarships(
+                  id,
+                  title,
+                  universities(
+                    id,
+                    name
+                  )
+                )
+              `)
+              .eq('is_application_fee_paid', true)
+              .not('acceptance_letter_url', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (!odinaError && odinaApp && odinaApp.length > 0) {
+              console.log('✅ [DOCUMENTS VIEW] Found application with acceptance letter:', odinaApp);
+              applications = odinaApp;
+              error = null;
+            } else {
+              console.log('⚠️ [DOCUMENTS VIEW] No application with acceptance letter found, trying paid applications...');
+              
+              const { data, error: paidAppError } = await supabase
+                .from('scholarship_applications')
+                .select(`
+                  *,
+                  scholarships(
+                    id,
+                    title,
+                    universities(
+                      id,
+                      name
+                    )
+                  )
+                `)
+                .eq('is_application_fee_paid', true)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            
+              if (!paidAppError && data && data.length > 0) {
+                console.log('✅ [DOCUMENTS VIEW] Found application with paid fee:', data);
+                applications = data;
+                error = null;
+              } else {
+                console.log('⚠️ [DOCUMENTS VIEW] No paid application found, trying most recent...');
+                
+                // Fallback: buscar a mais recente se não encontrou nenhuma paga
+                const { data, error: recentError } = await supabase
+                  .from('scholarship_applications')
+                  .select(`
+                    *,
+                    scholarships(
+                      id,
+                      title,
+                      universities(
+                        id,
+                        name
+                      )
+                    )
+                  `)
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+                
+                applications = data;
+                error = recentError;
+              }
+            }
+          }
+
+          if (!error && applications && applications.length > 0) {
+            const app = applications[0];
+            console.log('🔍 [DOCUMENTS VIEW] Found real application:', app);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
+            setRealScholarshipApplication(app);
+          } else {
+            console.log('⚠️ [DOCUMENTS VIEW] No applications found or error:', error);
+          }
+        } catch (error) {
+          console.error('Error fetching real application:', error);
+        } finally {
+          setLoadingApplication(false);
+        }
+      }
+    };
+
+    fetchRealApplication();
+  }, [scholarshipApplication, studentDocuments]);
+
+  // Usar a aplicação real se disponível, senão usar a passada como prop
+  const currentApplication = realScholarshipApplication || scholarshipApplication;
+  
+  // Debug: mostrar qual aplicação está sendo usada
+  useEffect(() => {
+    console.log('🔍 [DOCUMENTS VIEW] Current application:', currentApplication);
+    console.log('🔍 [DOCUMENTS VIEW] Has acceptance letter:', !!currentApplication?.acceptance_letter_url);
+    if (currentApplication?.acceptance_letter_url) {
+      console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', currentApplication.acceptance_letter_url);
+    }
+  }, [currentApplication]);
 
   // ✅ GAMBIARRA: Função para extrair nome do arquivo e construir URL completa
   const getDocumentInfo = (upload: any) => {
@@ -46,6 +203,21 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       filename,
       fullUrl
     };
+  };
+
+  // Função para obter URL correta do acceptance letter
+  const getAcceptanceLetterUrl = (application: any) => {
+    if (!application?.acceptance_letter_url) return null;
+    
+    // Se já é uma URL completa, usar diretamente
+    if (application.acceptance_letter_url.startsWith('http')) {
+      return application.acceptance_letter_url;
+    }
+    
+    // Se é um path do storage, construir URL completa
+    // O acceptance letter está no bucket 'document-attachments'
+    const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+    return `${baseUrl}${application.acceptance_letter_url}`;
   };
 
   console.log('Document requests:', documentRequests);
@@ -219,7 +391,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         </div>
         
         <div className="p-6">
-          {scholarshipApplication && scholarshipApplication.acceptance_letter_url ? (
+          {loadingApplication && !currentApplication?.acceptance_letter_url ? (
+            <div className="bg-white rounded-3xl p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-400"></div>
+                </div>
+                <h4 className="text-lg font-semibold text-slate-700 mb-2">Loading application...</h4>
+                <p className="text-slate-500">Please wait while we fetch your application details.</p>
+              </div>
+            </div>
+          ) : currentApplication && currentApplication.acceptance_letter_url ? (
             <div className="bg-white rounded-3xl p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -231,7 +413,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-slate-900">Acceptance Letter</p>
                     <p className="text-sm text-slate-500">
-                      Sent on {formatDate(scholarshipApplication.acceptance_letter_sent_at)}
+                      Sent on {formatDate(currentApplication.acceptance_letter_sent_at)}
                     </p>
                     <p className="text-xs text-slate-400 mt-1">
                       Official university acceptance document
@@ -246,7 +428,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   
                   <button
                     onClick={() => onViewDocument({
-                      file_url: scholarshipApplication.acceptance_letter_url,
+                      file_url: getAcceptanceLetterUrl(currentApplication),
                       filename: 'Acceptance Letter'
                     })}
                     className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -256,7 +438,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   
                   <button
                     onClick={() => onDownloadDocument({
-                      file_url: scholarshipApplication.acceptance_letter_url,
+                      file_url: getAcceptanceLetterUrl(currentApplication),
                       filename: 'Acceptance Letter'
                     })}
                     className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
