@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Smartphone, CheckCircle, AlertCircle, Upload, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, CreditCard, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -46,7 +46,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
   // Estado para desconto ativo
   const [activeDiscount, setActiveDiscount] = useState<any>(null);
-  const [discountLoading, setDiscountLoading] = useState(true);
 
   // Verificar desconto ativo do usuário
   useEffect(() => {
@@ -54,7 +53,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       if (!user) return;
       
       try {
-        setDiscountLoading(true);
         const { data: discountData, error: discountError } = await supabase
           .rpc('get_user_active_discount', {
             user_id_param: user.id
@@ -68,8 +66,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         }
       } catch (error) {
         console.error('❌ [ZelleCheckoutPage] Erro ao verificar desconto:', error);
-      } finally {
-        setDiscountLoading(false);
       }
     };
 
@@ -265,22 +261,24 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   return (
     <div className="min-h-screen bg-white py-8">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
+        {/* Header with Language Selector */}
         <div className="mb-8">
-          <button
-            onClick={handleBack}
-            className="flex items-center text-gray-600 hover:text-gray-800 mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Payment Selection
-          </button>
+          <div className="flex justify-between items-start mb-6">
+            <button
+              onClick={handleBack}
+              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              {t('zelleCheckout.backToPaymentSelection')}
+            </button>
+          </div>
           
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Zelle Payment Checkout
+              {t('zelleCheckout.title')}
             </h1>
             <p className="text-gray-600">
-              Complete your payment via Zelle transfer
+              {t('zelleCheckout.subtitle')}
             </p>
           </div>
         </div>
@@ -294,8 +292,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <CreditCard className="w-5 h-5 text-gray-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Payment Summary</h2>
-                  <p className="text-gray-600">Review your payment details</p>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('zelleCheckout.paymentSummary')}</h2>
+                  <p className="text-gray-600">{t('zelleCheckout.reviewDetails')}</p>
                 </div>
               </div>
 
@@ -321,7 +319,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-medium text-gray-900">Total Amount</span>
+                    <span className="text-lg font-medium text-gray-900">{t('zelleCheckout.amount')}</span>
                     <span className="text-2xl font-bold text-gray-900">
                       ${currentFee.amount.toLocaleString()}
                     </span>
@@ -332,13 +330,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
             {/* Payment Instructions */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6">Payment Instructions</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('zelleCheckout.instructions')}</h3>
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Instruções Importantes */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                   <h4 className="font-medium text-gray-900 mb-4">
-                    Important: Your payment confirmation MUST include:
+                    {t('zelleCheckout.requirements.title')}
                   </h4>
                   
                   <div className="grid md:grid-cols-2 gap-4">
@@ -347,8 +345,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                         <span className="text-gray-700 font-medium text-sm">1</span>
                       </div>
                       <div>
-                        <h5 className="font-medium text-gray-900">Confirmation Code</h5>
-                        <p className="text-sm text-gray-600">The unique transaction code from Zelle</p>
+                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.confirmationCode')}</h5>
+                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.confirmationCodeDesc')}</p>
                       </div>
                     </div>
                     
@@ -357,8 +355,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                         <span className="text-gray-700 font-medium text-sm">2</span>
                       </div>
                       <div>
-                        <h5 className="font-medium text-gray-900">Payment Date</h5>
-                        <p className="text-sm text-gray-600">When the transfer was completed</p>
+                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.paymentDate')}</h5>
+                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.paymentDateDesc')}</p>
                       </div>
                     </div>
                     
@@ -367,8 +365,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                         <span className="text-gray-700 font-medium text-sm">3</span>
                       </div>
                       <div>
-                        <h5 className="font-medium text-gray-900">Payment Amount</h5>
-                        <p className="text-sm text-gray-600">The exact amount transferred (${currentFee.amount} USD)</p>
+                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.paymentAmount')}</h5>
+                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.paymentAmountDesc')} (${currentFee.amount} USD)</p>
                       </div>
                     </div>
                     
@@ -377,8 +375,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                         <span className="text-gray-700 font-medium text-sm">4</span>
                       </div>
                       <div>
-                        <h5 className="font-medium text-gray-900">Recipient</h5>
-                        <p className="text-sm text-gray-600">Who received the payment</p>
+                        <h5 className="font-medium text-gray-900">{t('zelleCheckout.requirements.recipient')}</h5>
+                        <p className="text-sm text-gray-600">{t('zelleCheckout.requirements.recipientDesc')}</p>
                       </div>
                     </div>
                   </div>
@@ -387,25 +385,25 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 {/* Passos do Processo */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                   <h4 className="font-medium text-gray-900 mb-4">
-                    Complete these steps:
+                    {t('zelleCheckout.steps.title')}
                   </h4>
                   
                   <ol className="space-y-3 text-gray-700">
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">1</span>
-                      <span>Complete your Zelle transfer of <strong>${currentFee.amount} USD</strong> to the provided recipient</span>
+                      <span>{t('zelleCheckout.steps.step1')} <strong>${currentFee.amount} USD</strong> {t('zelleCheckout.step2')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">2</span>
-                      <span>Save the payment confirmation screenshot that shows all required information</span>
+                      <span>{t('zelleCheckout.steps.step2')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">3</span>
-                      <span>Upload your confirmation screenshot below</span>
+                      <span>{t('zelleCheckout.steps.step3')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">4</span>
-                      <span>Submit for automatic verification (completed within 24 hours)</span>
+                      <span>{t('zelleCheckout.steps.step4')}</span>
                     </li>
                   </ol>
                 </div>
@@ -413,7 +411,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 {/* File Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Confirmation Screenshot
+                    {t('zelleCheckout.uploadReceipt')}
                   </label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                     <input
@@ -447,10 +445,10 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                         <div>
                           <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                           <p className="text-gray-600 mb-2">
-                            Click to upload or drag and drop
+                            {t('zelleCheckout.dragAndDrop')}
                           </p>
                           <p className="text-sm text-gray-500">
-                            PNG, JPG, GIF up to 10MB
+                            {t('zelleCheckout.supportedFormats')}
                           </p>
                         </div>
                       )}
@@ -467,10 +465,10 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   {loading ? (
                     <div className="flex items-center justify-center">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Processing Payment...
+                      {t('zelleCheckout.processing')}
                     </div>
                   ) : (
-                    `Submit Payment Confirmation - $${currentFee.amount} USD`
+                    `${t('zelleCheckout.submitPayment')} - $${currentFee.amount} USD`
                   )}
                 </button>
               </form>
@@ -480,7 +478,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 sticky top-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Important Information</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">{t('zelleCheckout.importantInfo.title')}</h3>
               
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -488,9 +486,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">Secure Payment</h4>
+                    <h4 className="font-medium text-gray-900">{t('zelleCheckout.importantInfo.securePayment')}</h4>
                     <p className="text-sm text-gray-600">
-                      Your payment information is encrypted and secure
+                      {t('zelleCheckout.importantInfo.securePaymentDesc')}
                     </p>
                   </div>
                 </div>
@@ -500,9 +498,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">Verification Required</h4>
+                    <h4 className="font-medium text-gray-900">{t('zelleCheckout.importantInfo.verificationRequired')}</h4>
                     <p className="text-sm text-gray-600">
-                      Payment will be verified automatically within 24 hours
+                      {t('zelleCheckout.importantInfo.verificationRequiredDesc')}
                     </p>
                   </div>
                 </div>
@@ -512,21 +510,21 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900">Zelle Transfer</h4>
+                    <h4 className="font-medium text-gray-900">{t('zelleCheckout.importantInfo.zelleTransfer')}</h4>
                     <p className="text-sm text-gray-600">
-                      Complete the transfer and upload your confirmation
+                      {t('zelleCheckout.importantInfo.zelleTransferDesc')}
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-2">Payment Instructions</h4>
+                <h4 className="font-medium text-gray-900 mb-2">{t('zelleCheckout.importantInfo.paymentInstructions')}</h4>
                 <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                  <li>Complete Zelle transfer to the provided recipient</li>
-                  <li>Save the confirmation screenshot</li>
-                  <li>Upload your confirmation screenshot</li>
-                  <li>Submit for automatic verification</li>
+                  <li>{t('zelleCheckout.importantInfo.step1')}</li>
+                  <li>{t('zelleCheckout.importantInfo.step2')}</li>
+                  <li>{t('zelleCheckout.importantInfo.step3')}</li>
+                  <li>{t('zelleCheckout.importantInfo.step4')}</li>
                 </ol>
               </div>
             </div>

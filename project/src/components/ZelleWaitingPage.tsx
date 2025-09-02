@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PaymentStatus {
   status: 'pending' | 'approved' | 'rejected' | 'error';
@@ -11,15 +11,14 @@ interface PaymentStatus {
 }
 
 export const ZelleWaitingPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({
     status: 'pending',
-    message: 'Analisando seu comprovante de pagamento...'
+    message: t('zelleWaiting.messages.analyzing')
   });
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const [isChecking, setIsChecking] = useState(false);
 
   const paymentId = searchParams.get('payment_id');
   const feeType = searchParams.get('fee_type');
@@ -39,7 +38,6 @@ export const ZelleWaitingPage: React.FC = () => {
     if (!paymentId) return;
 
     const checkPaymentStatus = async () => {
-      setIsChecking(true);
       try {
         const { data, error } = await supabase
           .from('zelle_payments')
@@ -52,8 +50,8 @@ export const ZelleWaitingPage: React.FC = () => {
         if (data.status === 'approved') {
           setPaymentStatus({
             status: 'approved',
-            message: 'Pagamento aprovado! 🎉',
-            details: 'Seu pagamento foi verificado e aprovado com sucesso.'
+            message: t('zelleWaiting.messages.approved'),
+            details: t('zelleWaiting.details.approved')
           });
           // Redirecionar para página de sucesso após 3 segundos
           setTimeout(() => {
@@ -62,21 +60,19 @@ export const ZelleWaitingPage: React.FC = () => {
         } else if (data.status === 'rejected') {
           setPaymentStatus({
             status: 'rejected',
-            message: 'Pagamento rejeitado ❌',
-            details: 'Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.'
+            message: t('zelleWaiting.messages.rejected'),
+            details: t('zelleWaiting.details.rejected')
           });
         } else if (data.status === 'pending_verification') {
           // Continuar aguardando
           setPaymentStatus({
             status: 'pending',
-            message: 'Analisando seu comprovante de pagamento...',
-            details: `Tempo de espera: ${Math.floor(timeElapsed / 60)}:${(timeElapsed % 60).toString().padStart(2, '0')}`
+            message: t('zelleWaiting.messages.analyzing'),
+            details: `${t('zelleWaiting.waitTime')}: ${Math.floor(timeElapsed / 60)}:${(timeElapsed % 60).toString().padStart(2, '0')}`
           });
         }
       } catch (error) {
         console.error('Erro ao verificar status:', error);
-      } finally {
-        setIsChecking(false);
       }
     };
 
@@ -137,13 +133,14 @@ export const ZelleWaitingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4">
+        
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Análise do Pagamento
+            {t('zelleWaiting.title')}
           </h1>
           <p className="text-gray-600">
-            Aguarde enquanto nossa IA analisa seu comprovante
+            {t('zelleWaiting.subtitle')}
           </p>
         </div>
 
@@ -176,7 +173,7 @@ export const ZelleWaitingPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                Tempo de análise: ~40 segundos
+                {t('zelleWaiting.analysisTime')}
               </p>
             </div>
           )}
@@ -198,7 +195,7 @@ export const ZelleWaitingPage: React.FC = () => {
                 onClick={() => navigate('/checkout/zelle')}
                 className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition-colors"
               >
-                Tentar Novamente
+                {t('zelleWaiting.actions.tryAgain')}
               </button>
             )}
             
@@ -206,26 +203,26 @@ export const ZelleWaitingPage: React.FC = () => {
               onClick={() => navigate('/dashboard')}
               className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-700 transition-colors"
             >
-              Voltar ao Dashboard
+              {t('zelleWaiting.actions.backToCheckout')}
             </button>
           </div>
         </div>
 
         {/* Payment Info */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Informações do Pagamento</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('zelleWaiting.paymentInfo.title')}</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Tipo de Taxa:</span>
+              <span className="text-gray-600">{t('zelleWaiting.paymentInfo.feeType')}</span>
               <span className="font-medium text-gray-900">{feeType}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Valor:</span>
+              <span className="text-gray-600">{t('zelleWaiting.paymentInfo.amount')}</span>
               <span className="font-medium text-gray-900">${amount} USD</span>
             </div>
             {paymentId && (
               <div className="flex justify-between">
-                <span className="text-gray-600">ID do Pagamento:</span>
+                <span className="text-gray-600">{t('zelleWaiting.paymentInfo.paymentId')}</span>
                 <span className="font-mono text-sm text-gray-500">{paymentId}</span>
               </div>
             )}
@@ -235,7 +232,7 @@ export const ZelleWaitingPage: React.FC = () => {
         {/* Help Text */}
         <div className="text-center mt-6 text-sm text-gray-500">
           <p>
-            Se o processo demorar mais de 2 minutos, entre em contato com o suporte.
+            {t('zelleWaiting.helpText')}
           </p>
         </div>
       </div>
