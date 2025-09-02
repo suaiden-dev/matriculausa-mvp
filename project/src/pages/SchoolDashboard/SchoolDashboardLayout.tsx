@@ -437,31 +437,6 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Open sidebar</span>
               </button>
-              
-              <div className="hidden md:block">
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {activeTab === 'overview' && 'Overview'}
-                  {activeTab === 'scholarships' && 'Manage Scholarships'}
-                  {activeTab === 'profile' && 'University Profile'}
-                  {activeTab === 'students' && 'Students'}
-                  {activeTab === 'selection-process' && 'Selection Process'}
-                  {activeTab === 'analytics' && 'Payment Management'}
-                  {activeTab === 'stripe-connect' && 'Stripe Connect'}
-          
-                  {activeTab === 'payment-dashboard' && 'Payment Dashboard'}
-                </h1>
-                <p className="text-slate-600">
-                  {activeTab === 'overview' && 'Monitor your university performance'}
-                  {activeTab === 'scholarships' && 'Create and manage scholarship opportunities'}
-                  {activeTab === 'profile' && 'Keep your university information up to date'}
-                  {activeTab === 'students' && 'Manage applicants and students'}
-                  {activeTab === 'selection-process' && 'Review and approve student applications'}
-                  {activeTab === 'analytics' && 'Track and manage scholarship payment requests'}
-                  {activeTab === 'stripe-connect' && 'Manage your Stripe Connect integration'}
-          
-                  {activeTab === 'payment-dashboard' && 'Monitor payment activities'}
-                </p>
-              </div>
             </div>
 
             <div className="flex items-center space-x-4">

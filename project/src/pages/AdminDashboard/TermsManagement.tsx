@@ -173,6 +173,11 @@ const TermsManagement: React.FC = () => {
   const [acceptanceHistory, setAcceptanceHistory] = useState<TermAcceptance[]>([]);
   const [acceptanceHistoryLoading, setAcceptanceHistoryLoading] = useState(false);
   const [selectedTermForHistory, setSelectedTermForHistory] = useState<Term | null>(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Configuração do React Quill
   const quillModules = {
@@ -255,15 +260,33 @@ const TermsManagement: React.FC = () => {
   };
 
   // Carregar histórico de aceitações
-  const loadAcceptanceHistory = async (termId?: string) => {
+  const loadAcceptanceHistory = async (termId?: string, page: number = 1) => {
     try {
       setAcceptanceHistoryLoading(true);
       
-      // Buscar as aceitações
+      // Calcular offset para paginação
+      const offset = (page - 1) * itemsPerPage;
+      
+      // Buscar total de itens para paginação
+      let countQuery = supabase
+        .from('comprehensive_term_acceptance')
+        .select('*', { count: 'exact', head: true });
+
+      if (termId) {
+        countQuery = countQuery.eq('term_id', termId);
+      }
+
+      const { count, error: countError } = await countQuery;
+      if (countError) throw countError;
+      
+      setTotalItems(count || 0);
+      
+      // Buscar as aceitações com paginação
       let query = supabase
         .from('comprehensive_term_acceptance')
         .select('*')
-        .order('accepted_at', { ascending: false });
+        .order('accepted_at', { ascending: false })
+        .range(offset, offset + itemsPerPage - 1);
 
       if (termId) {
         query = query.eq('term_id', termId);
@@ -330,7 +353,8 @@ const TermsManagement: React.FC = () => {
   // Load acceptance history when history tab is selected
   useEffect(() => {
     if (activeTab === 'history') {
-      loadAcceptanceHistory();
+      setCurrentPage(1); // Reset to first page when switching to history tab
+      loadAcceptanceHistory(undefined, 1);
     }
   }, [activeTab]);
 
@@ -481,8 +505,6 @@ const TermsManagement: React.FC = () => {
   const handleDeleteTerm = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este termo?')) return;
 
-
-
     try {
       console.log('🔄 Excluindo termo:', id);
       
@@ -502,6 +524,24 @@ const TermsManagement: React.FC = () => {
       setError(err.message);
     }
   };
+
+  // Funções de paginação
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    const termId = selectedTermForHistory?.id;
+    loadAcceptanceHistory(termId, newPage);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page
+    const termId = selectedTermForHistory?.id;
+    loadAcceptanceHistory(termId, 1);
+  };
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   if (loading) {
     return (
@@ -738,7 +778,8 @@ const TermsManagement: React.FC = () => {
                       onClick={() => {
                         setSelectedTermForHistory(term);
                         setActiveTab('history');
-                        loadAcceptanceHistory(term.id);
+                        setCurrentPage(1); // Reset to first page
+                        loadAcceptanceHistory(term.id, 1);
                       }}
                       className="p-2 text-green-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                       title="Ver histórico de aceitações"
@@ -825,7 +866,8 @@ const TermsManagement: React.FC = () => {
                 <button
                   onClick={() => {
                     setSelectedTermForHistory(null);
-                    loadAcceptanceHistory();
+                    setCurrentPage(1); // Reset to first page
+                    loadAcceptanceHistory(undefined, 1);
                   }}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
@@ -850,89 +892,201 @@ const TermsManagement: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Usuário
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Termo
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Aceito Em
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Endereço IP
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Navegador/Dispositivo
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {acceptanceHistory.map((acceptance) => (
-                      <tr key={acceptance.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                <Users className="w-4 h-4 text-blue-600" />
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">
-                                {acceptance.user_full_name || 'N/A'}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {acceptance.user_email || 'N/A'}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                                <FileText className="w-4 h-4 text-green-600" />
-                              </div>
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900">
-                                {acceptance.term_title || 'N/A'}
-                              </div>
-                              <div className="text-sm text-gray-500 capitalize">
-                                {acceptance.term_type.replace(/_/g, ' ')}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                            {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {acceptance.ip_address || 'N/A'}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
-                          <div className="flex items-center">
-                            <Globe className="w-4 h-4 mr-2 text-gray-400" />
-                            <span title={acceptance.user_agent || 'N/A'}>
-                              {acceptance.user_agent ? 
-                                acceptance.user_agent.substring(0, 50) + (acceptance.user_agent.length > 50 ? '...' : '') 
-                                : 'N/A'
-                              }
-                            </span>
-                          </div>
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Usuário
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Termo
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Aceito Em
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Endereço IP
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Navegador/Dispositivo
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {acceptanceHistory.map((acceptance) => (
+                        <tr key={acceptance.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-8 w-8">
+                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                  <Users className="w-4 h-4 text-blue-600" />
+                                </div>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {acceptance.user_full_name || 'N/A'}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {acceptance.user_email || 'N/A'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-8 w-8">
+                                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-green-600" />
+                                </div>
+                              </div>
+                              <div className="ml-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {acceptance.term_title || 'N/A'}
+                                </div>
+                                <div className="text-sm text-gray-500 capitalize">
+                                  {acceptance.term_type.replace(/_/g, ' ')}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div className="flex items-center">
+                              <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                              {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {acceptance.ip_address || 'N/A'}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
+                            <div className="flex items-center">
+                              <Globe className="w-4 h-4 mr-2 text-gray-400" />
+                              <span title={acceptance.user_agent || 'N/A'}>
+                                {acceptance.user_agent ? 
+                                  acceptance.user_agent.substring(0, 50) + (acceptance.user_agent.length > 50 ? '...' : '') 
+                                  : 'N/A'
+                                }
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Paginação */}
+                <div className="mt-6 flex items-center justify-between">
+                  {/* Informações da página e seletor de itens por página */}
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm text-gray-700">
+                      Mostrando <span className="font-medium">{startItem}</span> a <span className="font-medium">{endItem}</span> de{' '}
+                      <span className="font-medium">{totalItems}</span> resultados
+                    </div>
+                    
+                    {/* Seletor de itens por página */}
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm text-gray-600">Itens por página:</label>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                        className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Controles de navegação - só aparecem se houver mais de uma página */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center space-x-2">
+                      {/* Botão Anterior */}
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentPage === 1
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                        }`}
+                      >
+                        Anterior
+                      </button>
+
+                      {/* Números das páginas */}
+                      <div className="flex items-center space-x-1">
+                        {/* Primeira página */}
+                        {currentPage > 3 && (
+                          <>
+                            <button
+                              onClick={() => handlePageChange(1)}
+                              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                            >
+                              1
+                            </button>
+                            {currentPage > 4 && (
+                              <span className="px-2 text-gray-400">...</span>
+                            )}
+                          </>
+                        )}
+
+                        {/* Páginas ao redor da atual */}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          const pageNum = Math.max(1, Math.min(totalPages, currentPage - 2 + i));
+                          if (pageNum < 1 || pageNum > totalPages) return null;
+                          
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                pageNum === currentPage
+                                  ? 'bg-blue-600 text-white'
+                                  : 'text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+
+                        {/* Última página */}
+                        {currentPage < totalPages - 2 && (
+                          <>
+                            {currentPage < totalPages - 3 && (
+                              <span className="px-2 text-gray-400">...</span>
+                            )}
+                            <button
+                              onClick={() => handlePageChange(totalPages)}
+                              className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                            >
+                              {totalPages}
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Botão Próximo */}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentPage === totalPages
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                        }`}
+                      >
+                        Próximo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>

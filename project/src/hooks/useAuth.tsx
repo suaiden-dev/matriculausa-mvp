@@ -61,6 +61,7 @@ interface AuthContextType {
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refetchUserProfile: () => Promise<void>;
+  checkStudentTermsAcceptance: (userId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -528,6 +529,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Redirection will be handled by the auth state change listener
   };
 
+  // Check if student has accepted terms
+  const checkStudentTermsAcceptance = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('check_user_term_acceptance', {
+        p_user_id: userId,
+        p_term_type: 'terms_of_service'
+      });
+
+      if (error) {
+        console.error('Error checking terms acceptance:', error);
+        return false;
+      }
+
+      return data || false;
+    } catch (error) {
+      console.error('Error checking terms acceptance:', error);
+      return false;
+    }
+  };
+
   const logout = async () => {
     try {
       setLoading(true);
@@ -659,6 +680,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     updateUserProfile,
     refetchUserProfile,
+    checkStudentTermsAcceptance,
   };
 
   return (
