@@ -350,8 +350,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           return;
         }
         
-        // Validar aceitação dos termos
-        if (!termsAccepted) {
+        // Validar aceitação dos termos apenas para universidades
+        if (activeTab === 'university' && !termsAccepted) {
           setError(t('authPage.messages.mustAcceptTerms'));
           setLoading(false);
           return;
@@ -622,7 +622,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           <div className="bg-slate-100 p-1 sm:p-2 rounded-2xl flex space-x-1 sm:space-x-2 w-full max-w-md">
             <button
               onClick={() => handleTabChange('student')}
-              className={`flex items-center justify-center px-3 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm sm:text-base ${
+              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
                 activeTab === 'student'
                   ? 'bg-white text-[#05294E] shadow-lg'
                   : 'text-slate-600 hover:text-slate-900'
@@ -633,7 +633,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </button>
             <button
               onClick={() => handleTabChange('university')}
-              className={`flex items-center justify-center px-3 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm sm:text-base ${
+              className={`flex items-center justify-center px-3 sm:px-4 py-3 sm:py-4 rounded-xl font-bold transition-all duration-300 flex-1 text-sm ${
                 activeTab === 'university'
                   ? 'bg-white text-[#05294E] shadow-lg'
                   : 'text-slate-600 hover:text-slate-900'
@@ -753,7 +753,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                     </div>
                   </div>
 
-                  <div className="lg:col-span-2">
+                  <div className="lg:col-span-1">
                     <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-900 mb-2">
                       {t('authPage.register.confirmPassword')}
                     </label>
@@ -1195,39 +1195,41 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               </>
             )}
 
-            {/* Terms and Conditions Checkbox */}
-            <div className="flex items-start space-x-3 p-3 sm:p-4 bg-slate-100 rounded-2xl">
-              <input
-                id="termsAccepted"
-                name="termsAccepted"
-                type="checkbox"
-                checked={termsAccepted}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    handleTermsClick();
-                  } else {
-                    setTermsAccepted(false);
-                  }
-                }}
-                className="mt-1 h-4 w-4 text-[#05294E] border-slate-300 rounded focus:ring-[#05294E] focus:ring-2 flex-shrink-0"
-              />
-              <label htmlFor="termsAccepted" className="text-xs sm:text-sm text-slate-700 leading-relaxed cursor-pointer">
-                {t('authPage.register.termsAndConditions.title')}{' '}
-                <span className="text-[#05294E] hover:text-[#041f3a] font-semibold underline">
-                  {t('authPage.register.termsAndConditions.termsOfUse')}
-                </span>
-                {' '}{t('authPage.register.termsAndConditions.and')}{' '}
-                <span className="text-[#05294E] hover:text-[#041f3a] font-semibold underline">
-                  {t('authPage.register.termsAndConditions.privacyPolicy')}
-                </span>
-                {' '}{t('authPage.register.termsAndConditions.description')}
-              </label>
-            </div>
+            {/* Terms and Conditions Checkbox - Only for Universities */}
+            {activeTab === 'university' && (
+              <div className="flex items-start space-x-3 p-3 sm:p-4 bg-slate-100 rounded-2xl">
+                <input
+                  id="termsAccepted"
+                  name="termsAccepted"
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      handleTermsClick();
+                    } else {
+                      setTermsAccepted(false);
+                    }
+                  }}
+                  className="mt-1 h-4 w-4 text-[#D0151C] border-slate-300 rounded focus:ring-[#D0151C] focus:ring-2 flex-shrink-0"
+                />
+                <label htmlFor="termsAccepted" className="text-xs sm:text-sm text-slate-700 leading-relaxed cursor-pointer">
+                  {t('authPage.register.termsAndConditions.title')}{' '}
+                  <span className="text-[#D0151C] hover:text-[#B01218] font-semibold underline">
+                    {t('authPage.register.termsAndConditions.termsOfUse')}
+                  </span>
+                  {' '}{t('authPage.register.termsAndConditions.and')}{' '}
+                  <span className="text-[#D0151C] hover:text-[#B01218] font-semibold underline">
+                    {t('authPage.register.termsAndConditions.privacyPolicy')}
+                  </span>
+                  {' '}{t('authPage.register.termsAndConditions.description')}
+                </label>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !termsAccepted || (activeTab === 'student' && showReferralCodeSection === null)}
+              disabled={loading || (activeTab === 'university' && !termsAccepted) || (activeTab === 'student' && showReferralCodeSection === null)}
               className={`w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-base sm:text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 activeTab === 'student' 
                   ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]' 

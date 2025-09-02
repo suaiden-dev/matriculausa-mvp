@@ -12,6 +12,7 @@ import Universities from './pages/Universities';
 import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
 import TermsAndConditions from './pages/TermsAndConditions';
+import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
 import SchoolProfileSetup from './pages/SchoolProfileSetup';
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
 import StudentDashboard from './pages/StudentDashboard/index';
@@ -89,7 +90,8 @@ const AppContent = () => {
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          {/* Student/Admin Dashboard Switch - sempre renderize StudentDashboard por padrão */}
+          {/* Student Routes */}
+          <Route path="/student/terms" element={<StudentTermsAcceptance />} />
           <Route path="/student/dashboard/*" element={<StudentDashboard />} />
           {/* School Routes */}
           <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
