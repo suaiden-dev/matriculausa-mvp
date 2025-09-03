@@ -1562,6 +1562,7 @@
       "step2PartnerUrl": "www.lushamerica.com",
       "languageError": "This document is not in English. Please provide an English version or certified translation.",
       "accessError": "Unable to access {{documentType}} data. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
+      "fundsDataError": "Funds statement data not available in {{documentType}}. The document may not contain sufficient fund information or be in an unreadable format. Please try uploading a clearer document.",
       "passport": "Passport",
       "passportDescription": "Valid passport document",
       "diploma": "High School Diploma",

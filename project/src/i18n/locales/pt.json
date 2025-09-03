@@ -1559,6 +1559,7 @@
       "step2PartnerUrl": "www.lushamerica.com",
       "languageError": "Este documento não está em inglês. Forneça uma versão em inglês ou tradução certificada.",
       "accessError": "Não foi possível acessar os dados do {{documentType}}. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
+      "fundsDataError": "Dados de extrato não disponíveis no {{documentType}}. O documento pode não conter informações suficientes sobre fundos ou estar em formato não legível. Tente fazer upload de um documento mais claro.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
       "diploma": "Diploma do Ensino Médio",

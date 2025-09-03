@@ -523,6 +523,25 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     );
   };
 
+  // Função para detectar se o erro é sobre dados de fundos não disponíveis
+  const isFundsDataError = (errorMessage: string): boolean => {
+    const fundsDataErrorKeywords = [
+      'dados de extrato não disponíveis',
+      'funds statement data not available',
+      'los datos del extracto bancario no están disponibles',
+      'extrato não disponível',
+      'extract not available',
+      'extracto no disponible',
+      'dados de fundos não disponíveis',
+      'fund data not available',
+      'datos de fondos no disponibles'
+    ];
+    
+    return fundsDataErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
 
 
   // Função para obter mensagem de erro formatada
@@ -535,6 +554,12 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     
     if (isAccessError(errorMessage)) {
       return t('studentDashboard.documentsAndScholarshipChoice.accessError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    
+    if (isFundsDataError(errorMessage)) {
+      return t('studentDashboard.documentsAndScholarshipChoice.fundsDataError', { 
         documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
       });
     }
@@ -757,6 +782,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                 ? 'text-amber-700 bg-amber-50 border border-amber-200' 
                                 : isAccessError(hasError)
                                 ? 'text-blue-700 bg-blue-50 border border-blue-200'
+                                : isFundsDataError(hasError)
+                                ? 'text-green-700 bg-green-50 border border-green-200'
                                 : 'text-red-600 bg-red-50 border border-red-200'
                             }`}>
                               <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
@@ -764,6 +791,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                   ? 'bg-amber-500' 
                                   : isAccessError(hasError)
                                   ? 'bg-blue-500'
+                                  : isFundsDataError(hasError)
+                                  ? 'bg-green-500'
                                   : 'bg-red-500'
                               }`}></div>
                               <span className="break-words">
@@ -771,6 +800,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                   ? t('studentDashboard.documentsAndScholarshipChoice.languageError')
                                   : isAccessError(hasError)
                                   ? t('studentDashboard.documentsAndScholarshipChoice.accessError')
+                                  : isFundsDataError(hasError)
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.fundsDataError')
                                   : hasError
                                 }
                               </span>

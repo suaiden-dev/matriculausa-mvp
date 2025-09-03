@@ -1681,6 +1681,7 @@
       "step2PartnerUrl": "www.lushamerica.com",
       "languageError": "Este documento no está en inglés. Proporciona una versión en inglés o traducción certificada.",
       "accessError": "No se pudo acceder a los datos del {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
+      "fundsDataError": "Los datos del extracto bancario no están disponibles en {{documentType}}. El documento puede no contener información suficiente sobre fondos o estar en un formato no legible. Intenta subir un documento más claro.",
       "passport": "Pasaporte",
       "passportDescription": "Documento de pasaporte válido",
       "diploma": "Diploma de Secundaria",
