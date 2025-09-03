@@ -278,41 +278,15 @@ const UniversityDetail: React.FC = () => {
     <>
       <Header />
     <div className="min-h-screen bg-white">
-      {/* Header Navigation */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {isOwner && (
-              isEditing ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                  >
-                    {t('universityDetailPage.editProfile.saveButton')}
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    disabled={saving}
-                    className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
-                  >
-                    {t('universityDetailPage.editProfile.cancelButton')}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleEditClick}
-                  className="inline-flex items-center px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  {t('universityDetailPage.editProfile.editButton')}
-                </button>
-              )
-            )}
-          {successMessage && <div className="text-green-600 mt-2">{successMessage}</div>}
-          {errorMessage && <div className="text-red-600 mt-2">{errorMessage}</div>}
+      {/* Success/Error Messages */}
+      {(successMessage || errorMessage) && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            {successMessage && <div className="text-green-600">{successMessage}</div>}
+            {errorMessage && <div className="text-red-600">{errorMessage}</div>}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative h-80 overflow-hidden">
@@ -322,26 +296,56 @@ const UniversityDetail: React.FC = () => {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/40"></div>
-        {isOwner && isEditing && (
-          <div className="absolute top-4 right-4 z-10">
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleBannerChange}
-              className="hidden"
-              id="banner-upload"
-              disabled={uploading}
-                title="Upload university banner image"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-white/80 text-[#05294E] px-4 py-2 rounded-lg shadow hover:bg-white"
-              disabled={uploading}
-            >
-              {uploading ? t('universityDetailPage.editProfile.uploadingBanner') : t('universityDetailPage.editProfile.changeBanner')}
-            </button>
-            {uploadError && <div className="text-red-600 text-xs mt-1">{uploadError}</div>}
+        
+        {/* Edit Controls - Top Right */}
+        {isOwner && (
+          <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+            {isEditing ? (
+              <>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-lg"
+                  >
+                    {t('universityDetailPage.editProfile.saveButton')}
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    disabled={saving}
+                    className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium shadow-lg"
+                  >
+                    {t('universityDetailPage.editProfile.cancelButton')}
+                  </button>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={handleBannerChange}
+                  className="hidden"
+                  id="banner-upload"
+                  disabled={uploading}
+                  title="Upload university banner image"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-white/90 text-[#05294E] px-4 py-2 rounded-lg shadow-lg hover:bg-white transition-colors text-sm font-medium"
+                  disabled={uploading}
+                >
+                  {uploading ? t('universityDetailPage.editProfile.uploadingBanner') : t('universityDetailPage.editProfile.changeBanner')}
+                </button>
+                {uploadError && <div className="text-red-600 text-xs mt-1 bg-white/90 px-2 py-1 rounded">{uploadError}</div>}
+              </>
+            ) : (
+              <button
+                onClick={handleEditClick}
+                className="inline-flex items-center px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium shadow-lg"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                {t('universityDetailPage.editProfile.editButton')}
+              </button>
+            )}
           </div>
         )}
         <div className="absolute inset-0 flex items-end">

@@ -14,7 +14,7 @@ const PAGE_SIZE = 20;
 
 const Universities: React.FC = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, userProfile, loading } = useAuth();
+  const { isAuthenticated, user, userProfile, loading } = useAuth();
   
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,7 +40,7 @@ const Universities: React.FC = () => {
         setSearching(true);
         let query = supabase
           .from('universities')
-          .select('id, name, location, logo_url, programs, description, website, address, is_featured')
+          .select('id, name, location, logo_url, image_url, programs, description, website, address, is_featured')
           .eq('is_approved', true)
           .eq('is_featured', false) // Exclude featured universities from search results
           .ilike('name', `%${searchTerm}%`);
@@ -66,7 +66,7 @@ const Universities: React.FC = () => {
       const to = from + PAGE_SIZE - 1;
       let query = supabase
         .from('universities')
-        .select('id, name, location, logo_url, programs, description, website, address, is_featured', { count: 'exact' })
+        .select('id, name, location, logo_url, image_url, programs, description, website, address, is_featured', { count: 'exact' })
         .eq('is_approved', true)
         .eq('is_featured', false) // Exclude featured universities from paginated results
         .range(from, to);
@@ -154,9 +154,9 @@ const Universities: React.FC = () => {
     );
   }
   
-  // Check if user needs to pay selection process fee
-  if (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee)) {
-    console.log('Universities - Showing PaymentRequiredBlocker');
+  // Check if user needs to pay selection process fee (only for students)
+  if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
+    console.log('Universities - Showing PaymentRequiredBlocker for student');
     return <PaymentRequiredBlocker pageType="universities" />;
   }
   
@@ -169,15 +169,21 @@ const Universities: React.FC = () => {
   }))).filter(Boolean).sort();
   console.log('Estados disponíveis para filtro:', states);
 
-  const filteredSchools = realUniversities.filter(school => {
-    const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (school.location || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'all' || school.type === selectedType;
-    // Usar o campo address.state que já está padronizado
-    const schoolState = school.address?.state || '';
-    const matchesLocation = selectedLocation === 'all' || schoolState === selectedLocation;
-    return matchesSearch && matchesType && matchesLocation;
-  });
+  // Função para filtrar universidades (aplicável tanto para normais quanto featured)
+  const filterUniversities = (universities: any[]) => {
+    return universities.filter(school => {
+      const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (school.location || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = selectedType === 'all' || school.type === selectedType;
+      // Usar o campo address.state que já está padronizado
+      const schoolState = school.address?.state || '';
+      const matchesLocation = selectedLocation === 'all' || schoolState === selectedLocation;
+      return matchesSearch && matchesType && matchesLocation;
+    });
+  };
+
+  const filteredSchools = filterUniversities(realUniversities);
+  const filteredFeaturedUniversities = filterUniversities(featuredUniversities);
 
   // Paginação só para dados reais
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -262,9 +268,9 @@ const Universities: React.FC = () => {
             <div className="flex items-center justify-center bg-white border border-slate-300 rounded-xl px-3 py-3">
               <span className="text-sm text-slate-600">
                 <span className="font-semibold text-[#05294E]">{filteredSchools.length}</span> {t('universitiesPage.search.universitiesCount')}
-                {featuredUniversities.length > 0 && (
+                {filteredFeaturedUniversities.length > 0 && (
                   <span className="text-sm text-slate-500 ml-2">
-                    + {featuredUniversities.length} {t('universitiesPage.search.featured')}
+                    + {filteredFeaturedUniversities.length} {t('universitiesPage.search.featured')}
                   </span>
                 )}
               </span>
@@ -273,7 +279,7 @@ const Universities: React.FC = () => {
         </div>
 
         {/* Featured Universities Section */}
-        {featuredUniversities.length > 0 && (
+        {filteredFeaturedUniversities.length > 0 && (
           <div className="mb-12">
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-4">
@@ -289,7 +295,7 @@ const Universities: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 mb-8">
-              {featuredUniversities.map((school) => (
+              {filteredFeaturedUniversities.map((school) => (
                 <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
                   {/* Featured Badge */}
                   <div className="absolute top-4 right-4 z-10">
@@ -301,11 +307,28 @@ const Universities: React.FC = () => {
                   
                   {/* University Image */}
                   <div className="relative h-48 overflow-hidden flex-shrink-0">
-                    <img
-                      src={school.logo_url || school.image || '/university-placeholder.png'}
-                      alt={`${school.name} campus`}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {(school.image_url || school.logo_url) ? (
+                      <img
+                        src={school.image_url || school.logo_url}
+                        alt={`${school.name} campus`}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          // Fallback para div com ícone se a imagem falhar
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallbackDiv = target.nextElementSibling as HTMLElement;
+                          if (fallbackDiv) {
+                            fallbackDiv.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className={`w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ${(school.image_url || school.logo_url) ? 'hidden' : 'flex'}`}
+                      style={{ display: (school.image_url || school.logo_url) ? 'none' : 'flex' }}
+                    >
+                      <Building className="h-16 w-16 text-slate-400" />
+                    </div>
                     
                     
                     
@@ -374,11 +397,28 @@ const Universities: React.FC = () => {
             <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px]">
               {/* University Image */}
               <div className="relative h-48 overflow-hidden flex-shrink-0">
-                <img
-                  src={school.logo_url || school.image || '/university-placeholder.png'}
-                  alt={`${school.name} campus`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                {(school.image_url || school.logo_url) ? (
+                  <img
+                    src={school.image_url || school.logo_url}
+                    alt={`${school.name} campus`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      // Fallback para div com ícone se a imagem falhar
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallbackDiv = target.nextElementSibling as HTMLElement;
+                      if (fallbackDiv) {
+                        fallbackDiv.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div 
+                  className={`w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ${(school.image_url || school.logo_url) ? 'hidden' : 'flex'}`}
+                  style={{ display: (school.image_url || school.logo_url) ? 'none' : 'flex' }}
+                >
+                  <Building className="h-16 w-16 text-slate-400" />
+                </div>
                 
                 {/* Ranking Badge */}
                 {school.ranking && (
@@ -452,7 +492,7 @@ const Universities: React.FC = () => {
           </button>
         </div>
 
-        {filteredSchools.length === 0 && (
+        {filteredSchools.length === 0 && filteredFeaturedUniversities.length === 0 && (
           <div className="text-center py-16">
             <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <GraduationCap className="h-10 w-10 text-slate-400" />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import type { User, UserProfile } from '../hooks/useAuth';
 import { 
   X, 
   Award, 
@@ -26,14 +27,16 @@ interface ScholarshipDetailModalProps {
   scholarship: any;
   isOpen: boolean;
   onClose: () => void;
-  userProfile?: any;
+  userProfile?: UserProfile | null;
+  user?: User | null;
 }
 
 const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   scholarship,
   isOpen,
   onClose,
-  userProfile
+  userProfile,
+  user
 }) => {
   const { t } = useTranslation();
   
@@ -159,7 +162,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             <div className="relative">
               {/* Hero Image */}
               <div className="h-64 overflow-hidden relative">
-                {scholarship.image_url && userProfile?.has_paid_selection_process_fee ? (
+                {scholarship.image_url && (user?.role !== 'student' || (userProfile?.has_paid_selection_process_fee)) ? (
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
@@ -201,9 +204,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     </span>
                     <span className="text-white/80 text-sm flex items-center gap-1">
                       <Building className="h-4 w-4" />
-                      {userProfile?.has_paid_selection_process_fee
-                        ? (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))
-                        : t('scholarshipsPage.modal.universityHidden')}
+                      {user?.role === 'student' && !userProfile?.has_paid_selection_process_fee
+                        ? t('scholarshipsPage.modal.universityHidden')
+                        : (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))}
                     </span>
                   </div>
                 </div>
@@ -393,7 +396,13 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                       <Building className="h-5 w-5 text-slate-600" />
                       {t('scholarshipsPage.modal.universityInformation')}
                     </h4>
-                    {userProfile?.has_paid_selection_process_fee ? (
+                    {user?.role === 'student' && !userProfile?.has_paid_selection_process_fee ? (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <p className="text-blue-800 text-sm">
+                          {t('scholarshipsPage.modal.universityDetailsLocked')}
+                        </p>
+                      </div>
+                    ) : (
                       <div className="space-y-3">
                         <p className="font-semibold text-slate-900">
                           {scholarship.universities?.name || t('scholarshipsPage.modal.universityNameAvailable')}
@@ -410,12 +419,6 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             {t('scholarshipsPage.modal.ranking')} #{scholarship.universities.ranking}
                           </p>
                         )}
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <p className="text-blue-800 text-sm">
-                          {t('scholarshipsPage.modal.universityDetailsLocked')}
-                        </p>
                       </div>
                     )}
                   </div>

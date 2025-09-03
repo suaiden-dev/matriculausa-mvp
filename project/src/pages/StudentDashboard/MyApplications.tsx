@@ -122,7 +122,26 @@ const MyApplications: React.FC = () => {
         if (error) {
           if (isMounted) setError('Erro ao buscar aplicações.');
         } else {
-          if (isMounted) setApplications(data || []);
+          if (isMounted) {
+            // Verificar se alguma aplicação teve mudança de status de pagamento
+            const newApplications = data || [];
+            const currentApplications = applications;
+            
+            // Detectar aplicações que agora têm ambas as taxas pagas
+            newApplications.forEach(newApp => {
+              const currentApp = currentApplications.find(app => app.id === newApp.id);
+              const bothFeesPaid = !!(newApp.is_application_fee_paid && newApp.is_scholarship_fee_paid);
+              const wasBothFeesPaid = currentApp ? !!(currentApp.is_application_fee_paid && currentApp.is_scholarship_fee_paid) : false;
+              
+              // Se agora ambas as taxas estão pagas e antes não estavam, enviar notificação
+              if (bothFeesPaid && !wasBothFeesPaid && currentApp) {
+                console.log('Detectado pagamento completo de ambas as taxas para aplicação:', newApp.id);
+                notifyUniversityBothFeesPaid(newApp);
+              }
+            });
+            
+            setApplications(newApplications);
+          }
           // Verificar e abrir automaticamente checklists de documentos rejeitados
           if (data && data.length) {
             data.forEach(application => {
@@ -220,7 +239,23 @@ const MyApplications: React.FC = () => {
           if (error) {
             setError('Erro ao buscar aplicações.');
           } else {
-            setApplications(data || []);
+            const newApplications = data || [];
+            const currentApplications = applications;
+            
+            // Detectar aplicações que agora têm ambas as taxas pagas
+            newApplications.forEach(newApp => {
+              const currentApp = currentApplications.find(app => app.id === newApp.id);
+              const bothFeesPaid = !!(newApp.is_application_fee_paid && newApp.is_scholarship_fee_paid);
+              const wasBothFeesPaid = currentApp ? !!(currentApp.is_application_fee_paid && currentApp.is_scholarship_fee_paid) : false;
+              
+              // Se agora ambas as taxas estão pagas e antes não estavam, enviar notificação
+              if (bothFeesPaid && !wasBothFeesPaid && currentApp) {
+                console.log('Detectado pagamento completo de ambas as taxas para aplicação (após retorno do pagamento):', newApp.id);
+                notifyUniversityBothFeesPaid(newApp);
+              }
+            });
+            
+            setApplications(newApplications);
           }
         } catch (err) {
           setError('Erro inesperado ao buscar aplicações.');
@@ -461,6 +496,36 @@ const MyApplications: React.FC = () => {
         newDocs = [...base, newDoc];
       }
       await supabase.from('scholarship_applications').update({ documents: newDocs }).eq('id', applicationId);
+      
+      // Notificar universidade sobre o reenvio do documento
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token && app?.scholarships?.university_id) {
+          const documentLabel = DOCUMENT_LABELS[type] || type;
+          const notificationPayload = {
+            user_id: user.id,
+            application_id: applicationId,
+            document_type: type,
+            document_label: documentLabel,
+            university_id: app.scholarships.university_id,
+            scholarship_title: app.scholarships.title,
+            is_reupload: true
+          };
+          
+          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-reupload`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json', 
+              'Authorization': `Bearer ${session.access_token}` 
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+        }
+      } catch (notificationError) {
+        console.error('Erro ao notificar universidade sobre reenvio:', notificationError);
+        // Não falhar o upload se a notificação falhar
+      }
+      
       // Atualiza estado local
       setApplications(prev => prev.map(a => a.id === applicationId ? ({ ...a, documents: newDocs } as any) : a));
       // Limpa seleção
@@ -667,6 +732,44 @@ const getLevelColor = (level: any) => {
     } finally {
       // Desativar loading
       setIsProcessingCheckout(false);
+    }
+  };
+
+  // Função para notificar universidade quando ambas as taxas foram pagas
+  const notifyUniversityBothFeesPaid = async (application: ApplicationWithScholarship) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        console.error('Usuário não autenticado para notificação');
+        return;
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-both-fees-paid`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          application_id: application.id,
+          user_id: user?.id,
+          scholarship_id: application.scholarship_id
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro ao enviar notificação para universidade:', errorData);
+      } else {
+        const result = await response.json();
+        console.log('Notificação enviada com sucesso:', result);
+      }
+    } catch (error) {
+      console.error('Erro ao notificar universidade:', error);
     }
   };
 
