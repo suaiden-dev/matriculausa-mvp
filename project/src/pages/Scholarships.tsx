@@ -567,7 +567,7 @@ const Scholarships: React.FC = () => {
 
                     {/* Scholarship Image */}
                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center ">
-                      {scholarship.image_url && isAuthenticated && userProfile?.has_paid_selection_process_fee ? (
+                      {scholarship.image_url && (user?.role !== 'student' || (isAuthenticated && userProfile?.has_paid_selection_process_fee)) ? (
                         <img
                           src={scholarship.image_url}
                           alt={scholarship.title}
@@ -620,10 +620,10 @@ const Scholarships: React.FC = () => {
                         <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                           <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                          <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                            {isAuthenticated && userProfile?.has_paid_selection_process_fee
-                              ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
-                              : '********'}
+                          <span className={`text-sm font-medium ${user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee) ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                            {user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee)
+                              ? '********'
+                              : (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')}
                           </span>
                         </div>
                         
@@ -831,7 +831,7 @@ const Scholarships: React.FC = () => {
 
                      {/* Scholarship Image */}
                      <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
-                       {scholarship.image_url && isAuthenticated && userProfile?.has_paid_selection_process_fee ? (
+                       {scholarship.image_url && (user?.role !== 'student' || (isAuthenticated && userProfile?.has_paid_selection_process_fee)) ? (
                          <img
                            src={scholarship.image_url}
                            alt={scholarship.title}
@@ -892,10 +892,10 @@ const Scholarships: React.FC = () => {
                          <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                            <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                            <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                           <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                             {isAuthenticated && userProfile?.has_paid_selection_process_fee
-                               ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
-                               : '********'}
+                           <span className={`text-sm font-medium ${user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee) ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                             {user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee)
+                               ? '********'
+                               : (scholarship.university_name || scholarship.universities?.name || 'Unknown University')}
                            </span>
                          </div>
                          {/* Program Details */}
@@ -1120,6 +1120,7 @@ const Scholarships: React.FC = () => {
         isOpen={isModalOpen}
         onClose={closeScholarshipModal}
         userProfile={userProfile}
+        user={user}
       />
       
       <SmartChat />
