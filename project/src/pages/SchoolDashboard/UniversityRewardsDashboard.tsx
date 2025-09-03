@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Gift, 
-  DollarSign, 
   TrendingUp, 
   Users, 
-  Calendar,
   Search,
   Download,
-  Eye,
   CheckCircle,
-  Clock,
   AlertCircle,
   XCircle,
   BarChart3,
@@ -178,16 +174,7 @@ const UniversityRewardsDashboard: React.FC = () => {
     }
   };
 
-  const handleCancelPayout = async (requestId: string) => {
-    if (!user?.id) return;
-    try {
-      await PayoutService.cancelPayout(requestId, user.id);
-      await loadMatriculaRewardsData();
-    } catch (e: any) {
-      setError(e.message || 'Failed to cancel request');
-      setTimeout(() => setError(null), 4000);
-    }
-  };
+
 
   // Function to reload data after successful opt-in
   const handleOptInSuccess = async () => {
@@ -356,21 +343,38 @@ const UniversityRewardsDashboard: React.FC = () => {
 
         {/* If university participates in the program, show dashboard */}
         {participatesInProgram === true && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Header Section */}
-            <div className="mb-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="hidden sm:w-12 sm:h-12 bg-[#05294E] rounded-xl sm:flex items-center justify-center">
-                  <Gift className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Matricula Rewards Dashboard</h1>
-                  <p className="text-gray-600 mt-1">Manage your rewards and payments</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Active Program
+          <div className="min-h-screen">
+            {/* Header + Filters Section */}
+            <div className="w-full">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                <div className="max-w-full mx-auto bg-slate-50">
+                  {/* Header: title + note + counter */}
+                  <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-3">
+
+                        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                          Matricula Rewards Dashboard
+                        </h1>
+                      </div>
+                      <p className="text-slate-600 text-sm sm:text-base">
+                        Manage your rewards program, track student redemptions, and request payouts from earned coins.
+                      </p>
+                      <p className="mt-3 text-sm text-slate-500">
+                        Monitor tuition discount transactions and manage your rewards account balance.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-700 border border-green-200 shadow-sm">
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Active Program
+                      </div>
+                      <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
+                        <Wallet className="w-5 h-5 mr-2" />
+                        {stats.balanceCoins.toLocaleString()} Coins
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -401,16 +405,16 @@ const UniversityRewardsDashboard: React.FC = () => {
             )}
 
             {/* Balance Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
               {/* Main Balance */}
-              <div className="bg-[#05294E] rounded-2xl shadow-lg p-6 text-white">
+              <div className="bg-[#05294E] rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 text-white">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-blue-100 text-sm font-medium">Available Balance</p>
-                    <p className="text-3xl font-bold">{stats.balanceCoins.toLocaleString()}</p>
+                    <p className="text-2xl sm:text-3xl font-bold">{stats.balanceCoins.toLocaleString()}</p>
                     <p className="text-blue-200 text-sm">Matricula Coins</p>
                   </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <div className="p-3 bg-white/20 rounded-xl">
                     <Wallet className="h-6 w-6" />
                   </div>
                 </div>
@@ -421,14 +425,14 @@ const UniversityRewardsDashboard: React.FC = () => {
               </div>
 
               {/* Total Received */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-gray-600 text-sm font-medium">Total Received</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalReceivedCoins.toLocaleString()}</p>
-                    <p className="text-gray-500 text-sm">Coins</p>
+                    <p className="text-slate-600 text-sm font-medium">Total Received</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.totalReceivedCoins.toLocaleString()}</p>
+                    <p className="text-slate-500 text-sm">Coins</p>
                   </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <div className="p-3 bg-green-100 rounded-xl">
                     <TrendingUp className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
@@ -439,14 +443,14 @@ const UniversityRewardsDashboard: React.FC = () => {
               </div>
 
               {/* Discounts Sent */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-gray-600 text-sm font-medium">Discounts Sent</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalDiscountsSent}</p>
-                    <p className="text-gray-500 text-sm">Transactions</p>
+                    <p className="text-slate-600 text-sm font-medium">Discounts Sent</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.totalDiscountsSent}</p>
+                    <p className="text-slate-500 text-sm">Transactions</p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <div className="p-3 bg-purple-100 rounded-xl">
                     <CreditCard className="h-6 w-6 text-purple-600" />
                   </div>
                 </div>
@@ -457,14 +461,14 @@ const UniversityRewardsDashboard: React.FC = () => {
               </div>
 
               {/* Total Value */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-gray-600 text-sm font-medium">Total Value</p>
-                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalDiscountAmount)}</p>
-                    <p className="text-gray-500 text-sm">USD Value</p>
+                    <p className="text-slate-600 text-sm font-medium">Total Value</p>
+                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.totalDiscountAmount)}</p>
+                    <p className="text-slate-500 text-sm">USD Value</p>
                   </div>
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <div className="p-3 bg-orange-100 rounded-xl">
                     <Banknote className="h-6 w-6 text-orange-600" />
                   </div>
                 </div>
@@ -477,16 +481,16 @@ const UniversityRewardsDashboard: React.FC = () => {
 
             {/* Analytics Section */}
             {showAnalytics && (
-              <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
+              <div className="mb-6 sm:mb-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">Analytics Dashboard</h2>
-                      <p className="text-gray-600 mt-1">Detailed insights about your rewards program</p>
+                      <h2 className="text-lg sm:text-xl font-bold text-slate-900">Analytics Dashboard</h2>
+                      <p className="text-slate-500 text-sm">Detailed insights about your rewards program</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-gray-600">Live Data</span>
+                      <span className="text-sm text-slate-600">Live Data</span>
                     </div>
                   </div>
                 </div>
@@ -587,17 +591,17 @@ const UniversityRewardsDashboard: React.FC = () => {
             )}
 
             {/* Transaction History */}
-            <div className="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Transaction History</h2>
-                    <p className="text-gray-600 mt-1">All student tuition discount redemptions</p>
+                    <h2 className="text-lg sm:text-xl font-bold text-slate-900">Transaction History</h2>
+                    <p className="text-slate-500 text-sm">All student tuition discount redemptions</p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={handleAnalytics}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
                     >
                       {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
                     </button>
@@ -613,17 +617,17 @@ const UniversityRewardsDashboard: React.FC = () => {
               </div>
 
               {/* Filters */}
-              <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200 bg-slate-50">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
                     <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                       <input
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Search by student name or email..."
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                        className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
                       />
                     </div>
                   </div>
@@ -686,8 +690,8 @@ const UniversityRewardsDashboard: React.FC = () => {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                 <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900">Request Payment</h3>
-                    <button onClick={() => setShowPaymentRequestModal(false)} title="Close" className="text-gray-500 hover:text-gray-700">
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900">Request Payment</h3>
+                    <button onClick={() => setShowPaymentRequestModal(false)} title="Close" className="text-slate-500 hover:text-slate-700">
                       <XCircle className="h-5 w-5"/>
                     </button>
                   </div>
@@ -792,10 +796,10 @@ const UniversityRewardsDashboard: React.FC = () => {
             )}
 
             {/* Payout History */}
-            <div id="payout-history" className="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
+            <div id="payout-history" className="mt-6 sm:mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-gray-900">Payout Requests (Invoices)</h2>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900">Payout Requests (Invoices)</h2>
                   <button
                     onClick={() => setShowPaymentRequestModal(true)}
                     className="px-4 py-2 text-sm font-medium text-white bg-[#05294E] rounded-lg hover:bg-[#05294E]/90 transition-colors"
@@ -803,7 +807,7 @@ const UniversityRewardsDashboard: React.FC = () => {
                     Request Payout
                   </button>
                 </div>
-                <p className="text-gray-600 mt-1">Track your cash-out requests sent to MatriculaUSA</p>
+                <p className="text-slate-500 text-sm mt-1">Track your cash-out requests sent to MatriculaUSA</p>
               </div>
               <div className="p-6">
                 {paginatedPayouts.length ? (
@@ -881,8 +885,8 @@ const UniversityRewardsDashboard: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="mt-8 text-center">
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+            <div className="mt-6 sm:mt-8 text-center">
+              <div className="flex items-center justify-center space-x-2 text-sm text-slate-500">
                 <Shield className="h-4 w-4" />
                 <span>All transactions are secure and encrypted</span>
               </div>
