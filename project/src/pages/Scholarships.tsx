@@ -15,7 +15,7 @@ import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, userProfile, loading } = useAuth();
+  const { isAuthenticated, user, userProfile, loading } = useAuth();
   
   // Hook para verificar se usuário já tem application fee paga
   const { 
@@ -173,9 +173,9 @@ const Scholarships: React.FC = () => {
     userProfileKeys: userProfile ? Object.keys(userProfile) : 'No profile'
   });
   
-  // Check if user needs to pay selection process fee
-  if (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee)) {
-    console.log('Scholarships - Showing PaymentRequiredBlocker');
+  // Check if user needs to pay selection process fee (only for students)
+  if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
+    console.log('Scholarships - Showing PaymentRequiredBlocker for student');
     return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
   }
   
