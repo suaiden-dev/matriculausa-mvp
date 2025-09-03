@@ -729,7 +729,11 @@
       "createAccount": "Create Account",
       "creatingAccount": "Creating Account...",
       "createStudentAccount": "Create Student Account",
-      "createUniversityAccount": "Create University Account"
+      "createUniversityAccount": "Create University Account",
+      "termsNotice": "By clicking Create Account, you agree to our ",
+      "terms": "Terms of Use",
+      "and": " and ",
+      "privacyPolicy": "Privacy Policy"
     },
     "modals": {
       "verification": {

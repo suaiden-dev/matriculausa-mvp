@@ -1115,6 +1115,22 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                               ${formatAmount(scholarship.original_value_per_credit || scholarship.per_credit_cost || 'N/A')}
                             </span>
                           </div>
+                          
+                          {/* Application Fee Information */}
+                          <div className="pt-2 border-t border-slate-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                              <span className="text-sm font-bold text-purple-600">
+                                ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400 text-center mt-1">
+                              {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                                t('scholarshipsPage.scholarshipCard.customFee') : 
+                                t('scholarshipsPage.scholarshipCard.standardFee')
+                              }
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1406,6 +1422,22 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="flex items-center justify-between text-xs text-slate-500 pt-1 sm:pt-2 border-t border-slate-200">
                         <span>{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
                         <span>${formatAmount(scholarship.original_value_per_credit)}</span>
+                      </div>
+                      
+                      {/* Application Fee Information */}
+                      <div className="pt-2 border-t border-slate-200">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                          <span className="font-semibold text-purple-600">
+                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-400 text-center mt-1">
+                          {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                            t('scholarshipsPage.scholarshipCard.customFee') : 
+                            t('scholarshipsPage.scholarshipCard.standardFee')
+                          }
+                        </div>
                       </div>
                     </div>
                   </div>

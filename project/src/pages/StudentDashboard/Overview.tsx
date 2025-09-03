@@ -105,6 +105,15 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
+  // Valores das taxas para o ProgressBar
+  // A application fee agora é variável, então não mostramos um valor específico
+  const dynamicFeeValues = [
+    '$600', // Selection Process Fee (fixo)
+    'As per university', // Application Fee (variável - não mostra valor específico)
+    '$850', // Scholarship Fee (fixo)
+    '$1,250', // I-20 Control Fee (fixo)
+  ];
+
   // Lógica da barra de progresso dinâmica
   let steps = [];
   if (!userProfile?.has_paid_selection_process_fee) {
@@ -251,7 +260,7 @@ const Overview: React.FC<OverviewProps> = ({
             {allCompleted ? 'All Steps Completed! 🎉' : t('studentDashboard.progressBar.title')}
           </div>
           <div className="mb-2 md:mb-4">
-            <ProgressBar steps={steps} />
+            <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
           </div>
 
           {userProfile && !userProfile.has_paid_selection_process_fee && (
@@ -424,7 +433,7 @@ const Overview: React.FC<OverviewProps> = ({
       </div> */}
       {/* Progress Bar */}
       {/* <div className="overview-progressbar-wrapper">
-        <ProgressBar steps={steps} />
+        <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
       </div> */}
       {/* Outros cards/boxes da overview seguem o mesmo padrão visual */}
       {/* Recent Applications */}

@@ -442,12 +442,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         setUserProfile(profile);
-        setUser(await buildUser(session.user, profile));
+        const builtUser = await buildUser(session.user, profile);
+        setUser(builtUser);
         setSupabaseUser(session.user);
 
         // Sincronizar telefone do user_metadata se o perfil não tiver
         if (profile && !profile.phone && session.user.user_metadata?.phone) {
-          console.log('🔄 [USEAUTH] Sincronizando telefone do user_metadata para o perfil:', session.user.user_metadata.phone);
           try {
             const { data: updatedProfile, error: updateError } = await supabase
               .from('user_profiles')
@@ -477,8 +477,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         fetchAndSetUser(session);
+        setLoading(false);
       }
     );
     return () => {

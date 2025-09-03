@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Gift, Target } from 'lucide-react';
@@ -48,6 +48,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   // New states for referral code UI
   const [showReferralCodeSection, setShowReferralCodeSection] = useState<boolean | null>(null);
   const [selectedReferralType, setSelectedReferralType] = useState<'friend' | 'seller' | null>(null);
+  // Terms acceptance state
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   
   const { login, register } = useAuth();
@@ -283,12 +285,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         
 
         
-        // Validar resposta sobre código de referência (apenas para estudantes)
-        if (activeTab === 'student' && showReferralCodeSection === null) {
-          setError(t('authPage.messages.mustAnswerReferralCode'));
-          setLoading(false);
-          return;
-        }
+                 // Validar resposta sobre código de referência (apenas para estudantes)
+         if (activeTab === 'student' && showReferralCodeSection === null) {
+           setError(t('authPage.messages.mustAnswerReferralCode'));
+           setLoading(false);
+           return;
+         }
+         
+         // Validar aceite dos termos
+         if (!termsAccepted) {
+           setError(t('authPage.messages.mustAcceptTerms'));
+           setLoading(false);
+           return;
+         }
         
         console.log('✅ [AUTH] Validação de telefone passou:', formData.phone);
         
@@ -1121,12 +1130,42 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               </>
             )}
 
-
+            {/* Terms and Privacy Policy Notice */}
+            <div className="flex items-center space-x-3 mb-4">
+              <input
+                type="checkbox"
+                id="terms-acceptance"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] flex-shrink-0"
+              />
+              <label htmlFor="terms-acceptance" className="text-sm text-slate-600 cursor-pointer leading-relaxed">
+                {t('authPage.register.termsNotice')}
+                <a 
+                  href="/terms-of-service" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
+                >
+                  {t('authPage.register.terms')}
+                </a>
+                {t('authPage.register.and')}
+                <a 
+                  href="/privacy-policy" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
+                >
+                  {t('authPage.register.privacyPolicy')}
+                </a>
+                .
+              </label>
+            </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || (activeTab === 'student' && showReferralCodeSection === null)}
+              disabled={loading || (activeTab === 'student' && showReferralCodeSection === null) || !termsAccepted}
               className={`w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-base sm:text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 activeTab === 'student' 
                   ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]' 

@@ -126,6 +126,7 @@ const StudentDashboard: React.FC = () => {
             annual_value_with_scholarship,
             scholarship_type,
             work_permissions,
+            application_fee_amount,
             universities (id, name, logo_url, location, is_approved)
           `)
           .eq('is_active', true);

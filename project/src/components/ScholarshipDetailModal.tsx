@@ -267,6 +267,27 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         )}
                       </div>
                     </div>
+                    
+                    {/* Application Fee Information */}
+                    <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-purple-600" />
+                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-purple-600 text-lg">
+                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                          </span>
+                          <div className="text-xs text-slate-400">
+                            {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                              t('scholarshipsPage.scholarshipCard.customFee') : 
+                              t('scholarshipsPage.scholarshipCard.standardFee')
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Program Details */}

@@ -729,7 +729,11 @@
       "createAccount": "Crear Cuenta",
       "creatingAccount": "Creando Cuenta...",
       "createStudentAccount": "Crear Cuenta de Estudiante",
-      "createUniversityAccount": "Crear Cuenta de Universidad"
+      "createUniversityAccount": "Crear Cuenta de Universidad",
+      "termsNotice": "Al hacer clic en Crear Cuenta, aceptas nuestros ",
+      "terms": "Términos de Uso",
+      "and": " y ",
+      "privacyPolicy": "Política de Privacidad"
     },
     "modals": {
       "verification": {
