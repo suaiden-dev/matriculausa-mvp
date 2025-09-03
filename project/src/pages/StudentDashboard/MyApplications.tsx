@@ -51,6 +51,7 @@ const MyApplications: React.FC = () => {
   // const [payingId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(true);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
+
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   // Document Requests uploads grouped by applicationId
@@ -81,6 +82,16 @@ const MyApplications: React.FC = () => {
       [applicationId]: !prev[applicationId]
     }));
   };
+
+  // Função para verificar se há documentos pendentes (mover para antes das outras funções)
+  const hasPendingDocuments = (application: ApplicationWithScholarship) => {
+    const docs = parseApplicationDocuments((application as any).documents);
+    return docs.some(doc => 
+      doc.status === 'pending' || doc.status === 'under_review' || doc.status === 'changes_requested'
+    );
+  };
+
+
 
   // Função para verificar se há documentos rejeitados e abrir automaticamente o checklist
   const checkAndOpenRejectedDocuments = (application: ApplicationWithScholarship) => {
@@ -200,21 +211,33 @@ const MyApplications: React.FC = () => {
     };
     if (userProfileId) fetchApplications(true);
 
-    // Polling eficiente: só roda enquanto isPolling for true
-    let interval: NodeJS.Timeout | null = null;
-    if (isPolling) {
-      interval = setInterval(async () => {
-        if (userProfileId) {
-          await refetchUserProfile();
-          fetchApplications(false);
-        }
-      }, 1000);
-    }
+    // Polling desabilitado para evitar loops infinitos
+    // O polling será feito apenas manualmente quando necessário
+    
     return () => {
       isMounted = false;
-      if (interval) clearInterval(interval);
     };
   }, [userProfileId, refetchUserProfile, isPolling]);
+
+  // Polling manual baseado em eventos específicos (sem loops infinitos)
+  useEffect(() => {
+    if (!isPolling || !userProfileId) return;
+    
+    // Polling apenas quando a página ganha foco (usuário volta para a aba)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && userProfileId) {
+        console.log('🔄 Polling manual - Página ganhou foco');
+        refetchUserProfile();
+        // fetchApplications será chamado pelo useEffect principal
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isPolling, userProfileId, refetchUserProfile]);
 
   // Nenhum fallback de cart: a página lista exclusivamente o que está em scholarship_applications
 
@@ -442,13 +465,7 @@ const MyApplications: React.FC = () => {
     }
   };
 
-  // Função para verificar se há documentos pendentes
-  const hasPendingDocuments = (application: ApplicationWithScholarship) => {
-    const docs = parseApplicationDocuments((application as any).documents);
-    return docs.some(doc => 
-      doc.status === 'pending' || doc.status === 'under_review' || doc.status === 'changes_requested'
-    );
-  };
+
 
   // Estilo para status dos documentos (nível do documento, não da aplicação)
   const getDocBadgeClasses = (status: string) => {

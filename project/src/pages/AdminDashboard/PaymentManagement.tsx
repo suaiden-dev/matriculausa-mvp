@@ -244,10 +244,11 @@ const PaymentManagement = (): React.JSX.Element => {
       setLoadingZellePayments(true);
       console.log('🔍 Loading Zelle payments...');
 
-      // Buscar pagamentos Zelle sem join
+      // Buscar pagamentos Zelle sem join, filtrando apenas registros com valores > 0
       const { data: zellePaymentsData, error: zelleError } = await supabase
         .from('zelle_payments')
         .select('*')
+        .gt('amount', 0)
         .order('created_at', { ascending: false });
 
       if (zelleError) {
@@ -266,32 +267,43 @@ const PaymentManagement = (): React.JSX.Element => {
         const studentProfileIds = zellePaymentsData.map(p => p.student_profile_id).filter(Boolean);
         const allUserIds = [...new Set([...userIds, ...studentProfileIds])];
 
+        console.log('🔍 User IDs to fetch:', allUserIds);
+
         let userProfiles: any[] = [];
         if (allUserIds.length > 0) {
+          // Buscar por user_id (que corresponde ao auth.users.id) e também por id (que é o user_profiles.id)
+          // Incluir também informações da universidade
           const { data: profilesData, error: profilesError } = await supabase
             .from('user_profiles')
-            .select('id, user_id, full_name, email')
-            .in('id', allUserIds);
+            .select('id, user_id, full_name, email, university_id')
+            .in('user_id', allUserIds);
 
           if (profilesError) {
             console.error('Error loading user profiles:', profilesError);
           } else {
             userProfiles = profilesData || [];
+            console.log('👥 User profiles loaded:', userProfiles);
           }
         }
 
         // Processar cada pagamento Zelle
-        zellePaymentsData.forEach((zellePayment: any) => {
-          const student = userProfiles.find(p => p.id === zellePayment.user_id || p.id === zellePayment.student_profile_id);
+        zellePaymentsData.forEach((zellePayment: any) => {          
+          // Buscar o perfil do usuário pelo user_id (auth.users.id)
+          const student = userProfiles.find(p => p.user_id === zellePayment.user_id);
           
+          // Determinar o nome do estudante (usar email se full_name for igual ao email ou estiver vazio)
+          const studentName = student?.full_name && student.full_name !== student?.email 
+            ? student.full_name 
+            : student?.email || 'Unknown User';
+         
           const paymentRecord: PaymentRecord = {
             id: zellePayment.id,
             student_id: zellePayment.user_id || zellePayment.student_profile_id || '',
             user_id: zellePayment.user_id, // Campo necessário para a função approveZellePayment
-            student_name: student?.full_name || 'Unknown User',
+            student_name: studentName,
             student_email: student?.email || 'Email not available',
-            university_id: '',
-            university_name: 'N/A',
+            university_id: student?.university_id || '',
+            university_name: 'N/A', // TODO: Implementar busca de universidade separadamente
             fee_type: zellePayment.fee_type || 'selection_process',
             fee_type_global: zellePayment.fee_type_global, // Campo necessário para a função approveZellePayment
             amount: parseFloat(zellePayment.amount) || 0,

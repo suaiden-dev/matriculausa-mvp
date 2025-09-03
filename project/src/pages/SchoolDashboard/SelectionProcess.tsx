@@ -1224,6 +1224,16 @@ const SelectionProcess: React.FC = () => {
     }
   };
 
+  // Função para sanitizar nomes de arquivos (remover acentos, espaços e caracteres especiais)
+  const sanitizeFileName = (fileName: string): string => {
+    return fileName
+      .normalize('NFD') // Decompor caracteres acentuados
+      .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos (acentos)
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Substituir caracteres especiais por underscore
+      .replace(/_+/g, '_') // Remover underscores múltiplos
+      .replace(/^_|_$/g, ''); // Remover underscores do início e fim
+  };
+
   // Função para processar a carta de aceite
   const handleProcessAcceptanceLetter = async () => {
     if (!selectedStudent || !acceptanceLetterFile) {
@@ -1233,8 +1243,9 @@ const SelectionProcess: React.FC = () => {
 
     setUploadingAcceptanceLetter(true);
     try {
-      // Upload do arquivo para o storage
-      const fileName = `acceptance_letters/${Date.now()}_${acceptanceLetterFile.name}`;
+      // Sanitizar o nome do arquivo e gerar chave segura
+      const sanitizedFileName = sanitizeFileName(acceptanceLetterFile.name);
+      const fileName = `acceptance_letters/${Date.now()}_${sanitizedFileName}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('student-documents')
         .upload(fileName, acceptanceLetterFile);

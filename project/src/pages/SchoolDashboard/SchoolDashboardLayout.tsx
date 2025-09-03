@@ -573,7 +573,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         <main className="pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
           <div className="max-w-7xl mx-auto">
             {/* Welcome Message for Incomplete Profiles */}
-            {(!university || !university.profile_completed) && (
+            {(!university || !university.profile_completed) && !location.pathname.includes('/profile') && (
               <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="relative">
