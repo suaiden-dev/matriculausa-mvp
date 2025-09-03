@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Clock, FileText, Globe, Phone, AlertCircle, Eye, Download, CheckCircle2, XCircle, UserCircle, ArrowLeft, X } from 'lucide-react';
+import { Search, Clock, FileText, Globe, Phone, AlertCircle, Eye, Download, CheckCircle2, XCircle, UserCircle, ArrowLeft, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Scholarship, Application, UserProfile } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -45,6 +45,10 @@ const SelectionProcess: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
+  
+  // States para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   
   // States para o modal de detalhes do estudante
   const [selectedStudent, setSelectedStudent] = useState<ApplicationDetails | null>(null);
@@ -687,6 +691,17 @@ const SelectionProcess: React.FC = () => {
 
     return filtered;
   }, [selectionProcessApplications, selectedScholarship, selectedCountry, searchTerm]);
+
+  // Lógica de paginação
+  const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedApplications = filteredApplications.slice(startIndex, endIndex);
+
+  // Reset para primeira página quando filtros mudarem
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedScholarship, selectedCountry]);
 
   // Função para obter contagem de documentos analisados
   const getDocumentProgress = (app: any) => {
@@ -1586,7 +1601,7 @@ const SelectionProcess: React.FC = () => {
     >
       <div className="min-h-screen">
         {/* Header + Filters Section */}
-        <div className="max-w-7xl">
+        <div className="w-full">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="max-w-full mx-auto bg-slate-50">
               {/* Header: title + note + counter */}
@@ -1697,7 +1712,7 @@ const SelectionProcess: React.FC = () => {
 
           {/* Students Grid */}
           <div className="space-y-4">
-            {filteredApplications.length === 0 ? (
+            {paginatedApplications.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 sm:p-12 text-center">
                 {selectionProcessApplications.length === 0 ? (
                   <>
@@ -1714,7 +1729,7 @@ const SelectionProcess: React.FC = () => {
                 )}
               </div>
             ) : (
-              filteredApplications.map((app) => {
+              paginatedApplications.map((app) => {
                 const student = (app as any).user_profiles;
                 const progress = getDocumentProgress(app);
                 const hasUrgentAction = progress.reviewed < progress.total;
@@ -1817,6 +1832,73 @@ const SelectionProcess: React.FC = () => {
               })
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {filteredApplications.length > itemsPerPage && (
+            <div className="bg-white mt-4 rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* Results Info */}
+                <div className="text-sm text-slate-600">
+                  Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                  <span className="font-medium">{Math.min(endIndex, filteredApplications.length)}</span> of{' '}
+                  <span className="font-medium">{filteredApplications.length}</span> students
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center space-x-2">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="flex items-center px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNumber;
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i;
+                      } else {
+                        pageNumber = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => setCurrentPage(pageNumber)}
+                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            currentPage === pageNumber
+                              ? 'bg-[#05294E] text-white'
+                              : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Student Details View */}
@@ -1827,7 +1909,7 @@ const SelectionProcess: React.FC = () => {
 
               {/* Page Title and Navigation Section */}
               <div className="bg-white border-b border-slate-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+                <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
                     <div className="min-w-0 flex-1">
                       <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
@@ -1890,7 +1972,7 @@ const SelectionProcess: React.FC = () => {
               </div>
 
               {/* Student Details Content */}
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+              <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
                 {studentLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>

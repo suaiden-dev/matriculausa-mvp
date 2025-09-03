@@ -4,10 +4,11 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
 const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, checkStudentTermsAcceptance } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingUniversity, setCheckingUniversity] = useState(false);
+  const [checkingStudentTerms, setCheckingStudentTerms] = useState(false);
   const lastCheckedPath = useRef<string>('');
   const universityCache = useRef<{ [userId: string]: any }>({});
 
@@ -96,9 +97,29 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
         
         if (user.role === 'student') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando student para /student/dashboard');
-          navigate('/student/dashboard', { replace: true });
-          return;
+          setCheckingStudentTerms(true);
+          
+          try {
+            const hasAcceptedTerms = await checkStudentTermsAcceptance(user.id);
+            
+            if (!hasAcceptedTerms) {
+              console.log('🔀 [AUTHREDIRECT] Student não aceitou termos, redirecionando para /student/terms');
+              navigate('/student/terms', { replace: true });
+              setCheckingStudentTerms(false);
+              return;
+            }
+            
+            console.log('🔀 [AUTHREDIRECT] Student aceitou termos, redirecionando para /student/dashboard');
+            navigate('/student/dashboard', { replace: true });
+            setCheckingStudentTerms(false);
+            return;
+          } catch (error) {
+            console.error('🔀 [AUTHREDIRECT] Erro ao verificar termos do student:', error);
+            // Em caso de erro, redirecionar para dashboard
+            navigate('/student/dashboard', { replace: true });
+            setCheckingStudentTerms(false);
+            return;
+          }
         }
         
         if (user.role === 'school') {
@@ -150,6 +171,26 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
         navigate('/student/dashboard', { replace: true });
         return;
+      }
+
+      // Verificar se student aceitou termos ao acessar rotas protegidas
+      if (user.role === 'student' && currentPath.startsWith('/student/') && currentPath !== '/student/terms') {
+        setCheckingStudentTerms(true);
+        
+        try {
+          const hasAcceptedTerms = await checkStudentTermsAcceptance(user.id);
+          
+          if (!hasAcceptedTerms) {
+            console.log('🔀 [AUTHREDIRECT] Student tentando acessar área protegida sem aceitar termos');
+            navigate('/student/terms', { replace: true });
+            setCheckingStudentTerms(false);
+            return;
+          }
+        } catch (error) {
+          console.error('🔀 [AUTHREDIRECT] Erro ao verificar termos do student:', error);
+        } finally {
+          setCheckingStudentTerms(false);
+        }
       }
       
       // Se usuário é admin e está tentando acessar áreas restritas de outros roles
@@ -207,8 +248,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     checkAndRedirect();
   }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus]);
 
-  // Mostrar loading enquanto verifica universidade
-  if (checkingUniversity) {
+  // Mostrar loading enquanto verifica universidade ou termos de estudantes
+  if (checkingUniversity || checkingStudentTerms) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>

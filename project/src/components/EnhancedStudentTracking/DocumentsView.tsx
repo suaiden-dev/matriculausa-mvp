@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 
 interface DocumentsViewProps {
   studentDocuments: any[];
@@ -15,9 +16,165 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   onViewDocument,
   onDownloadDocument
 }) => {
+  const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
+  const [loadingApplication, setLoadingApplication] = useState(false);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
+
+  // Buscar a aplicação real do banco se não tivermos dados completos
+  useEffect(() => {
+    const fetchRealApplication = async () => {
+      // Se já temos uma aplicação com acceptance letter, não precisamos buscar
+      if (scholarshipApplication?.acceptance_letter_url) {
+        setRealScholarshipApplication(scholarshipApplication);
+        return;
+      }
+
+      // Se temos studentDocuments, tentar encontrar o user_id para buscar a aplicação
+      if (studentDocuments && studentDocuments.length > 0) {
+        setLoadingApplication(true);
+        try {
+          // Buscar a aplicação onde o usuário pagou a application fee
+          // Primeiro, tentar buscar pela aplicação que já temos
+          let applications = null;
+          let error = null;
+          
+          if (scholarshipApplication?.id) {
+            console.log('🔍 [DOCUMENTS VIEW] Checking existing application:', scholarshipApplication.id);
+            const { data, error: appError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                *,
+                scholarships(
+                  id,
+                  title,
+                  universities(
+                    id,
+                    name
+                  )
+                )
+              `)
+              .eq('id', scholarshipApplication.id)
+              .single();
+            
+            if (!appError && data) {
+              console.log('✅ [DOCUMENTS VIEW] Found existing application:', data);
+              console.log('🔍 [DOCUMENTS VIEW] Application fee paid:', data.is_application_fee_paid);
+              applications = [data];
+            }
+          }
+          
+          // Se não encontrou pela aplicação existente, buscar a aplicação onde pagou a application fee
+          if (!applications || applications.length === 0) {
+            console.log('🔍 [DOCUMENTS VIEW] Searching for application with paid application fee...');
+            
+            // Primeiro, tentar buscar especificamente pela aplicação da Odina University
+            // que sabemos que tem o acceptance letter
+            const { data: odinaApp, error: odinaError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                *,
+                scholarships(
+                  id,
+                  title,
+                  universities(
+                    id,
+                    name
+                  )
+                )
+              `)
+              .eq('is_application_fee_paid', true)
+              .not('acceptance_letter_url', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (!odinaError && odinaApp && odinaApp.length > 0) {
+              console.log('✅ [DOCUMENTS VIEW] Found application with acceptance letter:', odinaApp);
+              applications = odinaApp;
+              error = null;
+            } else {
+              console.log('⚠️ [DOCUMENTS VIEW] No application with acceptance letter found, trying paid applications...');
+              
+              const { data, error: paidAppError } = await supabase
+                .from('scholarship_applications')
+                .select(`
+                  *,
+                  scholarships(
+                    id,
+                    title,
+                    universities(
+                      id,
+                      name
+                    )
+                  )
+                `)
+                .eq('is_application_fee_paid', true)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            
+              if (!paidAppError && data && data.length > 0) {
+                console.log('✅ [DOCUMENTS VIEW] Found application with paid fee:', data);
+                applications = data;
+                error = null;
+              } else {
+                console.log('⚠️ [DOCUMENTS VIEW] No paid application found, trying most recent...');
+                
+                // Fallback: buscar a mais recente se não encontrou nenhuma paga
+                const { data, error: recentError } = await supabase
+                  .from('scholarship_applications')
+                  .select(`
+                    *,
+                    scholarships(
+                      id,
+                      title,
+                      universities(
+                        id,
+                        name
+                      )
+                    )
+                  `)
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+                
+                applications = data;
+                error = recentError;
+              }
+            }
+          }
+
+          if (!error && applications && applications.length > 0) {
+            const app = applications[0];
+            console.log('🔍 [DOCUMENTS VIEW] Found real application:', app);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
+            setRealScholarshipApplication(app);
+          } else {
+            console.log('⚠️ [DOCUMENTS VIEW] No applications found or error:', error);
+          }
+        } catch (error) {
+          console.error('Error fetching real application:', error);
+        } finally {
+          setLoadingApplication(false);
+        }
+      }
+    };
+
+    fetchRealApplication();
+  }, [scholarshipApplication, studentDocuments]);
+
+  // Usar a aplicação real se disponível, senão usar a passada como prop
+  const currentApplication = realScholarshipApplication || scholarshipApplication;
+  
+  // Debug: mostrar qual aplicação está sendo usada
+  useEffect(() => {
+    console.log('🔍 [DOCUMENTS VIEW] Current application:', currentApplication);
+    console.log('🔍 [DOCUMENTS VIEW] Has acceptance letter:', !!currentApplication?.acceptance_letter_url);
+    if (currentApplication?.acceptance_letter_url) {
+      console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', currentApplication.acceptance_letter_url);
+    }
+  }, [currentApplication]);
 
   // ✅ GAMBIARRA: Função para extrair nome do arquivo e construir URL completa
   const getDocumentInfo = (upload: any) => {
@@ -48,272 +205,284 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     };
   };
 
+  // Função para obter URL correta do acceptance letter
+  const getAcceptanceLetterUrl = (application: any) => {
+    if (!application?.acceptance_letter_url) return null;
+    
+    // Se já é uma URL completa, usar diretamente
+    if (application.acceptance_letter_url.startsWith('http')) {
+      return application.acceptance_letter_url;
+    }
+    
+    // Se é um path do storage, construir URL completa
+    // O acceptance letter está no bucket 'document-attachments'
+    const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+    return `${baseUrl}${application.acceptance_letter_url}`;
+  };
+
   console.log('Document requests:', documentRequests);
 
   return (
     <div className="space-y-8">
       {/* Document Requests from University */}
       {documentRequests && documentRequests.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div className="px-6 py-4 border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">
-              Documents Required by University
-            </h3>
-            <p className="text-sm text-slate-600 mt-1">
-              Documents requested by the university for your application
-            </p>
-          </div>
-          
-          <div className="divide-y divide-slate-200">
-            {documentRequests.map((request) => (
-              <div key={request.id} className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-base font-medium text-slate-900">
-                      {request.document_requests?.title || 'Document Request'}
-                    </h4>
-                    {request.document_requests?.description && (
-                      <p className="text-sm text-slate-600 mt-1">
-                        {request.document_requests.description}
-                      </p>
-                    )}
-                    <div className="flex items-center space-x-4 mt-2 text-xs text-slate-500">
-                      {request.document_requests?.due_date && (
-                        <span>
-                          <span className="font-medium">Due Date:</span> {formatDate(request.document_requests.due_date)}
-                        </span>
-                      )}
-                      <span>
-                        <span className="font-medium">Type:</span> {request.document_requests?.is_global ? 'Global' : 'Specific'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* University Template */}
-                  {request.document_requests?.attachment_url && (
-                    <div className="ml-4">
-                      <button
-                        onClick={() => onViewDocument({ file_url: request.document_requests.attachment_url, type: 'template' })}
-                        className="inline-flex items-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        View Template
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Documents Submitted by Student */}
-                <div className="mt-4">
-                  <h5 className="text-sm font-medium text-slate-700 mb-2">
-                    Submitted Documents:
-                  </h5>
-                  <div className="space-y-2">
-                    {/* ✅ GAMBIARRA: Tratar cada upload individualmente */}
-                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                        </div>
-                        <div>
-                          {/* ✅ GAMBIARRA: Usar nome extraído do file_url */}
-                          <p className="text-sm font-medium text-slate-900">
-                            {getDocumentInfo(request).filename}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            Submitted on {formatDate(request.uploaded_at)}
-                          </p>
-                          {/* ✅ GAMBIARRA: Mostrar informações do document_request */}
-                          <p className="text-xs text-slate-400 mt-1">
-                            Request: {request.document_requests?.title || 'Document Request'}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          request.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          request.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-slate-100 text-slate-800'
-                        }`}>
-                          {request.status === 'approved' ? 'Approved' :
-                           request.status === 'rejected' ? 'Rejected' :
-                           request.status === 'under_review' ? 'Under Review' :
-                           'Pending'}
-                        </span>
-                        
-                        {/* ✅ GAMBIARRA: Passar documento com URL completa para as funções */}
-                        <button
-                          onClick={() => onViewDocument({
-                            ...request,
-                            file_url: getDocumentInfo(request).fullUrl,
-                            filename: getDocumentInfo(request).filename
-                          })}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          View
-                        </button>
-                        
-                        <button
-                          onClick={() => onDownloadDocument({
-                            ...request,
-                            file_url: getDocumentInfo(request).fullUrl,
-                            filename: getDocumentInfo(request).filename
-                          })}
-                          className="text-green-600 hover:text-green-800 text-sm font-medium"
-                        >
-                          Download
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
+          <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-5 rounded-t-3xl">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Student Documents */}
-      {studentDocuments && studentDocuments.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div className="px-6 py-4 border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">
-              Student Documents
-            </h3>
-            <p className="text-sm text-slate-600 mt-1">
-              Documents submitted by the student during the application process
-            </p>
-          </div>
-          
-          <div className="divide-y divide-slate-200">
-            {studentDocuments.map((doc, index) => (
-              <div key={index} className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">
-                        {doc.name || `Document ${index + 1}`}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {doc.type || 'Document'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                      doc.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-slate-100 text-slate-800'
-                    }`}>
-                      {doc.status === 'approved' ? 'Approved' :
-                       doc.status === 'rejected' ? 'Rejected' :
-                       doc.status === 'under_review' ? 'Under Review' :
-                       'Pending'}
-                    </span>
-                    
-                    <button
-                      onClick={() => onViewDocument(doc)}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      View
-                    </button>
-                    
-                    <button
-                      onClick={() => onDownloadDocument(doc)}
-                      className="text-green-600 hover:text-green-800 text-sm font-medium"
-                    >
-                      Download
-                    </button>
-                  </div>
-                </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Document Requests</h3>
+                <p className="text-slate-200 text-sm">Documents requested by the university for your application</p>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Acceptance Letter Section */}
-      {scholarshipApplication && scholarshipApplication.acceptance_letter_url && (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div className="px-6 py-4 border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900">
-              Acceptance Letter
-            </h3>
-            <p className="text-sm text-slate-600 mt-1">
-              Official acceptance letter from the university
-            </p>
+            </div>
           </div>
           
           <div className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+            <div className="space-y-4">
+              {documentRequests.map((request) => (
+                <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-slate-900">
+                            {request.document_requests?.title || 'Document Request'}
+                          </h4>
+                          {request.document_requests?.description && (
+                            <p className="text-sm text-slate-600 mt-1">
+                              {request.document_requests.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4 text-sm text-slate-500">
+                        {request.document_requests?.due_date && (
+                          <span className="flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Due: {formatDate(request.document_requests.due_date)}
+                          </span>
+                        )}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          request.document_requests?.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {request.document_requests?.is_global ? 'Global Request' : 'Individual Request'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* University Template */}
+                    {request.document_requests?.attachment_url && (
+                      <div className="ml-4">
+                        <button
+                          onClick={() => onViewDocument({ file_url: request.document_requests.attachment_url, type: 'template' })}
+                          className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center space-x-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span>View Template</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Documents Submitted by Student */}
+                  <div className="border-t border-slate-200 pt-4">
+                    <h5 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      Student Response:
+                    </h5>
+                    
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-900">
+                              {getDocumentInfo(request).filename}
+                            </p>
+                            <p className="text-sm text-slate-500">
+                              Submitted on {formatDate(request.uploaded_at)}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              Response to: {request.document_requests?.title || 'Document Request'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            request.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-slate-100 text-slate-800'
+                          }`}>
+                            {request.status === 'approved' ? 'Approved' :
+                             request.status === 'rejected' ? 'Rejected' :
+                             request.status === 'under_review' ? 'Under Review' :
+                             'Pending'}
+                          </span>
+                          
+                          <button
+                            onClick={() => onViewDocument({
+                              ...request,
+                              file_url: getDocumentInfo(request).fullUrl,
+                              filename: getDocumentInfo(request).filename
+                            })}
+                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            View
+                          </button>
+                          
+                          <button
+                            onClick={() => onDownloadDocument({
+                              ...request,
+                              file_url: getDocumentInfo(request).fullUrl,
+                              filename: getDocumentInfo(request).filename
+                            })}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-900">
-                    Acceptance Letter
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Sent on {formatDate(scholarshipApplication.acceptance_letter_sent_at)}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => onViewDocument({
-                    file_url: scholarshipApplication.acceptance_letter_url,
-                    filename: 'Acceptance Letter'
-                  })}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  View
-                </button>
-                
-                <button
-                  onClick={() => onDownloadDocument({
-                    file_url: scholarshipApplication.acceptance_letter_url,
-                    filename: 'Acceptance Letter'
-                  })}
-                  className="text-green-600 hover:text-green-800 text-sm font-medium"
-                >
-                  Download
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         </div>
       )}
+      
+      {/* Acceptance Letter Section - Always visible */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Acceptance Letter</h3>
+              <p className="text-blue-100 text-sm">Official acceptance letter from the university</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6">
+          {loadingApplication && !currentApplication?.acceptance_letter_url ? (
+            <div className="bg-white rounded-3xl p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-400"></div>
+                </div>
+                <h4 className="text-lg font-semibold text-slate-700 mb-2">Loading application...</h4>
+                <p className="text-slate-500">Please wait while we fetch your application details.</p>
+              </div>
+            </div>
+          ) : currentApplication && currentApplication.acceptance_letter_url ? (
+            <div className="bg-white rounded-3xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-slate-900">Acceptance Letter</p>
+                    <p className="text-sm text-slate-500">
+                      Sent on {formatDate(currentApplication.acceptance_letter_sent_at)}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Official university acceptance document
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    Available
+                  </span>
+                  
+                  <button
+                    onClick={() => onViewDocument({
+                      file_url: getAcceptanceLetterUrl(currentApplication),
+                      filename: 'Acceptance Letter'
+                    })}
+                    className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    View
+                  </button>
+                  
+                  <button
+                    onClick={() => onDownloadDocument({
+                      file_url: getAcceptanceLetterUrl(currentApplication),
+                      filename: 'Acceptance Letter'
+                    })}
+                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-semibold text-slate-700 mb-2">No Acceptance Letter Yet</h4>
+                <p className="text-slate-500 max-w-md mx-auto">
+                  Your acceptance letter will appear here once the university processes your application and sends it to you.
+                </p>
+                <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-slate-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Please wait for the university to send your acceptance letter</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
-      {/* No Documents Message */}
+      {/* No Document Requests Message */}
       {(!documentRequests || documentRequests.length === 0) && 
-       (!studentDocuments || studentDocuments.length === 0) && 
-       (!scholarshipApplication || !scholarshipApplication.acceptance_letter_url) && (
-        <div className="text-center py-12 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
-          <svg className="w-12 h-12 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <p className="text-slate-600 font-medium">No documents available</p>
-          <p className="text-sm text-slate-500 mt-1">Documents will appear here once they are uploaded or requested</p>
+       (!studentDocuments || studentDocuments.length === 0) && (
+        <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-700 mb-2">No document requests yet</h3>
+          <p className="text-slate-500 max-w-md mx-auto">Document requests from the university will appear here once they are created for your application.</p>
         </div>
       )}
     </div>

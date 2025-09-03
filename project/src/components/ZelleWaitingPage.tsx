@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from '../hooks/useAuth';
 
 interface PaymentStatus {
   status: 'analyzing' | 'under_review' | 'approved' | 'rejected' | 'error';
@@ -12,18 +13,16 @@ interface PaymentStatus {
 }
 
 export const ZelleWaitingPage: React.FC = () => {
-  console.log('🚀 [ZelleWaitingPage] Componente renderizando');
+  const { t } = useTranslation()
+  const { user } = useAuth();
   
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({
     status: 'analyzing',
-    message: 'Processing your payment verification...'
+    message: t('zelleWaiting.messages.analyzing')
   });
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const [isChecking, setIsChecking] = useState(false);
-  const [analysisComplete, setAnalysisComplete] = useState(false);
   const [webhookResponseReceived, setWebhookResponseReceived] = useState(false);
   const [n8nAnalysisResult, setN8nAnalysisResult] = useState<string | null>(null);
   
@@ -34,7 +33,7 @@ export const ZelleWaitingPage: React.FC = () => {
   const approvePaymentAutomatically = async () => {
     try {
       console.log('🚀 [ZelleWaiting] Iniciando aprovação automática...');
-      console.log('🔍 [ZelleWaiting] Parâmetros:', {
+      console.log('�� [ZelleWaiting] Parâmetros:', {
         user_id: user?.id,
         fee_type_global: feeType,
         temp_payment_id: paymentId,
@@ -89,20 +88,20 @@ export const ZelleWaitingPage: React.FC = () => {
 
     const checkN8nResponse = async () => {
       try {
-        console.log('🔍 [ZelleWaiting] Verificando resposta do n8n para paymentId:', paymentId);
+        console.log('�� [ZelleWaiting] Verificando resposta do n8n para paymentId:', paymentId);
         
         // Verificar se há uma resposta do n8n armazenada no localStorage
         let storedResponse = null;
         
         if (paymentId) {
           storedResponse = localStorage.getItem(`n8n_response_${paymentId}`);
-          console.log('🔍 [ZelleWaiting] Resposta armazenada com paymentId:', storedResponse);
+          console.log('�� [ZelleWaiting] Resposta armazenada com paymentId:', storedResponse);
         }
         
         // Fallback: verificar resposta mais recente se não tiver paymentId
         if (!storedResponse) {
           storedResponse = localStorage.getItem('latest_n8n_response');
-          console.log('🔍 [ZelleWaiting] Resposta armazenada (fallback):', storedResponse);
+          console.log('�� [ZelleWaiting] Resposta armazenada (fallback):', storedResponse);
         }
         
         if (storedResponse) {
@@ -112,8 +111,8 @@ export const ZelleWaitingPage: React.FC = () => {
           if (responseData.response) {
             setN8nAnalysisResult(responseData.response);
             setWebhookResponseReceived(true);
-            console.log('🎯 [ZelleWaiting] Resposta do n8n encontrada:', responseData.response);
-            console.log('🎯 [ZelleWaiting] webhookResponseReceived definido como true');
+            console.log('�� [ZelleWaiting] Resposta do n8n encontrada:', responseData.response);
+            console.log('�� [ZelleWaiting] webhookResponseReceived definido como true');
             
             // Processar imediatamente a resposta
             const response = responseData.response.toLowerCase();
@@ -174,26 +173,85 @@ export const ZelleWaitingPage: React.FC = () => {
     
     // Se já temos resposta do n8n processada, desabilitar verificação do banco
     if (n8nAnalysisResult && webhookResponseReceived) {
-      console.log('🎯 [ZelleWaiting] Resposta do n8n já processada, desabilitando verificação do banco');
+      console.log('�� [ZelleWaiting] Resposta do n8n já processada, desabilitando verificação do banco');
       shouldCheckDatabase.current = false;
       return;
     }
     
     // Se a verificação do banco foi desabilitada, não executar
     if (!shouldCheckDatabase.current) {
-      console.log('🎯 [ZelleWaiting] Verificação do banco desabilitada, não executando');
+      console.log('�� [ZelleWaiting] Verificação do banco desabilitada, não executando');
       return;
     }
 
     const checkPaymentStatus = async () => {
-      // Esta função foi desabilitada para evitar conflitos com a aprovação automática
-      // A aprovação automática já gerencia o status do pagamento
-      console.log('🎯 [ZelleWaiting] checkPaymentStatus desabilitada - usando apenas aprovação automática');
-      return;
+      // Verificar novamente se já temos resposta do n8n (dupla verificação)
+      if (n8nAnalysisResult && webhookResponseReceived) {
+        console.log('�� [ZelleWaiting] Resposta do n8n já processada, cancelando verificação do banco');
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('zelle_payments')
+          .select('status, updated_at, admin_notes')
+          .eq('id', paymentId)
+          .single();
+
+        if (error) throw error;
+
+        if (data.status === 'approved') {
+          setPaymentStatus({
+            status: 'approved',
+            message: t('zelleWaiting.messages.approved'),
+            details: t('zelleWaiting.details.approved')
+          });
+          // Redirecionar para página de sucesso após 3 segundos
+          setTimeout(() => {
+            navigate('/checkout/success?method=zelle&status=approved');
+          }, 3000);
+        } else if (data.status === 'rejected') {
+          setPaymentStatus({
+            status: 'rejected',
+            message: t('zelleWaiting.messages.rejected'),
+            details: t('zelleWaiting.details.rejected')
+          });
+        } else if (data.status === 'pending_verification') {
+          console.log('🔍 [ZelleWaiting] Status: pending_verification');
+          console.log('�� [ZelleWaiting] n8nAnalysisResult:', n8nAnalysisResult);
+          console.log('�� [ZelleWaiting] webhookResponseReceived:', webhookResponseReceived);
+          
+          // Se já temos resposta do n8n, não fazer nada (deixar o estado atual)
+          if (n8nAnalysisResult && webhookResponseReceived) {
+            console.log('�� [ZelleWaiting] Resposta do n8n já processada, mantendo estado atual');
+            return; // Não alterar o status se já foi processado
+          }
+          
+          // Verificação adicional: se o status atual já é 'under_review', não alterar
+          if (paymentStatus.status === 'under_review') {
+            console.log('🎯 [ZelleWaiting] Status já é under_review, não alterando');
+            return;
+          }
+          
+          // Ainda não recebemos resposta do n8n - continuar análise
+          setPaymentStatus({
+            status: 'analyzing',
+            message: t('zelleWaiting.messages.analyzing'),
+            details: `${t('zelleWaiting.waitTime')}: ${Math.floor(timeElapsed / 60)}:${(timeElapsed % 60).toString().padStart(2, '0')}`
+          });
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+        setPaymentStatus({
+          status: 'error',
+          message: 'Verification Error',
+          details: 'There was an issue checking your payment status. Please try again.'
+        });
+      }
     };
 
-    // Verificar imediatamente (desabilitado)
-    // checkPaymentStatus();
+    // Verificar imediatamente
+    checkPaymentStatus();
 
     // Verificar a cada 5 segundos para análise mais responsiva (desabilitado)
     // const interval = setInterval(checkPaymentStatus, 5000);
@@ -258,22 +316,23 @@ export const ZelleWaitingPage: React.FC = () => {
     }
   };
 
-  console.log('🎨 [ZelleWaitingPage] Renderizando interface');
-  console.log('🎨 [ZelleWaitingPage] paymentStatus:', paymentStatus);
-  console.log('🎨 [ZelleWaitingPage] timeElapsed:', timeElapsed);
-  console.log('🎨 [ZelleWaitingPage] webhookResponseReceived:', webhookResponseReceived);
-  console.log('🎨 [ZelleWaitingPage] n8nAnalysisResult:', n8nAnalysisResult);
+  console.log('�� [ZelleWaitingPage] Renderizando interface');
+  console.log('�� [ZelleWaitingPage] paymentStatus:', paymentStatus);
+  console.log('�� [ZelleWaitingPage] timeElapsed:', timeElapsed);
+  console.log('�� [ZelleWaitingPage] webhookResponseReceived:', webhookResponseReceived);
+  console.log('�� [ZelleWaitingPage] n8nAnalysisResult:', n8nAnalysisResult);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4">
+        
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Payment Verification
+            {t('zelleWaiting.title')}
           </h1>
           <p className="text-gray-600">
-            Your payment proof is being processed by our verification team
+            {t('zelleWaiting.subtitle')}
           </p>
         </div>
 
@@ -306,7 +365,7 @@ export const ZelleWaitingPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                Automated verification in progress...
+                {t('zelleWaiting.analysisTime')}
               </p>
             </div>
           )}
@@ -330,7 +389,7 @@ export const ZelleWaitingPage: React.FC = () => {
                 onClick={() => navigate('/checkout/zelle')}
                 className="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition-colors"
               >
-                Try Again
+                {t('zelleWaiting.actions.tryAgain')}
               </button>
             )}
             
@@ -338,26 +397,26 @@ export const ZelleWaitingPage: React.FC = () => {
               onClick={() => navigate('/student/dashboard')}
               className="w-full bg-gray-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-700 transition-colors"
             >
-              Back to Dashboard
+              {t('zelleWaiting.actions.backToCheckout')}
             </button>
           </div>
         </div>
 
         {/* Payment Info */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('zelleWaiting.paymentInfo.title')}</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Fee Type:</span>
+            <span className="text-gray-600">{t('zelleWaiting.paymentInfo.feeType')}</span>
               <span className="font-medium text-gray-900">{feeType?.replace('_', ' ').toUpperCase()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Amount:</span>
+              <span className="text-gray-600">{t('zelleWaiting.paymentInfo.amount')}</span>
               <span className="font-medium text-gray-900">${amount} USD</span>
             </div>
             {paymentId && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Payment ID:</span>
+                <span className="text-gray-600">{t('zelleWaiting.paymentInfo.paymentId')}</span>
                 <span className="font-mono text-sm text-gray-500">{paymentId}</span>
               </div>
             )}
@@ -367,9 +426,9 @@ export const ZelleWaitingPage: React.FC = () => {
         {/* Help Text */}
         <div className="text-center mt-6 text-sm text-gray-500">
           <p>
-            {paymentStatus.status === 'under_review' 
-              ? 'Manual review may take up to 24 hours. You will be notified once the review is complete.'
-              : 'If the verification process takes longer than expected, please contact our support team.'
+          {paymentStatus.status === 'under_review' 
+              ? t('zelleWaiting.helpText.underReview')
+              : t('zelleWaiting.helpText.default')
             }
           </p>
         </div>
