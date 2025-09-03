@@ -542,6 +542,30 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     );
   };
 
+  // Função para detectar se o erro é sobre campo 'moeda' não encontrado
+  const isCurrencyFieldError = (errorMessage: string): boolean => {
+    const currencyFieldErrorKeywords = [
+      'campo \'moeda\' não foi encontrado',
+      'field \'moeda\' not found',
+      'campo \'currency\' not found',
+      'field \'currency\' not found',
+      'moeda não foi encontrado',
+      'currency not found',
+      'moeda não encontrado',
+      'currency field not found',
+      'campo moeda não encontrado',
+      'currency field missing',
+      'moeda field missing',
+      'campo de moeda não encontrado',
+      'currency field not available',
+      'moeda field not available'
+    ];
+    
+    return currencyFieldErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
 
 
   // Função para obter mensagem de erro formatada
@@ -560,6 +584,12 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     
     if (isFundsDataError(errorMessage)) {
       return t('studentDashboard.documentsAndScholarshipChoice.fundsDataError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    
+    if (isCurrencyFieldError(errorMessage)) {
+      return t('studentDashboard.documentsAndScholarshipChoice.currencyFieldError', { 
         documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
       });
     }
@@ -784,6 +814,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                 ? 'text-blue-700 bg-blue-50 border border-blue-200'
                                 : isFundsDataError(hasError)
                                 ? 'text-green-700 bg-green-50 border border-green-200'
+                                : isCurrencyFieldError(hasError)
+                                ? 'text-purple-700 bg-purple-50 border border-purple-200'
                                 : 'text-red-600 bg-red-50 border border-red-200'
                             }`}>
                               <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
@@ -793,6 +825,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                   ? 'bg-blue-500'
                                   : isFundsDataError(hasError)
                                   ? 'bg-green-500'
+                                  : isCurrencyFieldError(hasError)
+                                  ? 'bg-purple-500'
                                   : 'bg-red-500'
                               }`}></div>
                               <span className="break-words">
@@ -802,6 +836,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                   ? t('studentDashboard.documentsAndScholarshipChoice.accessError')
                                   : isFundsDataError(hasError)
                                   ? t('studentDashboard.documentsAndScholarshipChoice.fundsDataError')
+                                  : isCurrencyFieldError(hasError)
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.currencyFieldError')
                                   : hasError
                                 }
                               </span>
