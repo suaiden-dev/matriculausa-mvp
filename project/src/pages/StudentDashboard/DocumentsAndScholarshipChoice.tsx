@@ -500,6 +500,29 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     );
   };
 
+  // Função para detectar se o erro é sobre acesso a dados do documento
+  const isAccessError = (errorMessage: string): boolean => {
+    const accessErrorKeywords = [
+      'unable to access',
+      'unable to access diploma data',
+      'unable to access passport data',
+      'unable to access funds data',
+      'cannot access',
+      'cannot access diploma data',
+      'cannot access passport data',
+      'cannot access funds data',
+      'access denied',
+      'failed to access',
+      'failed to access diploma data',
+      'failed to access passport data',
+      'failed to access funds data'
+    ];
+    
+    return accessErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
 
 
   // Função para obter mensagem de erro formatada
@@ -509,6 +532,13 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
       });
     }
+    
+    if (isAccessError(errorMessage)) {
+      return t('studentDashboard.documentsAndScholarshipChoice.accessError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    
     return errorMessage;
   };
 
@@ -647,16 +677,23 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             <div className="text-center mb-6 sm:mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
                 {t('studentDashboard.documentsAndScholarshipChoice.step2Title')}
-              </h2>
-              <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto mb-2 px-2">
-                {t('studentDashboard.documentsAndScholarshipChoice.step2Description')}
-              </p>
-              <p className="text-xs sm:text-sm text-slate-500 px-2">
-                <strong>{t('studentDashboard.documentsAndScholarshipChoice.step2Note')}</strong>
-              </p>
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
-                <p className="text-sm text-amber-800 font-medium">
-                  {t('studentDashboard.documentsAndScholarshipChoice.step2LanguageNote')}
+              </h2>              
+              {/* Seção Importante com destaque amarelo e link do parceiro */}
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+                <p className="text-sm text-amber-800 font-bold mb-2">
+                  {t('studentDashboard.documentsAndScholarshipChoice.step2Important').split('.')[0]}.
+                </p>
+                <p className="text-sm text-amber-700 leading-relaxed">
+                  {t('studentDashboard.documentsAndScholarshipChoice.step2Important').split('.')[1]?.trim()}{' '}
+                  <a 
+                    href={`https://${t('studentDashboard.documentsAndScholarshipChoice.step2PartnerUrl')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-600 hover:text-amber-800 underline font-medium transition-colors"
+                  >
+                    {t('studentDashboard.documentsAndScholarshipChoice.step2PartnerUrl')}
+                  </a>
+                  .
                 </p>
               </div>
             </div>
@@ -718,14 +755,22 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                             <div className={`flex items-center text-xs sm:text-sm p-2 rounded-lg ${
                               isLanguageError(hasError) 
                                 ? 'text-amber-700 bg-amber-50 border border-amber-200' 
+                                : isAccessError(hasError)
+                                ? 'text-blue-700 bg-blue-50 border border-blue-200'
                                 : 'text-red-600 bg-red-50 border border-red-200'
                             }`}>
                               <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
-                                isLanguageError(hasError) ? 'bg-amber-500' : 'bg-red-500'
+                                isLanguageError(hasError) 
+                                  ? 'bg-amber-500' 
+                                  : isAccessError(hasError)
+                                  ? 'bg-blue-500'
+                                  : 'bg-red-500'
                               }`}></div>
                               <span className="break-words">
                                 {isLanguageError(hasError) 
                                   ? t('studentDashboard.documentsAndScholarshipChoice.languageError')
+                                  : isAccessError(hasError)
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.accessError')
                                   : hasError
                                 }
                               </span>
