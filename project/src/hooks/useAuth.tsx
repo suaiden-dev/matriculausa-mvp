@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
@@ -653,8 +653,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUserProfile(prev => prev ? { ...prev, role: newRole } : null);
   };
 
-  // Função para refetch manual do perfil do usuário
-  const refetchUserProfile = async () => {
+  // Função para refetch manual do perfil do usuário - memoizada para evitar re-renders desnecessários
+  const refetchUserProfile = useCallback(async () => {
     if (!supabaseUser) return;
     try {
       const { data, error } = await supabase
@@ -666,7 +666,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (err) {
       // Ignorar erros silenciosamente
     }
-  };
+  }, [supabaseUser]);
 
   const value: AuthContextType = {
     user,
