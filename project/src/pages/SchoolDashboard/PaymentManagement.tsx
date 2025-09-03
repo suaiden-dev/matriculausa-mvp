@@ -380,68 +380,126 @@ const PaymentManagement: React.FC = () => {
       title="Complete your profile to manage payment requests"
       description="Finish setting up your university profile to track and manage scholarship payment requests"
     >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">Payment Requests Management</h1>
-            <p className="text-gray-600 mt-2">Monitor and manage all scholarship payment requests and application fees</p>
-          </div>
-          <div className="flex items-center space-x-3 ml-8">
-            <button
-              onClick={() => setShowPaymentRequestModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Request Payment
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 ease-in-out"
-            >
-              <Filter className={`w-4 h-4 mr-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
-              Filters
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] disabled:opacity-50"
-            >
-              {exporting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              Export CSV
-            </button>
+      <div className="min-h-screen">
+        {/* Header + Tabs Section */}
+        <div className="w-full">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div className="max-w-full mx-auto bg-slate-50">
+              {/* Header: title + note + counter */}
+              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    Payment Management
+                  </h1>
+                  <p className="mt-2 text-sm sm:text-base text-slate-600">
+                    Monitor and manage all scholarship payment requests and application fees.
+                  </p>
+                  <p className="mt-3 text-sm text-slate-500">
+                    Track student payments and request payouts from your available balance.
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
+                    <DollarSign className="w-5 h-5 mr-2" />
+                    {formatCurrency(universityBalance)} Available
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs Section */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8">
+                  <nav className="flex space-x-8 overflow-x-auto" role="tablist">
+                    <button
+                      onClick={() => setActiveTab('student-payments')}
+                      className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                        activeTab === 'student-payments' 
+                          ? 'border-[#05294E] text-[#05294E]' 
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                      type="button"
+                      aria-selected={activeTab === 'student-payments'}
+                      role="tab"
+                    >
+                      <FileText className={`w-5 h-5 mr-2 transition-colors ${
+                        activeTab === 'student-payments' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
+                      Student Payments
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('university-requests')}
+                      className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                        activeTab === 'university-requests' 
+                          ? 'border-[#05294E] text-[#05294E]' 
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                      type="button"
+                      aria-selected={activeTab === 'university-requests'}
+                      role="tab"
+                    >
+                      <CreditCard className={`w-5 h-5 mr-2 transition-colors ${
+                        activeTab === 'university-requests' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
+                      University Requests
+                    </button>
+                  </nav>
+                </div>
+              </div>
+
+              {/* Action Buttons Section */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <h2 className="text-lg font-semibold text-slate-900">
+                        {activeTab === 'student-payments' ? 'Student Payment Records' : 'University Payment Requests'}
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-1">
+                        {activeTab === 'student-payments' 
+                          ? 'View and export all student payment transactions and application fees'
+                          : 'Request payouts from your available balance and track request status'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      {activeTab === 'university-requests' && (
+                        <button
+                          onClick={() => setShowPaymentRequestModal(true)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-colors"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Request Payment
+                        </button>
+                      )}
+                      {activeTab === 'student-payments' && (
+                        <button
+                          onClick={() => setShowFilters(!showFilters)}
+                          className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-all duration-200 ease-in-out"
+                        >
+                          <Filter className={`w-4 h-4 mr-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
+                          Filters
+                        </button>
+                      )}
+                      <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] disabled:opacity-50"
+                      >
+                        {exporting ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-2" />
+                        )}
+                        Export CSV
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('student-payments')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'student-payments'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Student Payments
-          </button>
-          <button
-            onClick={() => setActiveTab('university-requests')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'university-requests'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            University Payment Requests
-          </button>
-        </nav>
-      </div>
 
             {/* Student Payments Tab Content */}
       {activeTab === 'student-payments' && (
@@ -450,27 +508,30 @@ const PaymentManagement: React.FC = () => {
           <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
             showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
           }`}>
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label htmlFor="search-query" className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                  <input
-                    id="search-query"
-                    type="text"
-                    placeholder="Search by name or email..."
-                    value={filters.search_query}
-                    onChange={(e) => updateFilters({ search_query: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    aria-label="Search payment requests by student name or email"
-                  />
+                  <label htmlFor="search-query" className="block text-sm font-medium text-slate-700 mb-2">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      id="search-query"
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={filters.search_query}
+                      onChange={(e) => updateFilters({ search_query: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      aria-label="Search payment requests by student name or email"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label htmlFor="application-status-filter" className="block text-sm font-medium text-gray-700 mb-2">Application Status</label>
+                  <label htmlFor="application-status-filter" className="block text-sm font-medium text-slate-700 mb-2">Application Status</label>
                   <select
                     id="application-status-filter"
                     value={filters.application_status_filter}
                     onChange={(e) => updateFilters({ application_status_filter: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     aria-label="Filter by application status"
                   >
                     <option value="all">All Statuses</option>
@@ -481,12 +542,12 @@ const PaymentManagement: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="payment-type-filter" className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+                  <label htmlFor="payment-type-filter" className="block text-sm font-medium text-slate-700 mb-2">Payment Type</label>
                   <select
                     id="payment-type-filter"
                     value={filters.payment_type_filter}
                     onChange={(e) => updateFilters({ payment_type_filter: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     aria-label="Filter by payment type"
                   >
                     <option value="all">All Types</option>
@@ -495,14 +556,14 @@ const PaymentManagement: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="date-from" className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                  <label htmlFor="date-from" className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
                   <div className="space-y-2">
                     <input
                       id="date-from"
                       type="date"
                       value={filters.date_from}
                       onChange={(e) => updateFilters({ date_from: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                       aria-label="Filter payment requests from date"
                     />
                     <input
@@ -510,16 +571,16 @@ const PaymentManagement: React.FC = () => {
                       type="date"
                       value={filters.date_to}
                       onChange={(e) => updateFilters({ date_to: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                       aria-label="Filter payment requests to date"
                     />
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-gray-600 hover:text-gray-800"
+                  className="text-sm text-slate-600 hover:text-slate-800 transition-colors"
                 >
                   Clear all filters
                 </button>
@@ -528,66 +589,66 @@ const PaymentManagement: React.FC = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-3 bg-blue-100 rounded-xl">
                   <FileText className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Applications</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total_applications}</p>
+                  <p className="text-sm font-medium text-slate-600">Total Applications</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.total_applications}</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-3 bg-green-100 rounded-xl">
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Application Fees Received</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total_revenue)}</p>
-                  <p className="text-xs text-gray-500">From paid applications</p>
+                  <p className="text-sm font-medium text-slate-600">Application Fees Received</p>
+                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_revenue)}</p>
+                  <p className="text-xs text-slate-500">From paid applications</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-3 bg-green-100 rounded-xl">
                   <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Paid Application Fees</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.paid_application_fees}</p>
+                  <p className="text-sm font-medium text-slate-600">Paid Application Fees</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.paid_application_fees}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
+                <div className="p-3 bg-yellow-100 rounded-xl">
                   <Clock className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending Application Fees</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pending_application_fees}</p>
+                  <p className="text-sm font-medium text-slate-600">Pending Application Fees</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.pending_application_fees}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="p-3 bg-purple-100 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Available Balance</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-slate-600">Available Balance</p>
+                  <p className="text-2xl font-bold text-slate-900">
                     {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
+                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
                     ) : (
                       formatCurrency(universityBalance)
                     )}
@@ -598,17 +659,17 @@ const PaymentManagement: React.FC = () => {
           </div>
 
           {/* Payment Requests Table */}
-          <div className="bg-white shadow border rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Payment Requests</h3>
+                <h3 className="text-lg font-medium text-slate-900">Payment Requests</h3>
                 <div className="flex items-center space-x-4">
-                  <label htmlFor="page-size-select" className="text-sm text-gray-600">Show:</label>
+                  <label htmlFor="page-size-select" className="text-sm text-slate-600">Show:</label>
                   <select
                     id="page-size-select"
                     value={pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     aria-label="Select number of payment requests to display per page"
                   >
                     <option value={10}>10</option>
@@ -799,29 +860,29 @@ const PaymentManagement: React.FC = () => {
         <>
                     {/* Stripe Connect Banner - Only show if not connected */}
                     {!loadingStripeStatus && !hasStripeConnect && (
-                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
+                      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
-                          <div className="p-3 bg-[#05294E] rounded-lg">
+                          <div className="p-3 bg-[#05294E] rounded-xl">
                             <CreditCard className="w-6 h-6 text-white" />
                           </div>
                           <div className="flex-1">
-                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Upgrade to Stripe Connect</h2>
-                            <p className="text-gray-600 text-sm mb-4">Skip payment requests, get paid instantly!</p>
+                            <h2 className="text-xl font-semibold text-slate-900 mb-2">Upgrade to Stripe Connect</h2>
+                            <p className="text-slate-600 text-sm mb-4">Skip payment requests, get paid instantly!</p>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                                 <CheckCircle className="w-4 h-4 text-[#05294E]" />
                                 <div>
-                                  <h4 className="font-medium text-gray-900 text-sm">Instant Payments</h4>
-                                  <p className="text-xs text-gray-600">Application fees go directly to your account</p>
+                                  <h4 className="font-medium text-slate-900 text-sm">Instant Payments</h4>
+                                  <p className="text-xs text-slate-600">Application fees go directly to your account</p>
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                                 <TrendingUp className="w-4 h-4 text-[#05294E]" />
                                 <div>
-                                  <h4 className="text-sm font-medium text-gray-900">No More Delays</h4>
-                                  <p className="text-xs text-gray-600">Skip admin approval and waiting periods</p>
+                                  <h4 className="text-sm font-medium text-slate-900">No More Delays</h4>
+                                  <p className="text-xs text-slate-600">Skip admin approval and waiting periods</p>
                                 </div>
                               </div>
                             </div>
@@ -840,9 +901,9 @@ const PaymentManagement: React.FC = () => {
 
                     {/* Stripe Connect Success Message - Only show if connected */}
                     {!loadingStripeStatus && hasStripeConnect && (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-6 shadow-sm mb-6">
+                      <div className="bg-green-50 border border-green-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
-                          <div className="p-3 bg-green-100 rounded-lg">
+                          <div className="p-3 bg-green-100 rounded-xl">
                             <CheckCircle className="w-6 h-6 text-green-600" />
                           </div>
                           <div className="flex-1">
@@ -859,43 +920,43 @@ const PaymentManagement: React.FC = () => {
                     )}
 
           {/* Stats Cards for University Requests */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-3 bg-blue-100 rounded-xl">
                   <FileText className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Requests</p>
-                  <p className="text-2xl font-bold text-gray-900">{universityPaymentRequests.length}</p>
+                  <p className="text-sm font-medium text-slate-600">Total Requests</p>
+                  <p className="text-2xl font-bold text-slate-900">{universityPaymentRequests.length}</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-3 bg-green-100 rounded-xl">
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Requested</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-slate-600">Total Requested</p>
+                  <p className="text-2xl font-bold text-slate-900">
                     {formatCurrency(universityPaymentRequests.reduce((sum, r) => sum + r.amount_usd, 0))}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="p-3 bg-purple-100 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Available Balance</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-slate-600">Available Balance</p>
+                  <p className="text-2xl font-bold text-slate-900">
                     {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
+                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
                     ) : (
                       formatCurrency(universityBalance)
                     )}
@@ -906,11 +967,11 @@ const PaymentManagement: React.FC = () => {
           </div>
 
           {/* University Payment Requests Section */}
-        <div className="bg-white shadow border rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">University Payment Requests</h3>
-              <p className="text-sm text-gray-600">Your submitted payment requests and their status</p>
+              <h3 className="text-lg font-medium text-slate-900">University Payment Requests</h3>
+              <p className="text-sm text-slate-600">Your submitted payment requests and their status</p>
             </div>
           </div>
 
