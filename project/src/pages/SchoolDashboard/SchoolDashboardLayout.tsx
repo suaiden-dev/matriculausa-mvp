@@ -444,8 +444,12 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
               <div className="relative notifications-container">
                 <button
                   onClick={() => {
-                    // Em mobile, abre modal; em desktop, abre modal também (simples)
-                    setShowNotificationsModal(true);
+                    // Em mobile, abre modal; em desktop, abre dropdown
+                    if (window.innerWidth < 768) {
+                      setShowNotificationsModal(true);
+                    } else {
+                      setShowNotif(!showNotif);
+                    }
                   }}
                   className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
                   title="Notifications"
@@ -457,6 +461,36 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                     </span>
                   )}
                 </button>
+
+                {/* Notifications Dropdown - only show on desktop */}
+                {showNotif && (
+                  <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                    <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
+                      <span>Notifications</span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
+                        <span className="text-slate-300">|</span>
+                        <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-sm text-slate-500">No notifications</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${!n.read_at ? 'bg-slate-50' : ''}`} onClick={() => openNotification(n)}>
+                            <div className="text-sm font-medium text-slate-900 flex items-center justify-between">
+                              <span>{n.title}</span>
+                              {!n.read_at && <span className="ml-2 h-2 w-2 rounded-full bg-blue-500 inline-block"></span>}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-0.5">{n.message}</div>
+                            <div className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
 

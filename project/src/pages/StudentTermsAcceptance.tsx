@@ -56,10 +56,42 @@ const StudentTermsAcceptance: React.FC = () => {
       setError('');
       
       try {
-        // Record acceptance of both terms of service and privacy policy
-        const termsOfServiceTerm = await getLatestActiveTerm('terms_of_service');
-        const privacyPolicyTerm = await getLatestActiveTerm('privacy_policy');
+        // Get the latest active terms
+        let termsOfServiceTerm = await getLatestActiveTerm('terms_of_service');
+        let privacyPolicyTerm = await getLatestActiveTerm('privacy_policy');
         
+        // If no active terms exist, create default ones
+        if (!termsOfServiceTerm) {
+          console.log('No active terms of service found, creating default term');
+          const defaultTermsTerm = {
+            id: 'default-terms-of-service',
+            title: 'Terms of Service',
+            content: 'By accepting these terms, you agree to our terms of service.',
+            term_type: 'terms_of_service' as const,
+            version: 1,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          termsOfServiceTerm = defaultTermsTerm;
+        }
+        
+        if (!privacyPolicyTerm) {
+          console.log('No active privacy policy found, creating default term');
+          const defaultPrivacyTerm = {
+            id: 'default-privacy-policy',
+            title: 'Privacy Policy',
+            content: 'By accepting this policy, you agree to our privacy policy.',
+            term_type: 'privacy_policy' as const,
+            version: 1,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          privacyPolicyTerm = defaultPrivacyTerm;
+        }
+        
+        // Record acceptance of both terms of service and privacy policy
         if (termsOfServiceTerm) {
           await recordTermAcceptance(termsOfServiceTerm.id, 'terms_of_service');
         }

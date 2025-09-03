@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { 
   Upload, 
   CheckCircle, 
-  AlertTriangle, 
   User, 
   GraduationCap, 
   DollarSign,
@@ -36,7 +35,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showDocumentSection, setShowDocumentSection] = useState(false);
+
   
   const navigate = useNavigate();
 
@@ -60,10 +59,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     if (savedProcessType) {
       console.log('Loading processType from localStorage:', savedProcessType);
       setProcessType(savedProcessType);
-      // Se já tem processType, mostrar seção de documentos
-      if (!documentsApproved) {
-        setShowDocumentSection(true);
-      }
+      // Se já tem processType, documentos serão mostrados automaticamente
     }
   }, [documentsApproved]);
 
@@ -178,22 +174,24 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       if (!n8nData && webhookResult.response_passaport !== undefined) {
         n8nData = webhookResult;
       }
+
+      console.log('n8nData', n8nData);
       
       if (n8nData) {
-        const respPassport = n8nData.response_passaport;
-        const respFunds = n8nData.response_funds;
-        const respDegree = n8nData.response_degree;
+        const respPassport = n8nData[0].response_passaport;
+        const respFunds = n8nData[0].response_funds;
+        const respDegree = n8nData[0].response_degree;
 
         const passportOk = respPassport === true;
         const fundsOk = respFunds === true;
         const degreeOk = respDegree === true;
 
         const passportErr = typeof respPassport === 'string' ? respPassport : 
-                           (passportOk ? '' : (n8nData.details_passport || 'Invalid document.'));
+                           (passportOk ? '' : (n8nData[0].details_passport || 'Invalid document.'));
         const fundsErr = typeof respFunds === 'string' ? respFunds : 
-                        (fundsOk ? '' : (n8nData.details_funds || 'Invalid document.'));
+                        (fundsOk ? '' : (n8nData[0].details_funds || 'Invalid document.'));
         const degreeErr = typeof respDegree === 'string' ? respDegree : 
-                         (degreeOk ? '' : (n8nData.details_degree || 'Invalid document.'));
+                         (degreeOk ? '' : (n8nData[0].details_degree || 'Invalid document.'));
 
         const allValid = passportOk && fundsOk && degreeOk;
         
@@ -236,9 +234,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           
           // Salvar dados no localStorage para manual review
           const errorData = {
-            passport: passportErr || 'Invalid document.',
-            funds_proof: fundsErr || 'Invalid document.',
-            diploma: degreeErr || 'Invalid document.',
+            passport: getFormattedErrorMessage(passportErr || 'Invalid document.', 'passport'),
+            funds_proof: getFormattedErrorMessage(fundsErr || 'Invalid document.', 'fundsProof'),
+            diploma: getFormattedErrorMessage(degreeErr || 'Invalid document.', 'diploma'),
           };
           
           console.log('Saving to localStorage for manual review:');
@@ -277,9 +275,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
         // Salvar dados no localStorage para manual review
         const errorData = {
-          passport: 'Document analysis failed. Please review manually.',
-          funds_proof: 'Document analysis failed. Please review manually.',
-          diploma: 'Document analysis failed. Please review manually.',
+          passport: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'passport'),
+          funds_proof: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'fundsProof'),
+          diploma: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'diploma'),
         };
         
         localStorage.setItem('documentAnalysisErrors', JSON.stringify(errorData));
@@ -299,9 +297,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       
       // Em caso de erro, definir erros genéricos para forçar manual review
       const genericErrors = {
-        passport: 'Upload failed. Please review manually.',
-        funds_proof: 'Upload failed. Please review manually.',
-        diploma: 'Upload failed. Please review manually.',
+        passport: getFormattedErrorMessage('Upload failed. Please review manually.', 'passport'),
+        funds_proof: getFormattedErrorMessage('Upload failed. Please review manually.', 'fundsProof'),
+        diploma: getFormattedErrorMessage('Upload failed. Please review manually.', 'diploma'),
       };
       
       setFieldErrors(genericErrors);
@@ -459,8 +457,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       // Se documentos já aprovados, vai direto para pagamento
       if (documentsApproved) {
         navigate('/student/dashboard/application-fee');
-      } else {
-        setShowDocumentSection(true);
       }
     } catch (e) {
       console.error('Error in saveStudentType:', e);
@@ -479,6 +475,42 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
   // Verificar se todos os arquivos foram selecionados
   const allFilesSelected = DOCUMENT_TYPES.every((doc) => files[doc.key]);
+
+  // Função para detectar se o erro é sobre documentos não estarem em inglês
+  const isLanguageError = (errorMessage: string): boolean => {
+    const languageErrorKeywords = [
+      'not in english',
+      'not in english.',
+      'document is not in english',
+      'document is not in english.',
+      'not in english language',
+      'not in english language.',
+      'language is not english',
+      'language is not english.',
+      'not written in english',
+      'not written in english.',
+      'not in the english language',
+      'not in the english language.',
+      'the document is not in english',
+      'the document is not in english.'
+    ];
+    
+    return languageErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
+
+
+  // Função para obter mensagem de erro formatada
+  const getFormattedErrorMessage = (errorMessage: string, documentType: string): string => {
+    if (isLanguageError(errorMessage)) {
+      return t('studentDashboard.documentsAndScholarshipChoice.languageError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    return errorMessage;
+  };
 
   if (!userProfile) return null;
 
@@ -622,6 +654,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               <p className="text-xs sm:text-sm text-slate-500 px-2">
                 <strong>{t('studentDashboard.documentsAndScholarshipChoice.step2Note')}</strong>
               </p>
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+                <p className="text-sm text-amber-800 font-medium">
+                  {t('studentDashboard.documentsAndScholarshipChoice.step2LanguageNote')}
+                </p>
+              </div>
             </div>
 
             {/* Document Upload List */}
@@ -678,10 +715,19 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                           )}
                           
                           {hasError && (
-                            <div className="flex items-start text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-                              <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-2 mt-0.5 flex-shrink-0" />
-                              <span className="flex items-center justify-center">
-                                <span className="break-words">{hasError}</span>
+                            <div className={`flex items-center text-xs sm:text-sm p-2 rounded-lg ${
+                              isLanguageError(hasError) 
+                                ? 'text-amber-700 bg-amber-50 border border-amber-200' 
+                                : 'text-red-600 bg-red-50 border border-red-200'
+                            }`}>
+                              <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
+                                isLanguageError(hasError) ? 'bg-amber-500' : 'bg-red-500'
+                              }`}></div>
+                              <span className="break-words">
+                                {isLanguageError(hasError) 
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.languageError')
+                                  : hasError
+                                }
                               </span>
                             </div>
                           )}
@@ -692,6 +738,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 );
               })}
             </div>
+
+
 
             {/* Upload Button */}
             <div className="text-center flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">

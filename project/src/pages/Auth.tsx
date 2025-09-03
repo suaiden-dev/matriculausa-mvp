@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Scroll, Gift, Target } from 'lucide-react';
+import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Gift, Target } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
+
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -38,11 +38,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showStudentVerificationNotice, setShowStudentVerificationNotice] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  const [hasScrolledToBottomPrivacy, setHasScrolledToBottomPrivacy] = useState(false);
   const [affiliateCodeValid, setAffiliateCodeValid] = useState<boolean | null>(null);
   const [affiliateCodeLoading, setAffiliateCodeLoading] = useState(false);
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
@@ -53,11 +48,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   // New states for referral code UI
   const [showReferralCodeSection, setShowReferralCodeSection] = useState<boolean | null>(null);
   const [selectedReferralType, setSelectedReferralType] = useState<'friend' | 'seller' | null>(null);
-  const termsContentRef = useRef<HTMLDivElement>(null);
-  const privacyContentRef = useRef<HTMLDivElement>(null);
+
   
   const { login, register } = useAuth();
-  const { recordTermAcceptance, getLatestActiveTerm } = useTermsAcceptance();
+
   const navigate = useNavigate();
 
   // Global scroll-to-top on login/register page load
@@ -246,70 +240,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }
   };
 
-  // Handle scroll in terms modal
-  const handleTermsScroll = () => {
-    if (termsContentRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = termsContentRef.current;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
-      console.log('Terms scroll:', { scrollTop, scrollHeight, clientHeight, isAtBottom });
-      setHasScrolledToBottom(isAtBottom);
-    }
-  };
 
-  // Handle scroll in privacy modal
-  const handlePrivacyScroll = () => {
-    if (privacyContentRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = privacyContentRef.current;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
-      setHasScrolledToBottomPrivacy(isAtBottom);
-    }
-  };
-
-  // Handle terms modal open
-  const handleTermsClick = () => {
-    setShowTermsModal(true);
-    setHasScrolledToBottom(false);
-  };
-
-  // Handle terms acceptance and open privacy modal
-  const handleTermsAccept = () => {
-    console.log('handleTermsAccept called, hasScrolledToBottom:', hasScrolledToBottom);
-    if (hasScrolledToBottom) {
-      console.log('Opening privacy modal...');
-      setShowTermsModal(false);
-      setShowPrivacyModal(true);
-      setHasScrolledToBottomPrivacy(false);
-    } else {
-      console.log('User has not scrolled to bottom yet');
-    }
-  };
-
-  // Handle privacy acceptance
-  const handlePrivacyAccept = async () => {
-    if (hasScrolledToBottomPrivacy) {
-      try {
-        // Record acceptance of both terms of service and privacy policy
-        const termsOfServiceTerm = await getLatestActiveTerm('terms_of_service');
-        const privacyPolicyTerm = await getLatestActiveTerm('privacy_policy');
-        
-        if (termsOfServiceTerm) {
-          await recordTermAcceptance(termsOfServiceTerm.id, 'terms_of_service');
-        }
-        
-        if (privacyPolicyTerm) {
-          await recordTermAcceptance(privacyPolicyTerm.id, 'privacy_policy');
-        }
-        
-        setTermsAccepted(true);
-        setShowPrivacyModal(false);
-      } catch (error) {
-        console.error('Error recording term acceptance:', error);
-        // Still allow user to proceed even if recording fails
-        setTermsAccepted(true);
-        setShowPrivacyModal(false);
-      }
-    }
-  };
 
   // Remove redirecionamento - deixar AuthRedirect fazer isso
 
@@ -350,12 +281,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           return;
         }
         
-        // Validar aceitação dos termos apenas para universidades
-        if (activeTab === 'university' && !termsAccepted) {
-          setError(t('authPage.messages.mustAcceptTerms'));
-          setLoading(false);
-          return;
-        }
+
         
         // Validar resposta sobre código de referência (apenas para estudantes)
         if (activeTab === 'student' && showReferralCodeSection === null) {
@@ -1146,7 +1072,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInputCountrySelectArrow-opacity': '0.8',
                           '--PhoneInput-color--focus': '#D0151C'
                         }}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-4 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base"
                         placeholder={t('authPage.register.enterContactPhone')}
                       />
                     </div>
@@ -1195,41 +1121,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               </>
             )}
 
-            {/* Terms and Conditions Checkbox - Only for Universities */}
-            {activeTab === 'university' && (
-              <div className="flex items-start space-x-3 p-3 sm:p-4 bg-slate-100 rounded-2xl">
-                <input
-                  id="termsAccepted"
-                  name="termsAccepted"
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      handleTermsClick();
-                    } else {
-                      setTermsAccepted(false);
-                    }
-                  }}
-                  className="mt-1 h-4 w-4 text-[#D0151C] border-slate-300 rounded focus:ring-[#D0151C] focus:ring-2 flex-shrink-0"
-                />
-                <label htmlFor="termsAccepted" className="text-xs sm:text-sm text-slate-700 leading-relaxed cursor-pointer">
-                  {t('authPage.register.termsAndConditions.title')}{' '}
-                  <span className="text-[#D0151C] hover:text-[#B01218] font-semibold underline">
-                    {t('authPage.register.termsAndConditions.termsOfUse')}
-                  </span>
-                  {' '}{t('authPage.register.termsAndConditions.and')}{' '}
-                  <span className="text-[#D0151C] hover:text-[#B01218] font-semibold underline">
-                    {t('authPage.register.termsAndConditions.privacyPolicy')}
-                  </span>
-                  {' '}{t('authPage.register.termsAndConditions.description')}
-                </label>
-              </div>
-            )}
+
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || (activeTab === 'university' && !termsAccepted) || (activeTab === 'student' && showReferralCodeSection === null)}
+              disabled={loading || (activeTab === 'student' && showReferralCodeSection === null)}
               className={`w-full flex justify-center py-3 sm:py-4 px-4 border border-transparent text-base sm:text-lg font-black rounded-2xl text-white transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 activeTab === 'student' 
                   ? 'bg-[#05294E] hover:bg-[#05294E]/90 focus:ring-[#05294E]' 
@@ -1251,577 +1148,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </button>
           </form>
 
-          {/* Terms and Conditions Modal */}
-          {showTermsModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                  <h2 className="text-2xl font-bold text-slate-900">{t('authPage.modals.terms.title')}</h2>
-                  <button
-                    onClick={() => setShowTermsModal(false)}
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    title={t('authPage.modals.terms.close')}
-                  >
-                    <X className="h-6 w-6 text-slate-500" />
-                  </button>
-                </div>
 
-                {/* Modal Content */}
-                <div 
-                  ref={termsContentRef}
-                  onScroll={handleTermsScroll}
-                  className="flex-1 overflow-y-auto p-6 space-y-6"
-                >
-                  {/* Terms of Service */}
-                  <section>
-                    <h3 className="text-xl font-bold text-slate-900 mb-4">{t('authPage.modals.terms.content.title')}</h3>
-                    <div className="prose prose-slate max-w-none">
-                      {/* 1. ACCEPTANCE OF TERMS */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.acceptance.title')}</h4>
-                        <p className="text-slate-700 mb-4">
-                          {t('authPage.modals.terms.content.acceptance.description')}
-                        </p>
-                      </div>
 
-                      {/* 2. SERVICE DESCRIPTION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.serviceDescription.title')}</h4>
-                        <p className="text-slate-700 mb-4">
-                          {t('authPage.modals.terms.content.serviceDescription.description')}
-                        </p>
-                        
-                        <div className="space-y-4 mb-4">
-                          <div className="border border-slate-200 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.serviceDescription.emailHub.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.terms.content.serviceDescription.emailHub.features', { returnObjects: true }) as string[]).map((feature: string, index: number) => (
-                                <li key={index}>{feature}</li>
-                              ))}
-                            </ul>
-                          </div>
 
-                          <div className="border border-slate-200 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.serviceDescription.scholarshipManagement.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.terms.content.serviceDescription.scholarshipManagement.features', { returnObjects: true }) as string[]).map((feature: string, index: number) => (
-                                <li key={index}>{feature}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* 3. LICENSE GRANT */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.licenseGrant.title')}</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.licenseGrant.limitedLicense.title')}</h5>
-                            <p className="text-slate-700">
-                              {t('authPage.modals.terms.content.licenseGrant.limitedLicense.description')}
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.licenseGrant.restrictions.title')}</h5>
-                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.licenseGrant.restrictions.description')}</p>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              {(t('authPage.modals.terms.content.licenseGrant.restrictions.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 4. THIRD-PARTY DEPENDENCIES */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.title')}</h4>
-                        <div className="space-y-4">
-                          <div className="border border-slate-300 p-4 bg-slate-50 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.googleApis.title')}</h5>
-                            <p className="text-slate-700 mb-2">
-                              {t('authPage.modals.terms.content.thirdPartyDependencies.googleApis.description')}
-                            </p>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.terms.content.thirdPartyDependencies.googleApis.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.otherProviders.title')}</h5>
-                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.thirdPartyDependencies.otherProviders.description')}</p>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              {(t('authPage.modals.terms.content.thirdPartyDependencies.otherProviders.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 5. INTELLECTUAL PROPERTY */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.intellectualProperty.title')}</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div className="bg-slate-50 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.intellectualProperty.platformOwnership.title')}</h5>
-                            <p className="text-slate-700 text-sm">
-                              {t('authPage.modals.terms.content.intellectualProperty.platformOwnership.description')}
-                            </p>
-                          </div>
-                          <div className="bg-slate-50 p-4 rounded-lg">
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.intellectualProperty.customerData.title')}</h5>
-                            <p className="text-slate-700 text-sm mb-2">{t('authPage.modals.terms.content.intellectualProperty.customerData.description')}</p>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.terms.content.intellectualProperty.customerData.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                            <p className="text-slate-700 text-sm mt-2">
-                              {t('authPage.modals.terms.content.intellectualProperty.customerData.conclusion')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 6. RESPONSIBILITIES */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.responsibilities.title')}</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.responsibilities.userResponsibilities.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.terms.content.responsibilities.userResponsibilities.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.responsibilities.matriculaResponsibilities.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.terms.content.responsibilities.matriculaResponsibilities.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 7. LIMITATION OF LIABILITY */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.limitationOfLiability.title')}</h4>
-                        <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.limitationOfLiability.description')}</p>
-                        <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                          {(t('authPage.modals.terms.content.limitationOfLiability.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                            <li key={index}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* 8. SUSPENSION AND TERMINATION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.title')}</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.suspension.title')}</h5>
-                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.suspension.description')}</p>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              {(t('authPage.modals.terms.content.suspensionAndTermination.suspension.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.termination.title')}</h5>
-                            <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.suspensionAndTermination.termination.description')}</p>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              {(t('authPage.modals.terms.content.suspensionAndTermination.termination.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 9. MODIFICATIONS */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.modifications.title')}</h4>
-                        <p className="text-slate-700">
-                          {t('authPage.modals.terms.content.modifications.description')}
-                        </p>
-                      </div>
-
-                      {/* 10. GOVERNING LAW */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.governingLaw.title')}</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.governingLaw.jurisdiction.title')}</h5>
-                            <p className="text-slate-700">
-                              {t('authPage.modals.terms.content.governingLaw.jurisdiction.description')}
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.governingLaw.disputeResolution.title')}</h5>
-                            <p className="text-slate-700">
-                              {t('authPage.modals.terms.content.governingLaw.disputeResolution.description')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 11. ARBITRATION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.arbitration.title')}</h4>
-                        <p className="text-slate-700">
-                          {t('authPage.modals.terms.content.arbitration.description')}
-                        </p>
-                      </div>
-
-                      {/* 12. GENERAL PROVISIONS */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.title')}</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.entireAgreement.title')}</h5>
-                            <p className="text-slate-700">
-                              {t('authPage.modals.terms.content.generalProvisions.entireAgreement.description')}
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.waiver.title')}</h5>
-                            <p className="text-slate-700">
-                              {t('authPage.modals.terms.content.generalProvisions.waiver.description')}
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.generalProvisions.severability.title')}</h5>
-                            <p className="text-slate-700">
-                              {t('authPage.modals.terms.content.generalProvisions.severability.description')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 13. CONTACT */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.terms.content.contact.title')}</h4>
-                        <p className="text-slate-700 mb-2">{t('authPage.modals.terms.content.contact.description')}</p>
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <p className="text-blue-800"><strong>{t('authPage.modals.terms.content.contact.email.label')}:</strong> {t('authPage.modals.terms.content.contact.email.value')}</p>
-                          <p className="text-blue-800"><strong>{t('authPage.modals.terms.content.contact.phone.label')}:</strong> {t('authPage.modals.terms.content.contact.phone.value')}</p>
-                          <p className="text-blue-800"><strong>{t('authPage.modals.terms.content.contact.address.label')}:</strong> {t('authPage.modals.terms.content.contact.address.value')}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Scroll indicator */}
-                  {!hasScrolledToBottom && (
-                    <div className="flex items-center justify-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <Scroll className="h-5 w-5 text-amber-600 mr-2" />
-                      <span className="text-amber-800 font-medium">
-                        {t('authPage.modals.terms.scrollIndicator')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex items-center justify-between p-6 border-t border-slate-200">
-                  <button
-                    onClick={() => setShowTermsModal(false)}
-                    className="px-6 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors"
-                  >
-                    {t('authPage.modals.terms.cancel')}
-                  </button>
-                  <button
-                    onClick={handleTermsAccept}
-                    disabled={!hasScrolledToBottom}
-                    className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
-                      hasScrolledToBottom
-                        ? 'bg-[#05294E] text-white hover:bg-[#041f3a] shadow-lg'
-                        : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {hasScrolledToBottom ? t('authPage.modals.terms.continueToPrivacy') : t('authPage.modals.terms.scrollToBottomFirst')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Privacy Policy Modal */}
-          {showPrivacyModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                  <h2 className="text-2xl font-bold text-slate-900">{t('authPage.modals.privacy.title')}</h2>
-                  <button
-                    onClick={() => setShowPrivacyModal(false)}
-                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    title={t('authPage.modals.privacy.close')}
-                  >
-                    <X className="h-6 w-6 text-slate-500" />
-                  </button>
-                </div>
-
-                {/* Modal Content */}
-                <div 
-                  ref={privacyContentRef}
-                  onScroll={handlePrivacyScroll}
-                  className="flex-1 overflow-y-auto p-6 space-y-6"
-                >
-                  {/* Privacy Policy Content */}
-                  <section>
-                    <h3 className="text-xl font-bold text-slate-900 mb-4">{t('authPage.modals.privacy.content.title')}</h3>
-                    <div className="prose prose-slate max-w-none">
-                      {/* 1. INTRODUCTION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.introduction.title')}</h4>
-                        <p className="text-slate-700 mb-4">
-                          {t('authPage.modals.privacy.content.introduction.description')}
-                        </p>
-                      </div>
-
-                      {/* 2. DATA COLLECTED AND ACCESSED */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.title')}</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.userAccountData.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              {(t('authPage.modals.privacy.content.dataCollected.userAccountData.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.gmailData.title')}</h5>
-                            <p className="text-slate-700 mb-2">
-                              {t('authPage.modals.privacy.content.dataCollected.gmailData.description')}
-                            </p>
-                            
-                            <div className="border border-slate-200 p-4 mb-4">
-                              <h6 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.gmailData.readonlyPermission.title')}</h6>
-                              <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                                {(t('authPage.modals.privacy.content.dataCollected.gmailData.readonlyPermission.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                  <li key={index}>{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-
-                            <div className="border border-slate-200 p-4">
-                              <h6 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataCollected.gmailData.sendPermission.title')}</h6>
-                              <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                                {(t('authPage.modals.privacy.content.dataCollected.gmailData.sendPermission.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                  <li key={index}>{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 3. HOW WE USE YOUR INFORMATION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.howWeUse.title')}</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.howWeUse.primaryEmailHub.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              {(t('authPage.modals.privacy.content.howWeUse.primaryEmailHub.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index} dangerouslySetInnerHTML={{ __html: item }} />
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.howWeUse.otherUses.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm ml-4">
-                              {(t('authPage.modals.privacy.content.howWeUse.otherUses.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 4. DATA SECURITY */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSecurity.title')}</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div className="border border-slate-200 p-4">
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSecurity.encryptionAndStorage.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.privacy.content.dataSecurity.encryptionAndStorage.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index} dangerouslySetInnerHTML={{ __html: item }} />
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div className="border border-slate-200 p-4">
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSecurity.securityMeasures.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.privacy.content.dataSecurity.securityMeasures.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 5. GOOGLE COMPLIANCE */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.googleCompliance.title')}</h4>
-                        <div className="border border-slate-300 p-4 bg-slate-50 rounded-lg">
-                          <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.googleCompliance.important')}</h5>
-                          <p className="text-slate-700 mb-2">
-                            {t('authPage.modals.privacy.content.googleCompliance.description')}
-                          </p>
-                          <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                            {(t('authPage.modals.privacy.content.googleCompliance.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                              <li key={index}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* 6. YOUR RIGHTS */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.title')}</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.accessAndPortability.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.privacy.content.yourRights.accessAndPortability.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.correctionAndUpdate.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.privacy.content.yourRights.correctionAndUpdate.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.deletion.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.privacy.content.yourRights.deletion.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.yourRights.consentWithdrawal.title')}</h5>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                              {(t('authPage.modals.privacy.content.yourRights.consentWithdrawal.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                                <li key={index}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 7. DATA RETENTION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataRetention.title')}</h4>
-                        <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                          {(t('authPage.modals.privacy.content.dataRetention.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                            <li key={index} dangerouslySetInnerHTML={{ __html: item }} />
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* 8. DATA SHARING */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.dataSharing.title')}</h4>
-                        <p className="text-slate-700 mb-2">
-                          {t('authPage.modals.privacy.content.dataSharing.description')}
-                        </p>
-                        <ul className="list-disc list-inside text-slate-700 space-y-1 text-sm">
-                          {(t('authPage.modals.privacy.content.dataSharing.items', { returnObjects: true }) as string[]).map((item: string, index: number) => (
-                            <li key={index}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* 9. CHILDREN'S PRIVACY */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.childrensPrivacy.title')}</h4>
-                        <p className="text-slate-700">
-                          {t('authPage.modals.privacy.content.childrensPrivacy.description')}
-                        </p>
-                      </div>
-
-                      {/* 10. INTERNATIONAL DATA TRANSFERS */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.internationalDataTransfers.title')}</h4>
-                        <p className="text-slate-700">
-                          {t('authPage.modals.privacy.content.internationalDataTransfers.description')}
-                        </p>
-                      </div>
-
-                      {/* 11. CONTACT */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-slate-900 mb-2">{t('authPage.modals.privacy.content.contact.title')}</h4>
-                        <p className="text-slate-700 mb-2">
-                          {t('authPage.modals.privacy.content.contact.description')}
-                        </p>
-                        <div className="border border-slate-200 p-4">
-                          <p className="text-slate-700"><strong>{t('authPage.modals.privacy.content.contact.email.label')}:</strong> {t('authPage.modals.privacy.content.contact.email.value')}</p>
-                          <p className="text-slate-700"><strong>{t('authPage.modals.privacy.content.contact.phone.label')}:</strong> {t('authPage.modals.privacy.content.contact.phone.value')}</p>
-                          <p className="text-slate-700"><strong>{t('authPage.modals.privacy.content.contact.address.label')}:</strong> {t('authPage.modals.privacy.content.contact.address.value')}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Scroll indicator */}
-                  {!hasScrolledToBottomPrivacy && (
-                    <div className="flex items-center justify-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <Scroll className="h-5 w-5 text-amber-600 mr-2" />
-                      <span className="text-amber-800 font-medium">
-                        {t('authPage.modals.privacy.scrollIndicator')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex items-center justify-between p-6 border-t border-slate-200">
-                  <button
-                    onClick={() => setShowPrivacyModal(false)}
-                    className="px-6 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors"
-                  >
-                    {t('authPage.modals.privacy.cancel')}
-                  </button>
-                  <button
-                    onClick={handlePrivacyAccept}
-                    disabled={!hasScrolledToBottomPrivacy}
-                    className={`px-6 py-2 rounded-lg font-medium transition-all duration-300 ${
-                      hasScrolledToBottomPrivacy
-                        ? 'bg-[#05294E] text-white hover:bg-[#041f3a] shadow-lg'
-                        : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {hasScrolledToBottomPrivacy ? t('authPage.modals.privacy.accept') : t('authPage.modals.privacy.scrollToBottomFirst')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Formulário de registro de estudante */}
           {showStudentVerificationNotice && (
