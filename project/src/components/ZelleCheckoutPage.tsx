@@ -79,10 +79,14 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const amount = searchParams.get('amount') || '600';
   const scholarshipsIds = searchParams.get('scholarshipsIds') || '';
   const applicationFeeAmount = searchParams.get('applicationFeeAmount') ? parseFloat(searchParams.get('applicationFeeAmount')!) : undefined;
+  
+  // Normalizar feeType para lidar com inconsistências (i20_control_fee vs i-20_control_fee)
+  const normalizedFeeType = feeType === 'i20_control_fee' ? 'i-20_control_fee' : feeType;
 
   // Debug logs
   console.log('🔍 [ZelleCheckoutPage] Componente renderizando');
   console.log('🔍 [ZelleCheckoutPage] feeType:', feeType);
+  console.log('🔍 [ZelleCheckoutPage] normalizedFeeType:', normalizedFeeType);
   console.log('🔍 [ZelleCheckoutPage] amount:', amount);
   console.log('🔍 [ZelleCheckoutPage] activeDiscount:', activeDiscount);
   console.log('🔍 [ZelleCheckoutPage] searchParams:', Object.fromEntries(searchParams.entries()));
@@ -115,12 +119,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     }
   ];
 
-  const currentFee = feeInfo.find(fee => fee.type === feeType) || feeInfo[0];
+  const currentFee = feeInfo.find(fee => fee.type === normalizedFeeType) || feeInfo[0];
   
   console.log('🔍 [ZelleCheckoutPage] currentFee:', currentFee);
   console.log('🔍 [ZelleCheckoutPage] feeType recebido:', feeType);
+  console.log('🔍 [ZelleCheckoutPage] normalizedFeeType usado:', normalizedFeeType);
   console.log('🔍 [ZelleCheckoutPage] feeInfo tipos disponíveis:', feeInfo.map(fee => fee.type));
-  console.log('🔍 [ZelleCheckoutPage] Match encontrado:', feeInfo.find(fee => fee.type === feeType) ? 'SIM' : 'NÃO');
+  console.log('🔍 [ZelleCheckoutPage] Match encontrado:', feeInfo.find(fee => fee.type === normalizedFeeType) ? 'SIM' : 'NÃO');
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -179,13 +184,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         image_url: imageUrl,
         value: currentFee.amount.toString(), // Apenas o número, sem símbolos
         currency: 'USD',
-        fee_type: feeType === 'i20_control_fee' ? 'i-20_control_fee' : feeType,
+        fee_type: normalizedFeeType,
         timestamp: new Date().toISOString(),
         temp_payment_id: tempPaymentId // ID temporário para o n8n usar
       };
 
       // Adicionar scholarship_application_id se for taxa de bolsa
-      if (feeType === 'application_fee' || feeType === 'scholarship_fee') {
+      if (normalizedFeeType === 'application_fee' || normalizedFeeType === 'scholarship_fee') {
         console.log('🔍 [ZelleCheckout] Buscando scholarship_application_id para taxa de bolsa');
         console.log('🔍 [ZelleCheckout] scholarshipsIds:', scholarshipsIds);
         console.log('🔍 [ZelleCheckout] user.id:', user?.id);
@@ -241,7 +246,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         email_universidade: 'newvicturibdev@gmail.com', // Admin específico
         o_que_enviar: `Novo pagamento Zelle de ${currentFee.amount} USD foi enviado para avaliação.`,
         temp_payment_id: tempPaymentId,
-        fee_type: feeType,
+        fee_type: normalizedFeeType,
         amount: currentFee.amount,
         uploaded_at: new Date().toISOString()
       };
@@ -331,13 +336,12 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 console.log('🎯 [ZelleCheckout] RESPOSTA DO N8N:', responseJson.response);
                 console.log('🎯 [ZelleCheckout] Tipo da resposta:', typeof responseJson.response);
                 
-                // Verificar se a resposta é negativa (pagamento inválido)
-                const isNegativeResponse = responseJson.response.toLowerCase().includes('not valid') || 
-                                         responseJson.response.toLowerCase().includes('invalid') ||
-                                         responseJson.response.toLowerCase().includes('rejected');
+                // Verificar se a resposta é especificamente "The proof of payment is valid"
+                const response = responseJson.response.toLowerCase();
+                const isPositiveResponse = response === 'the proof of payment is valid.';
                 
-                if (isNegativeResponse) {
-                  console.log('❌ [ZelleCheckout] Resposta negativa detectada - enviando notificação para admin');
+                if (!isPositiveResponse) {
+                  console.log('❌ [ZelleCheckout] Resposta negativa detectada - enviando notificações para admin e aluno');
                   
                   // Enviar notificação para admin apenas se o pagamento for inválido
                   try {
@@ -357,8 +361,42 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   } catch (error) {
                     console.error('❌ [ZelleCheckout] Erro ao enviar notificação para admin:', error);
                   }
+
+                  // Enviar notificação para o aluno sobre o status do pagamento
+                  try {
+                    const studentNotificationPayload = {
+                      tipo_notf: 'Pagamento Zelle em Processamento',
+                      email_aluno: user?.email,
+                      nome_aluno: userName,
+                      email_universidade: user?.email, // Para o aluno, usar o próprio email
+                      o_que_enviar: `Seu pagamento Zelle de ${currentFee.amount} USD para ${currentFee.description.split(' - ')[1]} está sendo processado. Você será notificado assim que o processamento for concluído.`,
+                      temp_payment_id: tempPaymentId,
+                      fee_type: normalizedFeeType,
+                      amount: currentFee.amount,
+                      uploaded_at: new Date().toISOString(),
+                      status: 'processing'
+                    };
+
+                    console.log('📧 [ZelleCheckout] Enviando notificação para aluno:', studentNotificationPayload);
+
+                    const studentNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(studentNotificationPayload),
+                    });
+                    
+                    if (studentNotificationResponse.ok) {
+                      console.log('✅ [ZelleCheckout] Notificação para aluno enviada com sucesso!');
+                    } else {
+                      console.warn('⚠️ [ZelleCheckout] Erro ao enviar notificação para aluno:', studentNotificationResponse.status);
+                    }
+                  } catch (error) {
+                    console.error('❌ [ZelleCheckout] Erro ao enviar notificação para aluno:', error);
+                  }
                 } else {
-                  console.log('✅ [ZelleCheckout] Resposta positiva - pagamento aprovado automaticamente, não enviando notificação para admin');
+                  console.log('✅ [ZelleCheckout] Resposta positiva específica - pagamento aprovado automaticamente, não enviando notificação para admin');
                 }
                 
                 // Armazenar a resposta do n8n no localStorage para a página de waiting
@@ -418,7 +456,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       onSuccess?.();
       // Redirecionar para página de aguardo
       console.log('🔄 [ZelleCheckout] Redirecionando para waiting page com temp_payment_id:', tempPaymentId);
-      navigate(`/checkout/zelle/waiting?temp_payment_id=${tempPaymentId}&fee_type=${feeType}&amount=${currentFee.amount}`);
+      navigate(`/checkout/zelle/waiting?temp_payment_id=${tempPaymentId}&fee_type=${normalizedFeeType}&amount=${currentFee.amount}&scholarshipsIds=${scholarshipsIds}`);
     } catch (error) {
       console.error('Error processing Zelle payment:', error);
       onError?.(error instanceof Error ? error.message : 'Error processing payment');
@@ -484,7 +522,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-gray-900">
-                      ${currentFee.amount.toLocaleString()}
+                      ${currentFee.amount}
                     </div>
                     <div className="text-sm text-gray-500">USD</div>
                   </div>
@@ -494,8 +532,58 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-medium text-gray-900">{t('zelleCheckout.amount')}</span>
                     <span className="text-2xl font-bold text-gray-900">
-                      ${currentFee.amount.toLocaleString()}
+                      ${currentFee.amount}
                     </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Zelle Payment Information */}
+            <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-gray-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Zelle Payment Details</h2>
+                  <p className="text-gray-600">Send your payment to the following recipient</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Recipient Email
+                    </label>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <code className="text-sm font-mono text-gray-900">info@thefutureofenglish.com</code>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment Amount
+                    </label>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <span className="text-lg font-bold text-gray-900">${currentFee.amount} USD</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center mt-0.5">
+                      <span className="text-gray-600 text-xs font-bold">!</span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-800 font-medium">Important:</p>
+                      <p className="text-sm text-gray-700">
+                        Make sure to send the exact amount of <strong>${currentFee.amount} USD</strong> to <strong>info@thefutureofenglish.com</strong> via Zelle. 
+                        Any discrepancy in amount or recipient will delay your payment processing.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

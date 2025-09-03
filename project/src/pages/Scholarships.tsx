@@ -10,10 +10,20 @@ import { supabase } from '../lib/supabase';
 import SmartChat from '../components/SmartChat';
 import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
 import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
+import { ApplicationFeeBlockedMessage } from '../components/ApplicationFeeBlockedMessage';
+import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
   const { isAuthenticated, userProfile, loading } = useAuth();
+  
+  // Hook para verificar se usuário já tem application fee paga
+  const { 
+    hasPaidApplicationFee, 
+    committedUniversity, 
+    committedScholarship, 
+    loading: applicationFeeLoading 
+  } = useApplicationFeeStatus();
   
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
@@ -350,6 +360,16 @@ const Scholarships: React.FC = () => {
   useEffect(() => {
     setPage(0);
   }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
+
+  // Se usuário já tem application fee paga, mostrar mensagem de bloqueio
+  if (isAuthenticated && !applicationFeeLoading && hasPaidApplicationFee) {
+    return (
+      <ApplicationFeeBlockedMessage 
+        committedUniversity={committedUniversity}
+        committedScholarship={committedScholarship}
+      />
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen">
