@@ -10,6 +10,7 @@ interface Step {
 
 interface ProgressBarProps {
   steps: Step[];
+  feeValues?: string[];
 }
 
 const getStepColor = (completed: boolean, current: boolean) => {
@@ -29,15 +30,26 @@ const getStepIcon = (idx: number, completed: boolean, current: boolean) => {
   return <Lock className="h-7 w-7 text-slate-400" />;
 };
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ steps }) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
   const currentIdx = steps.findIndex(step => step.current);
-  // Valores das taxas (ajuste conforme necessário)
-  const feeValues = [
-    '$600', // Selection Process Fee
+  // Valores padrão das taxas (usados quando não há valores customizados)
+  const defaultFeeValues = [
+    '$999', // Selection Process Fee
     '$350', // Application Fee
-    '$850', // Scholarship Fee
-    '$1,250', // I-20 Control Fee
+    '$400', // Scholarship Fee
+    '$999', // I-20 Control Fee
   ];
+  
+  // Usar valores customizados se fornecidos, senão usar os padrão
+  const feeValues = customFeeValues || defaultFeeValues;
+  
+  // Para a application fee (índice 1), usar mensagem genérica se não houver valor específico
+  const displayFeeValues = feeValues.map((value, index) => {
+    if (index === 1 && value === '$350.00') {
+      return 'As per university'; // Mensagem genérica para application fee
+    }
+    return value;
+  });
   return (
     <div className="w-full flex flex-col items-center pb-8 md:pb-16 mb-4 md:mb-8">
       {/* Desktop: horizontal, Mobile: vertical */}
@@ -78,7 +90,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps }) => {
               </div>
               <div className="flex flex-col flex-1">
                 <div className="text-sm font-bold text-[#05294E]">{step.label}</div>
-                <div className="text-xs font-bold text-blue-700">{feeValues[idx]}</div>
+                <div className="text-xs font-bold text-blue-700">{displayFeeValues[idx]}</div>
                 <div className="text-xs text-slate-700 leading-tight">{step.description}</div>
               </div>
             </div>
@@ -93,7 +105,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps }) => {
               <div className="text-xs md:text-sm font-bold mb-0.5 text-white whitespace-nowrap drop-shadow-sm tracking-wide">
                 {step.label}
               </div>
-              <div className="text-[11px] md:text-sm font-bold text-yellow-300 mb-0.5">{feeValues[idx]}</div>
+              <div className="text-[11px] md:text-sm font-bold text-yellow-300 mb-0.5">{displayFeeValues[idx]}</div>
               <div className="text-[10px] md:text-xs text-blue-100 max-w-[90px] md:max-w-[120px] leading-tight mb-1 font-medium">
                 {step.description}
               </div>

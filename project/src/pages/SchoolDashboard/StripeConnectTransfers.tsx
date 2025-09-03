@@ -710,16 +710,11 @@ const StripeConnect: React.FC = () => {
                         You will be redirected to Stripe to authorize the connection securely.
                       </p>
                       <button
-                        onClick={initiateStripeConnect}
-                        disabled={connectLoading}
-                        className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled
+                        className="inline-flex items-center space-x-2 px-6 py-3 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed opacity-60"
                       >
-                        {connectLoading ? (
-                          <RefreshCw className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <CreditCard className="h-5 w-5" />
-                        )}
-                        <span>Connect with Stripe</span>
+                        <CreditCard className="h-5 w-5" />
+                        <span>Under Development</span>
                       </button>
                     </div>
                   )}

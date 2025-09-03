@@ -28,7 +28,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   // Valor dinâmico baseado no tipo de taxa
   const getFeeAmount = () => {
     if (feeType === 'scholarship_fee') {
-      return scholarship.scholarship_fee_amount || 850; // Valor padrão para scholarship fee ($850.00)
+      return scholarship.scholarship_fee_amount || 400; // Valor padrão para scholarship fee ($400.00)
     }
     
     // Para application fee, usar o valor real da bolsa ou valor padrão se não existir

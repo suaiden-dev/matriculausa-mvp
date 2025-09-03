@@ -897,16 +897,16 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       if (!profileError && profileData) {
         console.log('🔍 Profile data found:', profileData);
         
-        // Selection Process Fee (fixa - $600)
+        // Selection Process Fee (fixa - $999)
         if (profileData.has_paid_selection_process_fee) {
-          totalRevenue += 600;
-          console.log('🔍 Selection process fee added: $600');
+          totalRevenue += 999;
+          console.log('🔍 Selection process fee added: $999');
         }
         
-        // I-20 Control Fee (fixa - $1,250)
+        // I-20 Control Fee (fixa - $999)
         if (profileData.has_paid_i20_control_fee) {
-          totalRevenue += 1250;
-          console.log('🔍 I-20 control fee added: $1,250');
+          totalRevenue += 999;
+          console.log('🔍 I-20 control fee added: $999');
         }
       }
       
@@ -1461,7 +1461,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">$600.00</span>
+                             <span className="text-xs text-slate-500">$999.00</span>
                            )}
                          </div>
                        </div>
@@ -1519,7 +1519,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">$1,250.00</span>
+                             <span className="text-xs text-slate-500">$999.00</span>
                            )}
                          </div>
                        </div>

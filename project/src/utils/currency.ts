@@ -6,7 +6,7 @@
 export const formatCentsToDollars = (cents: number | null | undefined): string => {
   if (!cents) return '0';
   
-  // Se o valor for maior que 10000, provavelmente está em centavos (ex: 125000 = $1,250)
+  // Se o valor for maior que 10000, provavelmente está em centavos (ex: 99900 = $999)
   if (cents > 10000) {
     const dollars = cents / 100;
     // Se for um número inteiro, não mostrar decimais
@@ -27,7 +27,7 @@ export const formatCentsToDollars = (cents: number | null | undefined): string =
 export const convertCentsToDollars = (cents: number | null | undefined): number => {
   if (!cents) return 0;
   
-  // Se o valor for maior que 10000, provavelmente está em centavos (ex: 125000 = $1,250)
+  // Se o valor for maior que 10000, provavelmente está em centavos (ex: 99900 = $999)
   if (cents > 10000) {
     return cents / 100;
   }

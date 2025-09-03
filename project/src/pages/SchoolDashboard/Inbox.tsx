@@ -722,20 +722,21 @@ const Inbox: React.FC = () => {
     }
   }, [activeConnection?.email, updateEmailCounts]);
 
-  // PRIMEIRO: Verificar se o perfil está completo ANTES de qualquer outra verificação
-  // Se perfil não estiver completo, mostrar o guard ANTES de qualquer verificação de email
-  if (university?.profile_completed !== true) {
-    return (
-      <ProfileCompletionGuard 
-        isProfileCompleted={university?.profile_completed}
-        title="Profile setup required"
-        description="Complete your university profile to start creating and managing scholarships"
-      >
-        {/* Este conteúdo nunca será renderizado porque o guard sempre mostrará a tela de setup */}
-        <div></div>
-      </ProfileCompletionGuard>
-    );
-  }
+  // Development Block - Always show
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center border-2 border-orange-200">
+        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <AlertTriangle className="w-8 h-8 text-orange-600" />
+        </div>
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Page Under Development</h2>
+        <p className="text-gray-600 text-lg leading-relaxed">
+          This functionality is currently being developed and will be available soon. 
+          Thank you for your patience!
+        </p>
+      </div>
+    </div>
+  );
 
   // Se mostrar integração de email, renderizar a página de integração
   if (showEmailIntegration) {
@@ -921,7 +922,27 @@ const Inbox: React.FC = () => {
   // Se chegou até aqui, o perfil está completo e a conexão Gmail está ativa
   // Renderizar a interface principal do Inbox
   return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 relative">
+        {/* Bloqueio de Desenvolvimento */}
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center border-2 border-orange-200">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-orange-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Página em Desenvolvimento</h2>
+            <p className="text-gray-600 mb-6">
+              Esta funcionalidade está sendo desenvolvida e estará disponível em breve. 
+              Obrigado pela sua paciência!
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <p className="text-sm text-orange-800">
+                <strong>Nota:</strong> A funcionalidade está funcionando em segundo plano, 
+                mas a interface ainda está sendo finalizada.
+              </p>
+            </div>
+          </div>
+        </div>
+        
         <style>{tabScrollStyles}</style>
         <div className="min-h-screen flex flex-col">
           {/* Main Inbox Container - Ocupando toda a tela */}

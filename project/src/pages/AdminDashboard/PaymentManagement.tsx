@@ -830,7 +830,7 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'selection_process',
-          amount: 60000, // $600.00 em centavos
+          amount: 99900, // $999.00 em centavos
           status: student.has_paid_selection_process_fee ? 'paid' : 'pending',
           payment_date: student.has_paid_selection_process_fee ? app.created_at : undefined,
           created_at: app.created_at
@@ -864,7 +864,7 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'scholarship',
-          amount: 85000, // $850.00 em centavos
+          amount: 40000, // $400.00 em centavos
           status: student.is_scholarship_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_scholarship_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
@@ -881,7 +881,7 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'i20_control_fee',
-          amount: 125000, // $1,250.00 em centavos
+          amount: 99900, // $999.00 em centavos
           status: 'pending',
           created_at: app.created_at
         });
@@ -968,7 +968,7 @@ const PaymentManagement = (): React.JSX.Element => {
             scholarship_id: 'sample-scholarship-3',
             scholarship_title: 'Business Leadership Scholarship',
             fee_type: 'i20_control_fee',
-            amount: 125000, // $1,250.00 em centavos
+            amount: 99900, // $999.00 em centavos
             status: 'pending',
             created_at: '2024-01-25T11:00:00Z'
           }

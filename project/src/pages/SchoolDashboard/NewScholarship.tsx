@@ -1020,17 +1020,17 @@ const NewScholarship: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Delivery Mode */}
+                {/* Course Modality */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Delivery Mode
+                    Course Modality
                   </label>
                   <select
                     name="delivery_mode"
                     value={formData.delivery_mode}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                    title="Select delivery mode"
+                    title="Select course modality"
                   >
                     <option value="in_person">In-person</option>
                     <option value="hybrid">Hybrid</option>

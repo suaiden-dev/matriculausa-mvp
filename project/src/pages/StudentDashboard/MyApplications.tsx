@@ -1282,7 +1282,7 @@ const getLevelColor = (level: any) => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                          <span className="text-base font-bold text-gray-700">$850</span>
+                          <span className="text-base font-bold text-gray-700">$400</span>
                         </div>
                         {scholarshipFeePaid ? (
                           <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">

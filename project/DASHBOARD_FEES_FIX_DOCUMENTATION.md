@@ -39,8 +39,8 @@ Resultado:
 ```
 
 ### **3. Valores Reais dos Fees:**
-- **Selection Process Fee**: $600.00
-- **Scholarship Fee**: $850.00
+- **Selection Process Fee**: $999.00
+- **Scholarship Fee**: $400.00
 - **Total quando ambos pagos**: $1,450.00
 
 ## 🛠️ **Soluções Implementadas**
@@ -127,14 +127,14 @@ $$ LANGUAGE plpgsql;
 
 ### **Dashboard Admin Afiliado:**
 - ✅ **`alam178@uorak.com`**: $1,450.00 (Selection Process Fee + Scholarship Fee)
-- ✅ **`guozhong262@uorak.com`**: $600.00 (Selection Process Fee)
+- ✅ **`guozhong262@uorak.com`**: $999.00 (Selection Process Fee)
 - ✅ **`Teste Seller Student 2`**: $0.00 (Nenhum fee pago)
 - ✅ **`zulaica2615@uorak.com`**: $1,450.00 (Selection Process Fee + Scholarship Fee)
 - ✅ **`GILSON FELIPE DA SILVA CRUZ`**: $1,450.00 (Selection Process Fee + Scholarship Fee)
 
 ### **Dashboard do Vendedor:**
 - ✅ **`alam178@uorak.com`**: $1,450.00, Fees count: 2
-- ✅ **`guozhong262@uorak.com`**: $600.00, Fees count: 1
+- ✅ **`guozhong262@uorak.com`**: $999.00, Fees count: 1
 
 ## 🔧 **Como Resolver se Acontecer Novamente**
 
@@ -170,8 +170,8 @@ SELECT * FROM get_seller_students('SELLER_Q8WLVG5NU') LIMIT 3;
 - **Vendedor**: Usar `get_seller_students` com cálculo baseado em campos booleanos
 
 ### **5. Valores dos Fees:**
-- **Selection Process Fee**: $600.00
-- **Scholarship Fee**: $850.00
+- **Selection Process Fee**: $999.00
+- **Scholarship Fee**: $400.00
 - **Total quando ambos pagos**: $1,450.00
 
 ## 📚 **Tabelas e Campos Importantes**
