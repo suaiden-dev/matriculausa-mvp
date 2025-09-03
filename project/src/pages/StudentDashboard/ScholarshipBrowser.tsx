@@ -1309,8 +1309,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 )}
                 
                 {/* Favorite Button */}
-                <div className={`absolute top-3 sm:top-4 z-20 ${
-                  scholarship.is_exclusive ? 'right-20 sm:right-24' : 'right-3 sm:right-4'
+                <div className={`absolute top-3 z-20 ${
+                  scholarship.is_exclusive ? 'right-4 sm:right-4 sm:top-12' : 'right-3 sm:right-4 top-3'
                 }`}>
                   <FavoriteButton
                     isFavorite={isFavorite(scholarship.id)}
