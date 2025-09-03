@@ -136,164 +136,205 @@ const StudentManagement: React.FC = () => {
       title="Complete your profile to manage students"
       description="Finish setting up your university profile to view and manage student applications"
     >
-      <div className="space-y-6 lg:space-y-8">
-        {/* Page Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Users className="w-6 h-6 text-[#05294E]" />
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Student Management</h1>
-                <p className="text-slate-600">Manage applicants and students</p>
-              </div>
-            </div>
-            <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300">
-              <Users className="w-4 h-4 mr-1.5" />
-              {filteredApplications.length} Students
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen">
+        {/* Header + Filters Section */}
+        <div className="w-full">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div className="max-w-full mx-auto bg-slate-50">
+              {/* Header: title + note + counter */}
+              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    Student Management
+                  </h1>
+                  <p className="mt-2 text-sm sm:text-base text-slate-600">
+                    Students who have completed both fee payments and are ready for enrollment.
+                  </p>
+                  <p className="mt-3 text-sm text-slate-500">
+                    These students have paid both the application fee and scholarship fee, and are now enrolled students.
+                  </p>
+                </div>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ">
-          {/* Search and Filters */}
-          <div className="p-6 border-b border-slate-200">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Search Bar */}
-              <div className="sm:col-span-2 lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search students..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                <div className="flex items-center space-x-3">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
+                    <Users className="w-5 h-5 mr-2" />
+                    {filteredApplications.length} Students
+                  </div>
                 </div>
               </div>
 
-              {/* Scholarship Filter */}
-              <div className="lg:col-span-1">
-                <select
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                  value={selectedScholarship}
-                  onChange={(e) => setSelectedScholarship(e.target.value)}
-                >
-                  <option value="">All Scholarships</option>
-                  {scholarships.map(s => (
-                    <option key={s.id} value={s.id}>{s.title}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Separation and Filters row */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    {/* Search Bar */}
+                    <div className="lg:col-span-2">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                        <input
+                          type="text"
+                          placeholder="Search enrolled students..."
+                          className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      </div>
+                    </div>
 
-              {/* Status Filter */}
-              <div className="lg:col-span-1">
-                 <select
-                   className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                   value={selectedStatus}
-                   onChange={(e) => setSelectedStatus(e.target.value)}
-                 >
-                   <option value="">All Fee Status</option>
-                   <option value="both_paid">Both Fees Paid</option>
-                   <option value="application_paid">Application Fee Paid</option>
-                   <option value="scholarship_paid">Scholarship Fee Paid</option>
-                   <option value="pending">Fees Pending</option>
-                 </select>
-               </div>
+                    {/* Scholarship Filter */}
+                    <div>
+                      <select
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        value={selectedScholarship}
+                        onChange={(e) => setSelectedScholarship(e.target.value)}
+                      >
+                        <option value="">All Scholarships</option>
+                        {scholarships.map(s => (
+                          <option key={s.id} value={s.id}>{s.title}</option>
+                        ))}
+                      </select>
+                    </div>
 
-              {/* Country Filter */}
-              <div className="lg:col-span-1">
-                <select
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                  value={selectedCountry}
-                  onChange={(e) => setSelectedCountry(e.target.value)}
-                >
-                  <option value="">All Countries</option>
-                  {countries.map(country => (
-                    <option key={country} value={country}>{country}</option>
-                  ))}
-                </select>
+                    {/* Status Filter */}
+                    <div>
+                      <select
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        value={selectedStatus}
+                        onChange={(e) => setSelectedStatus(e.target.value)}
+                      >
+                        <option value="">All Fee Status</option>
+                        <option value="both_paid">Both Fees Paid</option>
+                        <option value="application_paid">Application Fee Paid</option>
+                        <option value="scholarship_paid">Scholarship Fee Paid</option>
+                        <option value="pending">Fees Pending</option>
+                      </select>
+                    </div>
+
+                    {/* Country Filter */}
+                    <div>
+                      <select
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        value={selectedCountry}
+                        onChange={(e) => setSelectedCountry(e.target.value)}
+                      >
+                        <option value="">All Countries</option>
+                        {countries.map(country => (
+                          <option key={country} value={country}>{country}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Students Grid */}
-          <div className="p-6">
-            <div className="space-y-4">
-              {filteredApplications.length === 0 ? (
-                <div className="bg-slate-50 rounded-xl p-8 text-center">
-                  <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-slate-900 mb-2">No students with both fees paid</h3>
-                  <p className="text-slate-600 max-w-md mx-auto">Students will appear here once they have paid both Application Fee and Scholarship Fee.</p>
+          {/* Students Summary */}
+          {filteredApplications.length > 0 && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900">Student Management</h3>
+                    <p className="text-xs sm:text-sm text-slate-600">
+                      {filteredApplications.length} students have completed all requirements and are enrolled
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                filteredApplications.map((app) => {
-                  const student = (app as any).user_profiles;
-                  const status = getStudentStatus(app);
-                  const StatusIcon = status.icon;
+                <div className="flex flex-col sm:flex-row gap-3 text-center sm:text-right">
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{filteredApplications.length}</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Students</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-                  return (
-                    <Link 
-                      to={`/school/dashboard/student/${app.id}`} 
-                      key={app.id} 
-                      className="block bg-slate-50 rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200"
-                    >
-                      <div className="p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                          <div className="flex items-start space-x-4 flex-1 min-w-0">
-                            {student?.avatar_url ? (
-                              <img
-                                src={student.avatar_url}
-                                alt={student?.full_name || student?.name || 'Student Avatar'}
-                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-white font-semibold text-base sm:text-lg">
-                                  {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
-                                {student?.full_name || student?.name || 'Unknown Student'}
-                              </h3>
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-slate-600 mt-1">
-                                {student?.country && (
-                                  <div className="flex items-center">
-                                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-slate-400" />
-                                    {student.country}
+          {/* Main Content */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+
+            {/* Students Grid */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {filteredApplications.length === 0 ? (
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 sm:p-12 text-center">
+                    <Users className="w-10 h-10 sm:w-12 sm:h-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No students with both fees paid</h3>
+                    <p className="text-sm sm:text-base text-slate-600">Students will appear here once they have paid both Application Fee and Scholarship Fee.</p>
+                  </div>
+                ) : (
+                  filteredApplications.map((app) => {
+                    const student = (app as any).user_profiles;
+                    const status = getStudentStatus(app);
+                    const StatusIcon = status.icon;
+
+                    return (
+                      <Link 
+                        to={`/school/dashboard/student/${app.id}`} 
+                        key={app.id} 
+                        className="block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200"
+                      >
+                        <div className="p-4 sm:p-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                              {student?.avatar_url ? (
+                                <img
+                                  src={student.avatar_url}
+                                  alt={student?.full_name || student?.name || 'Student Avatar'}
+                                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-white font-semibold text-base sm:text-lg">
+                                    {(student?.full_name || student?.name || 'U')[0].toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words">
+                                  {student?.full_name || student?.name || 'Unknown Student'}
+                                </h3>
+                                <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-600 mt-1">
+                                  {student?.country && (
+                                    <div className="flex items-center">
+                                      <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                                      <span className="truncate">{student.country}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Scholarship Information */}
+                                {(app as any).scholarships && (
+                                  <div className="mt-2">
+                                    <span className="text-xs text-slate-600 break-words">
+                                      <span className="font-medium">Scholarship:</span> {(app as any).scholarships.title}
+                                    </span>
                                   </div>
                                 )}
                               </div>
-                              
-                              {/* Scholarship Information */}
-                              {(app as any).scholarships && (
-                                <div className="mt-2 flex items-center text-xs text-slate-600">
-                                  <FileText className="w-3 h-3 mr-1.5 text-slate-400 flex-shrink-0" />
-                                  <span className="font-medium mr-1">Scholarship:</span> 
-                                  <span className="truncate">{(app as any).scholarships.title}</span>
-                                </div>
-                              )}
                             </div>
-                          </div>
-                        
-                          <div className="flex flex-col items-stretch sm:items-end space-y-2 w-full sm:w-auto flex-shrink-0">
-                            <span className={`inline-flex items-center justify-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${status.class}`}>
-                              <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
-                              {status.text}
-                            </span>
-                            <div className="text-xs sm:text-sm text-slate-500 text-right">
-                              Applied: {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
+                          
+                            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-3">
+                              <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border ${status.class}`}>
+                                <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                                {status.text}
+                              </span>
+                              <div className="text-xs sm:text-sm text-slate-500 text-right">
+                                Applied: {new Date((app as any).created_at || Date.now()).toLocaleDateString()}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </Link>
-                  );
-                })
-              )}
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
         </div>
