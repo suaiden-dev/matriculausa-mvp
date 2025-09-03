@@ -42,6 +42,8 @@ import AuthCallback from './pages/AuthCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
+import CheckoutSuccess from './pages/CheckoutSuccess';
+import ZellePaymentSuccess from './pages/ZellePaymentSuccess';
 import SmartAssistantLayout from './components/SmartAssistantLayout';
 
 // Componente interno que usa o hook dentro do contexto do Router
@@ -75,10 +77,8 @@ const AppContent = () => {
   }, [location.pathname, location.hash]);
 
   return (
-    <AuthProvider>
-      <AuthRedirect>
-        <Layout>
-          <Routes>
+    <Layout>
+      <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Auth mode="login" />} />
@@ -124,6 +124,8 @@ const AppContent = () => {
           {/* Zelle Checkout Routes */}
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
           <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/zelle/success" element={<ZellePaymentSuccess />} />
           
           {/* Smart Assistant Route */}
           <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
@@ -132,15 +134,6 @@ const AppContent = () => {
           <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
           </Routes>
         </Layout>
-      </AuthRedirect>
-      
-      {/* Rotas de teste fora do AuthRedirect */}
-      <Routes>
-        <Route path="/test-simple" element={<div className="min-h-screen bg-blue-50 flex items-center justify-center"><div className="text-2xl text-blue-600">Test Simple Page - Working!</div></div>} />
-        <Route path="/test-layout" element={<Layout><div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-2xl text-green-600">Test Layout Page - Working!</div></div></Layout>} />
-      </Routes>
-      
-    </AuthProvider>
   );
 };
 
@@ -148,7 +141,9 @@ const App: React.FC = () => {
   return (
     <HelmetProvider>
       <Router>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </Router>
     </HelmetProvider>
   );

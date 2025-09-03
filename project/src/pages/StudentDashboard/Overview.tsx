@@ -101,6 +101,10 @@ const Overview: React.FC<OverviewProps> = ({
 
   const { user, userProfile } = useAuth();
 
+  // Verificar se há application_fee ou scholarship_fee pagos nas applications
+  const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
+  const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
+
   // Lógica da barra de progresso dinâmica
   let steps = [];
   if (!userProfile?.has_paid_selection_process_fee) {
@@ -131,7 +135,7 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
-  } else if (!userProfile?.is_application_fee_paid) {
+  } else if (!hasApplicationFeePaid) {
     // Pagou só a Selection Process Fee
     steps = [
       {
@@ -159,7 +163,7 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
-  } else if (!userProfile?.has_paid_college_enrollment_fee) {
+  } else if (!hasScholarshipFeePaid) {
     // Pagou Application Fee
     steps = [
       {
@@ -210,9 +214,9 @@ const Overview: React.FC<OverviewProps> = ({
       },
       {
         label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: true,
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
       },
     ];
   }
@@ -243,16 +247,12 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Progress Bar dentro do bloco azul */}
-          {!allCompleted && (
-            <>
-              <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
-                {t('studentDashboard.progressBar.title')}
-              </div>
-              <div className="mb-2 md:mb-4">
-                <ProgressBar steps={steps} />
-              </div>
-            </>
-          )}
+          <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
+            {allCompleted ? 'All Steps Completed! 🎉' : t('studentDashboard.progressBar.title')}
+          </div>
+          <div className="mb-2 md:mb-4">
+            <ProgressBar steps={steps} />
+          </div>
 
           {userProfile && !userProfile.has_paid_selection_process_fee && (
             <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">

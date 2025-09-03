@@ -211,20 +211,6 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
               </div>
             </div>
           </div>
-
-          {/* Screenshot Preview */}
-          {payment.screenshot_url && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-600 mb-2">Payment Screenshot</p>
-              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                <img
-                  src={payment.screenshot_url}
-                  alt="Payment screenshot"
-                  className="max-w-full max-h-48 mx-auto rounded-lg"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Action Selection */}
