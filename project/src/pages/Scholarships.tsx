@@ -15,7 +15,7 @@ import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, userProfile, loading } = useAuth();
+  const { isAuthenticated, user, userProfile, loading } = useAuth();
   
   // Hook para verificar se usuário já tem application fee paga
   const { 
@@ -173,9 +173,9 @@ const Scholarships: React.FC = () => {
     userProfileKeys: userProfile ? Object.keys(userProfile) : 'No profile'
   });
   
-  // Check if user needs to pay selection process fee
-  if (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee)) {
-    console.log('Scholarships - Showing PaymentRequiredBlocker');
+  // Check if user needs to pay selection process fee (only for students)
+  if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
+    console.log('Scholarships - Showing PaymentRequiredBlocker for student');
     return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
   }
   
@@ -306,13 +306,13 @@ const Scholarships: React.FC = () => {
   const getDeliveryModeLabel = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
-        return t('scholarshipsPage.filters.deliveryModes.online');
+        return t('scholarshipsPage.filters.courseModalities.online');
       case 'in_person':
-        return t('scholarshipsPage.filters.deliveryModes.onCampus');
+        return t('scholarshipsPage.filters.courseModalities.inPerson');
       case 'hybrid':
-        return t('scholarshipsPage.filters.deliveryModes.hybrid');
+        return t('scholarshipsPage.filters.courseModalities.hybrid');
       default:
-        return t('scholarshipsPage.filters.deliveryModes.mixed');
+        return t('scholarshipsPage.filters.courseModalities.mixed');
     }
   };
 
@@ -497,7 +497,7 @@ const Scholarships: React.FC = () => {
                >
                <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
                <option value="online">{t('scholarshipsPage.filters.online')}</option>
-               <option value="in_person">{t('scholarshipsPage.filters.onCampus')}</option>
+               <option value="in_person">{t('scholarshipsPage.filters.inPerson')}</option>
                <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
              </select>
                                                      <select
@@ -567,7 +567,7 @@ const Scholarships: React.FC = () => {
 
                     {/* Scholarship Image */}
                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center ">
-                      {scholarship.image_url && isAuthenticated && userProfile?.has_paid_selection_process_fee ? (
+                      {scholarship.image_url && (user?.role !== 'student' || (isAuthenticated && userProfile?.has_paid_selection_process_fee)) ? (
                         <img
                           src={scholarship.image_url}
                           alt={scholarship.title}
@@ -620,16 +620,16 @@ const Scholarships: React.FC = () => {
                         <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                           <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                          <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                            {isAuthenticated && userProfile?.has_paid_selection_process_fee
-                              ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
-                              : '********'}
+                          <span className={`text-sm font-medium ${user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee) ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                            {user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee)
+                              ? '********'
+                              : (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')}
                           </span>
                         </div>
                         
                         {/* Program Details */}
                         <div className="grid grid-cols-1 gap-3 mb-4">
-                          {/* Delivery Mode */}
+                          {/* Course Modality */}
                           {scholarship.delivery_mode && (
                             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                               <div className="flex items-center">
@@ -847,7 +847,7 @@ const Scholarships: React.FC = () => {
 
                      {/* Scholarship Image */}
                      <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
-                       {scholarship.image_url && isAuthenticated && userProfile?.has_paid_selection_process_fee ? (
+                       {scholarship.image_url && (user?.role !== 'student' || (isAuthenticated && userProfile?.has_paid_selection_process_fee)) ? (
                          <img
                            src={scholarship.image_url}
                            alt={scholarship.title}
@@ -908,15 +908,15 @@ const Scholarships: React.FC = () => {
                          <div className="flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                            <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                            <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                           <span className={`text-sm font-medium ${!isAuthenticated || !userProfile?.has_paid_selection_process_fee ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                             {isAuthenticated && userProfile?.has_paid_selection_process_fee
-                               ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
-                               : '********'}
+                           <span className={`text-sm font-medium ${user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee) ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                             {user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee)
+                               ? '********'
+                               : (scholarship.university_name || scholarship.universities?.name || 'Unknown University')}
                            </span>
                          </div>
                          {/* Program Details */}
                          <div className="grid grid-cols-1 gap-3 mb-4">
-                           {/* Delivery Mode */}
+                           {/* Course Modality */}
                            {scholarship.delivery_mode && (
                              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                                <div className="flex items-center">
@@ -1136,6 +1136,7 @@ const Scholarships: React.FC = () => {
         isOpen={isModalOpen}
         onClose={closeScholarshipModal}
         userProfile={userProfile}
+        user={user}
       />
       
       <SmartChat />

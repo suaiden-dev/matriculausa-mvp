@@ -1908,7 +1908,7 @@ const SelectionProcess: React.FC = () => {
               
 
               {/* Page Title and Navigation Section */}
-              <div className="bg-white border-b border-slate-200">
+              <div className="bg-white border-b border-slate-200 pt-20">
                 <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
                     <div className="min-w-0 flex-1">

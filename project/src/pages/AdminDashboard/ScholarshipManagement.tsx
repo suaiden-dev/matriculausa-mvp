@@ -265,7 +265,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                          selectedScholarship.delivery_mode === 'in_person' ? <Building className="h-4 w-4" /> :
                                          selectedScholarship.delivery_mode === 'hybrid' ? <Globe className="h-4 w-4" /> :
                                          <MapPin className="h-4 w-4" />}
-                                        <span className="font-semibold text-slate-700">Study Mode</span>
+                                        <span className="font-semibold text-slate-700">Course Modality</span>
                                       </div>
                                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                                         selectedScholarship.delivery_mode === 'online' ? 'bg-blue-100 text-blue-700 border-blue-200' :
@@ -274,7 +274,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                                         'bg-gray-100 text-gray-700 border-gray-200'
                                       } border`}>
                                         {selectedScholarship.delivery_mode === 'online' ? 'Online Learning' : 
-                                         selectedScholarship.delivery_mode === 'in_person' ? 'On Campus' : 
+                                         selectedScholarship.delivery_mode === 'in_person' ? 'In Person' : 
                                          selectedScholarship.delivery_mode === 'hybrid' ? 'Hybrid Mode' : selectedScholarship.delivery_mode}
                                       </span>
                                     </div>

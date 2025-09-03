@@ -108,10 +108,10 @@ const Overview: React.FC<OverviewProps> = ({
   // Valores das taxas para o ProgressBar
   // A application fee agora é variável, então não mostramos um valor específico
   const dynamicFeeValues = [
-    '$600', // Selection Process Fee (fixo)
+    '$999', // Selection Process Fee (fixo)
     'As per university', // Application Fee (variável - não mostra valor específico)
-    '$850', // Scholarship Fee (fixo)
-    '$1,250', // I-20 Control Fee (fixo)
+    '$400', // Scholarship Fee (fixo)
+    '$999', // I-20 Control Fee (fixo)
   ];
 
   // Lógica da barra de progresso dinâmica
@@ -276,9 +276,9 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">$600</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">$999</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${600 - (activeDiscount.discount_amount || 0)}
+                        ${999 - (activeDiscount.discount_amount || 0)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -288,7 +288,7 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">$600</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">$999</div>
                   )}
                 </div>
               </div>

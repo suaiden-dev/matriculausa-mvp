@@ -510,7 +510,7 @@ const NewScholarship: React.FC = () => {
 
     try {
       // Helper to build payload optionally without work_permissions (fallback when column not deployed yet)
-      const buildPayload = (includeWP: boolean, includeDM: boolean, activeOverride?: boolean) => {
+      const buildPayload = (includeWP: boolean, includeDM: boolean, activeOverride?: boolean, preserveImage: boolean = false) => {
         const payload: any = {
           title: formData.title,
           description: formData.description,
@@ -524,13 +524,18 @@ const NewScholarship: React.FC = () => {
           is_exclusive: formData.is_exclusive,
           is_active: activeOverride !== undefined ? activeOverride : formData.is_active,
           university_id: university.id,
-          image_url: null, // Will be updated after image upload
           original_annual_value: Number(formData.original_annual_value),
           original_value_per_credit: Number(formData.original_value_per_credit),
           annual_value_with_scholarship: Number(formData.annual_value_with_scholarship),
           // Novos campos para taxas dinâmicas
           application_fee_amount: Number(formData.application_fee_amount),
         };
+        
+        // Only set image_url to null if we're not preserving the existing image
+        if (!preserveImage) {
+          payload.image_url = null; // Will be updated after image upload
+        }
+        
         if (includeWP) payload.work_permissions = formData.work_permissions.filter((wp) => wp !== 'F1');
         if (includeDM) payload.delivery_mode = formData.delivery_mode;
         return payload;
@@ -540,16 +545,18 @@ const NewScholarship: React.FC = () => {
 
       if (isEditMode && editScholarshipId) {
         // Update existing scholarship (try with WP first, fallback without)
+        // Preserve existing image if no new image is being uploaded
+        const preserveImage = !imageFile;
         let { error: updateErr } = await supabase
           .from('scholarships')
-          .update(buildPayload(true, true))
+          .update(buildPayload(true, true, undefined, preserveImage))
           .eq('id', editScholarshipId)
           .eq('university_id', university.id);
 
         if (updateErr && (String(updateErr.message || '').includes('work_permissions') || String(updateErr.message || '').includes('delivery_mode'))) {
           const res2 = await supabase
             .from('scholarships')
-            .update(buildPayload(false, false))
+            .update(buildPayload(false, false, undefined, preserveImage))
             .eq('id', editScholarshipId)
             .eq('university_id', university.id);
           updateErr = res2.error || null;
@@ -763,7 +770,7 @@ const NewScholarship: React.FC = () => {
                     <button
                       type="button"
                       onClick={removeImage}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      className="absolute top-2 right-[325px] bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-lg backdrop-blur-sm"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1013,17 +1020,17 @@ const NewScholarship: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Delivery Mode */}
+                {/* Course Modality */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Delivery Mode
+                    Course Modality
                   </label>
                   <select
                     name="delivery_mode"
                     value={formData.delivery_mode}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                    title="Select delivery mode"
+                    title="Select course modality"
                   >
                     <option value="in_person">In-person</option>
                     <option value="hybrid">Hybrid</option>

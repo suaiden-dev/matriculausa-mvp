@@ -247,19 +247,19 @@
         },
         "q2": {
           "question": "¿Qué es la Tarifa de Proceso de Selección?",
-          "answer": "La Tarifa de Proceso de Selección (US$600) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+          "answer": "La Tarifa de Proceso de Selección (US$999) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         "q3": {
           "question": "¿Qué es la Tarifa de Beca?",
-          "answer": "La Tarifa de Beca (US$350) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca."
+          "answer": "La Tarifa de Beca (US$400) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca."
         },
         "q4": {
           "question": "¿Qué es la Tarifa de Solicitud?",
-          "answer": "La Tarifa de Solicitud (US$850) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma."
+          "answer": "La Tarifa de Solicitud varía según la universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma."
         },
         "q5": {
           "question": "¿Qué es la Tarifa de Control de I-20?",
-          "answer": "La Tarifa de Control I-20 (US$1,250) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa."
+          "answer": "La Tarifa de Control I-20 (US$999) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa."
         },
         "q6": {
           "question": "¿Hay otras tarifas que deba conocer?",
@@ -349,7 +349,7 @@
         "items": ["Historial académico y logros", "Objetivos profesionales y preferencias", "Requisitos financieros"]
       },
       "selectionFee": {
-        "title": "Paga Tarifa de Selección ($600)",
+        "title": "Paga Tarifa de Selección ($999)",
         "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable.",
         "items": ["Acceso para explorar becas", "Iniciar proceso de solicitud", "Tarifa única"]
       },
@@ -359,17 +359,17 @@
         "items": ["Selecciona múltiples becas", "Subida segura de documentos", "Análisis inicial automatizado"]
       },
       "applicationFee": {
-        "title": "Paga Tarifa de Solicitud ($350)",
+        "title": "Paga Tarifa de Solicitud (Según la universidad)",
         "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable.",
         "items": ["Ve becas aprobadas", "Confirma elección de universidad", "Asegura tu lugar"]
       },
       "scholarshipFee": {
-        "title": "Paga Tarifa de Beca ($850)",
+        "title": "Paga Tarifa de Beca ($400)",
         "description": "Obtén chat directo con tu universidad. Esta tarifa es final y no reembolsable.",
         "items": ["Chat directo con universidad", "Envía documentos adicionales", "Compromiso final con beca"]
       },
       "i20Fee": {
-        "title": "Paga Tarifa de Control I-20 ($1,250)",
+        "title": "Paga Tarifa de Control I-20 ($999)",
         "description": "Necesario para tu visa F-1. Esta tarifa es final y no reembolsable.",
         "items": ["Esencial para visa de estudiante F-1", "Cubre procesamiento I-20", "Ventana de pago de 10 días"]
       }
@@ -401,19 +401,19 @@
       },
       "q2": {
         "question": "¿Qué es la Tarifa de Proceso de Selección?",
-        "answer": "La Tarifa de Proceso de Selección (US$600) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Proceso de Selección (US$999) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       },
       "q3": {
         "question": "¿Qué es la Tarifa de Beca?",
-        "answer": "La Tarifa de Beca (US$350) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Beca (US$400) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
       },
       "q4": {
         "question": "¿Qué es la Tarifa de Solicitud?",
-        "answer": "La Tarifa de Solicitud (US$850) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Solicitud varía según la universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
       },
       "q5": {
         "question": "¿Qué es la Tarifa de Control I-20?",
-        "answer": "La Tarifa de Control I-20 (US$1,250) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Control I-20 (US$999) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa. Esta tarifa es final y no reembolsable."
       }
     }
   },
@@ -459,7 +459,7 @@
       "engineering": "Ingeniería",
       "anyField": "Cualquier Campo",
       "online": "En Línea",
-      "onCampus": "En el Campus",
+      "inPerson": "Presencial",
       "hybrid": "Híbrido",
       "opt": "OPT",
       "cpt": "CPT",
@@ -472,16 +472,16 @@
         "doctorate": "Doctorado",
         "undergraduate": "Pregrado"
       },
-      "deliveryModes": {
+      "courseModalities": {
         "online": "En Línea",
-        "onCampus": "En el Campus",
+        "inPerson": "Presencial",
         "hybrid": "Híbrido",
         "mixed": "Mixto"
       }
     },
     "scholarshipCard": {
       "university": "Universidad:",
-      "studyMode": "Modo de Estudio",
+      "studyMode": "Modalidad del Curso",
       "workAuthorization": "Autorización de Trabajo",
       "financialOverview": "Resumen Financiero",
       "originalPrice": "Precio Original",
@@ -530,9 +530,9 @@
       "programInformation": "Información del Programa",
       "academicLevel": "Nivel Académico",
       "notSpecified": "No especificado",
-      "studyMode": "Modo de Estudio",
+      "studyMode": "Modalidad del Curso",
       "onlineLearning": "Aprendizaje en Línea",
-      "onCampus": "En el Campus",
+      "inPerson": "Presencial",
       "hybridMode": "Modo Híbrido",
       "programDuration": "Duración del Programa",
       "language": "Idioma",
@@ -1453,7 +1453,7 @@
         "active": "activo",
         "academicLevel": "Nivel Académico",
         "fieldOfStudy": "Campo de Estudio",
-        "studyMode": "Modo de Estudio",
+        "studyMode": "Modalidad del Curso",
         "workAuthorization": "Autorización de Trabajo",
         "minValue": "Valor Mín",
         "maxValue": "Valor Máx",
@@ -1495,7 +1495,7 @@
         "featured": "Destacada",
         "exclusive": "Exclusiva",
         "university": "Universidad:",
-        "studyMode": "Modo de Estudio",
+        "studyMode": "Modalidad del Curso",
         "workAuthorization": "Autorización de Trabajo",
         "financialOverview": "Resumen Financiero",
         "originalPrice": "Precio Original:",
@@ -1512,7 +1512,7 @@
         "deselect": "Deseleccionar",
         "selectScholarship": "Seleccionar Beca",
         "checking": "Verificando...",
-        "onCampus": "En el Campus",
+        "inPerson": "Presencial",
         "mixed": "Mixto",
         "more": "más"
       },

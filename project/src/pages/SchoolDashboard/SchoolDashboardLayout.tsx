@@ -570,78 +570,80 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className="flex justify-center pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
-          {/* Welcome Message for Incomplete Profiles */}
-          {(!university || !university.profile_completed) && (
-            <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
-              <div className="absolute inset-0 bg-black/10"></div>
-              <div className="relative">
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
-                    {university?.image_url ? (
-                      <img 
-                        src={university.image_url} 
-                        alt={`${university.name} logo`}
-                        className="w-full h-full object-cover rounded-2xl"
-                      />
-                    ) : (
-                      <Building className="h-8 w-8 text-white" />
+        <main className="pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
+          <div className="max-w-7xl mx-auto">
+            {/* Welcome Message for Incomplete Profiles */}
+            {(!university || !university.profile_completed) && (
+              <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
+                <div className="absolute inset-0 bg-black/10"></div>
+                <div className="relative">
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
+                      {university?.image_url ? (
+                        <img 
+                          src={university.image_url} 
+                          alt={`${university.name} logo`}
+                          className="w-full h-full object-cover rounded-2xl"
+                        />
+                      ) : (
+                        <Building className="h-8 w-8 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-bold mb-2">
+                        {!university ? 'Welcome to Matrícula USA!' : 'Complete Your Profile'}
+                      </h2>
+                      <p className="text-blue-100 text-lg">
+                        {!university 
+                          ? 'Set up your university and start attracting international students'
+                          : 'Finish your profile to unlock all features'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+                      <Edit className="h-8 w-8 text-white mb-4" />
+                      <h3 className="font-bold text-white mb-2">1. Complete Profile</h3>
+                      <p className="text-blue-100 text-sm">Add university information and documentation</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+                      <Award className="h-8 w-8 text-yellow-400 mb-4" />
+                      <h3 className="font-bold text-white mb-2">2. Create Scholarships</h3>
+                      <p className="text-blue-100 text-sm">Offer exclusive opportunities to students</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+                      <Users className="h-8 w-8 text-green-400 mb-4" />
+                      <h3 className="font-bold text-white mb-2">3. Connect Students</h3>
+                      <p className="text-blue-100 text-sm">Receive applications from qualified students</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Link
+                      to="/school/setup-profile"
+                      className="bg-white text-[#05294E] px-8 py-3 rounded-xl hover:bg-slate-100 transition-all duration-300 font-bold text-center flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <Settings className="h-5 w-5 mr-2" />
+                      {!university ? 'Set Up University Profile' : 'Complete Profile'}
+                    </Link>
+                    {!university && (
+                      <Link
+                        to="/school/termsandconditions"
+                        className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-8 py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-bold text-center flex items-center justify-center"
+                      >
+                        <Shield className="h-5 w-5 mr-2" />
+                        Review Terms & Conditions
+                      </Link>
                     )}
                   </div>
-                  <div>
-                    <h2 className="text-3xl font-bold mb-2">
-                      {!university ? 'Welcome to Matrícula USA!' : 'Complete Your Profile'}
-                    </h2>
-                    <p className="text-blue-100 text-lg">
-                      {!university 
-                        ? 'Set up your university and start attracting international students'
-                        : 'Finish your profile to unlock all features'
-                      }
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-                    <Edit className="h-8 w-8 text-white mb-4" />
-                    <h3 className="font-bold text-white mb-2">1. Complete Profile</h3>
-                    <p className="text-blue-100 text-sm">Add university information and documentation</p>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-                    <Award className="h-8 w-8 text-yellow-400 mb-4" />
-                    <h3 className="font-bold text-white mb-2">2. Create Scholarships</h3>
-                    <p className="text-blue-100 text-sm">Offer exclusive opportunities to students</p>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-                    <Users className="h-8 w-8 text-green-400 mb-4" />
-                    <h3 className="font-bold text-white mb-2">3. Connect Students</h3>
-                    <p className="text-blue-100 text-sm">Receive applications from qualified students</p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link
-                    to="/school/setup-profile"
-                    className="bg-white text-[#05294E] px-8 py-3 rounded-xl hover:bg-slate-100 transition-all duration-300 font-bold text-center flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    <Settings className="h-5 w-5 mr-2" />
-                    {!university ? 'Set Up University Profile' : 'Complete Profile'}
-                  </Link>
-                  {!university && (
-                    <Link
-                      to="/school/termsandconditions"
-                      className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-8 py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-bold text-center flex items-center justify-center"
-                    >
-                      <Shield className="h-5 w-5 mr-2" />
-                      Review Terms & Conditions
-                    </Link>
-                  )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {children}
+            {children}
+          </div>
         </main>
       </div>
 

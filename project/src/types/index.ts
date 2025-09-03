@@ -44,7 +44,7 @@ export interface Scholarship {
   requirements: string[];
   field_of_study: string;
   level: 'undergraduate' | 'graduate' | 'doctorate' | string;
-  delivery_mode?: 'in_person' | 'hybrid' | 'online' | string;
+  delivery_mode?: 'in_person' | 'hybrid' | 'online' | string; // Course Modality
   eligibility: string[];
   benefits: string[];
   is_exclusive: boolean;

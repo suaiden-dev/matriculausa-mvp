@@ -312,8 +312,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   }, [userProfile?.has_paid_selection_process_fee, refetchUserProfile]);
 
-  // Check if user needs to pay selection process fee
-  if (userProfile && !userProfile.has_paid_selection_process_fee) {
+  // Check if user needs to pay selection process fee (only for students)
+  if (user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee) {
     return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
   }
 
@@ -386,7 +386,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       case 'online':
         return t('studentDashboard.findScholarships.filters.online');
       case 'in_person':
-        return t('studentDashboard.findScholarships.scholarshipCard.onCampus');
+        return t('studentDashboard.findScholarships.scholarshipCard.inPerson');
       case 'hybrid':
         return t('studentDashboard.findScholarships.filters.hybrid');
       default:
@@ -791,7 +791,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               </select>
             </div>
 
-            {/* Delivery Mode Filter */}
+            {/* Course Modality Filter */}
             <div>
               <label htmlFor="delivery-mode-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.studyMode')}</label>
               <select
@@ -1325,8 +1325,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 )}
                 
                 {/* Favorite Button */}
-                <div className={`absolute top-3 sm:top-4 z-20 ${
-                  scholarship.is_exclusive ? 'right-20 sm:right-24' : 'right-3 sm:right-4'
+                <div className={`absolute top-3 z-20 ${
+                  scholarship.is_exclusive ? 'right-4 sm:right-4 sm:top-12' : 'right-3 sm:right-4 top-3'
                 }`}>
                   <FavoriteButton
                     isFavorite={isFavorite(scholarship.id)}
@@ -1361,7 +1361,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
                   {/* Program Details */}
                   <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    {/* Delivery Mode */}
+                    {/* Course Modality */}
                     {scholarship.delivery_mode && (
                       <div className="flex items-center justify-between p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex items-center">

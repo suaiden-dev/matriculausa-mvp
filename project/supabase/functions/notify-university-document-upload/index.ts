@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
           title,
           message,
           type: 'document_upload',
-          link: '/school/dashboard/students',
+          link: '/school/dashboard/selection-process',
           metadata,
           idempotency_key: key,
         });

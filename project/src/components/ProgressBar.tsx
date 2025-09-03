@@ -34,10 +34,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
   const currentIdx = steps.findIndex(step => step.current);
   // Valores padrão das taxas (usados quando não há valores customizados)
   const defaultFeeValues = [
-    '$600', // Selection Process Fee
+    '$999', // Selection Process Fee
     '$350', // Application Fee
-    '$850', // Scholarship Fee
-    '$1,250', // I-20 Control Fee
+    '$400', // Scholarship Fee
+    '$999', // I-20 Control Fee
   ];
   
   // Usar valores customizados se fornecidos, senão usar os padrão
