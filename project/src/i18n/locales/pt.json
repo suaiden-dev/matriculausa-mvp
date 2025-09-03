@@ -1557,7 +1557,7 @@
       "step2Description": "Por favor, faça upload dos seguintes documentos para prosseguir com seu processo de aplicação.",
       "step2Note": "Todos os arquivos devem estar claros e legíveis. Cada campo aceita apenas um arquivo.",
       "step2LanguageNote": "⚠️ IMPORTANTE: Todos os documentos devem estar em inglês. Se seus documentos estiverem em outro idioma, forneça traduções certificadas em inglês.",
-      "languageError": "⚠️ O {{documentType}} não está em inglês. Por favor, forneça uma versão em inglês ou uma tradução certificada.",
+      "languageError": "Este documento não está em inglês. Forneça uma versão em inglês ou tradução certificada.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
       "diploma": "Diploma do Ensino Médio",
