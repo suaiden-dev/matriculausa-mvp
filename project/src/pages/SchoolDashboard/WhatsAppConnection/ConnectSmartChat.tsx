@@ -143,7 +143,7 @@ const ConnectSmartChat = () => {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="bg-gray-50 rounded-3xl shadow-sm border border-gray-200 p-6 md:p-8 lg:p-10">
+      <div className="bg-gray-50 rounded-2xl shadow-sm border border-gray-200 p-6 md:p-8 lg:p-10">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4 md:gap-6">
           <div className="flex items-center gap-3 md:gap-4">
             <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-[#05294E]" />

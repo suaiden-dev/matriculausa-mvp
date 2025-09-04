@@ -494,25 +494,35 @@ const StripeConnect: React.FC = () => {
       <div className="min-h-screen bg-slate-50">
         <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="mb-6 sm:mb-8">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <CreditCard className="h-6 w-6 text-blue-600" />
+          <div className="bg-slate-50 rounded-2xl p-6 sm:p-8 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <CreditCard className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    Stripe Connect
+                  </h1>
+                </div>
+                <p className="text-slate-600 text-sm sm:text-base max-w-3xl">
+                  Setup, monitor and track all financial transfers received via Stripe Connect integration with detailed information about fees, scholarships, and students
+                </p>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                Stripe Connect
-              </h1>
+              <div className="flex items-center space-x-3">
+                <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
+                  <DollarSign className="w-5 h-5 mr-2" />
+                  {formatAmount(totalAmount)} Total
+                </div>
+              </div>
             </div>
-            <p className="text-slate-600 text-sm sm:text-base max-w-3xl">
-              Setup, monitor and track all financial transfers received via Stripe Connect integration with detailed information about fees, scholarships, and students
-            </p>
           </div>
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-3 bg-blue-100 rounded-xl">
                   <DollarSign className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
@@ -522,9 +532,9 @@ const StripeConnect: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-3 bg-green-100 rounded-xl">
                   <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
@@ -534,9 +544,9 @@ const StripeConnect: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="p-3 bg-purple-100 rounded-xl">
                   <TrendingUp className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
@@ -546,9 +556,9 @@ const StripeConnect: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
+                <div className="p-3 bg-orange-100 rounded-xl">
                   <Users className="w-6 h-6 text-orange-600" />
                 </div>
                 <div className="ml-4">
@@ -562,46 +572,49 @@ const StripeConnect: React.FC = () => {
           </div>
 
           {/* Tab Navigation */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 sm:mb-8 overflow-hidden">
             <div className="border-b border-slate-200">
-              <nav className="-mb-px flex space-x-8 px-6">
+              <nav className="flex">
                 <button
                   onClick={() => setActiveTab('setup')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex-1 py-4 px-6 text-sm font-medium transition-all duration-200 ${
                     activeTab === 'setup'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500'
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <Settings className="w-4 h-4" />
-                    Setup
+                    <span className="hidden sm:inline">Setup & Configuration</span>
+                    <span className="sm:hidden">Setup</span>
                   </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('transfers')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex-1 py-4 px-6 text-sm font-medium transition-all duration-200 ${
                     activeTab === 'transfers'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500'
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <CreditCard className="w-4 h-4" />
-                    Transfers
+                    <span className="hidden sm:inline">Transfer History</span>
+                    <span className="sm:hidden">Transfers</span>
                   </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('notifications')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex-1 py-4 px-6 text-sm font-medium transition-all duration-200 ${
                     activeTab === 'notifications'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500'
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <Bell className="w-4 h-4" />
-                    Payment Notifications
+                    <span className="hidden sm:inline">Payment Notifications</span>
+                    <span className="sm:hidden">Notifications</span>
                   </div>
                 </button>
               </nav>
@@ -612,7 +625,7 @@ const StripeConnect: React.FC = () => {
           {activeTab === 'setup' ? (
             <>
               {/* Status Card */}
-              <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 mb-6 sm:mb-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 sm:mb-8">
                 <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
                   <div className="flex items-center justify-between">
                     <div>
@@ -744,7 +757,7 @@ const StripeConnect: React.FC = () => {
               </div>
 
               {/* Benefits Section */}
-              <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 mb-6 sm:mb-8">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 sm:mb-8">
                 <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900">
                     Integration Benefits
@@ -800,39 +813,41 @@ const StripeConnect: React.FC = () => {
           ) : activeTab === 'transfers' ? (
             <>
               {/* Sub-tabs para categorias de transfers */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6">
                 <div className="flex space-x-1">
                   <button
                     onClick={() => setTransferSubTab('platform')}
-                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
                       transferSubTab === 'platform'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm'
                         : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <CreditCard className="w-4 h-4" />
-                      Transações via Plataforma
+                      <span className="hidden sm:inline">Transações via Plataforma</span>
+                      <span className="sm:hidden">Plataforma</span>
                     </div>
                   </button>
                   <button
                     onClick={() => setTransferSubTab('stripe_connect')}
-                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
                       transferSubTab === 'stripe_connect'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm'
                         : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
                       <DollarSign className="w-4 h-4" />
-                      Transações Stripe Connect
+                      <span className="hidden sm:inline">Transações Stripe Connect</span>
+                      <span className="sm:hidden">Stripe Connect</span>
                     </div>
                   </button>
                 </div>
               </div>
 
               {/* Filters */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
                   <div className="flex items-center space-x-2">
                     <Filter className="w-5 h-5 text-slate-500" />
@@ -879,7 +894,7 @@ const StripeConnect: React.FC = () => {
               </div>
 
               {/* Transfers List */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-200">
                   <h3 className="text-lg font-semibold text-slate-900">
                     {transferSubTab === 'platform' ? 'Transações via Plataforma' : 'Transações Stripe Connect'}
@@ -1123,7 +1138,7 @@ const StripeConnect: React.FC = () => {
             </>
           ) : (
             /* Notifications Tab */
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <StripeConnectPaymentNotifications universityId={university?.id || ''} />
             </div>
           )}
@@ -1132,7 +1147,7 @@ const StripeConnect: React.FC = () => {
         {/* Transfer Details Modal */}
         {selectedTransfer && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-slate-200">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-slate-900">Transfer Details</h3>

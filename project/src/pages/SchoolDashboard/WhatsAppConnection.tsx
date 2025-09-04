@@ -7,11 +7,9 @@ import {
   CheckCircle, 
   AlertCircle, 
   Loader2,
-  Smartphone,
   Brain,
   X,
   Bot,
-  Building,
   MessageCircle,
   HelpCircle,
   Save,
@@ -23,7 +21,6 @@ import {
   Grid3X3,
   List,
   Send,
-  Wifi,
 } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 
@@ -33,7 +30,6 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { generateUniqueInstanceName } from './WhatsAppConnection/utils/whatsappUtils';
 import { generateChatwootPassword } from '../../lib/chatwootUtils';
-import ConnectSmartChat from './WhatsAppConnection/ConnectSmartChat';
 import AIAgentKnowledgeUpload from '../../components/AIAgentKnowledgeUpload';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 
@@ -41,13 +37,13 @@ import { useCustomAgentTypes } from '../../hooks/useCustomAgentTypes';
 import { getAgentTypeBasePrompt } from '../../lib/agentPrompts';
 
 // Tipos de agentes específicos para universidades (serão substituídos pelo hook)
-const defaultAgentTypeOptions = [
-  "Admissions",
-  "Registrar's Office",
-  "Finance",
-  "Info",
-  "Marketing"
-];
+// const defaultAgentTypeOptions = [
+//   "Admissions",
+//   "Registrar's Office",
+//   "Finance",
+//   "Info",
+//   "Marketing"
+// ];
 
 const personalityOptions = [
   { value: "Friendly", label: "Friendly", description: "Warm and welcoming approach" },
@@ -131,9 +127,9 @@ export default function WhatsAppConnection() {
   const { university } = useUniversity();
   const [searchParams] = useSearchParams();
   const agentId = searchParams.get('agentId');
-  const { getAllAgentTypes, addCustomAgentType, isAgentTypeExists, loading: customTypesLoading } = useCustomAgentTypes();
+  const { getAllAgentTypes, addCustomAgentType, isAgentTypeExists } = useCustomAgentTypes();
   
-  const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp' | 'smartchat' | 'knowledge'>('agents');
+  const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp' | 'knowledge'>('agents');
   const tabNavRef = useRef<HTMLElement>(null);
 
   // Estados para agentes - MOVIDO PARA O TOPO
@@ -2447,7 +2443,7 @@ Mantenha sempre o seguinte tom nas interações:
   }
 
   return (
-    <div className="w-full flex flex-col" style={{ minHeight: 'calc(100vh - 180px)' }}>
+    <div className="min-h-screen">
       {/* Notification Toast - Centro da tela */}
       {notification && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2512,72 +2508,91 @@ Mantenha sempre o seguinte tom nas interações:
         </div>
       )}
 
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center">
-            <MessageSquare className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">WhatsApp Connection</h1>
-            <p className="text-gray-600 mt-1">
-              Connect your university's WhatsApp to enable automated conversations with AI assistants.
-            </p>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-gray-200 p-1">
-          <nav 
-            ref={tabNavRef}
-            className={`flex space-x-1 overflow-x-auto whitespace-nowrap scrollbar-hide tab-scroll-container bg-white horizontal-scroll-fade ${
-              activeTab === 'whatsapp' ? 'whatsapp-active' : ''
-            }`}
-            onScroll={handleTabScroll}
-          >
-            <button
-              onClick={() => setActiveTab('agents')}
-              className={`flex-shrink-0 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
-                activeTab === 'agents'
-                  ? 'bg-[#05294E] text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <Brain className="h-4 w-4" />
-              AI Agents
-            </button>
+      {/* Header + Tabs Section */}
+      <div className="w-full">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-3">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    WhatsApp Integration
+                  </h1>
+                </div>
+                <p className="text-slate-600 text-sm sm:text-base">
+                  Connect your university's WhatsApp to enable automated conversations with AI assistants.
+                </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  Automate student communications with personalized WhatsApp messages and AI-powered responses.
+                </p>
+              </div>
 
-            <button
-              onClick={() => setActiveTab('whatsapp')}
-              className={`flex-shrink-0 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
-                activeTab === 'whatsapp'
-                  ? 'bg-[#05294E] text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <MessageSquare className="h-4 w-4" />
-              WhatsApp Connection
-            </button>
+              <div className="flex items-center space-x-3">
+                <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border shadow-sm ${
+                  connections.some(conn => conn.connection_status === 'connected')
+                    ? 'bg-green-50 text-green-700 border-green-200' 
+                    : 'bg-red-50 text-red-700 border-red-200'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${connections.some(conn => conn.connection_status === 'connected') ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  {connections.some(conn => conn.connection_status === 'connected') ? 'Connected' : 'Not Connected'}
+                </div>
+                <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  {connections.length} Connections
+                </div>
+              </div>
+            </div>
 
-            <button
-              onClick={() => setActiveTab('smartchat')}
-              className={`flex-shrink-0 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
-                activeTab === 'smartchat'
-                  ? 'bg-[#05294E] text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <MessageCircle className="h-4 w-4" />
-              Connect SmartChat
-            </button>
-          </nav>
+            {/* Tabs Navigation */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-4 sm:px-6 lg:px-8">
+                <nav className="flex space-x-8 overflow-x-auto" role="tablist">
+                  <button
+                    onClick={() => setActiveTab('agents')}
+                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                      activeTab === 'agents'
+                        ? 'border-[#05294E] text-[#05294E]' 
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                    type="button"
+                    aria-selected={activeTab === 'agents'}
+                    role="tab"
+                  >
+                    <Brain className={`w-5 h-5 mr-2 transition-colors ${
+                      activeTab === 'agents' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                    }`} />
+                    AI Agents
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('whatsapp')}
+                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                      activeTab === 'whatsapp'
+                        ? 'border-[#05294E] text-[#05294E]' 
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                    type="button"
+                    aria-selected={activeTab === 'whatsapp'}
+                    role="tab"
+                  >
+                    <MessageSquare className={`w-5 h-5 mr-2 transition-colors ${
+                      activeTab === 'whatsapp' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                    }`} />
+                    WhatsApp Connection
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {activeTab === 'agents' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="p-6 border-b border-slate-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
                   <Brain className="h-5 w-5 text-[#05294E]" />
                   AI Agents
                 </h2>
@@ -2620,50 +2635,84 @@ Mantenha sempre o seguinte tom nas interações:
             
             {agentsLoading ? (
               <div className="text-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-[#05294E] mx-auto" />
-                <p className="text-gray-600 mt-2">Loading agents...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
+                <p className="text-slate-600 mt-2">Loading agents...</p>
               </div>
             ) : agents.length === 0 ? (
               <div className="text-center py-12">
-                <Bot className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No agents created yet</h3>
-                <p className="text-gray-600">Create your first AI agent to get started.</p>
+                <Bot className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">No agents created yet</h3>
+                <p className="text-slate-600">Create your first AI agent to get started.</p>
               </div>
             ) : viewMode === 'grid' ? (
               // Grid View
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
                 {agents.map((agent) => (
-                  <div key={agent.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-200 hover:-translate-y-1">
-                    {/* Header */}
-                    <div className="p-4 sm:p-6">
+                  <div key={agent.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 hover:border-slate-300 hover:-translate-y-1">
+                    {/* Header com gradiente */}
+                    <div className="relative bg-gradient-to-br from-slate-50 to-white p-4 sm:p-6">
+                      {/* Avatar do agente */}
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="relative">
+                          {getAgentConnection(agent.id) && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
                       {/* Nome do agente - maior destaque */}
-                      <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 group-hover:text-[#05294E] transition-colors">
+                          <h4 className="font-bold text-lg sm:text-xl text-slate-900 mb-1 group-hover:text-[#05294E] transition-colors truncate">
                         {agent.ai_name}
                       </h4>
                       
                       {/* Nome da universidade - texto secundário */}
-                      <p className="text-sm text-gray-500 mb-3">{agent.company_name}</p>
+                          <p className="text-sm text-slate-500 mb-2 truncate">{agent.company_name}</p>
+                          
+                          {/* Status de conexão */}
+                          <div className="flex items-center gap-2">
+                            {getAgentConnection(agent.id) ? (
+                              <div className="flex items-center gap-1 text-green-600">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <span className="text-xs font-medium">Connected</span>
+                              </div>
+                            ) : getAgentDisconnectedConnection(agent.id) ? (
+                              <div className="flex items-center gap-1 text-orange-600">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                <span className="text-xs font-medium">Disconnected</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-slate-400">
+                                <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                                <span className="text-xs font-medium">Not Connected</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                       
                       {/* Personalidade e Badges */}
                       <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#05294E]/10 text-[#05294E] border border-[#05294E]/20">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
                           {agent.agent_type}
                         </span>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 shadow-sm">
                           {agent.personality}
                         </span>
                         {agent.has_documents && (
-                          <div className="flex items-center gap-1">
-                            <FileText className="h-3 w-3 text-[#05294E]" />
-                            <span className="text-xs text-[#05294E]">Knowledge base</span>
+                          <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
+                            <FileText className="h-3 w-3" />
+                            <span>Knowledge base</span>
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Barra de Ações Horizontal e Rolável */}
-                    <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                      <div className="flex flex-nowrap gap-1 justify-center bg-white">
+                    <div className="px-4 sm:px-6 pb-4 sm:pb-6 bg-slate-50/30">
+                      <div className="space-y-3">
+                        {/* Ações principais */}
+                        <div className="flex gap-2">
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
@@ -2672,21 +2721,22 @@ Mantenha sempre o seguinte tom nas interações:
                             setChatHistory([]);
                             setCurrentTestConversationId(`conv_${Date.now()}`);
                           }}
-                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-[#05294E] bg-white border-2 border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/5 hover:border-[#05294E]/40 hover:shadow-md hover:shadow-[#05294E]/10 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <Bot className="h-4 w-4" />
-                          Test
+                            <span>Test</span>
                         </button>
+                          
                         {getAgentConnection(agent.id) ? (
                           <button
                             onClick={(e: React.MouseEvent) => {
                               e.preventDefault();
                               handleAgentDisconnect(agent.id);
                             }}
-                            className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-orange-700 bg-white border-2 border-orange-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 hover:shadow-md hover:shadow-orange-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           >
                             <WifiOff className="h-4 w-4" />
-                            Disconnect
+                              <span>Disconnect</span>
                           </button>
                         ) : getAgentDisconnectedConnection(agent.id) ? (
                           <button
@@ -2694,10 +2744,10 @@ Mantenha sempre o seguinte tom nas interações:
                               e.preventDefault();
                               handleAgentReconnect(agent.id);
                             }}
-                            className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-blue-700 bg-white border-2 border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:shadow-md hover:shadow-blue-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           >
                             <RotateCcw className="h-4 w-4" />
-                            Reconnect
+                              <span>Reconnect</span>
                           </button>
                         ) : (
                           <button
@@ -2706,41 +2756,51 @@ Mantenha sempre o seguinte tom nas interações:
                               setActiveTab('whatsapp');
                               handleCreateConnection(agent.id);
                             }}
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-green-700 bg-white border-2 border-green-200 rounded-xl hover:bg-green-50 hover:border-green-300 hover:shadow-md hover:shadow-green-100 transition-all duration-200 transform hover:-translate-y-0.5"
+                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           >
                             <FaWhatsapp className="h-4 w-4" />
-                            Connect
+                              <span>Connect</span>
                           </button>
                         )}
+                        </div>
+                        
+                        {/* Ações secundárias */}
+                        <div className="flex gap-2">
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
                             handleEmbedAgent(agent);
                           }}
-                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <ExternalLink className="h-4 w-4" />
-                          Embed
+                            <span>Embed</span>
                         </button>
+                          
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
                             handleEditAgent(agent);
                           }}
-                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <Edit className="h-4 w-4" />
-                          Edit
+                            <span>Edit</span>
                         </button>
+                        </div>
+                      </div>
+                      
+                      {/* Botão de delete separado */}
+                      <div className="mt-3 pt-3 border-t border-slate-200">
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
                             handleDeleteAgent(agent.id);
                           }}
-                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-red-700 bg-white border-2 border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 hover:shadow-md hover:shadow-red-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Delete
+                          <span>Delete Agent</span>
                         </button>
                       </div>
                     </div>
@@ -2751,33 +2811,73 @@ Mantenha sempre o seguinte tom nas interações:
               // List View
               <div className="space-y-4">
                 {agents.map((agent) => (
-                  <div key={agent.id} className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                  <div key={agent.id} className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 hover:shadow-md transition-all duration-200 hover:border-slate-300">
+                    <div className="flex items-start gap-4">
+                      {/* Avatar do agente */}
+                      <div className="relative flex-shrink-0">
+
+                        {getAgentConnection(agent.id) && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Conteúdo principal */}
+                      <div className="flex-1 min-w-0">
                     {/* Nome do agente - maior destaque */}
-                    <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 group-hover:text-[#05294E] transition-colors">
+                        <h4 className="font-bold text-lg sm:text-xl text-slate-900 mb-1 group-hover:text-[#05294E] transition-colors">
                       {agent.ai_name}
                     </h4>
                     
                     {/* Nome da universidade - texto secundário */}
-                    <p className="text-sm text-gray-500 mb-3">{agent.company_name}</p>
+                        <p className="text-sm text-slate-500 mb-2">{agent.company_name}</p>
+                        
+                        {/* Status de conexão */}
+                        <div className="flex items-center gap-2 mb-3">
+                          {getAgentConnection(agent.id) ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-xs font-medium">Connected</span>
+                            </div>
+                          ) : getAgentDisconnectedConnection(agent.id) ? (
+                            <div className="flex items-center gap-1 text-orange-600">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-xs font-medium">Disconnected</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-slate-400">
+                              <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                              <span className="text-xs font-medium">Not Connected</span>
+                            </div>
+                          )}
+                        </div>
                     
                     {/* Personalidade e Badges */}
                     <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#05294E]/10 text-[#05294E] border border-[#05294E]/20">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
+                          <Bot className="h-3 w-3 mr-1" />
                         {agent.agent_type}
                       </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 shadow-sm">
+                          <Sparkles className="h-3 w-3 mr-1" />
                         {agent.personality}
                       </span>
                       {agent.has_documents && (
-                        <div className="flex items-center gap-1">
-                          <FileText className="h-3 w-3 text-[#05294E]" />
-                          <span className="text-xs text-[#05294E]">Knowledge base</span>
+                          <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
+                            <FileText className="h-3 w-3" />
+                            <span>Knowledge base</span>
                         </div>
                       )}
+                      </div>
+                      </div>
                     </div>
 
                     {/* Barra de Ações Horizontal e Rolável */}
-                                         <div className="flex flex-nowrap gap-1 justify-start bg-white">
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <div className="space-y-3">
+                        {/* Ações principais */}
+                        <div className="flex flex-wrap gap-2">
                       <button
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
@@ -2786,21 +2886,22 @@ Mantenha sempre o seguinte tom nas interações:
                           setChatHistory([]);
                           setCurrentTestConversationId(`conv_${Date.now()}`);
                         }}
-                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-[#05294E] bg-white border-2 border-[#05294E]/20 rounded-lg hover:bg-[#05294E]/5 hover:border-[#05294E]/40 hover:shadow-md hover:shadow-[#05294E]/10 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
                         <Bot className="h-4 w-4" />
-                        Test
+                            <span>Test</span>
                       </button>
+                          
                       {getAgentConnection(agent.id) ? (
                         <button
                           onClick={(e: React.MouseEvent) => {
                             e.preventDefault();
                             handleAgentDisconnect(agent.id);
                           }}
-                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-orange-700 bg-white border-2 border-orange-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 hover:shadow-md hover:shadow-orange-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <WifiOff className="h-4 w-4" />
-                          Disconnect
+                              <span>Disconnect</span>
                         </button>
                       ) : getAgentDisconnectedConnection(agent.id) ? (
                         <button
@@ -2808,10 +2909,10 @@ Mantenha sempre o seguinte tom nas interações:
                             e.preventDefault();
                             handleAgentReconnect(agent.id);
                           }}
-                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-blue-700 bg-white border-2 border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:shadow-md hover:shadow-blue-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <RotateCcw className="h-4 w-4" />
-                          Reconnect
+                              <span>Reconnect</span>
                         </button>
                       ) : (
                         <button
@@ -2820,42 +2921,53 @@ Mantenha sempre o seguinte tom nas interações:
                             setActiveTab('whatsapp');
                             handleCreateConnection(agent.id);
                           }}
-                          className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-green-700 bg-white border-2 border-green-200 rounded-lg hover:bg-green-50 hover:border-green-300 hover:shadow-md hover:shadow-green-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           <FaWhatsapp className="h-4 w-4" />
-                          Connect
+                              <span>Connect</span>
                         </button>
                       )}
+                        </div>
+                        
+                        {/* Ações secundárias */}
+                        <div className="flex flex-wrap gap-2">
                       <button
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           handleEmbedAgent(agent);
                         }}
-                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        Embed
+                            <span>Embed</span>
                       </button>
+                          
                       <button
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           handleEditAgent(agent);
                         }}
-                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md hover:shadow-gray-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
                         <Edit className="h-4 w-4" />
-                        Edit
+                            <span>Edit</span>
                       </button>
+                        </div>
+                        
+                        {/* Botão de delete separado */}
+                        <div className="pt-2 border-t border-slate-100">
                       <button
                         onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           handleDeleteAgent(agent.id);
                         }}
-                        className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-red-700 bg-white border-2 border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 hover:shadow-md hover:shadow-red-100 transition-all duration-200 transform hover:-translate-y-0.5 whitespace-nowrap"
+                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Delete
+                            <span>Delete</span>
                       </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -3173,89 +3285,92 @@ Mantenha sempre o seguinte tom nas interações:
           </div>
         </div>
       ) : activeTab === 'whatsapp' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="p-4 sm:p-6 border-b border-slate-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          {/* Header com gradiente sutil */}
+          <div className="relative bg-gradient-to-r from-slate-50 to-white p-4 sm:p-5 lg:p-6 border-b border-slate-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-[#05294E]" />
+              <div className="space-y-1">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900">
                   WhatsApp Connections
                 </h2>
-                <p className="text-gray-600 mt-1 text-sm sm:text-base">
+                <p className="text-slate-600 text-sm sm:text-base">
                   Manage your university's WhatsApp connections
                 </p>
               </div>
               <button 
                 onClick={handleCreateConnection}
                 disabled={!hasUserAgents}
-                className={`px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors text-sm sm:text-base ${
+                className={`px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm sm:text-base ${
                   hasUserAgents 
-                    ? 'bg-[#05294E] hover:bg-[#05294E]/90 text-white' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow-md' 
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 }`}
                 title={!hasUserAgents ? 'You need to create AI agents first' : 'Connect new WhatsApp'}
               >
-                <Smartphone className="h-4 w-4" />
                 Connect New WhatsApp
               </button>
             </div>
             
             {/* Mensagem explicativa quando não há agentes */}
             {!hasUserAgents && (
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  <div className="bg-yellow-100 p-2 rounded-lg self-start">
-                    <Brain className="h-5 w-5 text-yellow-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-yellow-900 mb-1">AI Agents Required</h3>
-                    <p className="text-yellow-700 text-sm mb-3">
+              <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1">AI Agents Required</h3>
+                    <p className="text-slate-600 text-sm">
                       You need to create AI agents first before connecting WhatsApp. AI agents will handle conversations with your students automatically.
                     </p>
-                                          <button
-                        onClick={() => setActiveTab('agents')}
-                        className="bg-[#05294E] hover:bg-[#05294E]/90 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-lg hover:shadow-[#05294E]/20 transform hover:-translate-y-0.5 text-sm"
-                      >
-                      <Bot className="h-4 w-4" />
-                      Create Your First AI Agent
-                    </button>
                   </div>
+                  <button
+                    onClick={() => setActiveTab('agents')}
+                    className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-medium transition-all duration-200 hover:shadow-md text-sm"
+                  >
+                    Create Your First AI Agent
+                  </button>
                 </div>
               </div>
             )}
           </div>
 
           {loading ? (
-            <div className="p-4 sm:p-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-[#05294E] mx-auto" />
+            <div className="p-8 sm:p-12 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-100 rounded-xl mb-4">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-600" />
+              </div>
+              <p className="text-slate-600 text-sm">Loading connections...</p>
             </div>
           ) : connections.length === 0 ? (
-            <div className="p-4 sm:p-8 text-center">
-              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No WhatsApp Connections</h3>
-              <p className="text-gray-600 mb-6 text-sm sm:text-base">
-                Connect your first WhatsApp number to get started.
+            <div className="p-8 sm:p-12 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-2xl mb-6">
+                <MessageSquare className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">No WhatsApp Connections</h3>
+              <p className="text-slate-600 text-sm max-w-md mx-auto">
+                Connect your first WhatsApp number to get started with automated student conversations.
               </p>
             </div>
           ) : (
             connections.map((connection) => (
-              <div key={connection.id} className="p-4 sm:p-6 border-b border-slate-200 last:border-b-0">
-                {/* Barra de Ações no Topo */}
-                <div className="flex items-center justify-between mb-4">
+              <div key={connection.id} className="group p-4 sm:p-6 border-b border-slate-200 last:border-b-0 hover:bg-slate-50/50 transition-colors duration-200">
+                {/* Header com Status e Ações */}
+                <div className="flex items-start justify-between mb-6">
                   {/* Status Badge */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     {getStatusBadge(connection.connection_status)}
+                    <div className="h-1 w-1 bg-slate-300 rounded-full"></div>
+                    <span className="text-sm text-slate-500 font-medium">
+                      {connection.instance_name}
+                    </span>
                   </div>
                   
                   {/* Botões de Ação */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
                     {connection.connection_status === 'connected' && (
                       <button
                         onClick={() => handleDisconnect(connection.id, connection.instance_name)}
                         disabled={actionLoading === connection.id}
-                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-1 rounded-lg border border-orange-200 text-sm font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <WifiOff className="h-4 w-4" />
                         {actionLoading === connection.id ? "..." : "Disconnect"}
                       </button>
                     )}
@@ -3263,67 +3378,57 @@ Mantenha sempre o seguinte tom nas interações:
                       <button
                         onClick={() => handleReconnect(connection.id, connection.instance_name)}
                         disabled={actionLoading === connection.id}
-                        className="text-[#05294E] hover:text-[#05294E]/80 hover:bg-[#05294E]/10 px-3 py-1 rounded-lg border border-[#05294E]/20 text-sm font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Wifi className="h-4 w-4" />
                         {actionLoading === connection.id ? "..." : "Reconnect"}
                       </button>
                     )}
                     <button
                       onClick={() => handleDelete(connection.id, connection.instance_name)}
                       disabled={actionLoading === connection.id}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-lg border border-red-200 text-sm font-medium flex items-center gap-1 transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Trash2 className="h-4 w-4" />
                       {actionLoading === connection.id ? "..." : "Delete"}
                     </button>
                   </div>
                 </div>
                 
-                {/* Informações Organizadas Verticalmente */}
-                <div className="space-y-3">
-                  {/* Instance Name */}
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-700 text-sm">Instance Name:</span>
-                    <span className="text-gray-600 text-sm font-mono break-all">
-                      {connection.instance_name}
-                    </span>
-                  </div>
-                  
+                {/* Informações em Grid Responsivo */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Phone Number */}
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-700 text-sm">Phone Number:</span>
-                    <span className="text-gray-600 text-sm">
-                      {connection.phone_number || <span className="italic text-gray-500">Not provided</span>}
-                    </span>
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Phone Number</span>
+                    <div className="text-slate-900 text-sm font-medium">
+                      {connection.phone_number || <span className="text-slate-400 italic">Not provided</span>}
+                    </div>
                   </div>
                   
                   {/* Connected At */}
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-700 text-sm">Connected at:</span>
-                    <span className="text-gray-600 text-sm">
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Connected At</span>
+                    <div className="text-slate-900 text-sm font-medium">
                       {connection.connected_at 
                         ? new Date(connection.connected_at).toLocaleString()
-                        : <span className="italic text-gray-500">-</span>
+                        : <span className="text-slate-400 italic">-</span>
                       }
-                    </span>
+                    </div>
                   </div>
                   
-                  {/* AI Agent */}
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-gray-700 text-sm">AI Agent:</span>
-                    <div className="text-gray-600 text-sm">
+                  {/* AI Agent - Full Width */}
+                  <div className="sm:col-span-2 space-y-1">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">AI Agent</span>
+                    <div className="text-slate-900 text-sm">
                       {connection.ai_configuration ? (
-                        <div className="flex flex-col gap-2">
-                          <span className="break-words">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span className="font-medium break-words">
                             {connection.ai_configuration.ai_name}
                           </span>
-                          <span className="text-xs font-medium text-[#05294E] bg-[#05294E]/10 px-2 py-1 rounded border border-[#05294E]/20 w-fit">
+                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 w-fit">
                             {connection.ai_configuration.agent_type}
                           </span>
                         </div>
                       ) : (
-                        <span className="italic text-gray-500">No agent connected</span>
+                        <span className="text-slate-400 italic">No agent connected</span>
                       )}
                     </div>
                   </div>
@@ -3331,10 +3436,9 @@ Mantenha sempre o seguinte tom nas interações:
               </div>
             ))
           )}
+        
         </div>
-      ) : (
-        <ConnectSmartChat />
-      )}
+      ) : null}
 
       {showQrModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

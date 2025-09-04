@@ -182,40 +182,66 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-10">
-      {/* Tutorial/Instructions */}
-      <div className="bg-gradient-to-r from-[#05294E]/5 to-slate-50 border-b border-slate-200">
-        <div className="p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-5 h-5 sm:w-10 sm:h-10 bg-[#05294E] rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+    <div className="min-h-screen">
+      {/* Header + Tutorial Section */}
+      <div className="w-full">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-3">
+
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    Global Document Requests
+                  </h1>
+                </div>
+                <p className="text-slate-600 text-sm sm:text-base">
+                  Create and manage university-wide document collection requests for all students.
+                </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  Request specific documents from students based on their application type and university requirements.
+                </p>
               </div>
-              <div>
-                <h3 className="font-bold text-[#05294E] text-lg">Global Document Requests Guide</h3>
-                <p className="text-slate-600 text-sm">Essential information for managing university-wide document requests</p>
+
+              <div className="flex items-center space-x-3">
+                <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {requests.length} Requests
+                </div>
               </div>
             </div>
-            <button
-              onClick={toggleTutorial}
-              className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-[#05294E] hover:bg-white/50 rounded-lg transition-all duration-200"
-              title={isTutorialMinimized ? "Expand guide" : "Minimize guide"}
-            >
-              <span className="text-sm font-medium">{isTutorialMinimized ? "Show Guide" : "Minimize"}</span>
-              <svg 
-                className={`w-4 h-4 transition-transform duration-200 ${isTutorialMinimized ? "rotate-180" : ""}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
+
+            {/* Tutorial/Instructions */}
+            <div className="border-t border-slate-200 bg-gradient-to-r from-[#05294E]/5 to-slate-50">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+
+
+                  </div>
+                  <button
+                    onClick={toggleTutorial}
+                    className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-[#05294E] hover:bg-white/50 rounded-lg transition-all duration-200"
+                    title={isTutorialMinimized ? "Expand guide" : "Minimize guide"}
+                  >
+                    <span className="text-sm font-medium">{isTutorialMinimized ? "Show Guide" : "Minimize"}</span>
+                    <svg 
+                      className={`w-4 h-4 transition-transform duration-300 ease-in-out ${isTutorialMinimized ? "rotate-180" : ""}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
           
-          {!isTutorialMinimized && (
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
+            isTutorialMinimized ? 'max-h-0 opacity-0' : 'max-h-[800px] opacity-100'
+          }`}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white rounded-xl p-4 border border-slate-200">
@@ -262,154 +288,163 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                 </ol>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
-      {/* Main Content */}
-      <div className="p-3 sm:p-6">
-        <div className="flex sm:items-center sm:justify-between mb-6 flex-col sm:flex-row gap-4 sm:gap-0">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-[#05294E] mb-1">Document Requests</h2>
-            <p className="text-slate-600 text-sm">Manage university-wide document collection</p>
           </div>
-          <button 
-            className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-              isUniversityApproved 
-                ? 'bg-[#05294E] hover:bg-[#041f3a] text-white shadow-md hover:shadow-lg hover:-translate-y-0.5' 
-                : 'bg-slate-200 text-slate-500 cursor-not-allowed'
-            }`}
-            onClick={() => isUniversityApproved && setShowNewModal(true)}
-            disabled={!isUniversityApproved}
-            title={!isUniversityApproved ? 'University approval required to create global document requests' : 'Create new global document request'}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="text-sm font-medium">New Request</span>
-          </button>
         </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
+          <div className="flex sm:items-center sm:justify-between flex-col sm:flex-row gap-4 sm:gap-0">
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-1">Document Requests</h2>
+              <p className="text-slate-500 text-sm">Manage university-wide document collection</p>
+            </div>
+            <button 
+              className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                isUniversityApproved 
+                  ? 'bg-[#05294E] hover:bg-[#041f3a] text-white shadow-sm hover:shadow-md' 
+                  : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+              }`}
+              onClick={() => isUniversityApproved && setShowNewModal(true)}
+              disabled={!isUniversityApproved}
+              title={!isUniversityApproved ? 'University approval required to create global document requests' : 'Create new global document request'}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="text-sm font-medium">New Request</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5 lg:p-6">
       
-        {/* Warning when university is not approved */}
-        {!isUniversityApproved && (
-          <div className="mb-6 bg-amber-50 rounded-xl p-4 border border-amber-200">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L2.732 15.5C1.962 16.333 2.924 18 4.462 18z" />
+          {/* Warning when university is not approved */}
+          {!isUniversityApproved && (
+            <div className="mb-6 bg-amber-50 rounded-xl p-4 border border-amber-200">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L2.732 15.5C1.962 16.333 2.924 18 4.462 18z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-amber-800 mb-1">University Approval Required</h3>
+                  <p className="text-amber-700 text-sm leading-relaxed">
+                    Your university is currently pending approval. Once approved by our team, you'll be able to create global document requests. 
+                    Please contact support if you need assistance with the approval process.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+      
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3 text-slate-600">
+                <svg className="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Loading document requests...</span>
+              </div>
+            </div>
+          )}
+
+          {/* No University State */}
+          {!loading && !university?.id && requests.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-2m-2 0H7m14 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2h2m2 0V9a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2h-2zm-2-4h2v-2h-2v2zm0-6h2V9h-2v2zM7 19h2v-2H7v2z" />
                 </svg>
               </div>
-              <div>
-                <h3 className="font-semibold text-amber-800 mb-1">University Approval Required</h3>
-                <p className="text-amber-700 text-sm leading-relaxed">
-                  Your university is currently pending approval. Once approved by our team, you'll be able to create global document requests. 
-                  Please contact support if you need assistance with the approval process.
-                </p>
-              </div>
+              <p className="text-slate-500 font-medium">No university found for this user</p>
             </div>
-          </div>
-        )}
-      
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex items-center gap-3 text-slate-600">
-              <svg className="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>Loading document requests...</span>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* No University State */}
-        {!loading && !university?.id && requests.length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-2m-2 0H7m14 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2h2m2 0V9a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2h-2zm-2-4h2v-2h-2v2zm0-6h2V9h-2v2zM7 19h2v-2H7v2z" />
-              </svg>
-            </div>
-            <p className="text-slate-500 font-medium">No university found for this user</p>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && requests.length === 0 && university?.id && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <h3 className="text-slate-800 font-semibold mb-2">No document requests yet</h3>
-            <p className="text-slate-500 mb-6">Create your first global document request to start collecting university-specific documents from students.</p>
-            {isUniversityApproved && (
-              <button
-                onClick={() => setShowNewModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f3a] transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          {/* Empty State */}
+          {!loading && requests.length === 0 && university?.id && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Create First Request
-              </button>
-            )}
-          </div>
-        )}
+              </div>
+              <h3 className="text-slate-800 font-semibold mb-2">No document requests yet</h3>
+              <p className="text-slate-500 mb-6">Create your first global document request to start collecting university-specific documents from students.</p>
+              {isUniversityApproved && (
+                <button
+                  onClick={() => setShowNewModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f3a] transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create First Request
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* Requests List */}
-        {!loading && requests.length > 0 && (
-          <div className="space-y-3">
-            {requests.map((req) => (
-              <div key={req.id} className="bg-slate-50 rounded-xl p-3 sm:p-5 border border-slate-200 hover:border-slate-300 transition-colors">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center space-x-3 sm:space-x-4 mb-2 sm:mb-0 min-w-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-semibold text-sm sm:text-lg">
-                        {req.title[0].toUpperCase()}
-                      </span>
+          {/* Requests List */}
+          {!loading && requests.length > 0 && (
+            <div className="space-y-4">
+              {requests.map((req) => (
+                <div key={req.id} className="bg-slate-50 rounded-2xl p-4 sm:p-6 border border-slate-200 hover:border-slate-300 transition-colors">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center space-x-3 sm:space-x-4 mb-2 sm:mb-0 min-w-0">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-base sm:text-lg">
+                          {req.title[0].toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
+                          {req.title || 'Untitled Request'}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
+                          {req.description && (
+                            <div className="flex items-center w-full">
+                              <span className="mr-1 shrink-0">Description:</span>
+                              <span className="block text-slate-600" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{req.description}</span>
+                            </div>
+                          )}
+                          {req.due_date && (
+                            <div className="flex items-center">
+                              <span className="mr-1">Due Date:</span>
+                              <span className="whitespace-nowrap">{new Date(req.due_date).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm sm:text-lg font-semibold text-slate-900 truncate">
-                        {req.title || 'Untitled Request'}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
-                        {req.description && (
-                          <div className="flex items-center w-full">
-                            <span className="mr-1 shrink-0">Description:</span>
-                            <span className="block text-slate-600" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{req.description}</span>
-                          </div>
-                        )}
-                        {req.due_date && (
-                          <div className="flex items-center">
-                            <span className="mr-1">Due Date:</span>
-                            <span className="whitespace-nowrap">{new Date(req.due_date).toLocaleDateString()}</span>
-                          </div>
-                        )}
+
+                    <div className="flex flex-row sm:flex-col items-center sm:items-end space-x-3 sm:space-x-0 sm:space-y-2">
+                      <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${req.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {req.status === 'open' ? 'Open' : 'Closed'}
+                      </span>
+                      <div className="text-xs sm:text-sm text-slate-500 text-right">
+                        Created: {new Date(req.created_at).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex flex-row sm:flex-col items-center sm:items-end space-x-3 sm:space-x-0 sm:space-y-2">
-                    <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${req.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {req.status === 'open' ? 'Open' : 'Closed'}
-                    </span>
-                    <div className="text-xs sm:text-sm text-slate-500 text-right">
-                      Created: {new Date(req.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Modal de novo request */}
       {showNewModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8 w-full max-w-lg border border-slate-200 animate-fade-in max-h-[90vh] overflow-auto">
-             <h3 className="font-extrabold text-lg sm:text-xl mb-4 sm:mb-6 text-[#05294E] text-center">New Global Document Request</h3>
+             <h3 className="font-bold text-lg sm:text-xl mb-4 sm:mb-6 text-slate-900 text-center">New Global Document Request</h3>
              {error && <div className="text-red-500 mb-4 text-center font-semibold">{error}</div>}
              <div className="space-y-4">
               <div>
@@ -451,7 +486,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                     />
                   </label>
                   {newRequest.attachment && (
-                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{newRequest.attachment.name}</span>
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{newRequest.attachment?.name}</span>
                   )}
                 </div>
               </div>
@@ -520,7 +555,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
       {editingRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg border border-slate-200 animate-fade-in">
-            <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">Edit Global Document Request</h3>
+            <h3 className="font-bold text-lg sm:text-xl mb-6 text-slate-900 text-center">Edit Global Document Request</h3>
             {error && <div className="text-red-500 mb-4 text-center font-semibold">{error}</div>}
             <div className="space-y-4">
               <div>
@@ -609,11 +644,11 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                       disabled={creating}
                     />
                   </label>
-                  {editingRequest.attachment_url && !editForm.attachment && (
-                    <span className="text-xs text-slate-500">Current: {editingRequest.attachment_url.split('/').pop()}</span>
+                  {editingRequest?.attachment_url && !editForm.attachment && (
+                    <span className="text-xs text-slate-500">Current: {editingRequest.attachment_url?.split('/').pop()}</span>
                   )}
                   {editForm.attachment && (
-                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{editForm.attachment.name}</span>
+                    <span className="text-xs text-slate-700 truncate max-w-[180px]">{editForm.attachment?.name}</span>
                   )}
                 </div>
               </div>
