@@ -1,52 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, CheckCircle, Database, Eye, EyeOff, History, Users, Calendar, Globe, FileText } from 'lucide-react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Pencil, Trash2, X, CheckCircle, Eye, EyeOff, History, Users, Calendar, Globe, FileText } from 'lucide-react';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
 import { supabase } from '../../lib/supabase';
+import { ckEditorConfig, ckEditorStyles } from '../../config/ckeditor';
 
-// Estilos personalizados para o React Quill
-const quillStyles = `
-  .ql-editor {
-    min-height: 150px;
-    font-size: 14px;
-    line-height: 1.6;
+// Importar Editor dinamicamente - usando build decoupled-document para melhor suporte HTML
+let DecoupledDocumentEditor: any = null;
+const loadEditor = async () => {
+  if (!DecoupledDocumentEditor) {
+    try {
+      const { default: Editor } = await import('@ckeditor/ckeditor5-build-decoupled-document');
+      DecoupledDocumentEditor = Editor;
+    } catch (error) {
+      console.error('Erro ao carregar CKEditor:', error);
+      throw error;
+    }
   }
-  
-  .ql-toolbar {
-    border-top: 1px solid #e2e8f0;
-    border-left: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    background-color: #f8fafc;
-  }
-  
-  .ql-container {
-    border-bottom: 1px solid #e2e8f0;
-    border-left: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-  }
-  
-  .ql-editor.ql-blank::before {
-    color: #94a3b8;
-    font-style: italic;
-  }
-  
-  .ql-editor h1, .ql-editor h2, .ql-editor h3 {
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
-  }
-  
-  .ql-editor p {
-    margin-bottom: 0.5em;
-  }
-  
-  .ql-editor ul, .ql-editor ol {
-    padding-left: 1.5em;
-  }
+  return DecoupledDocumentEditor;
+};
 
+
+// Estilos adicionais para o conteúdo
+const additionalStyles = `
   /* Line clamp utility */
   .line-clamp-3 {
     display: -webkit-box;
@@ -138,7 +113,8 @@ interface Term {
   id: string;
   title: string;
   content: string;
-  status: boolean;
+  term_type: string;
+  is_active: boolean;
   version: number;
   created_at: string;
   updated_at: string;
@@ -163,8 +139,6 @@ const TermsManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
-  const [newTerm, setNewTerm] = useState<Partial<Term> | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>('');
   const [viewingTerm, setViewingTerm] = useState<Term | null>(null);
   const [showRawContent, setShowRawContent] = useState(false);
   
@@ -179,77 +153,73 @@ const TermsManagement: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Configuração do React Quill
-  const quillModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'align': [] }],
-      ['link', 'blockquote', 'code-block'],
-      ['clean']
-    ],
+  // Configuração do CKEditor
+  const [originalHtml, setOriginalHtml] = useState<string>('');
+  const [editMode, setEditMode] = useState<'wysiwyg' | 'html'>('wysiwyg');
+  const [ckEditorInstance, setCkEditorInstance] = useState<any>(null);
+  const [editorReady, setEditorReady] = useState(false);
+
+  // Função para limpar HTML para comparação
+  const cleanHtmlForComparison = (html: string) => {
+    if (!html) return '';
+    
+    return html
+      .replace(/\s+/g, ' ') // Normalizar espaços
+      .replace(/>\s+</g, '><') // Remover espaços entre tags
+      .replace(/<div[^>]*>/gi, '') // Remover divs wrapper
+      .replace(/<\/div>/gi, '') // Remover fechamento de divs
+      .replace(/class="[^"]*"/gi, '') // Remover classes
+      .replace(/style="[^"]*"/gi, '') // Remover estilos
+      .trim();
   };
 
-  const quillFormats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
-    'list', 'bullet',
-    'color', 'background',
-    'align',
-    'link', 'blockquote', 'code-block'
-  ];
+  // Função para preservar HTML original com GHS
+  const preserveHtmlWithGHS = (html: string) => {
+    if (!html) return '';
+    
+    // Armazenar HTML original apenas uma vez
+    if (!originalHtml && html) {
+      setOriginalHtml(html);
+    }
+    
+    return html;
+  };
 
-  // Função para verificar dados no banco
-  const checkDatabaseContent = async () => {
-    try {
-      console.log('🔍 Verificando conteúdo no banco...');
-      const { data, error } = await supabase
-        .from('affiliate_terms')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const debugData = data?.map(term => ({
-        id: term.id,
-        title: term.title,
-        content_length: term.content?.length || 0,
-        content_preview: term.content?.substring(0, 100) + '...',
-        status: term.status,
-        created_at: term.created_at
-      }));
-
-      console.log('📊 Dados no banco:', debugData);
-      setDebugInfo(JSON.stringify(debugData, null, 2));
-      
-      // Verificar se há conteúdo HTML
-      const htmlTerms = data?.filter(term => term.content?.includes('<'));
-      console.log('🔍 Termos com HTML:', htmlTerms?.length || 0);
-      
-      if (htmlTerms && htmlTerms.length > 0) {
-        console.log('✅ HTML detectado nos termos:', htmlTerms.map(t => ({ id: t.id, hasHtml: t.content?.includes('<') })));
-      }
-      
-    } catch (err: any) {
-      console.error('❌ Erro ao verificar banco:', err);
-      setDebugInfo(`Erro: ${err.message}`);
+  // Função para restaurar HTML original
+  const restoreOriginalHtml = () => {
+    if (originalHtml && editingTerm) {
+      setEditingTerm({ ...editingTerm, content: originalHtml });
     }
   };
+
+  // Função para alternar modo de edição
+  const toggleEditMode = () => {
+    if (ckEditorInstance) {
+      if (editMode === 'wysiwyg') {
+        // Alternar para modo de edição de fonte
+        ckEditorInstance.execute('sourceEditing');
+        setEditMode('html');
+      } else {
+        // Alternar para modo WYSIWYG
+        ckEditorInstance.execute('sourceEditing');
+        setEditMode('wysiwyg');
+      }
+    }
+  };
+
+
+
 
   // Carregar termos
   const loadTerms = async () => {
     try {
-      console.log('🔄 Carregando termos...');
       const { data, error } = await supabase
-        .from('affiliate_terms')
+        .from('application_terms')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      console.log('✅ Termos carregados:', data);
       setTerms(data || []);
     } catch (err: any) {
       console.error('❌ Erro ao carregar termos:', err);
@@ -348,6 +318,7 @@ const TermsManagement: React.FC = () => {
 
   useEffect(() => {
     loadTerms();
+    loadEditor().then(() => setEditorReady(true));
   }, []);
 
   // Load acceptance history when history tab is selected
@@ -358,164 +329,103 @@ const TermsManagement: React.FC = () => {
     }
   }, [activeTab]);
 
-  // Criar novo termo
-  const handleCreateTerm = async () => {
-    if (!newTerm?.title || !newTerm?.content) return;
-
-    try {
-      console.log('🔄 Criando novo termo:', { 
-        title: newTerm.title, 
-        content: newTerm.content,
-        content_length: newTerm.content?.length || 0,
-        has_html: newTerm.content?.includes('<') || false
-      });
-      
-      // Se o novo termo será ativo, desativar todos os outros primeiro
-      if (newTerm.status !== false) {
-        await supabase
-          .from('affiliate_terms')
-          .update({ status: false, updated_at: new Date().toISOString() })
-          .eq('status', true);
-      }
-      
-      const { data, error } = await supabase
-        .from('affiliate_terms')
-        .insert([{
-          title: newTerm.title,
-          content: newTerm.content,
-          status: newTerm.status !== false, // Padrão: ativo se não especificado
-          version: 1
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      console.log('✅ Termo criado com sucesso:', {
-        id: data.id,
-        title: data.title,
-        content_length: data.content?.length || 0,
-        has_html: data.content?.includes('<') || false
-      });
-      
-      // Recarregar termos para refletir as mudanças
-      await loadTerms();
-      setNewTerm(null);
-      
-      // Verificar banco após criação
-      setTimeout(checkDatabaseContent, 1000);
-    } catch (err: any) {
-      console.error('❌ Erro ao criar termo:', err);
-      setError(err.message);
-    }
-  };
 
   // Atualizar termo
   const handleUpdateTerm = async () => {
     if (!editingTerm) return;
 
     try {
-      console.log('🔄 Atualizando termo:', { 
-        id: editingTerm.id, 
-        title: editingTerm.title, 
-        content: editingTerm.content,
-        content_length: editingTerm.content?.length || 0,
-        has_html: editingTerm.content?.includes('<') || false
-      });
-      
-      // Se o termo será ativado, desativar todos os outros primeiro
-      if (editingTerm.status) {
+      // Validar conteúdo antes de enviar
+      if (!editingTerm.title || !editingTerm.content) {
+        throw new Error('Título e conteúdo são obrigatórios');
+      }
+
+      // Se o termo será ativado, desativar todos os outros do mesmo tipo primeiro
+      if (editingTerm.is_active) {
         await supabase
-          .from('affiliate_terms')
-          .update({ status: false, updated_at: new Date().toISOString() })
-          .eq('status', true)
+          .from('application_terms')
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq('is_active', true)
+          .eq('term_type', editingTerm.term_type)
           .neq('id', editingTerm.id);
       }
       
-      const { data, error } = await supabase
-        .from('affiliate_terms')
-        .update({
-          title: editingTerm.title,
-          content: editingTerm.content,
-          status: editingTerm.status,
-          updated_at: new Date().toISOString(),
-        })
+      // Preparar dados para atualização
+      // Implementar merge inteligente: preservar edições válidas, restaurar apenas se truncado
+      let contentToSave = editingTerm.content;
+      
+      // Verificar se o usuário fez edições válidas (comparando HTML limpo)
+      const cleanedOriginal = cleanHtmlForComparison(originalHtml);
+      const cleanedEdited = cleanHtmlForComparison(editingTerm.content);
+      const hasValidEdits = cleanedEdited !== cleanedOriginal;
+      const lengthDiff = Math.abs(editingTerm.content.length - originalHtml.length);
+      const lengthRatio = lengthDiff / originalHtml.length;
+      
+      // Critérios para restaurar HTML original:
+      // 1. HTML foi significativamente truncado (>50% de diferença)
+      // 2. E não há edições válidas do usuário
+      const shouldRestore = lengthRatio > 0.5 && !hasValidEdits;
+      
+      if (shouldRestore) {
+        contentToSave = originalHtml;
+      } else if (hasValidEdits) {
+        contentToSave = editingTerm.content;
+      } else {
+        contentToSave = editingTerm.content;
+      }
+
+      const updateData = {
+        title: editingTerm.title.trim(),
+        content: contentToSave,
+        is_active: editingTerm.is_active,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: updateResult, error } = await supabase
+        .from('application_terms')
+        .update(updateData)
         .eq('id', editingTerm.id)
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro detalhado na atualização:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
 
-      console.log('✅ Termo atualizado com sucesso:', {
-        id: data.id,
-        title: data.title,
-        content_length: data.content?.length || 0,
-        has_html: data.content?.includes('<') || false
-      });
+      // Se nenhuma linha foi atualizada, investigar o problema
+      if (!updateResult || updateResult.length === 0) {
+        throw new Error('Nenhuma linha foi atualizada. Verifique permissões ou RLS.');
+      }
       
       // Recarregar termos para refletir as mudanças
       await loadTerms();
       setEditingTerm(null);
-      
-      // Verificar banco após atualização
-      setTimeout(checkDatabaseContent, 1000);
+      setOriginalHtml(''); // Limpar HTML original
+      setEditMode('wysiwyg'); // Resetar modo de edição
+      setCkEditorInstance(null); // Limpar instância do CKEditor
     } catch (err: any) {
       console.error('❌ Erro ao atualizar termo:', err);
       setError(err.message);
     }
   };
 
-  // Alternar status do termo
-  const handleToggleStatus = async (id: string, newStatus: boolean) => {
-    try {
-      console.log('🔄 Alternando status do termo:', { id, newStatus });
-      
-      // Se está ativando um termo, desativar todos os outros primeiro
-      if (newStatus) {
-        await supabase
-          .from('affiliate_terms')
-          .update({ status: false, updated_at: new Date().toISOString() })
-          .eq('status', true)
-          .neq('id', id);
-      }
-      
-      const { data, error } = await supabase
-        .from('affiliate_terms')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      console.log('✅ Status do termo atualizado:', data);
-      
-      // Recarregar termos para refletir as mudanças
-      await loadTerms();
-    } catch (err: any) {
-      console.error('❌ Erro ao alternar status:', err);
-      setError(err.message);
-    }
-  };
 
   // Excluir termo
   const handleDeleteTerm = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este termo?')) return;
 
     try {
-      console.log('🔄 Excluindo termo:', id);
-      
       const { error } = await supabase
-        .from('affiliate_terms')
+        .from('application_terms')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-
-      console.log('✅ Termo excluído com sucesso');
       
       // Recarregar termos para refletir as mudanças
       await loadTerms();
@@ -555,9 +465,12 @@ const TermsManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 px-4 sm:px-6 lg:px-8">
-      {/* Estilos personalizados para o React Quill */}
-      <style>{quillStyles}</style>
+    <>
+      {/* Estilos personalizados para o CKEditor */}
+      <style>{ckEditorStyles}</style>
+      <style>{additionalStyles}</style>
+      
+      <div className="space-y-8 px-4 sm:px-6 lg:px-8">
       
       {/* Abas de navegação */}
       <div className="flex items-center justify-between mb-6">
@@ -570,7 +483,7 @@ const TermsManagement: React.FC = () => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Gerenciar Termos
+            Gerenciar Contratos
           </button>
           <button
             onClick={() => {
@@ -588,16 +501,6 @@ const TermsManagement: React.FC = () => {
           </button>
         </div>
         
-        {/* Botão para criar novo termo */}
-        {activeTab === 'terms' && !newTerm && (
-          <button
-            onClick={() => setNewTerm({ title: '', content: '', status: true })}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            New Term
-          </button>
-        )}
       </div>
 
       {/* Error Message */}
@@ -607,83 +510,6 @@ const TermsManagement: React.FC = () => {
         </div>
       )}
 
-      {/* New Term Form */}
-      {newTerm && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-slate-900">Create New Term</h3>
-            <button
-              onClick={() => setNewTerm(null)}
-              className="text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                value={newTerm.title}
-                onChange={(e) => setNewTerm({ ...newTerm, title: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter term title..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Content
-              </label>
-              <ReactQuill
-                theme="snow"
-                value={newTerm.content || ''}
-                onChange={(content) => {
-                  console.log('📝 Conteúdo alterado:', {
-                    content_length: content?.length || 0,
-                    has_html: content?.includes('<') || false,
-                    preview: content?.substring(0, 100) + '...'
-                  });
-                  setNewTerm({ ...newTerm, content });
-                }}
-                modules={quillModules}
-                formats={quillFormats}
-                placeholder="Enter term content..."
-              />
-            </div>
-            <div className="flex items-center space-x-3">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={newTerm.status !== false}
-                  onChange={(e) => setNewTerm({ ...newTerm, status: e.target.checked })}
-                />
-                <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-              <span className="text-sm font-medium text-slate-700">
-                Set as active term (will deactivate others)
-              </span>
-            </div>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setNewTerm(null)}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateTerm}
-                disabled={!newTerm.title || !newTerm.content}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Create Term
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Conteúdo baseado na aba ativa */}
       {activeTab === 'terms' && (
@@ -694,7 +520,7 @@ const TermsManagement: React.FC = () => {
           <div
             key={term.id}
             className={`bg-white rounded-xl shadow-sm border p-6 cursor-pointer transition-all duration-200 hover:shadow-md ${
-              term.status ? 'border-blue-200 bg-blue-50' : 'border-slate-200'
+              term.is_active ? 'border-blue-200 bg-blue-50' : 'border-slate-200'
             }`}
             onClick={() => setViewingTerm(term)}
           >
@@ -713,31 +539,59 @@ const TermsManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-slate-700">
                     Content
                   </label>
-                  <ReactQuill
-                    theme="snow"
-                    value={editingTerm.content || ''}
-                    onChange={(content) => {
-                      console.log('📝 Conteúdo editado:', {
-                        content_length: content?.length || 0,
-                        has_html: content?.includes('<') || false,
-                        preview: content?.substring(0, 100) + '...'
-                      });
-                      setEditingTerm({ ...editingTerm, content });
-                    }}
-                    modules={quillModules}
-                    formats={quillFormats}
-                  />
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={toggleEditMode}
+                        className="text-xs px-3 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
+                        title="Alternar entre modo visual e edição de HTML"
+                      >
+                        {editMode === 'wysiwyg' ? 'Switch to HTML' : 'Switch to Visual'}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {editorReady && DecoupledDocumentEditor ? (
+                    <div className="ck-editor-container">
+                      <div className="ck-toolbar-container"></div>
+                      <CKEditor
+                        editor={DecoupledDocumentEditor}
+                        data={preserveHtmlWithGHS(editingTerm.content || '')}
+                        config={ckEditorConfig as any}
+                        onReady={(editor) => {
+                          // Para o build decoupled-document, precisamos inserir a toolbar manualmente
+                          const toolbarContainer = document.querySelector('.ck-toolbar-container');
+                          if (toolbarContainer && editor.ui.view.toolbar && editor.ui.view.toolbar.element) {
+                            toolbarContainer.appendChild(editor.ui.view.toolbar.element);
+                          }
+                          setCkEditorInstance(editor);
+                        }}
+                        onChange={(_event, editor) => {
+                          const data = editor.getData();
+                          const newEditingTerm = { ...editingTerm, content: data };
+                          setEditingTerm(newEditingTerm);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-96 border border-slate-300 rounded-lg flex items-center justify-center bg-slate-50">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-slate-600 text-sm">Carregando editor...</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center space-x-3">
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       className="sr-only peer"
-                      checked={editingTerm.status}
-                      onChange={(e) => setEditingTerm({ ...editingTerm, status: e.target.checked })}
+                      checked={editingTerm.is_active}
+                      onChange={(e) => setEditingTerm({ ...editingTerm, is_active: e.target.checked })}
                     />
                     <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
@@ -745,9 +599,24 @@ const TermsManagement: React.FC = () => {
                     Active term (will deactivate others)
                   </span>
                 </div>
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setEditingTerm(null)}
+                <div className="flex justify-between items-center">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={restoreOriginalHtml}
+                      className="px-3 py-1 text-sm text-orange-600 hover:text-orange-800 hover:bg-orange-50 rounded transition-colors"
+                      title="Restaurar HTML original"
+                    >
+                      Restaurar Original
+                    </button>
+                  </div>
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => {
+                        setEditingTerm(null);
+                        setOriginalHtml(''); // Limpar HTML original
+                        setEditMode('wysiwyg'); // Resetar modo de edição
+                        setCkEditorInstance(null); // Limpar instância do CKEditor
+                      }}
                     className="px-4 py-2 text-slate-600 hover:text-slate-800"
                   >
                     Cancel
@@ -759,6 +628,7 @@ const TermsManagement: React.FC = () => {
                   >
                     Save Changes
                   </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -767,11 +637,14 @@ const TermsManagement: React.FC = () => {
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center space-x-3">
                     <h3 className="text-xl font-bold text-slate-900">{term.title}</h3>
-                    {term.status && (
+                    {term.is_active && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         Active
                       </span>
                     )}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                      {term.term_type?.replace(/_/g, ' ') || 'N/A'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
@@ -794,7 +667,11 @@ const TermsManagement: React.FC = () => {
                       <Eye className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => setEditingTerm(term)}
+                      onClick={() => {
+                        setEditingTerm(term);
+                        // Limpar HTML original para permitir novo armazenamento
+                        setOriginalHtml('');
+                      }}
                       className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                       title="Editar termo"
                     >
@@ -832,19 +709,10 @@ const TermsManagement: React.FC = () => {
             <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="h-10 w-10 text-slate-400" />
             </div>
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No Terms Created</h3>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">No Terms Found</h3>
             <p className="text-slate-600 mb-6">
-              Start by creating your first term of agreement
+              The system manages two specific terms: University Partnership Agreement and Student Checkout Terms.
             </p>
-            {!newTerm && (
-              <button
-                onClick={() => setNewTerm({ title: '', content: '', status: true })}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 inline-flex items-center"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Create Term
-              </button>
-            )}
           </div>
         )}
           </div>
@@ -1092,18 +960,23 @@ const TermsManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Term View Modal */}
+      </div>
+
+      {/* Term View Modal - Movido para fora do container principal */}
       {viewingTerm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay">
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <div className="flex items-center space-x-3">
                 <h2 className="text-2xl font-bold text-slate-900">{viewingTerm.title}</h2>
-                {viewingTerm.status && (
+                {viewingTerm.is_active && (
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     Active
                   </span>
                 )}
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                  {viewingTerm.term_type?.replace(/_/g, ' ') || 'N/A'}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 <button
@@ -1144,7 +1017,7 @@ const TermsManagement: React.FC = () => {
                         <span className="font-medium">Version:</span> {viewingTerm.version}
                       </div>
                       <div>
-                        <span className="font-medium">Status:</span> {viewingTerm.status ? 'Active' : 'Inactive'}
+                        <span className="font-medium">Status:</span> {viewingTerm.is_active ? 'Active' : 'Inactive'}
                       </div>
                     </div>
                   </div>
@@ -1183,7 +1056,7 @@ const TermsManagement: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

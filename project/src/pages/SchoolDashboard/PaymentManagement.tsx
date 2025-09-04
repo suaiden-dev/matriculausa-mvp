@@ -8,22 +8,16 @@ import {
   Filter, 
   Download, 
   Eye, 
-  Calendar, 
-  User, 
-  Building, 
   CreditCard, 
-  Banknote, 
   Search, 
   ChevronLeft, 
   ChevronRight, 
   Loader2,
-  Award,
   FileText,
   Globe,
   Plus,
   XCircle,
-  Shield,
-  Save
+  Shield
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -31,7 +25,6 @@ import { usePayments } from '../../hooks/usePayments';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { UniversityPaymentRequestService } from '../../services/UniversityPaymentRequestService';
 import { supabase } from '../../lib/supabase';
-import { useNavigate } from 'react-router-dom';
 
 const PaymentManagement: React.FC = () => {
   const { university } = useUniversity();
@@ -53,8 +46,6 @@ const PaymentManagement: React.FC = () => {
     handlePageChange,
     handlePageSizeChange,
     exportPayments,
-    hasPayments,
-    hasFilters,
   } = usePayments(university?.id);
   
   // UI state
@@ -75,7 +66,39 @@ const PaymentManagement: React.FC = () => {
   const [universityPaymentRequests, setUniversityPaymentRequests] = useState<any[]>([]);
   const [loadingUniversityRequests, setLoadingUniversityRequests] = useState(false);
   const [universityBalance, setUniversityBalance] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'student-payments' | 'university-requests'>('student-payments');
+  const [activeTab, setActiveTab] = useState<'student-payments' | 'university-requests' | 'financial-overview'>('financial-overview');
+  
+  // Financial statistics state
+  const [financialStats, setFinancialStats] = useState({
+    totalRevenue: 0,
+    last7DaysRevenue: 0,
+    totalPaidOut: 0,
+    totalApproved: 0,
+    pendingRequests: 0,
+    paidApplicationsCount: 0
+  });
+
+  // Detailed financial analytics state
+  const [financialAnalytics, setFinancialAnalytics] = useState({
+    dailyRevenue: [] as Array<{date: string, amount: number}>,
+    monthlyRevenue: [] as Array<{month: string, amount: number}>,
+    applicationTrends: {
+      totalApplications: 0,
+      paidApplications: 0,
+      conversionRate: 0,
+      averageFee: 0
+    },
+    paymentMethodBreakdown: {
+      zelle: 0,
+      bank_transfer: 0,
+      stripe: 0
+    },
+    recentActivity: [] as Array<{date: string, type: string, amount: number, description: string}>
+  });
+
+  // Revenue chart filter state
+  const [revenueChartType, setRevenueChartType] = useState<'daily' | 'monthly'>('daily');
+  const [revenueChartPeriod, setRevenueChartPeriod] = useState<number>(7);
   
   // Request details modal state
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -84,7 +107,6 @@ const PaymentManagement: React.FC = () => {
   // Stripe Connect status state
   const [hasStripeConnect, setHasStripeConnect] = useState(false);
   const [loadingStripeStatus, setLoadingStripeStatus] = useState(true);
-  const navigate = useNavigate();
   
   const handleExport = async () => {
     try {
@@ -153,71 +175,221 @@ const PaymentManagement: React.FC = () => {
       const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
       setUniversityPaymentRequests(requests);
       
-      // USAR O NOVO SISTEMA DE SALDO AUTOMÁTICO
-      try {
-        const balanceData = await UniversityPaymentRequestService.getUniversityBalance(university.id);
-        setUniversityBalance(balanceData.available_balance);
-        
-        console.log('💰 [Balance] New automatic system:', {
-          totalRevenue: balanceData.total_revenue,
-          totalReserved: balanceData.total_reserved,
-          totalPaidOut: balanceData.total_paid_out,
-          availableBalance: balanceData.available_balance,
-          lastUpdated: balanceData.last_updated,
-          requestsCount: requests.length,
-          paidRequests: requests.filter(r => r.status === 'paid').length,
-          pendingRequests: requests.filter(r => r.status === 'pending').length,
-          approvedRequests: requests.filter(r => r.status === 'approved').length,
-          cancelledRequests: requests.filter(r => r.status === 'cancelled').length
-        });
-      } catch (balanceError: any) {
-        console.error('❌ [Balance] Error getting balance:', balanceError);
-        // Fallback para cálculo manual se a função RPC falhar
-        const totalPaidOut = requests
-          .filter((r: any) => r.status === 'paid')
-          .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
-        
-        const totalApproved = requests
-          .filter((r: any) => r.status === 'approved')
-          .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
-        
-        // Calcular receita baseada em aplicações pagas (sem duplicatas)
-        const { data: paidApplications, error: paidError } = await supabase
-          .from('scholarship_applications')
-          .select(`
-            scholarship_id,
-            scholarships!inner(
-              university_id,
-              application_fee_amount
-            )
-          `)
-          .eq('is_application_fee_paid', true)
-          .eq('scholarships.university_id', university.id);
-        
-        if (paidError) {
-          console.error('Error fetching paid applications:', paidError);
-        }
-        
-        // Calcular receita total (sem duplicatas)
-        const totalRevenue = paidApplications?.reduce((sum: number, app: any) => {
-          return sum + (app.scholarships?.application_fee_amount || 0);
-        }, 0) || 0;
-        
-        const availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved);
-        setUniversityBalance(availableBalance);
-        
-        console.log('💰 [Balance] Fallback calculation:', {
-          totalRevenue,
-          totalPaidOut,
-          totalApproved,
-          availableBalance,
-          paidApplicationsCount: paidApplications?.length || 0
-        });
-      }
+      // Calcular total de payment requests (pending, approved e paid) - rejeitados NÃO são subtraídos do saldo
+      const totalPaidOut = requests
+        .filter((r: any) => r.status === 'paid')
+        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
+      
+      const totalApproved = requests
+        .filter((r: any) => r.status === 'approved')
+        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
+      
+      const totalPending = requests
+        .filter((r: any) => r.status === 'pending')
+        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
+      
+      const totalRejected = requests
+        .filter((r: any) => r.status === 'rejected')
+        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
+      
+             // Calcular receita baseada APENAS em application fees pagas (TODAS as aplicações, não apenas 90 dias)
+       const { data: paidApplications, error: paidError } = await supabase
+         .from('scholarship_applications')
+         .select(`
+           scholarship_id,
+           created_at,
+           is_application_fee_paid,
+           scholarships!inner(
+             university_id,
+             application_fee_amount
+           )
+         `)
+         .eq('is_application_fee_paid', true)
+         .eq('scholarships.university_id', university.id);
+       
+       if (paidError) {
+         console.error('Error fetching paid applications:', paidError);
+       }
+       
+       // Calcular receita total APENAS de application fees - converter de centavos para dólares
+       const totalApplicationFeeRevenue = paidApplications?.reduce((sum: number, app: any) => {
+         const feeAmount = app.scholarships?.application_fee_amount || 0;
+         return sum + (feeAmount / 100); // Converter de centavos para dólares
+       }, 0) || 0;
+       
+       // Calcular receita de application fees dos últimos 7 dias
+       const sevenDaysAgo = new Date();
+       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+       
+       const last7DaysApplicationFeeRevenue = paidApplications?.filter((app: any) => {
+         const appDate = new Date(app.created_at);
+         return appDate >= sevenDaysAgo;
+       }).reduce((sum: number, app: any) => {
+         const feeAmount = app.scholarships?.application_fee_amount || 0;
+         return sum + (feeAmount / 100);
+       }, 0) || 0;
+      
+             // Calcular saldo disponível: Application fees - Payment requests (pending + approved + paid) + rejeitados voltam ao saldo
+       const availableBalance = Math.max(0, totalApplicationFeeRevenue - totalPaidOut - totalApproved - totalPending);
+       setUniversityBalance(availableBalance);
+       
+       // Atualizar estatísticas financeiras
+       setFinancialStats({
+         totalRevenue: totalApplicationFeeRevenue,
+         last7DaysRevenue: last7DaysApplicationFeeRevenue,
+         totalPaidOut,
+         totalApproved,
+         pendingRequests: requests.filter((r: any) => r.status === 'pending').length,
+         paidApplicationsCount: paidApplications?.length || 0
+       });
+       
+       console.log('💰 [Balance] Calculation:', {
+         totalApplicationFeeRevenue,
+         last7DaysApplicationFeeRevenue,
+         totalPaidOut,
+         totalApproved,
+         totalPending,
+         totalRejected,
+         availableBalance,
+         paidApplicationsCount: paidApplications?.length || 0
+       });
     } catch (error: any) {
       console.error('Error loading university payment requests:', error);
     } finally {
       setLoadingUniversityRequests(false);
+    }
+  };
+
+  // Função para carregar análises financeiras detalhadas
+  const loadFinancialAnalytics = async () => {
+    if (!university?.id) return;
+    
+    try {
+             // Buscar aplicações dos últimos 90 dias para análise temporal (APENAS application fees)
+       const ninetyDaysAgo = new Date();
+       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+       
+       const { data: applications, error: appsError } = await supabase
+         .from('scholarship_applications')
+         .select(`
+           id,
+           created_at,
+           is_application_fee_paid,
+           scholarships!inner(
+             university_id,
+             application_fee_amount
+           )
+         `)
+         .eq('scholarships.university_id', university.id)
+         .gte('created_at', ninetyDaysAgo.toISOString())
+         .order('created_at', { ascending: false });
+
+      if (appsError) {
+        console.error('Error fetching applications for analytics:', appsError);
+        return;
+      }
+
+             // Calcular receita diária de application fees dos últimos 30 dias
+       const dailyRevenue = [];
+       for (let i = 29; i >= 0; i--) {
+         const date = new Date();
+         date.setDate(date.getDate() - i);
+         const dateStr = date.toISOString().split('T')[0];
+         
+         const dayApplicationFeeRevenue = applications?.filter(app => {
+           const appDate = new Date(app.created_at).toISOString().split('T')[0];
+           return appDate === dateStr && app.is_application_fee_paid;
+         }).reduce((sum, app) => {
+           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+           return sum + ((scholarship?.application_fee_amount || 0) / 100);
+         }, 0) || 0;
+         
+         dailyRevenue.push({ date: dateStr, amount: dayApplicationFeeRevenue });
+       }
+
+       // Calcular receita mensal de application fees dos últimos 12 meses
+       const monthlyRevenue = [];
+       for (let i = 11; i >= 0; i--) {
+         const date = new Date();
+         date.setMonth(date.getMonth() - i);
+         const monthStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+         
+         const monthApplicationFeeRevenue = applications?.filter(app => {
+           const appDate = new Date(app.created_at);
+           return appDate.getMonth() === date.getMonth() && 
+                  appDate.getFullYear() === date.getFullYear() && 
+                  app.is_application_fee_paid;
+         }).reduce((sum, app) => {
+           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+           return sum + ((scholarship?.application_fee_amount || 0) / 100);
+         }, 0) || 0;
+         
+         monthlyRevenue.push({ month: monthStr, amount: monthApplicationFeeRevenue });
+       }
+
+             // Calcular tendências de aplicação (APENAS application fees)
+       const totalApplications = applications?.length || 0;
+       const paidApplications = applications?.filter(app => app.is_application_fee_paid).length || 0;
+       const conversionRate = totalApplications > 0 ? (paidApplications / totalApplications) * 100 : 0;
+       const averageApplicationFee = paidApplications > 0 ? 
+         applications?.filter(app => app.is_application_fee_paid)
+           .reduce((sum, app) => {
+             const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+             return sum + ((scholarship?.application_fee_amount || 0) / 100);
+           }, 0) / paidApplications : 0;
+
+      // Calcular breakdown por método de pagamento
+      const paymentMethodBreakdown = {
+        zelle: universityPaymentRequests.filter(r => r.payout_method === 'zelle').length,
+        bank_transfer: universityPaymentRequests.filter(r => r.payout_method === 'bank_transfer').length,
+        stripe: universityPaymentRequests.filter(r => r.payout_method === 'stripe').length
+      };
+
+             // Criar atividade recente (últimos 10 eventos) - APENAS application fees e payment requests
+       const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
+       
+       // Adicionar application fees pagas recentes
+       applications?.slice(0, 5).forEach(app => {
+         if (app.is_application_fee_paid) {
+           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+           recentActivity.push({
+             date: app.created_at,
+             type: 'revenue',
+             amount: (scholarship?.application_fee_amount || 0) / 100,
+             description: 'Application fee received'
+           });
+         }
+       });
+
+       // Adicionar payment requests recentes
+       universityPaymentRequests.slice(0, 5).forEach(request => {
+         recentActivity.push({
+           date: request.created_at,
+           type: request.status === 'paid' ? 'payout' : 'request',
+           amount: request.amount_usd,
+           description: `Payment request ${request.status}`
+         });
+       });
+
+       // Ordenar por data e pegar os 10 mais recentes
+       recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+       recentActivity.splice(10);
+
+       setFinancialAnalytics({
+         dailyRevenue,
+         monthlyRevenue,
+         applicationTrends: {
+           totalApplications,
+           paidApplications,
+           conversionRate,
+           averageFee: averageApplicationFee
+         },
+         paymentMethodBreakdown,
+         recentActivity
+       });
+
+    } catch (error: any) {
+      console.error('Error loading financial analytics:', error);
     }
   };
 
@@ -226,12 +398,10 @@ const PaymentManagement: React.FC = () => {
     if (university?.id) {
       loadUniversityPaymentRequests();
       checkStripeConnectStatus();
+      loadFinancialAnalytics();
     }
   }, [university?.id]);
 
-  const handleFilterChange = () => {
-    setShowFilters(false);
-  };
 
   // Real-time validation of requested amount
   const validatePaymentAmount = (amount: number) => {
@@ -253,6 +423,25 @@ const PaymentManagement: React.FC = () => {
     return paymentRequestAmount > 0 && paymentRequestAmount <= universityBalance;
   };
 
+  // Check if payout details are valid based on method
+  const isPayoutDetailsValid = () => {
+    if (payoutMethod === 'bank_transfer') {
+      return payoutDetails.bank_name && 
+             payoutDetails.account_name && 
+             payoutDetails.routing_number && 
+             payoutDetails.account_number;
+    }
+    if (payoutMethod === 'zelle') {
+      // Zelle requer email OU telefone (não ambos), Account holder name é opcional
+      return (payoutDetails.zelle_email || payoutDetails.zelle_phone) && 
+             !(payoutDetails.zelle_email && payoutDetails.zelle_phone);
+    }
+    if (payoutMethod === 'stripe') {
+      return payoutDetails.stripe_email;
+    }
+    return true;
+  };
+
   const handleSubmitPaymentRequest = async () => {
     if (!user?.id || !university?.id) return;
     
@@ -268,6 +457,21 @@ const PaymentManagement: React.FC = () => {
     if (paymentRequestAmount > availableBalance) {
       setError(`Insufficient balance. You have ${formatCurrency(availableBalance)} available, but requested ${formatCurrency(paymentRequestAmount)}.`);
       setTimeout(() => setError(null), 5000);
+      return;
+    }
+    
+    // Payout details validation
+    if (!isPayoutDetailsValid()) {
+      let errorMessage = 'Please fill in all required payment details.';
+      if (payoutMethod === 'zelle') {
+        errorMessage = 'Please provide either Zelle email or phone number (not both).';
+      } else if (payoutMethod === 'bank_transfer') {
+        errorMessage = 'Please fill in all required bank details.';
+      } else if (payoutMethod === 'stripe') {
+        errorMessage = 'Please provide Stripe email.';
+      }
+      setError(errorMessage);
+      setTimeout(() => setError(null), 3000);
       return;
     }
     
@@ -310,21 +514,6 @@ const PaymentManagement: React.FC = () => {
     }).format(amount);
   };
 
-  const formatScholarshipAmount = (amount: number | null | undefined) => {
-    if (!amount) return 'N/A';
-    // If amount is already in cents (like from transfer), format normally
-    if (amount >= 100) {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(amount / 100);
-    }
-    // If amount is already in dollars, format directly
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -412,6 +601,22 @@ const PaymentManagement: React.FC = () => {
                 <div className="px-4 sm:px-6 lg:px-8">
                   <nav className="flex space-x-8 overflow-x-auto" role="tablist">
                     <button
+                      onClick={() => setActiveTab('financial-overview')}
+                      className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                        activeTab === 'financial-overview' 
+                          ? 'border-[#05294E] text-[#05294E]' 
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                      type="button"
+                      aria-selected={activeTab === 'financial-overview'}
+                      role="tab"
+                    >
+                      <TrendingUp className={`w-5 h-5 mr-2 transition-colors ${
+                        activeTab === 'financial-overview' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
+                      Financial Overview
+                    </button>
+                    <button
                       onClick={() => setActiveTab('student-payments')}
                       className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
                         activeTab === 'student-payments' 
@@ -453,12 +658,16 @@ const PaymentManagement: React.FC = () => {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex-1">
                       <h2 className="text-lg font-semibold text-slate-900">
-                        {activeTab === 'student-payments' ? 'Student Payment Records' : 'University Payment Requests'}
+                        {activeTab === 'student-payments' ? 'Student Payment Records' : 
+                         activeTab === 'university-requests' ? 'University Payment Requests' : 
+                         'Financial Overview & Analytics'}
                       </h2>
                       <p className="text-sm text-slate-600 mt-1">
                         {activeTab === 'student-payments' 
                           ? 'View and export all student payment transactions and application fees'
-                          : 'Request payouts from your available balance and track request status'
+                          : activeTab === 'university-requests'
+                          ? 'Request payouts from your available balance and track request status'
+                          : 'Comprehensive financial analytics, trends, and performance metrics'
                         }
                       </p>
                     </div>
@@ -588,8 +797,8 @@ const PaymentManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+          {/* Student Payment Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
                 <div className="p-3 bg-blue-100 rounded-xl">
@@ -602,19 +811,6 @@ const PaymentManagement: React.FC = () => {
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-xl">
-                  <DollarSign className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Application Fees Received</p>
-                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_revenue)}</p>
-                  <p className="text-xs text-slate-500">From paid applications</p>
-                </div>
-              </div>
-            </div>
-
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-xl">
@@ -642,18 +838,13 @@ const PaymentManagement: React.FC = () => {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
                 <div className="p-3 bg-purple-100 rounded-xl">
-                  <Shield className="w-6 h-6 text-purple-600" />
+                  <DollarSign className="w-6 h-6 text-purple-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Available Balance</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
-                    ) : (
-                      formatCurrency(universityBalance)
-                    )}
-                  </p>
-                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                   <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_revenue)}</p>
+                   <p className="text-xs text-slate-500">From application fees</p>
+                 </div>
               </div>
             </div>
           </div>
@@ -919,31 +1110,62 @@ const PaymentManagement: React.FC = () => {
                       </div>
                     )}
 
-          {/* Stats Cards for University Requests */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-xl">
-                  <FileText className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Total Requests</p>
-                  <p className="text-2xl font-bold text-slate-900">{universityPaymentRequests.length}</p>
-                </div>
-              </div>
-            </div>
-            
+          {/* University Requests Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-xl">
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {loadingUniversityRequests ? (
+                       <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                     ) : (
+                       formatCurrency(financialStats.totalRevenue)
+                     )}
+                   </p>
+                   <p className="text-xs text-slate-500">From application fees</p>
+                 </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <CreditCard className="w-6 h-6 text-blue-600" />
+                </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-600">Total Requested</p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {formatCurrency(universityPaymentRequests.reduce((sum, r) => sum + r.amount_usd, 0))}
+                    {loadingUniversityRequests ? (
+                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                    ) : (
+                      formatCurrency(universityPaymentRequests.reduce((sum, r) => sum + r.amount_usd, 0))
+                    )}
                   </p>
+                  <p className="text-xs text-slate-500">All payment requests</p>
                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-yellow-100 rounded-xl">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Pending Payment Requests</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {loadingUniversityRequests ? (
+                       <div className="animate-pulse bg-slate-200 h-8 w-8 rounded"></div>
+                     ) : (
+                       financialStats.pendingRequests
+                     )}
+                   </p>
+                   <p className="text-xs text-slate-500">Awaiting approval</p>
+                 </div>
               </div>
             </div>
 
@@ -952,19 +1174,21 @@ const PaymentManagement: React.FC = () => {
                 <div className="p-3 bg-purple-100 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Available Balance</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
-                    ) : (
-                      formatCurrency(universityBalance)
-                    )}
-                  </p>
-                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Available Balance</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {loadingUniversityRequests ? (
+                       <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                     ) : (
+                       formatCurrency(universityBalance)
+                     )}
+                   </p>
+                   <p className="text-xs text-slate-500">Application fees - active payment requests</p>
+                 </div>
               </div>
             </div>
           </div>
+
 
           {/* University Payment Requests Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1028,7 +1252,6 @@ const PaymentManagement: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
                           <div className="font-medium">{formatCurrency(request.amount_usd)}</div>
-                          <div className="text-gray-500">{request.amount_coins} coins</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1121,6 +1344,275 @@ const PaymentManagement: React.FC = () => {
         </>
       )}
 
+      {/* Financial Overview Tab Content */}
+      {activeTab === 'financial-overview' && (
+        <>
+          {/* Key Financial Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <DollarSign className="w-6 h-6 text-green-600" />
+                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {formatCurrency(financialStats.totalRevenue)}
+                   </p>
+                   <p className="text-xs text-slate-500">From application fees</p>
+                 </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-slate-600">Conversion Rate</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-slate-500">Applications to payments</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-purple-100 rounded-xl">
+                  <Shield className="w-6 h-6 text-purple-600" />
+                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Available Balance</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {formatCurrency(universityBalance)}
+                   </p>
+                   <p className="text-xs text-slate-500">Application fees - active payment requests</p>
+                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-yellow-100 rounded-xl">
+                  <FileText className="w-6 h-6 text-yellow-600" />
+                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Avg. Application Fee</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {formatCurrency(financialAnalytics.applicationTrends.averageFee)}
+                   </p>
+                   <p className="text-xs text-slate-500">Per application</p>
+                 </div>
+              </div>
+            </div>
+          </div>
+
+                     {/* Unified Revenue Chart */}
+           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+             <div className="flex items-center justify-between mb-6">
+               <div>
+                 <h3 className="text-xl font-semibold text-slate-900">Application Fee Revenue</h3>
+                 <p className="text-sm text-slate-600">Customizable time period insights</p>
+               </div>
+               <div className="text-right">
+                 <div className="text-2xl font-bold text-slate-900">
+                   {revenueChartType === 'daily' 
+                     ? formatCurrency(
+                         financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0)
+                       )
+                     : formatCurrency(
+                         financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0)
+                       )
+                   }
+                 </div>
+                 <div className="text-xs text-slate-500">
+                   {revenueChartType === 'daily' ? 'Last ' + revenueChartPeriod + ' days' : 'Last ' + revenueChartPeriod + ' months'}
+                 </div>
+               </div>
+             </div>
+
+             {/* Chart Type and Period Selector */}
+             <div className="mb-6 p-4 bg-slate-50 rounded-xl">
+               <div className="flex items-center justify-between mb-4">
+                 <div className="flex space-x-1 bg-white rounded-lg p-1">
+                   <button
+                     onClick={() => {
+                       setRevenueChartType('daily');
+                       setRevenueChartPeriod(7);
+                     }}
+                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                       revenueChartType === 'daily'
+                         ? 'bg-[#05294E] text-white shadow-sm'
+                         : 'text-slate-600 hover:text-slate-900'
+                     }`}
+                   >
+                     Daily
+                   </button>
+                   <button
+                     onClick={() => {
+                       setRevenueChartType('monthly');
+                       setRevenueChartPeriod(8);
+                     }}
+                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                       revenueChartType === 'monthly'
+                         ? 'bg-[#05294E] text-white shadow-sm'
+                         : 'text-slate-600 hover:text-slate-900'
+                     }`}
+                   >
+                     Monthly
+                   </button>
+                 </div>
+                 
+                 <div className="flex space-x-2">
+                   {(revenueChartType === 'daily' ? [3, 5, 7, 14] : [3, 4, 6, 8, 12]).map((period) => (
+                     <button
+                       key={period}
+                       onClick={() => setRevenueChartPeriod(period)}
+                       className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                         revenueChartPeriod === period
+                           ? 'bg-[#05294E] text-white'
+                           : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                       }`}
+                     >
+                       {period}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+               
+               <div className="text-xs text-slate-500 text-center">
+                 {revenueChartType === 'daily' 
+                   ? 'Select days to analyze daily application fee trends'
+                   : 'Select months to analyze monthly application fee patterns'
+                 }
+               </div>
+             </div>
+
+             {/* Chart Data */}
+             <div className="space-y-3">
+               {(revenueChartType === 'daily' 
+                 ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod)
+                 : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod)
+               ).map((item, index) => {
+                 const data = revenueChartType === 'daily' ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod) : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod);
+                 const maxAmount = Math.max(...data.map(d => d.amount));
+                 const percentage = maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
+                 const isCurrent = index === data.length - 1;
+                 
+                 return (
+                   <div key={revenueChartType === 'daily' ? (item as any).date : (item as any).month} className="group">
+                     <div className="flex items-center justify-between mb-2">
+                       <div className="flex items-center space-x-3">
+                         <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                           isCurrent ? 'bg-[#05294E]' : 'bg-slate-300'
+                         }`}></div>
+                         <span className={`text-sm font-medium transition-colors duration-200 ${
+                           isCurrent ? 'text-[#05294E]' : 'text-slate-600'
+                         }`}>
+                           {revenueChartType === 'daily' 
+                             ? new Date((item as any).date).toLocaleDateString('en-US', { 
+                                 weekday: 'short', 
+                                 month: 'short', 
+                                 day: 'numeric' 
+                               })
+                             : (item as any).month
+                           }
+                         </span>
+                         {isCurrent && (
+                           <span className="px-2 py-0.5 bg-[#05294E]/10 text-[#05294E] text-xs font-medium rounded-full">
+                             {revenueChartType === 'daily' ? 'Today' : 'Current'}
+                           </span>
+                         )}
+                       </div>
+                       <span className={`text-sm font-semibold transition-colors duration-200 ${
+                         isCurrent ? 'text-[#05294E]' : 'text-slate-700'
+                       }`}>
+                         {formatCurrency(item.amount)}
+                       </span>
+                     </div>
+                     <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                       <div 
+                         className={`h-full rounded-full transition-all duration-1000 ease-out ${
+                           isCurrent 
+                             ? 'bg-[#05294E]' 
+                             : 'bg-slate-400'
+                         }`}
+                         style={{ width: `${Math.max(percentage, 2)}%` }}
+                       ></div>
+                     </div>
+                   </div>
+                 );
+               })}
+             </div>
+             
+             <div className="mt-6 pt-4 border-t border-slate-200">
+               <div className="flex items-center justify-between">
+                 <span className="text-sm font-medium text-slate-700">
+                   {revenueChartType === 'daily' ? revenueChartPeriod + '-day' : revenueChartPeriod + '-month'} average
+                 </span>
+                 <span className="text-lg font-semibold text-slate-900">
+                   {revenueChartType === 'daily' 
+                     ? formatCurrency(
+                         financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0) / revenueChartPeriod
+                       )
+                     : formatCurrency(
+                         financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0) / revenueChartPeriod
+                       )
+                   }
+                 </span>
+               </div>
+             </div>
+           </div>
+
+
+          {/* Recent Activity Timeline */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent Financial Activity</h3>
+            <div className="space-y-4">
+              {financialAnalytics.recentActivity.length > 0 ? (
+                financialAnalytics.recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg">
+                    <div className={`w-3 h-3 rounded-full ${
+                      activity.type === 'revenue' ? 'bg-green-500' :
+                      activity.type === 'payout' ? 'bg-blue-500' :
+                      'bg-yellow-500'
+                    }`}></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-slate-900">{activity.description}</p>
+                      <p className="text-xs text-slate-600">
+                        {new Date(activity.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${
+                        activity.type === 'revenue' ? 'text-green-600' :
+                        activity.type === 'payout' ? 'text-blue-600' :
+                        'text-yellow-600'
+                      }`}>
+                        {activity.type === 'revenue' ? '+' : '-'}{formatCurrency(activity.amount)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-500">No recent activity to display</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Payment Request Modal */}
       {showPaymentRequestModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -1190,18 +1682,86 @@ const PaymentManagement: React.FC = () => {
               {/* Dynamic fields */}
               {payoutMethod === 'zelle' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input placeholder="Zelle email" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_email: e.target.value})}/>
-                  <input placeholder="Zelle phone" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_phone: e.target.value})}/>
-                  <input placeholder="Account holder name" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}/>
+                  <div>
+                    <input 
+                      placeholder="Zelle email *" 
+                      type='email'
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_email: e.target.value, zelle_phone: ''})}
+                    />
+                    {!payoutDetails.zelle_email && !payoutDetails.zelle_phone && <p className="text-xs text-red-600 mt-1">Zelle email or phone is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Zelle phone *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_phone: e.target.value, zelle_email: ''})}
+                    />
+                    {!payoutDetails.zelle_email && !payoutDetails.zelle_phone && <p className="text-xs text-red-600 mt-1">Zelle email or phone is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Account holder name (optional)" 
+                      className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Optional - useful for verification or records</p>
+                  </div>
                 </div>
               )}
               {payoutMethod === 'bank_transfer' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input placeholder="Bank name" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, bank_name: e.target.value})}/>
-                  <input placeholder="Account holder name" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}/>
-                  <input placeholder="Routing number" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, routing_number: e.target.value})}/>
-                  <input placeholder="Account number" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, account_number: e.target.value})}/>
-                  <input placeholder="SWIFT / IBAN (optional)" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, swift: e.target.value, iban: e.target.value})}/>
+                  <div>
+                    <input 
+                      placeholder="Bank name *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.bank_name ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, bank_name: e.target.value})}
+                    />
+                    {!payoutDetails.bank_name && <p className="text-xs text-red-600 mt-1">Bank name is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Account holder name *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.account_name ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}
+                    />
+                    {!payoutDetails.account_name && <p className="text-xs text-red-600 mt-1">Account holder name is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Routing number *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.routing_number ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, routing_number: e.target.value})}
+                    />
+                    {!payoutDetails.routing_number && <p className="text-xs text-red-600 mt-1">Routing number is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Account number *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.account_number ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, account_number: e.target.value})}
+                    />
+                    {!payoutDetails.account_number && <p className="text-xs text-red-600 mt-1">Account number is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="SWIFT / IBAN (optional)" 
+                      className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, swift: e.target.value, iban: e.target.value})}
+                    />
+                  </div>
                 </div>
               )}
               {payoutMethod === 'stripe' && (
@@ -1215,13 +1775,19 @@ const PaymentManagement: React.FC = () => {
                 <button onClick={()=> setShowPaymentRequestModal(false)} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Cancel</button>
                 <button 
                   onClick={handleSubmitPaymentRequest} 
-                  disabled={submittingPayout || !isPaymentAmountValid()} 
+                  disabled={submittingPayout || !isPaymentAmountValid() || !isPayoutDetailsValid()} 
                   className={`px-4 py-2 rounded-lg text-white transition-colors ${
-                    isPaymentAmountValid() 
+                    isPaymentAmountValid() && isPayoutDetailsValid()
                       ? 'bg-indigo-600 hover:bg-indigo-700' 
                       : 'bg-gray-400 cursor-not-allowed'
                   } disabled:opacity-60`}
-                  title={!isPaymentAmountValid() ? 'Please enter a valid amount within your available balance' : 'Submit payment request'}
+                  title={!isPaymentAmountValid() ? 'Please enter a valid amount within your available balance' : 
+                         !isPayoutDetailsValid() ? 
+                           (payoutMethod === 'zelle' ? 'Please provide either Zelle email or phone number (not both)' :
+                            payoutMethod === 'bank_transfer' ? 'Please fill in all required bank details' :
+                            payoutMethod === 'stripe' ? 'Please provide Stripe email' :
+                            'Please fill in all required payment details') : 
+                         'Submit payment request'}
                 >
                   {submittingPayout ? 'Submitting...' : 'Submit request'}
                 </button>
