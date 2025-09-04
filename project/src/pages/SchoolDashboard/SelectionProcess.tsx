@@ -70,12 +70,12 @@ const SelectionProcess: React.FC = () => {
   // Filtrar estudantes em processo de seleção OU aprovados que ainda não pagaram as taxas
   const selectionProcessApplications = useMemo(() => {
     return applications.filter(app => {
-      const userProfile = (app as any).user_profiles;
-      const hasPaidApplicationFee = userProfile?.is_application_fee_paid;
+      const hasPaidApplicationFee = (app as any).is_application_fee_paid;
       const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
       const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
       
       // Debug: log dos valores para verificar
+      const userProfile = (app as any).user_profiles;
       if (userProfile?.full_name) {
         console.log(`Student: ${userProfile.full_name}`);
         console.log(`Application Fee: ${hasPaidApplicationFee}`);
@@ -1329,8 +1329,8 @@ const SelectionProcess: React.FC = () => {
   
   // Função para verificar se o estudante deve ser movido para a página Students
   const checkIfStudentShouldBeMoved = (student: ApplicationDetails) => {
-    const hasPaidApplicationFee = student.user_profiles?.is_application_fee_paid;
-    const hasPaidScholarshipFee = student.is_scholarship_fee_paid;
+    const hasPaidApplicationFee = (student as any).is_application_fee_paid;
+    const hasPaidScholarshipFee = (student as any).is_scholarship_fee_paid;
     
     if (hasPaidApplicationFee && hasPaidScholarshipFee) {
       // Atualizar o status para 'approved' para mover para a página Students
@@ -1796,10 +1796,27 @@ const SelectionProcess: React.FC = () => {
                                 </span>
                               </div>
                               {app.status === 'approved' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                  Waiting for Fees
-                                </span>
+                                (() => {
+                                  const hasPaidApplicationFee = (app as any).is_application_fee_paid;
+                                  const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
+                                  const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
+                                  
+                                  if (bothFeesPaid) {
+                                    return (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                        Fees Paid
+                                      </span>
+                                    );
+                                  } else {
+                                    return (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                        Waiting for Fees
+                                      </span>
+                                    );
+                                  }
+                                })()
                               ) : hasUrgentAction && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                                   <AlertCircle className="w-3 h-3 mr-1" />
@@ -2067,12 +2084,12 @@ const SelectionProcess: React.FC = () => {
                                       <dd className="mt-1">
                                         <div className="flex items-center space-x-2">
                                           <div className={`w-2 h-2 rounded-full ${
-                                            selectedStudent.user_profiles.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
+                                            (selectedStudent as any).is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
                                           }`}></div>
                                           <span className={`text-xs sm:text-sm font-medium ${
-                                            selectedStudent.user_profiles.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
+                                            (selectedStudent as any).is_application_fee_paid ? 'text-green-700' : 'text-red-700'
                                           }`}>
-                                            {selectedStudent.user_profiles.is_application_fee_paid ? 'Paid' : 'Pending'}
+                                            {(selectedStudent as any).is_application_fee_paid ? 'Paid' : 'Pending'}
                                           </span>
                                         </div>
                                       </dd>

@@ -115,7 +115,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   };
 
   const getAmount = () => {
-    return feeType === 'selection_process' ? 50 : 350;
+    return feeType === 'selection_process' ? 999 : 350;
   };
 
   const getProductName = () => {

@@ -53,7 +53,7 @@ const CollegeEnrollmentCheckout: React.FC = () => {
         </div>
         <StripeCheckout
           productId="applicationFee"
-          buttonText="Pay Now ($900)"
+          buttonText="Pay Now ($999)"
           className="w-full py-4"
           paymentType="enrollment_and_scholarship"
           feeType="enrollment_fee"

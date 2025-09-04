@@ -60,7 +60,7 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
     setError(null);
 
     try {
-      // Se o admin digitou um código Zelle, inserir no PostgreSQL externo
+      // Se o admin digitou um código Zelle, inserir no PostgreSQL externo (para aprovação E rejeição)
       if (zelleCode.trim()) {
         console.log('💾 [ZellePaymentReviewModal] Inserindo código Zelle no PostgreSQL:', zelleCode.trim());
         const result = await insertZelleCode(zelleCode.trim());
@@ -259,29 +259,30 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Information</h3>
             
-            {/* Zelle Code Field - Only for approval */}
-            {action === 'approve' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zelle Code (Optional)
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={zelleCode}
-                    onChange={(e) => setZelleCode(e.target.value)}
-                    placeholder="Enter Zelle transaction code if available"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                    <AlertCircle className="w-4 h-4 text-gray-400" />
-                  </div>
+            {/* Zelle Code Field - For both approval and rejection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Zelle Code (Optional)
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={zelleCode}
+                  onChange={(e) => setZelleCode(e.target.value)}
+                  placeholder="Enter Zelle transaction code if available"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <AlertCircle className="w-4 h-4 text-gray-400" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  This field is optional. You can enter the Zelle transaction code if you have it available.
-                </p>
               </div>
-            )}
+              <p className="text-xs text-gray-500 mt-1">
+                {action === 'approve' 
+                  ? 'This field is optional. You can enter the Zelle transaction code if you have it available.'
+                  : 'This field is optional. Enter the Zelle transaction code for audit purposes even if rejecting the payment.'
+                }
+              </p>
+            </div>
 
             {/* Rejection Reason Cards - Only for rejection */}
             {action === 'reject' && (

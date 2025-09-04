@@ -70,7 +70,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
               selectedMethod={selectedPaymentMethod}
               onMethodSelect={handlePaymentMethodSelect}
               feeType="i20_control_fee"
-              amount={1250}
+              amount={999}
             />
 
             {/* Botão de Confirmação - só aparece quando um método é selecionado */}

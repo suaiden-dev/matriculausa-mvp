@@ -380,14 +380,15 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     console.log('🔍 [PreCheckoutModal] discountCode:', discountCode);
     console.log('🔍 [PreCheckoutModal] codeApplied:', codeApplied);
     
+    // ✅ CORREÇÃO: Só permite prosseguir se tiver código válido aplicado
     if (validationResult?.isValid && discountCode.trim() && codeApplied) {
       console.log('🔍 [PreCheckoutModal] ✅ Aplicando código e continuando para checkout');
       onProceedToCheckout(discountCode.trim().toUpperCase());
+      onClose();
     } else {
-      console.log('🔍 [PreCheckoutModal] ⚠️ Continuando sem código de desconto');
-      onProceedToCheckout();
+      console.log('🔍 [PreCheckoutModal] ❌ Código não válido ou não aplicado - não pode prosseguir');
+      alert(t('preCheckoutModal.mustEnterValidCode'));
     }
-    onClose();
   };
 
   const handleSkip = () => {
@@ -581,12 +582,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   </button>
                   <button
                     onClick={handleProceed}
-                    disabled={isLoading || !termsAccepted}
+                    disabled={isLoading || !termsAccepted || !(validationResult?.isValid && codeApplied)}
                     className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 ${
                       validationResult?.isValid && codeApplied
                         ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
                         : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-                    } ${isLoading || !termsAccepted ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    } ${isLoading || !termsAccepted || !(validationResult?.isValid && codeApplied) ? 'opacity-75 cursor-not-allowed' : ''}`}
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center space-x-2">

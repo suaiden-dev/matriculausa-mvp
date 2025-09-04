@@ -76,7 +76,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
   // Obter parâmetros da URL
   const feeType = searchParams.get('type') || searchParams.get('feeType') || 'selection_process';
-  const amount = searchParams.get('amount') || '600';
+  const amount = searchParams.get('amount') || '999';
   const scholarshipsIds = searchParams.get('scholarshipsIds') || '';
   const applicationFeeAmount = searchParams.get('applicationFeeAmount') ? parseFloat(searchParams.get('applicationFeeAmount')!) : undefined;
   
@@ -95,7 +95,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const feeInfo: FeeInfo[] = [
     {
       type: 'selection_process',
-      amount: activeDiscount && feeType === 'selection_process' ? 600 - (activeDiscount.discount_amount || 0) : 600,
+      amount: activeDiscount && feeType === 'selection_process' ? 999 - (activeDiscount.discount_amount || 0) : 999,
       description: `Selection Process Fee - Complete your application process${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
@@ -107,13 +107,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     },
     {
       type: 'scholarship_fee',
-      amount: 850,
+      amount: 400,
       description: 'Scholarship Fee - Confirm your scholarship application',
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'i-20_control_fee',
-      amount: 1250,
+      amount: 999,
       description: 'I-20 Control Fee - Document processing and validation',
       icon: <CreditCard className="w-6 h-6" />
     }
@@ -413,19 +413,34 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   const relativePath = uploadData.path; // Já é o path relativo: zelle-payments/user_id/filename
                   console.log('📁 [ZelleCheckout] Path relativo a ser salvo:', relativePath);
                   
-                  const { error: updateError } = await supabase
+                  // Primeiro, buscar o registro mais recente do usuário com status pending_verification
+                  const { data: existingPayments, error: selectError } = await supabase
                     .from('zelle_payments')
-                    .update({ screenshot_url: relativePath })
+                    .select('id, amount, fee_type, created_at')
                     .eq('user_id', user?.id)
-                    .eq('amount', amount.toString())
                     .eq('status', 'pending_verification')
                     .order('created_at', { ascending: false })
                     .limit(1);
 
-                  if (updateError) {
-                    console.error('❌ [ZelleCheckout] Erro ao atualizar screenshot_url:', updateError);
+                  if (selectError) {
+                    console.error('❌ [ZelleCheckout] Erro ao buscar pagamentos existentes:', selectError);
+                  } else if (existingPayments && existingPayments.length > 0) {
+                    const paymentToUpdate = existingPayments[0];
+                    console.log('🔍 [ZelleCheckout] Pagamento encontrado para atualizar:', paymentToUpdate);
+                    
+                    // Atualizar o screenshot_url usando o ID específico
+                    const { error: updateError } = await supabase
+                      .from('zelle_payments')
+                      .update({ screenshot_url: relativePath })
+                      .eq('id', paymentToUpdate.id);
+
+                    if (updateError) {
+                      console.error('❌ [ZelleCheckout] Erro ao atualizar screenshot_url:', updateError);
+                    } else {
+                      console.log('✅ [ZelleCheckout] screenshot_url atualizado com sucesso!');
+                    }
                   } else {
-                    console.log('✅ [ZelleCheckout] screenshot_url atualizado com sucesso!');
+                    console.log('⚠️ [ZelleCheckout] Nenhum pagamento pendente encontrado para atualizar');
                   }
                 } catch (error) {
                   console.error('❌ [ZelleCheckout] Erro ao atualizar screenshot_url:', error);
