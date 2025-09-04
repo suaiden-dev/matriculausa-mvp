@@ -129,7 +129,9 @@ export default function WhatsAppConnection() {
   const agentId = searchParams.get('agentId');
   const { getAllAgentTypes, addCustomAgentType, isAgentTypeExists } = useCustomAgentTypes();
   
-  const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp' | 'knowledge' | 'create'>('agents');
+  const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp' | 'knowledge'>('agents');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const tabNavRef = useRef<HTMLElement>(null);
 
   // Estados para agentes - MOVIDO PARA O TOPO
@@ -1219,8 +1221,16 @@ export default function WhatsAppConnection() {
       custom_prompt: customPrompt
     });
     
-    // Navegar para a aba de criação para editar
-    setActiveTab('create');
+    // Transição suave para o formulário
+    handleSmoothTransition(true);
+  };
+
+  const handleSmoothTransition = (showForm: boolean) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowCreateForm(showForm);
+      setIsTransitioning(false);
+    }, 150);
   };
 
   const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
@@ -2123,7 +2133,7 @@ Mantenha sempre o seguinte tom nas interações:
 
         showNotification('success', 'AI agent updated successfully!');
         setEditingAgent(null);
-        setActiveTab('agents'); // Redirecionar para a aba de agentes
+        handleSmoothTransition(false); // Voltar para a lista de agentes
       } else {
         // Create new agent
         const { data: agent, error: agentError } = await supabase
@@ -2181,7 +2191,7 @@ Mantenha sempre o seguinte tom nas interações:
         setLastCreatedAgent(agent);
         setShowSuccessModal(true);
         setPendingFiles([]); // Limpar arquivos pendentes
-        setActiveTab('agents'); // Redirecionar para a aba de agentes
+        handleSmoothTransition(false); // Voltar para a lista de agentes
       }
 
       fetchAgents();
@@ -2564,22 +2574,6 @@ Mantenha sempre o seguinte tom nas interações:
                     AI Agents
                   </button>
                   <button
-                    onClick={() => setActiveTab('create')}
-                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                      activeTab === 'create'
-                        ? 'border-[#05294E] text-[#05294E]' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
-                    type="button"
-                    aria-selected={activeTab === 'create'}
-                    role="tab"
-                  >
-                    <Bot className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'create' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
-                    Create Agent
-                  </button>
-                  <button
                     onClick={() => setActiveTab('whatsapp')}
                     className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
                       activeTab === 'whatsapp'
@@ -2615,18 +2609,42 @@ Mantenha sempre o seguinte tom nas interações:
                   Create and manage your AI agents before connecting them to WhatsApp
                 </p>
               </div>
-              <button
-                onClick={() => setActiveTab('create')}
-                className="bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 py-2.5 rounded-xl font-medium transition-all duration-200 hover:shadow-md text-sm flex items-center gap-2"
-              >
-                <Bot className="h-4 w-4" />
-                Create New Agent
-              </button>
+              {!showCreateForm && (
+                <button
+                  onClick={() => {
+                    setEditingAgent(null);
+                    setFormData({
+                      ai_name: "",
+                      university_name: university?.name || "",
+                      agent_type: "",
+                      personality: "",
+                      custom_prompt: ""
+                    });
+                    handleSmoothTransition(true);
+                  }}
+                  className="bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 py-2.5 rounded-xl font-medium transition-all duration-200 hover:shadow-md text-sm flex items-center gap-2"
+                >
+                  <Bot className="h-4 w-4" />
+                  Create New Agent
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Lista de Agentes */}
-          <div className="p-6 border-b border-slate-200">
+          {/* Lista de Agentes ou Formulário */}
+          <div className="relative overflow-hidden">
+            {isTransitioning && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10">
+                <div className="flex items-center gap-2 text-[#05294E]">
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#05294E] border-t-transparent"></div>
+                  <span className="text-sm font-medium">Loading...</span>
+                </div>
+              </div>
+            )}
+            {!showCreateForm ? (
+              <div className={`p-6 border-b border-slate-200 transition-all duration-300 ease-in-out transform ${
+                isTransitioning ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
+              }`}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900">Existing Agents</h3>
               <div className="flex items-center gap-2">
@@ -2996,9 +3014,257 @@ Mantenha sempre o seguinte tom nas interações:
               </div>
             )}
           </div>
+            ) : (
+              /* Formulário de Criação/Edição */
+              <div className={`p-4 sm:p-6 bg-gray-50 rounded-xl transition-all duration-300 ease-in-out transform ${
+                isTransitioning ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
+              }`}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-[#05294E]" />
+                    {editingAgent ? 'Edit AI Agent' : 'Create New Agent'}
+                  </h3>
+                  <p className="text-gray-600 mt-1">
+                    {editingAgent 
+                      ? 'Update your AI agent configuration and settings'
+                      : 'Configure your AI agent with custom instructions and knowledge base'
+                    }
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingAgent(null);
+                    setFormData({
+                      ai_name: "",
+                      university_name: university?.name || "",
+                      agent_type: "",
+                      personality: "",
+                      custom_prompt: ""
+                    });
+                    handleSmoothTransition(false);
+                  }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  {editingAgent ? 'Cancel Edit' : 'Back to List'}
+                </button>
+              </div>
 
+              <form onSubmit={handleSubmitAgent} className="space-y-4 sm:space-y-6">
+                {/* Grid responsivo para campos principais */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Agent Name */}
+                  <div className="w-full">
+                    <label htmlFor="ai_name" className="block text-sm font-medium text-gray-700 mb-2">
+                      Agent Name *
+                    </label>
+                    <input
+                      id="ai_name"
+                      type="text"
+                      value={formData.ai_name}
+                      onChange={(e) => handleInputChange("ai_name", e.target.value)}
+                      placeholder="e.g. Maria Assistant"
+                      className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
+                      required
+                    />
+                  </div>
+
+                  {/* Agent Type */}
+                  <div className="w-full">
+                    <label htmlFor="agent_type" className="block text-sm font-medium text-gray-700 mb-2">
+                      Agent Type *
+                    </label>
+                    <select
+                      id="agent_type"
+                      value={formData.agent_type}
+                      onChange={(e) => handleInputChange("agent_type", e.target.value)}
+                      className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
+                      required
+                    >
+                      <option value="">Select agent type</option>
+                      {getAllAgentTypes().map((option: string) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                      <option value="custom">Custom...</option>
+                    </select>
+                  </div>
+
+                  {/* Custom Agent Type Input - Only show when "custom" is selected */}
+                  {formData.agent_type === 'custom' && (
+                    <div className="w-full">
+                      <label htmlFor="custom_agent_type_input" className="block text-sm font-medium text-gray-700 mb-2">
+                        Custom Agent Type *
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          id="custom_agent_type_input"
+                          placeholder="Enter custom agent type..."
+                          className="flex-1 px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const customType = e.currentTarget.value.trim();
+                              if (customType && !isAgentTypeExists(customType)) {
+                                addCustomAgentType(customType);
+                                handleInputChange("agent_type", customType);
+                                e.currentTarget.value = '';
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const customType = e.target.value.trim();
+                            if (customType && !isAgentTypeExists(customType)) {
+                              addCustomAgentType(customType);
+                              handleInputChange("agent_type", customType);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Press Enter or click outside to add the custom agent type
+                      </p>
+                    </div>
+                  )}
+
+                  {/* University/Department */}
+                  <div className="w-full">
+                    <label htmlFor="university_name" className="block text-sm font-medium text-gray-700 mb-2">
+                      University/Department *
+                    </label>
+                    <input
+                      id="university_name"
+                      type="text"
+                      value={formData.university_name}
+                      onChange={(e) => handleInputChange("university_name", e.target.value)}
+                      placeholder="e.g. Anderson University Admissions"
+                      className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed text-base"
+                      required
+                      disabled
+                    />
+                  </div>
+
+                  {/* Personality */}
+                  <div className="w-full">
+                    <label htmlFor="personality" className="block text-sm font-medium text-gray-700 mb-2">
+                      Personality *
+                    </label>
+                    <select
+                      id="personality"
+                      value={formData.personality}
+                      onChange={(e) => handleInputChange("personality", e.target.value)}
+                      className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
+                      required
+                    >
+                      <option value="">Select personality</option>
+                      {personalityOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Custom Instructions - Collapsible */}
+                <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 mb-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      Custom Instructions (Optional)
+                    </label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCustomInstructionsExpanded(!customInstructionsExpanded)}
+                        className="flex items-center gap-1 px-3 py-2 sm:py-1 text-sm bg-[#05294E]/10 text-[#05294E] rounded-lg hover:bg-[#05294E]/20 transition-colors"
+                      >
+                        {customInstructionsExpanded ? (
+                          <>
+                            <X className="w-3 h-3" />
+                            Collapse
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" />
+                            Expand
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {customInstructionsExpanded && (
+                    <div className="space-y-3">
+                      <textarea
+                        id="custom_prompt"
+                        value={formData.custom_prompt}
+                        onChange={(e) => handleInputChange("custom_prompt", e.target.value)}
+                        placeholder="e.g. Always respond succinctly and politely. Be proactive in offering help..."
+                        className="w-full px-3 sm:px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors resize-none text-base"
+                        rows={4}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Add specific instructions for how this agent should behave and respond to students.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Knowledge Base Documents */}
+                <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-4 h-4 text-[#05294E]" />
+                    <label className="text-sm font-medium text-gray-700">
+                      Knowledge Base Documents (Optional)
+                    </label>
+                  </div>
+                  <AIAgentKnowledgeUpload
+                    ref={uploadRef}
+                    aiConfigurationId={editingAgent?.id || ""}
+                    onDocumentsChange={(documents: any[]) => {
+                      if (editingAgent?.id) {
+                        console.log('Documents uploaded:', documents);
+                      } else {
+                        console.log('Documents managed by component');
+                      }
+                    }}
+                    onPendingFilesChange={(files: File[]) => {
+                      setPendingFiles(files);
+                    }}
+                    existingDocuments={editingAgent?.id ? [] : []}
+                    isCreating={!editingAgent?.id}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Upload documents that will be used as knowledge base for your AI agent.
+                  </p>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-4">
+                  <button 
+                    type="submit" 
+                    disabled={formLoading}
+                    className="w-full bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold flex items-center justify-center gap-3 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl text-base"
+                  >
+                    {formLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        {editingAgent ? 'Updating Agent...' : 'Creating Agent...'}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" />
+                        {editingAgent ? 'Update Agent' : 'Create Agent'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+              </div>
+            )}
+          </div>
         </div>
-      ) : activeTab === 'create' ? (
+      ) : activeTab === 'whatsapp' ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
             <div className="flex items-center justify-between">
