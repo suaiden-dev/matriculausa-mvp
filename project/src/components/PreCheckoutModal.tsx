@@ -11,7 +11,8 @@ interface Term {
   id: string;
   title: string;
   content: string;
-  status: boolean;
+  term_type: string;
+  is_active: boolean;
   version: number;
   created_at: string;
   updated_at: string;
@@ -224,7 +225,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         id: 'default-checkout-terms',
         title: 'Checkout Terms and Conditions',
         content: 'By proceeding with this payment, you agree to our checkout terms and conditions.',
-        status: true,
+        term_type: 'checkout_terms',
+        is_active: true,
         version: 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
