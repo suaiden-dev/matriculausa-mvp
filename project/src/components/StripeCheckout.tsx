@@ -214,10 +214,10 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       // Redirecionar para a página de checkout do Zelle
       const params = new URLSearchParams({
         feeType: feeType,
-        amount: feeType === 'selection_process' ? '600' : 
+        amount: feeType === 'selection_process' ? '999' : 
                 feeType === 'application_fee' ? '350' :
-                feeType === 'scholarship_fee' ? '850' :
-                feeType === 'enrollment_fee' ? '1250' : '600',
+                feeType === 'scholarship_fee' ? '400' :
+                feeType === 'enrollment_fee' ? '999' : '999',
         scholarshipsIds: scholarshipsIds?.join(',') || ''
       });
       window.location.href = `/checkout/zelle?${params.toString()}`;
@@ -330,7 +330,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           onProceedToCheckout={handlePreCheckoutSuccess}
           feeType={feeType}
           productName={product.name}
-          productPrice={feeType === 'selection_process' ? 50 : 350}
+          productPrice={feeType === 'selection_process' ? 999 : 350}
         />
       )}
 
@@ -382,7 +382,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   selectedMethod={selectedPaymentMethod}
                   onMethodSelect={handlePaymentMethodSelect}
                   feeType={feeType}
-                  amount={850}
+                  amount={400}
                 />
               </div>
             </Dialog.Panel>
@@ -446,7 +446,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   selectedMethod={selectedPaymentMethod}
                   onMethodSelect={handlePaymentMethodSelect}
                   feeType={feeType}
-                  amount={feeType === 'selection_process' ? 50 : feeType === 'scholarship_fee' ? 850 : 350}
+                  amount={feeType === 'selection_process' ? 999 : feeType === 'scholarship_fee' ? 400 : 350}
                 />
               </div>
             </Dialog.Panel>

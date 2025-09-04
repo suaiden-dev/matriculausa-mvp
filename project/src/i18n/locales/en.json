@@ -187,7 +187,10 @@
       "amount": "Amount:",
       "paymentId": "Payment ID:"
     },
-    "helpText": "If the process takes longer than 2 minutes, please contact support."
+    "helpText": {
+      "default": "If the process takes longer than 2 minutes, please contact support.",
+      "underReview": "Your payment is under review. Please wait for verification."
+    }
   },
   "home": {
     "hero": {

@@ -51,7 +51,7 @@ export const PaymentFlow: React.FC<PaymentFlowProps> = ({
   };
 
   const getAmount = () => {
-    return feeType === 'selection_process' ? 50 : 350;
+    return feeType === 'selection_process' ? 999 : 350;
   };
 
   // Se um método foi selecionado, renderizar o componente correspondente

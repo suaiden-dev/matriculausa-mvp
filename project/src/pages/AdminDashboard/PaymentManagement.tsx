@@ -298,7 +298,7 @@ const PaymentManagement = (): React.JSX.Element => {
          
           const paymentRecord: PaymentRecord = {
             id: zellePayment.id,
-            student_id: zellePayment.user_id || zellePayment.student_profile_id || '',
+            student_id: student?.id || zellePayment.student_profile_id || '',
             user_id: zellePayment.user_id, // Campo necessário para a função approveZellePayment
             student_name: studentName,
             student_email: student?.email || 'Email not available',
@@ -470,6 +470,7 @@ const PaymentManagement = (): React.JSX.Element => {
       // MARCAR COMO PAGO NAS TABELAS CORRETAS
       console.log('💰 [approveZellePayment] Marcando como pago nas tabelas corretas...');
       console.log('🔍 [approveZellePayment] payment.fee_type_global:', payment.fee_type_global);
+      console.log('🔍 [approveZellePayment] payment.fee_type:', payment.fee_type);
       console.log('🔍 [approveZellePayment] payment.user_id:', payment.user_id);
       
       if (payment.fee_type_global === 'selection_process') {
@@ -498,7 +499,11 @@ const PaymentManagement = (): React.JSX.Element => {
         console.log('⚠️ [approveZellePayment] fee_type_global não é selection_process:', payment.fee_type_global);
       }
 
-      if (payment.fee_type_global === 'i20_control_fee') {
+      console.log('🔍 [approveZellePayment] Verificando condição I-20 Control Fee...');
+      console.log('🔍 [approveZellePayment] payment.fee_type_global === "i-20_control_fee":', payment.fee_type_global === 'i-20_control_fee');
+      console.log('🔍 [approveZellePayment] payment.fee_type === "i-20_control_fee":', payment.fee_type === 'i-20_control_fee');
+      
+      if (payment.fee_type_global === 'i-20_control_fee' || payment.fee_type === 'i-20_control_fee') {
         console.log('🎯 [approveZellePayment] Entrando na condição i20_control_fee');
         console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_i20_control_fee = true WHERE user_id =', payment.user_id);
         
@@ -522,19 +527,19 @@ const PaymentManagement = (): React.JSX.Element => {
         }
       }
 
-      if (payment.fee_type_global === 'application_fee' || payment.fee_type_global === 'scholarship_fee') {
+      if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
         console.log('🎯 [approveZellePayment] Entrando na condição scholarship_applications');
-        console.log('🔍 [approveZellePayment] fee_type_global:', payment.fee_type_global);
-        console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.user_id);
+        console.log('🔍 [approveZellePayment] fee_type:', payment.fee_type);
+        console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.student_id);
         
         // Marcar no scholarship_applications
         const { data: updateData, error: appError } = await supabase
           .from('scholarship_applications')
           .update({ 
-            [payment.fee_type_global === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
+            [payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
             updated_at: new Date().toISOString()
           })
-          .eq('student_id', payment.user_id)
+          .eq('student_id', payment.student_id)
           .select();
 
         console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications:', { updateData, appError });
@@ -542,8 +547,32 @@ const PaymentManagement = (): React.JSX.Element => {
         if (appError) {
           console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications:', appError);
         } else {
-          console.log(`✅ [approveZellePayment] ${payment.fee_type_global === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true`);
+          console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true`);
           console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
+        }
+
+        // Se for application_fee, também atualizar user_profiles
+        if (payment.fee_type === 'application_fee') {
+          console.log('🎯 [approveZellePayment] Atualizando user_profiles para application_fee');
+          console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET is_application_fee_paid = true WHERE user_id =', payment.user_id);
+          
+          const { data: profileUpdateData, error: profileError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              is_application_fee_paid: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', payment.user_id)
+            .select();
+
+          console.log('🔍 [approveZellePayment] Resultado da atualização user_profiles:', { profileUpdateData, profileError });
+
+          if (profileError) {
+            console.error('❌ [approveZellePayment] Erro ao marcar is_application_fee_paid no user_profiles:', profileError);
+          } else {
+            console.log('✅ [approveZellePayment] is_application_fee_paid marcado como true no user_profiles');
+            console.log('🔍 [approveZellePayment] Dados atualizados user_profiles:', profileUpdateData);
+          }
         }
       }
 

@@ -200,6 +200,34 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
+  } else if (!userProfile?.has_paid_i20_control_fee) {
+    // Pagou Scholarship Fee, mas não I-20 Control Fee
+    steps = [
+      {
+        label: t('studentDashboard.progressBar.selectionProcessFee'),
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.applicationFee'),
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.scholarshipFee'),
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.i20ControlFee'),
+        description: t('studentDashboard.progressBar.payI20Fee'),
+        completed: false,
+        current: true,
+      },
+    ];
   } else {
     // Pagou tudo
     steps = [

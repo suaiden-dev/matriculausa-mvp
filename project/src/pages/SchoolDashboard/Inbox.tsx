@@ -724,16 +724,217 @@ const Inbox: React.FC = () => {
 
   // Development Block - Always show
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center border-2 border-orange-200">
-        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <AlertTriangle className="w-8 h-8 text-orange-600" />
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-[#05294E] rounded-full mb-6">
+            <AlertTriangle className="h-10 w-10 text-white" />
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+            Email Management{' '}
+            <span className="text-[#05294E]">
+              Coming Soon!
+            </span>
+          </h1>
+          
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            We're developing an advanced email management system that will revolutionize 
+            how universities communicate with students and manage their applications.
+          </p>
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Page Under Development</h2>
-        <p className="text-gray-600 text-lg leading-relaxed">
-          This functionality is currently being developed and will be available soon. 
-          Thank you for your patience!
-        </p>
+
+        {/* Benefits Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
+            <div className="text-xl font-semibold text-gray-900 mb-4">
+              Enhanced Email Management
+            </div>
+            <div className="text-gray-600 leading-relaxed">
+              Streamlined inbox organization and communication tools for better productivity.
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
+            <div className="text-xl font-semibold text-gray-900 mb-4">
+              Streamlined Communication
+            </div>
+            <div className="text-gray-600 leading-relaxed">
+              Improved workflow integration and collaboration features for your team.
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
+            <div className="text-xl font-semibold text-gray-900 mb-4">
+              Advanced Features
+            </div>
+            <div className="text-gray-600 leading-relaxed">
+              Powerful tools to enhance your productivity and efficiency.
+            </div>
+          </div>
+        </div>
+
+        {/* How It Works Section */}
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
+            What to Expect
+          </h2>
+          
+          {/* Feature Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
+              <div className="text-xl font-semibold mb-4">Email Integration</div>
+              <div className="text-white">
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Seamless Gmail integration for university communications</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Automated email categorization and filtering</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Real-time notifications and alerts</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
+              <div className="text-xl font-semibold mb-4">Dashboard Features</div>
+              <div className="text-white">
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span><strong>Unified inbox</strong> for all university communications</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Advanced search and filtering capabilities</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Analytics and reporting tools</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* How It Works for Your University */}
+          <div className="mb-12">
+            <h3 className="text-2xl font-semibold text-gray-900 text-center mb-8">
+              How It Works for Your University
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl font-bold text-[#05294E]">1</span>
+                </div>
+                <div className="text-lg font-semibold text-gray-900 mb-3">Setup Integration</div>
+                <div className="text-gray-600">
+                  Connect your Gmail account and configure email settings for your university.
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl font-bold text-[#05294E]">2</span>
+                </div>
+                <div className="text-lg font-semibold text-gray-900 mb-3">Automated Processing</div>
+                <div className="text-gray-600">
+                  System automatically categorizes and processes incoming emails from students.
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl font-bold text-[#05294E]">3</span>
+                </div>
+                <div className="text-lg font-semibold text-gray-900 mb-3">Enhanced Management</div>
+                <div className="text-gray-600">
+                  Access unified dashboard with advanced tools for communication management.
+                </div>
+              </div>
+            </div>
+            
+            {/* Practical Example */}
+            <div className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
+              <div className="font-semibold text-white mb-4 text-center text-lg">Practical Example</div>
+              <div className="text-white">
+                <div className="text-center space-y-2">
+                  <p>
+                    <strong>Student sends application email</strong>
+                  </p>
+                  <p className="text-white/80">↓</p>
+                  <p>
+                    <strong>System automatically categorizes and notifies</strong>
+                  </p>
+                  <p className="text-white/80">↓</p>
+                  <p>
+                    <strong>University responds through unified dashboard</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Benefits */}
+          <div>
+            <h3 className="text-2xl font-semibold text-gray-900 text-center mb-8">
+              Benefits for Your University
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
+                <div className="font-semibold text-white mb-2">Automated Processing</div>
+                <div className="text-white text-sm">
+                  Intelligent email categorization and automated responses for efficiency.
+                </div>
+              </div>
+
+              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
+                <div className="font-semibold text-white mb-2">Unified Dashboard</div>
+                <div className="text-white text-sm">
+                  Centralized communication hub with advanced management tools.
+                </div>
+              </div>
+
+              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
+                <div className="font-semibold text-white mb-2">Enhanced Productivity</div>
+                <div className="text-white text-sm">
+                  Streamlined workflows and improved response times.
+                </div>
+              </div>
+
+              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
+                <div className="font-semibold text-white mb-2">Real-time Analytics</div>
+                <div className="text-white text-sm">
+                  Comprehensive insights and reporting for better decision making.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Call to Action */}
+        <div className="text-center">
+          <div className="space-y-4">
+            <div className="inline-flex items-center px-8 py-4 bg-[#05294E] text-white font-semibold text-lg rounded-xl shadow-lg">
+              <AlertTriangle className="h-5 w-5 mr-3" />
+              COMING SOON
+            </div>
+
+            <div className="block mx-auto text-[#05294E] font-medium">
+              We'll notify you as soon as it's ready!
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -46,20 +46,20 @@ const StudentManagement: React.FC = () => {
         console.log(`Student: ${student.full_name}`);
         console.log(`  - Application Status: ${app.status}`);
         console.log(`  - Documents Status: ${student.documents_status}`);
-        console.log(`  - Application Fee: ${student.is_application_fee_paid}`);
+        console.log(`  - Application Fee: ${(app as any).is_application_fee_paid}`);
         console.log(`  - Scholarship Fee: ${(app as any).is_scholarship_fee_paid}`);
-        console.log(`  - Both Fees Paid: ${student.is_application_fee_paid && (app as any).is_scholarship_fee_paid}`);
+        console.log(`  - Both Fees Paid: ${(app as any).is_application_fee_paid && (app as any).is_scholarship_fee_paid}`);
       }
     });
     
     // MOSTRAR APENAS ESTUDANTES QUE PAGARAM AMBAS AS TAXAS
     let filtered = applications.filter(app => {
-      const student = (app as any).user_profiles;
-      const hasPaidApplicationFee = student?.is_application_fee_paid;
+      const hasPaidApplicationFee = (app as any).is_application_fee_paid;
       const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
       const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
       
       // Debug: log do filtro
+      const student = (app as any).user_profiles;
       if (student?.full_name) {
         console.log(`Filtering ${student.full_name}: ${bothFeesPaid ? 'INCLUDED (both fees paid)' : 'EXCLUDED (fees pending)'}`);
       }
@@ -78,9 +78,8 @@ const StudentManagement: React.FC = () => {
     // Filtro por status de taxas
     if (selectedStatus) {
       filtered = filtered.filter(app => {
-        const student = app.user_profiles;
-        const hasPaidApplicationFee = student?.is_application_fee_paid;
-        const hasPaidScholarshipFee = app.is_scholarship_fee_paid;
+        const hasPaidApplicationFee = (app as any).is_application_fee_paid;
+        const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
         
         if (selectedStatus === 'both_paid') return hasPaidApplicationFee && hasPaidScholarshipFee;
         if (selectedStatus === 'application_paid') return hasPaidApplicationFee && !hasPaidScholarshipFee;

@@ -187,7 +187,10 @@
       "amount": "Valor:",
       "paymentId": "ID do Pagamento:"
     },
-    "helpText": "Se o processo demorar mais de 2 minutos, entre em contato com o suporte."
+    "helpText": {
+      "default": "Se o processo demorar mais de 2 minutos, entre em contato com o suporte.",
+      "underReview": "Seu pagamento está em análise. Aguarde a verificação."
+    }
   },
   "home": {
     "hero": {

@@ -187,7 +187,10 @@
       "amount": "Cantidad:",
       "paymentId": "ID del Pago:"
     },
-    "helpText": "Si el proceso toma más de 2 minutos, por favor contacta al soporte."
+    "helpText": {
+      "default": "Si el proceso toma más de 2 minutos, por favor contacta al soporte.",
+      "underReview": "Tu pago está en revisión. Espera la verificación."
+    }
   },
   "home": {
     "hero": {
