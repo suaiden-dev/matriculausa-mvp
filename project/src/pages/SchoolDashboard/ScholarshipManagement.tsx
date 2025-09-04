@@ -262,21 +262,27 @@ const ScholarshipManagement: React.FC = () => {
               const daysLeft = getDaysUntilDeadline(scholarship.deadline);
               
               return (
-                <div key={scholarship.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
-                  {/* Image */}
-                  {scholarship.image_url && (
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={scholarship.image_url}
-                        alt={scholarship.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                    </div>
-                  )}
+                <div key={scholarship.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 group h-full flex flex-col">
+                  {/* Image - Always present with fixed height */}
+                  <div className="relative h-48 overflow-hidden">
+                    {scholarship.image_url ? (
+                      <>
+                        <img
+                          src={scholarship.image_url}
+                          alt={scholarship.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      </>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                        <Award className="h-16 w-16 text-slate-400" />
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Header */}
-                  <div className={`p-6 ${scholarship.image_url ? 'pb-4' : 'pb-4'}`}>
+                  <div className="p-6 pb-4 flex-1 flex flex-col">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h3 className="font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-[#05294E] transition-colors">
@@ -417,24 +423,9 @@ const ScholarshipManagement: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Quick Stats */}
-                  <div className="px-6 pb-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-50 p-3 rounded-xl text-center">
-                        <Users className="h-5 w-5 mx-auto mb-2 text-slate-500" />
-                        <p className="text-lg font-bold text-slate-900">0</p>
-                        <p className="text-xs text-slate-500">Applicants</p>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-xl text-center">
-                        <Eye className="h-5 w-5 mx-auto mb-2 text-slate-500" />
-                        <p className="text-lg font-bold text-slate-900">0</p>
-                        <p className="text-xs text-slate-500">Views</p>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Actions */}
-                  <div className="px-6 pb-6">
+                  <div className="px-6 pb-6 mt-auto">
                     <div className="flex space-x-2">
                       <button 
                         onClick={() => navigate(`/school/dashboard/selection-process`)}
@@ -471,7 +462,7 @@ const ScholarshipManagement: React.FC = () => {
 
              {/* Scholarship Details Modal */}
        {showDetailsModal && selectedScholarship && (
-         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center  z-50">
            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
              {/* Header */}
              <div className="relative">
@@ -769,6 +760,25 @@ const ScholarshipManagement: React.FC = () => {
                            <span className="font-semibold text-slate-700">
                              {selectedScholarship.is_exclusive ? 'Exclusive' : 'Standard'}
                            </span>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+
+                   {/* Application Statistics */}
+                   <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                     <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                       <Users className="h-5 w-5 text-slate-600" />
+                       Application Statistics
+                     </h4>
+                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                       <div className="flex items-center gap-3">
+                         <div className="p-2 bg-blue-600 rounded-lg">
+                           <Users className="h-5 w-5 text-white" />
+                         </div>
+                         <div>
+                           <p className="text-2xl font-bold text-blue-900">{selectedScholarship.application_count || 0}</p>
+                           <p className="text-sm text-blue-700 font-medium">Total Applications</p>
                          </div>
                        </div>
                      </div>

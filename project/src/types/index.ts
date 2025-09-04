@@ -71,6 +71,7 @@ export interface Scholarship {
   // Algumas consultas retornam também um campo denormalizado com o nome da universidade
   // Usado como fallback quando o relacionamento "universities" não está carregado
   university_name?: string;
+  application_count?: number; // Número de aplicações para esta bolsa
   universities: {
     id: string;
     name: string;
