@@ -888,11 +888,11 @@ const PaymentManagement: React.FC = () => {
                             </div>
                             
                             <button
-                              onClick={() => navigate('/school/dashboard/stripe-connect')}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white text-sm font-medium rounded-lg hover:bg-[#05294E]/80 transition-colors"
+                              disabled
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-400 text-white text-sm font-medium rounded-lg cursor-not-allowed opacity-60"
                             >
                               <CreditCard className="w-4 h-4" />
-                              Connect Stripe Account
+                              Under Development
                             </button>
                           </div>
                         </div>

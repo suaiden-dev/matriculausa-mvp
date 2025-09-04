@@ -334,18 +334,7 @@ const Overview: React.FC = () => {
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900">Recent Scholarships</h3>
                   <p className="text-slate-500 text-xs sm:text-sm">Manage your scholarship opportunities</p>
                 </div>
-                {university?.profile_completed && (
-                  <div className="flex justify-end">
-                    <Link
-                      to="/school/dashboard/scholarship/new" 
-                      className="bg-gradient-to-r from-[#05294E] to-blue-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl hover:from-[#05294E]/90 hover:to-blue-600 transition-all duration-300 font-medium text-xs sm:text-sm flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
-                    >
-                      <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">New Scholarship</span>
-                      <span className="sm:hidden">New</span>
-                    </Link>
-                  </div>
-                )}
+
               </div>
             </div>
             

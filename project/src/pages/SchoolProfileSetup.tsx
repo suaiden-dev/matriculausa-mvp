@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, MapPin, Phone, Users, CheckCircle, Plus, X, Scroll } from 'lucide-react';
+import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
+
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import '../styles/phone-input.css';
@@ -13,7 +13,7 @@ const SchoolProfileSetup: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
   const { user } = useAuth();
-  const { recordTermAcceptance, getLatestActiveTerm } = useTermsAcceptance();
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -42,96 +42,14 @@ const SchoolProfileSetup: React.FC = () => {
     
     // Academic Information
     programs: [] as string[],
-    
-    // Terms acceptance
-    termsAccepted: false
   });
 
   const [newProgram, setNewProgram] = useState('');
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  const [hasScrolledToBottomPrivacy, setHasScrolledToBottomPrivacy] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  
-  const termsContentRef = useRef<HTMLDivElement>(null);
-  const privacyContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Check if user has already completed profile setup
     checkExistingProfile();
   }, [user]);
-
-  // Handle scroll in terms content
-  const handleTermsScroll = () => {
-    if (termsContentRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = termsContentRef.current;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
-      setHasScrolledToBottom(isAtBottom);
-    }
-  };
-
-  // Handle scroll in privacy policy content
-  const handlePrivacyScroll = () => {
-    if (privacyContentRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = privacyContentRef.current;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
-      setHasScrolledToBottomPrivacy(isAtBottom);
-    }
-  };
-
-
-
-  // Handle terms acceptance and show privacy policy
-  const handleTermsAccept = () => {
-    if (hasScrolledToBottom) {
-      setShowPrivacyPolicy(true);
-      setHasScrolledToBottomPrivacy(false);
-      // Scroll to top when showing privacy policy
-      setTimeout(() => {
-        if (privacyContentRef.current) {
-          privacyContentRef.current.scrollTop = 0;
-        }
-      }, 100);
-    }
-  };
-
-  // Handle privacy policy acceptance
-  const handlePrivacyAccept = async () => {
-    if (hasScrolledToBottomPrivacy) {
-      try {
-        // Get the latest active university terms
-        let universityTerms = await getLatestActiveTerm('university_terms');
-        
-        // If no active terms exist, create a default one
-        if (!universityTerms) {
-          console.log('No active university terms found, creating default term');
-          const defaultTerm = {
-            id: 'default-university-terms',
-            title: 'University Terms and Privacy Policy',
-            content: 'By accepting these terms, you agree to our university partnership terms and privacy policy.',
-            term_type: 'university_terms' as const,
-            version: 1,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          universityTerms = defaultTerm;
-        }
-        
-        if (universityTerms) {
-          // Record acceptance of university terms and privacy policy
-          await recordTermAcceptance(universityTerms.id, 'university_terms');
-        }
-        
-        setFormData(prev => ({ ...prev, termsAccepted: true }));
-        setShowPrivacyPolicy(false);
-      } catch (error) {
-        console.error('Error recording terms acceptance:', error);
-        // Still allow user to proceed even if recording fails
-        setFormData(prev => ({ ...prev, termsAccepted: true }));
-        setShowPrivacyPolicy(false);
-      }
-    }
-  };
 
   const checkExistingProfile = async () => {
     if (!user) return;
@@ -265,9 +183,6 @@ const SchoolProfileSetup: React.FC = () => {
       case 4:
         if (formData.programs.length === 0) newErrors.programs = 'At least one program is required';
         break;
-      case 5:
-        if (!formData.termsAccepted) newErrors.termsAccepted = 'You must accept the Terms of Use and Privacy Policy to continue';
-        break;
     }
 
     setErrors(newErrors);
@@ -276,7 +191,12 @@ const SchoolProfileSetup: React.FC = () => {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 5));
+      if (currentStep === 4) {
+        // Se estiver no step 4, finalizar o processo
+        handleSubmit();
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
     }
   };
 
@@ -285,7 +205,7 @@ const SchoolProfileSetup: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(5) || !user) return;
+    if (!validateStep(4) || !user) return;
 
     setLoading(true);
     try {
@@ -297,8 +217,7 @@ const SchoolProfileSetup: React.FC = () => {
         programs: formData.programs,
         address: formData.address,
         contact: formData.contact,
-        profile_completed: true,
-        terms_accepted: true
+        profile_completed: true
       };
 
       const { error } = await supabase
@@ -321,13 +240,12 @@ const SchoolProfileSetup: React.FC = () => {
     { number: 1, title: 'Basic Information', icon: Building },
     { number: 2, title: 'Location', icon: MapPin },
     { number: 3, title: 'Contact', icon: Phone },
-    { number: 4, title: 'Academic Info', icon: Users },
-    { number: 5, title: 'Terms of Use', icon: Scroll }
+    { number: 4, title: 'Academic Info', icon: Users }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your University Profile</h1>
@@ -649,654 +567,6 @@ const SchoolProfileSetup: React.FC = () => {
             </div>
           )}
 
-          {/* Step 5: Terms of Use */}
-          {currentStep === 5 && (
-            <div className="space-y-6">
-                                            <div className="text-center mb-6">
-                <Scroll className="h-12 w-12 text-[#05294E] mx-auto mb-3" />
-                <h2 className="text-xl font-bold text-gray-900">
-                  {showPrivacyPolicy ? 'Privacy Policy' : 'Terms of Use'}
-                </h2>
-                <p className="text-gray-600">
-                  {showPrivacyPolicy 
-                    ? 'Please read the privacy policy below carefully before accepting'
-                    : 'Please read the terms below carefully before accepting'
-                  }
-                </p>
-                
-                {/* Progress indicator */}
-                <div className="flex items-center justify-center mt-4 space-x-4">
-                  <div className={`flex items-center ${!showPrivacyPolicy ? 'text-[#05294E]' : 'text-gray-400'}`}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-2 ${
-                      !showPrivacyPolicy ? 'border-[#05294E] bg-[#05294E] text-white' : 'border-gray-300'
-                    }`}>
-                      {!showPrivacyPolicy ? '1' : <CheckCircle className="h-4 w-4" />}
-                    </div>
-                    <span className="text-sm font-medium">Terms of Use</span>
-                  </div>
-                  
-                  <div className="w-8 h-0.5 bg-gray-300"></div>
-                  
-                  <div className={`flex items-center ${showPrivacyPolicy ? 'text-[#05294E]' : 'text-gray-400'}`}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mr-2 ${
-                      showPrivacyPolicy ? 'border-[#05294E] bg-[#05294E] text-white' : 'border-gray-300'
-                    }`}>
-                      {showPrivacyPolicy ? (formData.termsAccepted ? <CheckCircle className="h-4 w-4" /> : '2') : '2'}
-                    </div>
-                    <span className="text-sm font-medium">Privacy Policy</span>
-                  </div>
-                </div>
-              </div>
-
-                                            {/* Content */}
-              <div 
-                ref={showPrivacyPolicy ? privacyContentRef : termsContentRef}
-                onScroll={showPrivacyPolicy ? handlePrivacyScroll : handleTermsScroll}
-                className="bg-gray-50 border border-gray-200 rounded-lg p-6 max-h-96 overflow-y-auto"
-              >
-                <div className="prose prose-sm max-w-none">
-                  {!showPrivacyPolicy ? (
-                    <>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Terms of Use</h3>
-                      
-                      {/* 1. ACCEPTANCE OF TERMS */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">1. ACCEPTANCE OF TERMS</h4>
-                        <p className="text-gray-700 mb-4 text-sm">
-                          By accessing and using the Matrícula USA platform, you agree to comply with and be bound by these Terms of Service. If you do not agree to any part of these terms, you should not use our services.
-                        </p>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-
-                      {/* 2. SERVICE DESCRIPTION */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">2. SERVICE DESCRIPTION</h4>
-                        <p className="text-gray-700 mb-4 text-sm">
-                          Matrícula USA is a SaaS (Software as a Service) platform that offers:
-                        </p>
-                        
-                        <div className="space-y-4 mb-4">
-                          <div className="border border-gray-200 p-4 rounded-lg">
-                            <h5 className="font-semibold text-gray-900 mb-2">2.1 Email Hub for Universities</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Secure integration with Gmail accounts through OAuth 2.0</li>
-                              <li>Professional interface for institutional email management</li>
-                              <li>Organized tab system (Inbox, Sent, Starred, Drafts, Spam, Trash)</li>
-                              <li>Real-time email counts</li>
-                              <li>Smart forwarding functionality</li>
-                              <li>Integrated composer for new emails</li>
-                              <li>Advanced search and filters</li>
-                              <li>Responsive interface for all devices</li>
-                            </ul>
-                          </div>
-
-                          <div className="border border-gray-200 p-4 rounded-lg">
-                            <h5 className="font-semibold text-gray-900 mb-2">2.2 Scholarship Management</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Creation and management of scholarships</li>
-                              <li>Student application process</li>
-                              <li>Document and application status management</li>
-                              <li>Integrated payment system</li>
-                            </ul>
-                          </div>
-                                                </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 3. LICENSE GRANT */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">3. LICENSE GRANT</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">3.1 Limited License</h5>
-                            <p className="text-gray-700 text-sm">
-                              We grant you a limited, non-exclusive, non-transferable, and revocable license to access and use the Matrícula USA platform in accordance with these Terms.
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">3.2 Restrictions</h5>
-                            <p className="text-gray-700 mb-2 text-sm">You agree not to:</p>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm ml-4">
-                              <li>Use the platform for illegal or unauthorized purposes</li>
-                              <li>Attempt to access unauthorized systems or data</li>
-                              <li>Interfere with platform operation</li>
-                              <li>Share access credentials</li>
-                              <li>Use the platform for spam or malicious content</li>
-                            </ul>
-                          </div>
-                                                </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 4. THIRD-PARTY DEPENDENCIES */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">4. THIRD-PARTY DEPENDENCIES</h4>
-                        <div className="space-y-4">
-                          <div className="border border-gray-300 p-4 bg-gray-50 rounded-lg">
-                            <h5 className="font-semibold text-gray-900 mb-2">4.1 Google APIs</h5>
-                            <p className="text-gray-700 mb-2 text-sm">
-                              The "Email Hub" functionality depends on Google APIs and is subject to Google's Terms of Service. By using this functionality, you agree to comply with:
-                            </p>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Google Terms of Service</li>
-                              <li>Google Privacy Policy</li>
-                              <li>Google API Services User Data Policy</li>
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">4.2 Other Providers</h5>
-                            <p className="text-gray-700 mb-2 text-sm">Our platform also uses:</p>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm ml-4">
-                              <li>Supabase: For data storage and authentication</li>
-                              <li>Stripe: For payment processing</li>
-                              <li>Vercel/Netlify: For application hosting</li>
-                            </ul>
-                          </div>
-                                                </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 5. INTELLECTUAL PROPERTY */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">5. INTELLECTUAL PROPERTY</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h5 className="font-semibold text-gray-900 mb-2">5.1 Platform Ownership</h5>
-                            <p className="text-gray-700 text-sm">
-                              The Matrícula USA platform, including its code, design, features, and content, is the exclusive property of Matrícula USA and is protected by intellectual property laws.
-                            </p>
-                          </div>
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h5 className="font-semibold text-gray-900 mb-2">5.2 Customer Data</h5>
-                            <p className="text-gray-700 text-sm mb-2">All customer data, including:</p>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Email content</li>
-                              <li>Personal information</li>
-                              <li>Submitted documents</li>
-                              <li>Application history</li>
-                            </ul>
-                            <p className="text-gray-700 text-sm mt-2">
-                              It is important to note that, although the data is customer property, Matrícula USA maintains the right to process and analyze this data to provide the contracted services, always in compliance with our Privacy Policy and applicable data protection laws.
-                            </p>
-                          </div>
-                                                </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 6. RESPONSIBILITIES */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">6. RESPONSIBILITIES</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">6.1 User Responsibilities</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Provide true and accurate information</li>
-                              <li>Maintain security of credentials</li>
-                              <li>Use the platform responsibly</li>
-                              <li>Comply with applicable laws</li>
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">6.2 Matrícula USA Responsibilities</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Maintain platform operation</li>
-                              <li>Protect user data according to our Privacy Policy</li>
-                              <li>Provide adequate technical support</li>
-                              <li>Notify about significant changes</li>
-                            </ul>
-                          </div>
-                                                </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 7. LIMITATION OF LIABILITY */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">7. LIMITATION OF LIABILITY</h4>
-                        <p className="text-gray-700 mb-2 text-sm">Matrícula USA will not be liable for:</p>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                          <li>Data loss due to technical failures</li>
-                          <li>Temporary service interruptions</li>
-                          <li>Indirect or consequential damages</li>
-                          <li>Actions of third parties (Google, Stripe, etc.)</li>
-                        </ul>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 8. SUSPENSION AND TERMINATION */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">8. SUSPENSION AND TERMINATION</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">8.1 Suspension</h5>
-                            <p className="text-gray-700 mb-2 text-sm">We may suspend your access if:</p>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm ml-4">
-                              <li>You violate these Terms</li>
-                              <li>You use the platform abusively</li>
-                              <li>You fail to make due payments</li>
-                            </ul>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">8.2 Termination</h5>
-                            <p className="text-gray-700 mb-2 text-sm">You may terminate your account at any time. After termination:</p>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm ml-4">
-                              <li>Your data will be deleted according to our Privacy Policy</li>
-                              <li>Gmail integrations will be disconnected</li>
-                              <li>Platform access will be revoked</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 9. MODIFICATIONS */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">9. MODIFICATIONS</h4>
-                        <p className="text-gray-700 text-sm">
-                          We reserve the right to modify these Terms at any time. Significant changes will be communicated 30 days in advance.
-                        </p>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 10. GOVERNING LAW */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">10. GOVERNING LAW</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">10.1 Jurisdiction</h5>
-                            <p className="text-gray-700 text-sm">
-                              These Terms are governed by the laws of the State of California, United States.
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">10.2 Dispute Resolution</h5>
-                            <p className="text-gray-700 text-sm">
-                              Any disputes will be resolved in the courts of Los Angeles County, California, with express waiver of any other venue, no matter how privileged.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 11. ARBITRATION */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">11. ARBITRATION</h4>
-                        <p className="text-gray-700 text-sm">
-                          Any disputes arising from these Terms will be resolved through binding arbitration in accordance with the American Arbitration Association rules.
-                        </p>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 12. GENERAL PROVISIONS */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">12. GENERAL PROVISIONS</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">12.1 Entire Agreement</h5>
-                            <p className="text-gray-700 text-sm">
-                              These Terms constitute the complete agreement between the parties.
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">12.2 Waiver</h5>
-                            <p className="text-gray-700 text-sm">
-                              Failure to exercise any right does not constitute waiver.
-                            </p>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">12.3 Severability</h5>
-                            <p className="text-gray-700 text-sm">
-                              If any provision is found invalid, the remaining provisions will remain in effect.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 13. CONTACT */}
-                      <div className="mb-6">
-                        <h4 className="text-base font-semibold text-gray-900 mb-2">13. CONTACT</h4>
-                        <p className="text-gray-700 mb-2 text-sm">For questions about these Terms:</p>
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <p className="text-blue-800 text-sm"><strong>Email:</strong> info@matriculausa.com</p>
-                          <p className="text-blue-800 text-sm"><strong>Phone:</strong> +1 (213) 676-2544</p>
-                          <p className="text-blue-800 text-sm"><strong>Address:</strong> Los Angeles - CA - USA</p>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="text-xl font-bold text-gray-900 mb-4">Privacy Policy</h3>
-                      
-                      {/* 1. INTRODUCTION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">1. INTRODUCTION</h4>
-                        <p className="text-gray-700 mb-4 text-sm">
-                          Matrícula USA ("we", "our", "us") is committed to protecting the privacy and personal data of our users. This Privacy Policy describes how we collect, use, store, and protect your information when you use our Email Hub platform for universities.
-                        </p>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 2. DATA COLLECTED AND ACCESSED */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">2. DATA COLLECTED AND ACCESSED</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">2.1 User Account Data</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm ml-4">
-                              <li>Full name</li>
-                              <li>Email address</li>
-                              <li>Phone number</li>
-                              <li>Country of origin</li>
-                              <li>Academic profile (study level, field of interest, GPA, English proficiency)</li>
-                              <li>Payment information (through Stripe)</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">2.2 Gmail Data (Email Hub)</h5>
-                            <p className="text-gray-700 mb-2 text-sm">
-                              Based on our platform's code analysis, when you connect your Gmail account, we access the following data:
-                            </p>
-                            
-                            <div className="border border-gray-200 p-4 mb-4">
-                              <h6 className="font-semibold text-gray-900 mb-2">gmail.readonly Permission:</h6>
-                              <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                                <li>Email list (ID, threadId, sender, recipient, subject)</li>
-                                <li>Complete email content (text and HTML body)</li>
-                                <li>Email metadata (date, priority, attachments, labels)</li>
-                                <li>Email count by category (Inbox, Sent, Starred, Drafts, Spam, Trash)</li>
-                                <li>Email read status</li>
-                                <li>Thread/conversation information</li>
-                              </ul>
-                            </div>
-
-                            <div className="border border-gray-200 p-4">
-                              <h6 className="font-semibold text-gray-900 mb-2">gmail.send Permission:</h6>
-                              <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                                <li>Ability to send emails through Gmail API</li>
-                                <li>Ability to forward existing emails</li>
-                                <li>Ability to reply to emails</li>
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 3. HOW WE USE YOUR INFORMATION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">3. HOW WE USE YOUR INFORMATION</h4>
-                        <div className="space-y-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">3.1 Primary Email Hub Functionality</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm ml-4">
-                              <li>Email Viewing: We display complete email content to facilitate institutional management</li>
-                              <li>Category Organization: We organize emails into tabs (Inbox, Sent, Starred, etc.) with real-time counts</li>
-                              <li>Smart Forwarding: We allow forwarding emails with complete content preserved</li>
-                              <li>New Email Composition: Integrated interface for creating and sending new institutional emails</li>
-                              <li>Search and Filters: Search functionality to locate specific emails</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">3.2 Other Uses</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm ml-4">
-                              <li>Scholarship and application management</li>
-                              <li>Payment processing</li>
-                              <li>User communication</li>
-                              <li>Platform improvement</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 4. DATA SECURITY */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">4. DATA SECURITY</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div className="border border-gray-200 p-4">
-                            <h5 className="font-semibold text-gray-900 mb-2">4.1 Encryption and Storage</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>OAuth Tokens: We store Gmail access and refresh tokens encrypted using AES-GCM with PBKDF2-derived keys</li>
-                              <li>Sensitive Data: All sensitive data is encrypted before storage in Supabase</li>
-                              <li>Transmission: All communications are protected by HTTPS/TLS</li>
-                            </ul>
-                          </div>
-
-                          <div className="border border-gray-200 p-4">
-                            <h5 className="font-semibold text-gray-900 mb-2">4.2 Security Measures</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Secure OAuth 2.0 authentication</li>
-                              <li>Access tokens with automatic expiration</li>
-                              <li>Automatic token renewal for expired tokens</li>
-                              <li>Detailed logs for security auditing</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 5. GOOGLE COMPLIANCE */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">5. GOOGLE COMPLIANCE</h4>
-                        <div className="border border-gray-300 p-4 bg-gray-50 rounded-lg">
-                          <h5 className="font-semibold text-gray-900 mb-2">IMPORTANT</h5>
-                          <p className="text-gray-700 mb-2 text-sm">
-                            The use and transfer of information received from Google APIs to any other app by Matrícula USA will adhere to the Google API Services User Data Policy, including the Limited Use requirements.
-                          </p>
-                          <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                            <li>We use only necessary permissions (gmail.readonly and gmail.send)</li>
-                            <li>We do not share Gmail data with third parties</li>
-                            <li>We do not use Gmail data for advertising or profile analysis</li>
-                            <li>We respect all Google API usage policies</li>
-                          </ul>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 6. YOUR RIGHTS */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">6. YOUR RIGHTS (CCPA/State Laws)</h4>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">6.1 Access and Portability</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Request access to all your personal data</li>
-                              <li>Receive your data in a structured, machine-readable format</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">6.2 Correction and Update</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Correct inaccurate or incomplete personal data</li>
-                              <li>Update your profile information at any time</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">6.3 Deletion</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Request deletion of your personal data</li>
-                              <li>Disconnect your Gmail account at any time</li>
-                              <li>Delete your platform account</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h5 className="font-semibold text-gray-900 mb-2">6.4 Consent Withdrawal</h5>
-                            <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                              <li>Withdraw consent for Gmail data usage</li>
-                              <li>Disconnect third-party integrations</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 7. DATA RETENTION */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">7. DATA RETENTION</h4>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                          <li>Account Data: Kept while your account is active</li>
-                          <li>OAuth Tokens: Stored until you disconnect or delete your account</li>
-                          <li>Security Logs: Kept for 12 months for auditing</li>
-                          <li>Payment Data: Kept as required by law</li>
-                        </ul>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 8. DATA SHARING */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">8. DATA SHARING</h4>
-                        <p className="text-gray-700 mb-2 text-sm">
-                          We do not sell, rent, or share your personal data with third parties, except:
-                        </p>
-                        <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm">
-                          <li>Essential service providers (Supabase, Stripe, Google)</li>
-                          <li>When required by law</li>
-                          <li>With your explicit consent</li>
-                        </ul>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 9. CHILDREN'S PRIVACY */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">9. CHILDREN'S PRIVACY</h4>
-                        <p className="text-gray-700 text-sm">
-                          Our services are not intended for children under 13. We do not knowingly collect personal information from children under 13.
-                        </p>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 10. INTERNATIONAL DATA TRANSFERS */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">10. INTERNATIONAL DATA TRANSFERS</h4>
-                        <p className="text-gray-700 text-sm">
-                          Your data may be processed in countries other than your own. We ensure appropriate safeguards are in place for such transfers.
-                        </p>
-                      </div>
-                      
-                      <hr className="border-gray-200 my-6" />
-                      
-                      {/* 11. CONTACT */}
-                      <div className="mb-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-2">11. CONTACT</h4>
-                        <p className="text-gray-700 mb-2 text-sm">
-                          To exercise your rights or clarify questions about this policy:
-                        </p>
-                        <div className="border border-gray-200 p-4">
-                          <p className="text-gray-700 text-sm"><strong>Email:</strong> info@matriculausa.com</p>
-                          <p className="text-gray-700 text-sm"><strong>Phone:</strong> +1 (213) 676-2544</p>
-                          <p className="text-gray-700 text-sm"><strong>Address:</strong> Los Angeles - CA - USA</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Scroll indicator */}
-                {(!showPrivacyPolicy && !hasScrolledToBottom) && (
-                  <div className="flex items-center justify-center p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
-                    <Scroll className="h-5 w-5 text-amber-600 mr-2" />
-                    <span className="text-amber-800 font-medium">
-                      Scroll down to read all terms
-                    </span>
-                  </div>
-                )}
-                {(showPrivacyPolicy && !hasScrolledToBottomPrivacy) && (
-                  <div className="flex items-center justify-center p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
-                    <Scroll className="h-5 w-5 text-amber-600 mr-2" />
-                    <span className="text-amber-800 font-medium">
-                      Scroll down to read the entire policy
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Accept Button */}
-              <div className="flex justify-center">
-                {!showPrivacyPolicy ? (
-                  <button
-                    onClick={handleTermsAccept}
-                    disabled={!hasScrolledToBottom}
-                    className={`px-8 py-3 rounded-xl font-bold transition-all duration-300 ${
-                      hasScrolledToBottom
-                        ? 'bg-[#05294E] text-white hover:bg-[#041f3a] shadow-lg'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {hasScrolledToBottom ? 'Accept Terms and Continue to Privacy Policy' : 'Read all terms first'}
-                  </button>
-                ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600 mb-2">
-                        You've accepted the Terms of Use. Now please read and accept the Privacy Policy.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => {
-                          setShowPrivacyPolicy(false);
-                          // Scroll to top when going back to terms
-                          setTimeout(() => {
-                            if (termsContentRef.current) {
-                              termsContentRef.current.scrollTop = 0;
-                            }
-                          }, 100);
-                        }}
-                        className="px-6 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-                      >
-                        Back to Terms
-                      </button>
-                      <button
-                        onClick={handlePrivacyAccept}
-                        disabled={!hasScrolledToBottomPrivacy}
-                        className={`px-8 py-3 rounded-xl font-bold transition-all duration-300 ${
-                          hasScrolledToBottomPrivacy
-                            ? 'bg-[#05294E] text-white hover:bg-[#041f3a] shadow-lg'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        {hasScrolledToBottomPrivacy ? 'Accept Privacy Policy' : 'Read the entire policy first'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {errors.termsAccepted && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm text-center">
-                  <div className="font-medium text-red-800 mb-1">Action Required</div>
-                  {errors.termsAccepted}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Navigation Buttons */}
           <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
             <button
@@ -1313,10 +583,10 @@ const SchoolProfileSetup: React.FC = () => {
             </button>
 
             <div className="text-sm text-gray-500">
-              Step {currentStep} of 5
+              Step {currentStep} of 4
             </div>
 
-            {currentStep < 5 ? (
+            {currentStep < 4 ? (
               <button
                 type="button"
                 onClick={nextStep}
@@ -1327,26 +597,10 @@ const SchoolProfileSetup: React.FC = () => {
             ) : (
               <button
                 type="button"
-                onClick={handleSubmit}
-                disabled={loading || !formData.termsAccepted}
-                className="bg-[#05294E] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#05294E]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                onClick={nextStep}
+                className="bg-[#05294E] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#05294E]/90 transition-colors"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Saving...
-                  </>
-                ) : !formData.termsAccepted ? (
-                  <>
-                    <Scroll className="h-4 w-4 mr-2" />
-                    Accept Terms to Continue
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Complete Setup
-                  </>
-                )}
+                Complete Profile
               </button>
             )}
           </div>

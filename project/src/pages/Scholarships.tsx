@@ -306,13 +306,13 @@ const Scholarships: React.FC = () => {
   const getDeliveryModeLabel = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
-        return t('scholarshipsPage.filters.deliveryModes.online');
+        return t('scholarshipsPage.filters.courseModalities.online');
       case 'in_person':
-        return t('scholarshipsPage.filters.deliveryModes.onCampus');
+        return t('scholarshipsPage.filters.courseModalities.inPerson');
       case 'hybrid':
-        return t('scholarshipsPage.filters.deliveryModes.hybrid');
+        return t('scholarshipsPage.filters.courseModalities.hybrid');
       default:
-        return t('scholarshipsPage.filters.deliveryModes.mixed');
+        return t('scholarshipsPage.filters.courseModalities.mixed');
     }
   };
 
@@ -497,7 +497,7 @@ const Scholarships: React.FC = () => {
                >
                <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
                <option value="online">{t('scholarshipsPage.filters.online')}</option>
-               <option value="in_person">{t('scholarshipsPage.filters.onCampus')}</option>
+               <option value="in_person">{t('scholarshipsPage.filters.inPerson')}</option>
                <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
              </select>
                                                      <select
@@ -629,7 +629,7 @@ const Scholarships: React.FC = () => {
                         
                         {/* Program Details */}
                         <div className="grid grid-cols-1 gap-3 mb-4">
-                          {/* Delivery Mode */}
+                          {/* Course Modality */}
                           {scholarship.delivery_mode && (
                             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                               <div className="flex items-center">
@@ -699,6 +699,22 @@ const Scholarships: React.FC = () => {
                                 </div>
                               </div>
                             )}
+
+                            {/* Application Fee Information */}
+                            <div className="pt-3 border-t border-slate-200">
+                              <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                                <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                                                                 <span className="font-semibold text-purple-600">
+                                   ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                                 </span>
+                              </div>
+                              <div className="text-xs text-slate-400 text-center">
+                                {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                                  t('scholarshipsPage.scholarshipCard.customFee') : 
+                                  t('scholarshipsPage.scholarshipCard.standardFee')
+                                }
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -900,7 +916,7 @@ const Scholarships: React.FC = () => {
                          </div>
                          {/* Program Details */}
                          <div className="grid grid-cols-1 gap-3 mb-4">
-                           {/* Delivery Mode */}
+                           {/* Course Modality */}
                            {scholarship.delivery_mode && (
                              <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
                                <div className="flex items-center">
@@ -978,11 +994,11 @@ const Scholarships: React.FC = () => {
                                <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
                                  <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
                                  <span className="font-semibold text-purple-600">
-                                   ${scholarship.application_fee_amount ? (Number(scholarship.application_fee_amount) / 100).toFixed(2) : '350.00'}
+                                   ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
                                  </span>
                                </div>
                                <div className="text-xs text-slate-400 text-center">
-                                 {scholarship.application_fee_amount && (Number(scholarship.application_fee_amount) / 100) !== 350 ? 
+                                 {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
                                    t('scholarshipsPage.scholarshipCard.customFee') : 
                                    t('scholarshipsPage.scholarshipCard.standardFee')
                                  }

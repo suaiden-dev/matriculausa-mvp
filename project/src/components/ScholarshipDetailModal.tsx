@@ -86,7 +86,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
     }
   };
 
-  const getDeliveryModeIcon = (mode: string) => {
+  const getCourseModalityIcon = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
         return <Monitor className="h-4 w-4" />;
@@ -99,7 +99,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
     }
   };
 
-  const getDeliveryModeColor = (mode: string) => {
+  const getCourseModalityColor = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
         return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -270,6 +270,27 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         )}
                       </div>
                     </div>
+                    
+                    {/* Application Fee Information */}
+                    <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-purple-600" />
+                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-purple-600 text-lg">
+                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                          </span>
+                          <div className="text-xs text-slate-400">
+                            {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                              t('scholarshipsPage.scholarshipCard.customFee') : 
+                              t('scholarshipsPage.scholarshipCard.standardFee')
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Program Details */}
@@ -291,12 +312,12 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         {scholarship.delivery_mode && (
                           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <div className="flex items-center gap-2 mb-2">
-                              {getDeliveryModeIcon(scholarship.delivery_mode)}
+                              {getCourseModalityIcon(scholarship.delivery_mode)}
                               <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.studyMode')}</span>
                             </div>
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getCourseModalityColor(scholarship.delivery_mode)}`}>
                               {scholarship.delivery_mode === 'online' ? t('scholarshipsPage.modal.onlineLearning') : 
-                               scholarship.delivery_mode === 'in_person' ? t('scholarshipsPage.modal.onCampus') : 
+                               scholarship.delivery_mode === 'in_person' ? t('scholarshipsPage.modal.inPerson') : 
                                scholarship.delivery_mode === 'hybrid' ? t('scholarshipsPage.modal.hybridMode') : scholarship.delivery_mode}
                             </span>
                           </div>

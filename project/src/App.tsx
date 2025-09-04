@@ -142,7 +142,9 @@ const App: React.FC = () => {
     <HelmetProvider>
       <Router>
         <AuthProvider>
-          <AppContent />
+          <AuthRedirect>
+            <AppContent />
+          </AuthRedirect>
         </AuthProvider>
       </Router>
     </HelmetProvider>

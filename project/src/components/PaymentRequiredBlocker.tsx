@@ -78,7 +78,7 @@ const PaymentRequiredBlocker: React.FC<PaymentRequiredBlockerProps> = ({
               </div>
               <div className="text-left">
                 <div className="text-sm font-medium text-slate-500">{t('paymentBlocker.selectionProcessFee')}</div>
-                <div className="text-2xl font-bold text-slate-900">$600</div>
+                <div className="text-2xl font-bold text-slate-900">$999</div>
               </div>
             </div>
 

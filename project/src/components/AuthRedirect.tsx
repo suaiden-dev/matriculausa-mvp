@@ -4,11 +4,10 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
 const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading, checkStudentTermsAcceptance } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [checkingUniversity, setCheckingUniversity] = useState(false);
-  const [checkingStudentTerms, setCheckingStudentTerms] = useState(false);
   const lastCheckedPath = useRef<string>('');
   const universityCache = useRef<{ [userId: string]: any }>({});
 
@@ -73,53 +72,27 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       
       // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
-        console.log('🔀 [AUTHREDIRECT] Usuário na página de login/auth');
-        console.log('🔀 [AUTHREDIRECT] User role:', user.role);
-        console.log('🔀 [AUTHREDIRECT] Current path:', currentPath);
-        
         // Redirecionamento baseado no role
         if (user.role === 'admin') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando admin para /admin/dashboard');
           navigate('/admin/dashboard', { replace: true });
           return;
         }
         
         if (user.role === 'affiliate_admin') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando affiliate_admin para /affiliate-admin/dashboard');
           navigate('/affiliate-admin/dashboard', { replace: true });
           return;
         }
         
         if (user.role === 'seller') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando seller para /seller/dashboard');
           navigate('/seller/dashboard', { replace: true });
           return;
         }
         
         if (user.role === 'student') {
-          setCheckingStudentTerms(true);
-          
-          try {
-            const hasAcceptedTerms = await checkStudentTermsAcceptance(user.id);
-            
-            if (!hasAcceptedTerms) {
-              console.log('🔀 [AUTHREDIRECT] Student não aceitou termos, redirecionando para /student/terms');
-              navigate('/student/terms', { replace: true });
-              setCheckingStudentTerms(false);
-              return;
-            }
-            
-            console.log('🔀 [AUTHREDIRECT] Student aceitou termos, redirecionando para /student/dashboard');
-            navigate('/student/dashboard', { replace: true });
-            setCheckingStudentTerms(false);
-            return;
-          } catch (error) {
-            console.error('🔀 [AUTHREDIRECT] Erro ao verificar termos do student:', error);
-            // Em caso de erro, redirecionar para dashboard
-            navigate('/student/dashboard', { replace: true });
-            setCheckingStudentTerms(false);
-            return;
-          }
+          // Estudantes agora aceitam termos automaticamente durante o registro
+          // Não precisamos mais verificar termos aceitos
+          navigate('/student/dashboard', { replace: true });
+          return;
         }
         
         if (user.role === 'school') {
@@ -173,25 +146,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         return;
       }
 
-      // Verificar se student aceitou termos ao acessar rotas protegidas
-      if (user.role === 'student' && currentPath.startsWith('/student/') && currentPath !== '/student/terms') {
-        setCheckingStudentTerms(true);
-        
-        try {
-          const hasAcceptedTerms = await checkStudentTermsAcceptance(user.id);
-          
-          if (!hasAcceptedTerms) {
-            console.log('🔀 [AUTHREDIRECT] Student tentando acessar área protegida sem aceitar termos');
-            navigate('/student/terms', { replace: true });
-            setCheckingStudentTerms(false);
-            return;
-          }
-        } catch (error) {
-          console.error('🔀 [AUTHREDIRECT] Erro ao verificar termos do student:', error);
-        } finally {
-          setCheckingStudentTerms(false);
-        }
-      }
+      // Estudantes não precisam mais verificar termos aceitos
+      // Eles aceitam automaticamente durante o registro
       
       // Se usuário é admin e está tentando acessar áreas restritas de outros roles
       if (user.role === 'admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
@@ -248,8 +204,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     checkAndRedirect();
   }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus]);
 
-  // Mostrar loading enquanto verifica universidade ou termos de estudantes
-  if (checkingUniversity || checkingStudentTerms) {
+  // Mostrar loading enquanto verifica universidade
+  if (checkingUniversity) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E]"></div>

@@ -1353,7 +1353,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentInfo?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">$600.00</span>
+                             <span className="text-xs text-slate-500">$999.00</span>
                            )}
                          </div>
                        </div>
@@ -1411,7 +1411,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentInfo?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">$1,250.00</span>
+                             <span className="text-xs text-slate-500">$999.00</span>
                            )}
                          </div>
                        </div>

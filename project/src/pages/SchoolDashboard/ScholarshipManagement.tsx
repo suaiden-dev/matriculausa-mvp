@@ -584,7 +584,7 @@ const ScholarshipManagement: React.FC = () => {
                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                              <div className="flex items-center gap-2 mb-2">
                                <Building className="h-4 w-4 text-slate-600" />
-                               <span className="font-semibold text-slate-700">Study Mode</span>
+                               <span className="font-semibold text-slate-700">Course Modality</span>
                              </div>
                              <span className="text-slate-900 capitalize">
                                {selectedScholarship.delivery_mode?.replace('_', ' ') || 'Not specified'}
