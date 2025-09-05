@@ -454,7 +454,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
               />
               {files[doc.key] && <span className="text-xs text-slate-500 mt-1 truncate max-w-full">{files[doc.key]?.name}</span>}
               {fieldErrors[doc.key] && (
-                <span className="text-xs text-red-500 mt-1">{fieldErrors[doc.key]}</span>
+                <span className="text-xs text-yellow-600 mt-1" style={{ color: '#d97706 !important' }}>{fieldErrors[doc.key]}</span>
               )}
             </div>
           ))}

@@ -492,7 +492,15 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       'not in the english language',
       'not in the english language.',
       'the document is not in english',
-      'the document is not in english.'
+      'the document is not in english.',
+      'this document is not in english',
+      'this document is not in english.',
+      'provide an english version',
+      'english version or certified translation',
+      'please provide an english version',
+      'please provide an english version or certified translation',
+      'all documents must be in english',
+      'document must be in english'
     ];
     
     return languageErrorKeywords.some(keyword => 
@@ -571,6 +579,16 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   // Função para obter mensagem de erro formatada
   const getFormattedErrorMessage = (errorMessage: string, documentType: string): string => {
     if (isLanguageError(errorMessage)) {
+      // Mensagens específicas para cada tipo de documento
+      if (documentType === 'diploma') {
+        return "Your high school diploma must be in English. Please provide an English version or certified translation.";
+      } else if (documentType === 'funds_proof') {
+        return "Your bank statement must be in English. Please provide an English version or certified translation.";
+      } else if (documentType === 'passport') {
+        return "Your passport must be in English. Please provide an English version or certified translation.";
+      }
+      
+      // Fallback para outros tipos
       return t('studentDashboard.documentsAndScholarshipChoice.languageError', { 
         documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
       });
@@ -768,11 +786,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   }`}>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                       <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0 ${
-                        hasError ? 'bg-red-100' :
+                        hasError ? 'bg-yellow-100' :
                         hasFile ? 'bg-green-100' : 'bg-slate-100'
                       }`}>
                         <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                          hasError ? 'text-red-600' :
+                          hasError ? 'text-yellow-600' :
                           hasFile ? 'text-green-600' : 'text-slate-600'
                         }`} />
                       </div>
@@ -816,7 +834,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                 ? 'text-green-700 bg-green-50 border border-green-200'
                                 : isCurrencyFieldError(hasError)
                                 ? 'text-purple-700 bg-purple-50 border border-purple-200'
-                                : 'text-red-600 bg-red-50 border border-red-200'
+                                : 'text-yellow-600 bg-yellow-50 border border-yellow-200'
                             }`}>
                               <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
                                 isLanguageError(hasError) 
@@ -827,7 +845,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                   ? 'bg-green-500'
                                   : isCurrencyFieldError(hasError)
                                   ? 'bg-purple-500'
-                                  : 'bg-red-500'
+                                  : 'bg-yellow-500'
                               }`}></div>
                               <span className="break-words">
                                 {isLanguageError(hasError) 
@@ -889,7 +907,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               </button>
               
               {/* {error && (
-                <div className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                <div className="mt-4 text-sm text-yellow-600 bg-yellow-50 p-3 rounded-lg">
                   {error}
                 </div>
               )} */}
