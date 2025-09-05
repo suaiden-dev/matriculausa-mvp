@@ -125,6 +125,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   // Check scroll requirements when activeTerm changes
   useEffect(() => {
     if (activeTerm && showTermsModal) {
+      console.log('🔍 [PreCheckoutModal] activeTerm carregado, verificando scroll');
       // Small delay to ensure DOM is fully rendered
       const timer = setTimeout(() => {
         checkIfContentNeedsScroll();
@@ -138,6 +139,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const loadActiveTerms = async () => {
     try {
       setLoadingTerms(true);
+      console.log('🔍 [PreCheckoutModal] Iniciando busca de termos no banco...');
+      
       const { data, error } = await supabase
         .from('application_terms')
         .select('*')
@@ -146,19 +149,27 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         .order('created_at', { ascending: false })
         .limit(1);
 
+      console.log('🔍 [PreCheckoutModal] Resultado da query:', { data, error });
+
       if (error) {
-        console.error('Error loading active terms:', error);
+        console.error('❌ [PreCheckoutModal] Erro na query:', error);
         return false;
       }
 
       if (data && data.length > 0) {
+        console.log('✅ [PreCheckoutModal] Dados encontrados no banco:', data[0]);
+        console.log('🔍 [PreCheckoutModal] Content length:', data[0].content?.length);
+        console.log('🔍 [PreCheckoutModal] Content preview:', data[0].content?.substring(0, 100));
+        console.log('🔍 [PreCheckoutModal] Title:', data[0].title);
         setActiveTerm(data[0]);
-        console.log('Active term loaded:', data[0]);
+        console.log('✅ [PreCheckoutModal] activeTerm definido:', data[0]);
         return true; // Indicate success
       }
+      
+      console.log('⚠️ [PreCheckoutModal] Nenhum termo ativo encontrado');
       return false; // Indicate no active terms found
     } catch (error) {
-      console.error('Error loading active terms:', error);
+      console.error('❌ [PreCheckoutModal] Erro inesperado:', error);
       return false; // Indicate failure
     } finally {
       setLoadingTerms(false);
@@ -235,15 +246,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       console.log('🔍 [PreCheckoutModal] Termo padrão criado');
     }
     
-    // CORREÇÃO: Sempre mostrar o modal de termos para garantir consistência
+    // CORREÇÃO: Abrir o modal imediatamente - o useEffect vai garantir que o activeTerm seja carregado
     console.log('🔍 [PreCheckoutModal] Abrindo modal de termos');
     setShowTermsModal(true);
     setHasScrolledToBottom(false);
-    
-    // Check if content needs scrolling after a short delay to ensure DOM is rendered
-    setTimeout(() => {
-      checkIfContentNeedsScroll();
-    }, 100);
   };
 
   // Handle terms acceptance
@@ -272,6 +278,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('🔍 [PreCheckoutModal] Checkbox alterado:', e.target.checked);
     setUserClickedCheckbox(true); // Mark that user interacted with checkbox
+    console.log('🔍 [PreCheckoutModal] userClickedCheckbox definido como true');
     
     if (e.target.checked) {
       // When checkbox is checked, open terms modal
@@ -635,7 +642,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                     className="flex-1 overflow-y-auto p-6"
                   >
                     <div 
-                      className="prose prose-slate max-w-none"
+                      className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-gray-900"
                       dangerouslySetInnerHTML={{ __html: activeTerm.content }}
                     />
                     
