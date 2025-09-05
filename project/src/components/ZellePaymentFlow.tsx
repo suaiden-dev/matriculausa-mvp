@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
@@ -25,10 +25,12 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   metadata = {},
   studentProcessType,
 }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [finalAmount, setFinalAmount] = useState<number | null>(null);
 
   const { isAuthenticated } = useAuth();
 
@@ -42,14 +44,21 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
     setShowPreCheckoutModal(true);
   };
 
-  const handlePreCheckoutSuccess = () => {
-    console.log('🔍 [ZellePaymentFlow] Pré-checkout aprovado, mostrando ZelleCheckout');
-    setShowPreCheckoutModal(false);
-    setShowZelleCheckout(true);
-  };
 
   const handlePreCheckoutProceed = async (discountCode?: string) => {
     console.log('🔍 [ZellePaymentFlow] handlePreCheckoutProceed chamado com código:', discountCode);
+    
+    // Calcular valor base
+    const baseAmount = getAmount();
+    let finalAmountValue = baseAmount;
+    let discountAppliedValue = false;
+    
+    console.log('🔍 [ZellePaymentFlow] Valores iniciais:', {
+      baseAmount,
+      finalAmountValue,
+      discountAppliedValue,
+      feeType
+    });
     
     // Se há código de desconto, aplicar via edge function
     if (discountCode) {
@@ -81,6 +90,15 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
           return;
         }
         
+        // Aplicar desconto de $50 se for selection_process
+        if (feeType === 'selection_process') {
+          finalAmountValue = Math.max(0, baseAmount - 50);
+          discountAppliedValue = true;
+          console.log('🔍 [ZellePaymentFlow] ✅ Desconto de $50 aplicado. Valor original: $' + baseAmount + ', Valor final: $' + finalAmountValue);
+        } else {
+          console.log('🔍 [ZellePaymentFlow] ⚠️ Desconto não aplicado - feeType não é selection_process:', feeType);
+        }
+        
         console.log('🔍 [ZellePaymentFlow] ✅ Código aplicado com sucesso');
       } catch (error) {
         console.error('🔍 [ZellePaymentFlow] ❌ Erro ao aplicar código:', error);
@@ -91,8 +109,19 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
       console.log('🔍 [ZellePaymentFlow] Nenhum código de desconto fornecido');
     }
 
+    // Definir valores finais
+    setFinalAmount(finalAmountValue);
+    setDiscountApplied(discountAppliedValue);
+
+    console.log('🔍 [ZellePaymentFlow] Estados finais definidos:', {
+      finalAmountValue,
+      discountAppliedValue,
+      finalAmount: finalAmountValue,
+      discountApplied: discountAppliedValue
+    });
+
     // Continuar para o checkout Zelle
-    console.log('🔍 [ZellePaymentFlow] Continuando para checkout Zelle...');
+    console.log('🔍 [ZellePaymentFlow] Continuando para checkout Zelle com valor:', finalAmountValue);
     setShowPreCheckoutModal(false);
     setShowZelleCheckout(true);
   };
@@ -170,13 +199,16 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
 
               <ZelleCheckout
                 feeType={feeType}
-                amount={getAmount()}
+                amount={finalAmount || getAmount()}
                 scholarshipsIds={scholarshipsIds}
                 onSuccess={handleZelleSuccess}
                 onError={handleZelleError}
                 metadata={{
                   ...metadata,
                   student_process_type: studentProcessType,
+                  discount_applied: discountApplied,
+                  original_amount: getAmount(),
+                  final_amount: finalAmount || getAmount(),
                 }}
               />
             </div>
