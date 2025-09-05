@@ -192,6 +192,40 @@
       "underReview": "Your payment is under review. Please wait for verification."
     }
   },
+  "zelleSuccess": {
+    "title": "Zelle Payment Successful!",
+    "subtitle": "Thank you for your payment! Your Zelle payment has been verified and approved.",
+    "invalidStatus": {
+      "title": "Invalid Payment Status",
+      "message": "This page is only for successful Zelle payments.",
+      "returnHome": "Return Home"
+    },
+    "paymentDetails": {
+      "title": "Payment Details",
+      "subtitle": "Zelle payment verified",
+      "feeType": "Fee Type:",
+      "amount": "Amount:",
+      "status": "Status:",
+      "approved": "Approved"
+    },
+    "whatsNext": {
+      "title": "What's Next?",
+      "step1": "Your Zelle payment has been verified and approved",
+      "step2": "You can now access all features of the application process",
+      "step3": "Our team will contact you shortly with next steps"
+    },
+    "actions": {
+      "goToDashboard": "Go to Dashboard",
+      "returnHome": "Return Home"
+    },
+    "feeTypes": {
+      "i-20_control_fee": "I-20 Control Fee",
+      "application_fee": "Application Fee",
+      "scholarship_fee": "Scholarship Fee",
+      "selection_process": "Selection Process Fee",
+      "default": "Payment"
+    }
+  },
   "home": {
     "hero": {
       "title": "Your Gateway to American Universities",

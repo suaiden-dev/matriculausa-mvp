@@ -192,6 +192,40 @@
       "underReview": "Seu pagamento está em análise. Aguarde a verificação."
     }
   },
+  "zelleSuccess": {
+    "title": "Pagamento Zelle Realizado com Sucesso!",
+    "subtitle": "Obrigado pelo seu pagamento! Seu pagamento Zelle foi verificado e aprovado.",
+    "invalidStatus": {
+      "title": "Status de Pagamento Inválido",
+      "message": "Esta página é apenas para pagamentos Zelle bem-sucedidos.",
+      "returnHome": "Voltar ao Início"
+    },
+    "paymentDetails": {
+      "title": "Detalhes do Pagamento",
+      "subtitle": "Pagamento Zelle verificado",
+      "feeType": "Tipo de Taxa:",
+      "amount": "Valor:",
+      "status": "Status:",
+      "approved": "Aprovado"
+    },
+    "whatsNext": {
+      "title": "Próximos Passos",
+      "step1": "Seu pagamento Zelle foi verificado e aprovado",
+      "step2": "Agora você pode acessar todos os recursos do processo de aplicação",
+      "step3": "Nossa equipe entrará em contato em breve com os próximos passos"
+    },
+    "actions": {
+      "goToDashboard": "Ir para o Dashboard",
+      "returnHome": "Voltar ao Início"
+    },
+    "feeTypes": {
+      "i-20_control_fee": "Taxa de Controle I-20",
+      "application_fee": "Taxa de Aplicação",
+      "scholarship_fee": "Taxa de Bolsa",
+      "selection_process": "Taxa de Processo de Seleção",
+      "default": "Pagamento"
+    }
+  },
   "home": {
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
