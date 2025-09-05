@@ -41,7 +41,7 @@ serve(async (req) => {
 
     // Validar parâmetros obrigatórios
     if (!user_id || !fee_type_global) {
-      throw new Error('Parâmetros obrigatórios: user_id, fee_type_global')
+      throw new Error('Required parameters: user_id, fee_type_global')
     }
 
     // 1. Buscar ou criar o pagamento na tabela zelle_payments
@@ -76,7 +76,7 @@ serve(async (req) => {
         .update({
           status: 'approved',
           admin_approved_at: new Date().toISOString(),
-          admin_notes: 'Aprovado automaticamente pelo sistema n8n'
+          admin_notes: 'Automatically approved by n8n system'
         })
         .eq('id', paymentId)
 
@@ -95,7 +95,7 @@ serve(async (req) => {
           fee_type_global: normalizedFeeTypeGlobal,
           status: 'approved',
           admin_approved_at: new Date().toISOString(),
-          admin_notes: 'Aprovado automaticamente pelo sistema n8n',
+          admin_notes: 'Automatically approved by n8n system',
           amount: 0, // Valor será preenchido se necessário
           created_at: new Date().toISOString()
         })
@@ -161,7 +161,7 @@ serve(async (req) => {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando scholarship_applications...')
       
       if (!scholarship_ids) {
-        throw new Error('scholarship_ids é obrigatório para application_fee e scholarship_fee')
+        throw new Error('scholarship_ids is required for application_fee and scholarship_fee')
       }
 
       // Converter scholarship_ids para array se for string
@@ -259,14 +259,14 @@ serve(async (req) => {
       } else {
         // Payload para notificar o aluno sobre a aprovação
         const approvalPayload = {
-          tipo_notf: "Pagamento aprovado automaticamente",
+          tipo_notf: "Payment automatically approved",
           email_aluno: userProfile.email,
           nome_aluno: userProfile.full_name,
           email_universidade: "",
-          o_que_enviar: `Seu pagamento de ${normalizedFeeTypeGlobal} foi aprovado automaticamente pelo sistema!`,
+          o_que_enviar: `Your ${normalizedFeeTypeGlobal} payment has been automatically approved by the system!`,
           payment_id: paymentId,
           fee_type: normalizedFeeTypeGlobal,
-          approved_by: "Sistema Automático"
+          approved_by: "Automatic System"
         }
 
         console.log('📤 [approve-zelle-payment-automatic] Payload de aprovação:', approvalPayload)
@@ -295,7 +295,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Pagamento aprovado automaticamente com sucesso',
+        message: 'Payment automatically approved successfully',
         fee_type_global: normalizedFeeTypeGlobal,
         payment_id: paymentId
       }),
