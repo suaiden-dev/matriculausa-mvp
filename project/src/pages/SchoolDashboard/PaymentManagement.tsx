@@ -1713,7 +1713,6 @@ const PaymentManagement: React.FC = () => {
                 <p className="text-3xl font-bold text-slate-900 mb-1">
                   {formatCurrency(financialStats.totalRevenue)}
                 </p>
-                <p className="text-xs text-slate-500">From application fees</p>
               </div>
             </div>
 
@@ -1722,10 +1721,6 @@ const PaymentManagement: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
                   <TrendingUp className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="flex items-center text-blue-600">
-                  <Target className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">Target: {calculatedMetrics.conversionTarget.toFixed(0)}%</span>
                 </div>
               </div>
               <div>
@@ -1743,12 +1738,7 @@ const PaymentManagement: React.FC = () => {
                 <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
-                <div className="flex items-center text-purple-600">
-                  <Users className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">
-                    {universityBalance > 0 ? 'Available' : 'No Balance'}
-                  </span>
-                </div>
+
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Available Balance</p>
