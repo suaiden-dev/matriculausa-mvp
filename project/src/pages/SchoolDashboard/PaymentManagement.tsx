@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -17,8 +17,22 @@ import {
   Globe,
   Plus,
   XCircle,
-  Shield
+  Shield,
+  BarChart3,
+  PieChart,
+  Calendar,
+  Users,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
+
+// Declare Chart.js types
+declare global {
+  interface Window {
+    Chart: any;
+  }
+}
 import { useUniversity } from '../../context/UniversityContext';
 import { useAuth } from '../../hooks/useAuth';
 import { usePayments } from '../../hooks/usePayments';
@@ -100,6 +114,26 @@ const PaymentManagement: React.FC = () => {
   const [revenueChartType, setRevenueChartType] = useState<'daily' | 'monthly'>('daily');
   const [revenueChartPeriod, setRevenueChartPeriod] = useState<number>(7);
   
+  // Chart refs for Chart.js
+  const revenueChartRef = useRef<HTMLCanvasElement>(null);
+  const paymentStatusChartRef = useRef<HTMLCanvasElement>(null);
+  const trendChartRef = useRef<HTMLCanvasElement>(null);
+  
+  // Chart instances
+  const [revenueChart, setRevenueChart] = useState<any>(null);
+  const [paymentStatusChart, setPaymentStatusChart] = useState<any>(null);
+  const [trendChart, setTrendChart] = useState<any>(null);
+  
+  // Calculated metrics state
+  const [calculatedMetrics, setCalculatedMetrics] = useState({
+    revenueGrowth: 0,
+    conversionTarget: 0,
+    monthlyAverage: 0,
+    bestMonth: '',
+    totalApplications: 0
+  });
+  
+  
   // Request details modal state
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [showRequestDetailsModal, setShowRequestDetailsModal] = useState(false);
@@ -126,6 +160,25 @@ const PaymentManagement: React.FC = () => {
       setExporting(false);
     }
   };
+
+
+  // Load Chart.js dynamically
+  useEffect(() => {
+    const loadChartJS = async () => {
+      if (typeof window !== 'undefined' && !window.Chart) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.async = true;
+        document.head.appendChild(script);
+        
+        script.onload = () => {
+          console.log('Chart.js loaded successfully');
+        };
+      }
+    };
+    
+    loadChartJS();
+  }, []);
 
   const checkStripeConnectStatus = async () => {
     if (!university?.id) return;
@@ -338,11 +391,16 @@ const PaymentManagement: React.FC = () => {
              return sum + ((scholarship?.application_fee_amount || 0) / 100);
            }, 0) / paidApplications : 0;
 
-      // Calcular breakdown por método de pagamento
+      // Calcular breakdown por método de pagamento (porcentagens)
+      const totalPaymentRequests = universityPaymentRequests.length;
+      const zelleCount = universityPaymentRequests.filter(r => r.payout_method === 'zelle').length;
+      const bankTransferCount = universityPaymentRequests.filter(r => r.payout_method === 'bank_transfer').length;
+      const stripeCount = universityPaymentRequests.filter(r => r.payout_method === 'stripe').length;
+      
       const paymentMethodBreakdown = {
-        zelle: universityPaymentRequests.filter(r => r.payout_method === 'zelle').length,
-        bank_transfer: universityPaymentRequests.filter(r => r.payout_method === 'bank_transfer').length,
-        stripe: universityPaymentRequests.filter(r => r.payout_method === 'stripe').length
+        zelle: totalPaymentRequests > 0 ? Math.round((zelleCount / totalPaymentRequests) * 100) : 0,
+        bank_transfer: totalPaymentRequests > 0 ? Math.round((bankTransferCount / totalPaymentRequests) * 100) : 0,
+        stripe: totalPaymentRequests > 0 ? Math.round((stripeCount / totalPaymentRequests) * 100) : 0
       };
 
              // Criar atividade recente (últimos 10 eventos) - APENAS application fees e payment requests
@@ -392,6 +450,289 @@ const PaymentManagement: React.FC = () => {
       console.error('Error loading financial analytics:', error);
     }
   };
+
+  // Create revenue chart
+  const createRevenueChart = () => {
+    if (!revenueChartRef.current || !window.Chart) return;
+
+    // Destroy existing chart
+    if (revenueChart) {
+      revenueChart.destroy();
+    }
+
+    const ctx = revenueChartRef.current.getContext('2d');
+    const data = revenueChartType === 'daily' 
+      ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod)
+      : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod);
+
+    const chart = new window.Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map(item => 
+          revenueChartType === 'daily' 
+            ? new Date((item as any).date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : (item as any).month
+        ),
+        datasets: [{
+          label: 'Revenue',
+          data: data.map(item => item.amount),
+          borderColor: '#05294E',
+          backgroundColor: 'rgba(5, 41, 78, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#05294E',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(5, 41, 78, 0.9)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#05294E',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              label: function(context: any) {
+                return `Revenue: $${context.parsed.y.toFixed(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+              callback: function(value: any) {
+                return '$' + value.toFixed(0);
+              }
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        }
+      }
+    });
+
+    setRevenueChart(chart);
+  };
+
+  // Create payment status pie chart
+  const createPaymentStatusChart = () => {
+    if (!paymentStatusChartRef.current || !window.Chart) return;
+
+    // Destroy existing chart
+    if (paymentStatusChart) {
+      paymentStatusChart.destroy();
+    }
+
+    const ctx = paymentStatusChartRef.current.getContext('2d');
+    
+    // Calculate payment status distribution
+    const totalPaid = financialStats.paidApplicationsCount;
+    const totalPending = financialStats.pendingRequests;
+    const totalRejected = universityPaymentRequests.filter((r: any) => r.status === 'rejected').length;
+
+    const chart = new window.Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Paid', 'Pending', 'Rejected'],
+        datasets: [{
+          data: [totalPaid, totalPending, totalRejected],
+          backgroundColor: [
+            '#10B981', // Green for paid
+            '#F59E0B', // Yellow for pending
+            '#EF4444'  // Red for rejected
+          ],
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              usePointStyle: true,
+              font: {
+                size: 12
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(5, 41, 78, 0.9)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#05294E',
+            borderWidth: 1,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(context: any) {
+                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                return `${context.label}: ${context.parsed} (${percentage}%)`;
+              }
+            }
+          }
+        },
+        cutout: '60%'
+      }
+    });
+
+    setPaymentStatusChart(chart);
+  };
+
+  // Create trend analysis chart
+  const createTrendChart = () => {
+    if (!trendChartRef.current || !window.Chart) return;
+
+    // Destroy existing chart
+    if (trendChart) {
+      trendChart.destroy();
+    }
+
+    const ctx = trendChartRef.current.getContext('2d');
+    const data = financialAnalytics.monthlyRevenue.slice(-6); // Last 6 months
+
+    const chart = new window.Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(item => (item as any).month),
+        datasets: [{
+          label: 'Revenue',
+          data: data.map(item => item.amount),
+          backgroundColor: 'rgba(5, 41, 78, 0.8)',
+          borderColor: '#05294E',
+          borderWidth: 1,
+          borderRadius: 4,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(5, 41, 78, 0.9)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#05294E',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              label: function(context: any) {
+                return `Revenue: $${context.parsed.y.toFixed(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+              callback: function(value: any) {
+                return '$' + value.toFixed(0);
+              }
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+
+    setTrendChart(chart);
+  };
+
+  // Calculate real metrics
+  const calculateRealMetrics = () => {
+    // Calculate revenue growth (comparing last 7 days vs previous 7 days)
+    const last7Days = financialAnalytics.dailyRevenue.slice(-7);
+    const previous7Days = financialAnalytics.dailyRevenue.slice(-14, -7);
+    
+    const last7DaysTotal = last7Days.reduce((sum, day) => sum + day.amount, 0);
+    const previous7DaysTotal = previous7Days.reduce((sum, day) => sum + day.amount, 0);
+    
+    const revenueGrowth = previous7DaysTotal > 0 
+      ? ((last7DaysTotal - previous7DaysTotal) / previous7DaysTotal) * 100 
+      : 0;
+
+    // Calculate monthly average
+    const monthlyAverage = financialAnalytics.monthlyRevenue.length > 0
+      ? financialAnalytics.monthlyRevenue.reduce((sum, month) => sum + month.amount, 0) / financialAnalytics.monthlyRevenue.length
+      : 0;
+
+    // Find best month
+    const bestMonth = financialAnalytics.monthlyRevenue.length > 0
+      ? financialAnalytics.monthlyRevenue.reduce((max, month) => 
+          month.amount > max.amount ? month : max
+        ).month
+      : '';
+
+    // Calculate conversion target (industry average or based on historical data)
+    const conversionTarget = financialAnalytics.applicationTrends.conversionRate > 0
+      ? Math.min(95, financialAnalytics.applicationTrends.conversionRate * 1.1) // 10% above current
+      : 85; // Default industry target
+
+    setCalculatedMetrics({
+      revenueGrowth,
+      conversionTarget,
+      monthlyAverage,
+      bestMonth,
+      totalApplications: financialAnalytics.applicationTrends.totalApplications
+    });
+  };
+
+  // Update charts when data changes
+  useEffect(() => {
+    if (window.Chart && financialAnalytics.dailyRevenue.length > 0) {
+      createRevenueChart();
+      createPaymentStatusChart();
+      createTrendChart();
+    }
+  }, [financialAnalytics, revenueChartType, revenueChartPeriod]);
+
+  // Calculate metrics when financial data changes
+  useEffect(() => {
+    if (financialAnalytics.dailyRevenue.length > 0) {
+      calculateRealMetrics();
+    }
+  }, [financialAnalytics]);
 
   // Carregar payment requests da universidade quando a universidade mudar
   React.useEffect(() => {
@@ -1347,234 +1688,333 @@ const PaymentManagement: React.FC = () => {
       {/* Financial Overview Tab Content */}
       {activeTab === 'financial-overview' && (
         <>
+
           {/* Key Financial Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-green-100 rounded-xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Total Revenue Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl">
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
-                                 <div className="ml-4">
-                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                   <p className="text-2xl font-bold text-slate-900">
-                     {formatCurrency(financialStats.totalRevenue)}
-                   </p>
-                   <p className="text-xs text-slate-500">From application fees</p>
-                 </div>
+                <div className={`flex items-center ${calculatedMetrics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {calculatedMetrics.revenueGrowth >= 0 ? (
+                    <ArrowUpRight className="w-4 h-4 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4 mr-1" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {calculatedMetrics.revenueGrowth >= 0 ? '+' : ''}{calculatedMetrics.revenueGrowth.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {formatCurrency(financialStats.totalRevenue)}
+                </p>
+                <p className="text-xs text-slate-500">From application fees</p>
               </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-xl">
+
+            {/* Conversion Rate Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
                   <TrendingUp className="w-6 h-6 text-blue-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-600">Conversion Rate</p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-slate-500">Applications to payments</p>
+                <div className="flex items-center text-blue-600">
+                  <Target className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">Target: {calculatedMetrics.conversionTarget.toFixed(0)}%</span>
                 </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Conversion Rate</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-slate-500">Applications to payments</p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-100 rounded-xl">
+            {/* Available Balance Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
-                                 <div className="ml-4">
-                   <p className="text-sm font-medium text-slate-600">Available Balance</p>
-                   <p className="text-2xl font-bold text-slate-900">
-                     {formatCurrency(universityBalance)}
-                   </p>
-                   <p className="text-xs text-slate-500">Application fees - active payment requests</p>
-                 </div>
+                <div className="flex items-center text-purple-600">
+                  <Users className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">
+                    {universityBalance > 0 ? 'Available' : 'No Balance'}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Available Balance</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {formatCurrency(universityBalance)}
+                </p>
+                <p className="text-xs text-slate-500">Ready for withdrawal</p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex items-center">
-                <div className="p-3 bg-yellow-100 rounded-xl">
+            {/* Average Fee Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-xl">
                   <FileText className="w-6 h-6 text-yellow-600" />
                 </div>
-                                 <div className="ml-4">
-                   <p className="text-sm font-medium text-slate-600">Avg. Application Fee</p>
-                   <p className="text-2xl font-bold text-slate-900">
-                     {formatCurrency(financialAnalytics.applicationTrends.averageFee)}
-                   </p>
-                   <p className="text-xs text-slate-500">Per application</p>
-                 </div>
+                <div className="flex items-center text-yellow-600">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">
+                    {calculatedMetrics.totalApplications} apps
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Avg. Application Fee</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {formatCurrency(financialAnalytics.applicationTrends.averageFee)}
+                </p>
+                <p className="text-xs text-slate-500">Per application</p>
               </div>
             </div>
           </div>
 
-                     {/* Unified Revenue Chart */}
-           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-             <div className="flex items-center justify-between mb-6">
-               <div>
-                 <h3 className="text-xl font-semibold text-slate-900">Application Fee Revenue</h3>
-                 <p className="text-sm text-slate-600">Customizable time period insights</p>
-               </div>
-               <div className="text-right">
-                 <div className="text-2xl font-bold text-slate-900">
-                   {revenueChartType === 'daily' 
-                     ? formatCurrency(
-                         financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0)
-                       )
-                     : formatCurrency(
-                         financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0)
-                       )
-                   }
-                 </div>
-                 <div className="text-xs text-slate-500">
-                   {revenueChartType === 'daily' ? 'Last ' + revenueChartPeriod + ' days' : 'Last ' + revenueChartPeriod + ' months'}
-                 </div>
-               </div>
-             </div>
-
-             {/* Chart Type and Period Selector */}
-             <div className="mb-6 p-4 bg-slate-50 rounded-xl">
-               <div className="flex items-center justify-between mb-4">
-                 <div className="flex space-x-1 bg-white rounded-lg p-1">
-                   <button
-                     onClick={() => {
-                       setRevenueChartType('daily');
-                       setRevenueChartPeriod(7);
-                     }}
-                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                       revenueChartType === 'daily'
-                         ? 'bg-[#05294E] text-white shadow-sm'
-                         : 'text-slate-600 hover:text-slate-900'
-                     }`}
-                   >
-                     Daily
-                   </button>
-                   <button
-                     onClick={() => {
-                       setRevenueChartType('monthly');
-                       setRevenueChartPeriod(8);
-                     }}
-                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                       revenueChartType === 'monthly'
-                         ? 'bg-[#05294E] text-white shadow-sm'
-                         : 'text-slate-600 hover:text-slate-900'
-                     }`}
-                   >
-                     Monthly
-                   </button>
-                 </div>
-                 
-                 <div className="flex space-x-2">
-                   {(revenueChartType === 'daily' ? [3, 5, 7, 14] : [3, 4, 6, 8, 12]).map((period) => (
-                     <button
-                       key={period}
-                       onClick={() => setRevenueChartPeriod(period)}
-                       className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                         revenueChartPeriod === period
-                           ? 'bg-[#05294E] text-white'
-                           : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                       }`}
-                     >
-                       {period}
-                     </button>
-                   ))}
-                 </div>
-               </div>
+          {/* Charts Section */}
+          {/* Revenue Trend Chart - Full Width */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">Revenue Trend</h3>
+                <p className="text-sm text-slate-600">Application fee revenue over time</p>
+              </div>
+              
+              {/* Time Period Filters */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Quick Period Buttons */}
+                <div className="flex space-x-1 bg-slate-100 rounded-lg p-1">
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('daily');
+                      setRevenueChartPeriod(7);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'daily' && revenueChartPeriod === 7
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    7D
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('daily');
+                      setRevenueChartPeriod(30);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'daily' && revenueChartPeriod === 30
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    30D
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('monthly');
+                      setRevenueChartPeriod(3);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'monthly' && revenueChartPeriod === 3
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    3M
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('monthly');
+                      setRevenueChartPeriod(6);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'monthly' && revenueChartPeriod === 6
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    6M
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('monthly');
+                      setRevenueChartPeriod(12);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'monthly' && revenueChartPeriod === 12
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    1Y
+                  </button>
+                </div>
+                
+                {/* Custom Period Selector */}
                
-               <div className="text-xs text-slate-500 text-center">
-                 {revenueChartType === 'daily' 
-                   ? 'Select days to analyze daily application fee trends'
-                   : 'Select months to analyze monthly application fee patterns'
-                 }
-               </div>
-             </div>
+              </div>
+            </div>
+            
+            <div className="h-64">
+              <canvas ref={revenueChartRef}></canvas>
+            </div>
+            
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-slate-600">
+                {revenueChartType === 'daily' 
+                  ? `Last ${revenueChartPeriod} day${revenueChartPeriod > 1 ? 's' : ''}`
+                  : `Last ${revenueChartPeriod} month${revenueChartPeriod > 1 ? 's' : ''}`
+                }
+              </span>
+              <span className="font-semibold text-slate-900">
+                {revenueChartType === 'daily' 
+                  ? formatCurrency(
+                      financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0)
+                    )
+                  : formatCurrency(
+                      financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0)
+                    )
+                }
+              </span>
+            </div>
+          </div>
 
-             {/* Chart Data */}
-             <div className="space-y-3">
-               {(revenueChartType === 'daily' 
-                 ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod)
-                 : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod)
-               ).map((item, index) => {
-                 const data = revenueChartType === 'daily' ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod) : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod);
-                 const maxAmount = Math.max(...data.map(d => d.amount));
-                 const percentage = maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
-                 const isCurrent = index === data.length - 1;
-                 
-                 return (
-                   <div key={revenueChartType === 'daily' ? (item as any).date : (item as any).month} className="group">
-                     <div className="flex items-center justify-between mb-2">
-                       <div className="flex items-center space-x-3">
-                         <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                           isCurrent ? 'bg-[#05294E]' : 'bg-slate-300'
-                         }`}></div>
-                         <span className={`text-sm font-medium transition-colors duration-200 ${
-                           isCurrent ? 'text-[#05294E]' : 'text-slate-600'
-                         }`}>
-                           {revenueChartType === 'daily' 
-                             ? new Date((item as any).date).toLocaleDateString('en-US', { 
-                                 weekday: 'short', 
-                                 month: 'short', 
-                                 day: 'numeric' 
-                               })
-                             : (item as any).month
-                           }
-                         </span>
-                         {isCurrent && (
-                           <span className="px-2 py-0.5 bg-[#05294E]/10 text-[#05294E] text-xs font-medium rounded-full">
-                             {revenueChartType === 'daily' ? 'Today' : 'Current'}
-                           </span>
-                         )}
-                       </div>
-                       <span className={`text-sm font-semibold transition-colors duration-200 ${
-                         isCurrent ? 'text-[#05294E]' : 'text-slate-700'
-                       }`}>
-                         {formatCurrency(item.amount)}
-                       </span>
-                     </div>
-                     <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                       <div 
-                         className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                           isCurrent 
-                             ? 'bg-[#05294E]' 
-                             : 'bg-slate-400'
-                         }`}
-                         style={{ width: `${Math.max(percentage, 2)}%` }}
-                       ></div>
-                     </div>
-                   </div>
-                 );
-               })}
-             </div>
-             
-             <div className="mt-6 pt-4 border-t border-slate-200">
-               <div className="flex items-center justify-between">
-                 <span className="text-sm font-medium text-slate-700">
-                   {revenueChartType === 'daily' ? revenueChartPeriod + '-day' : revenueChartPeriod + '-month'} average
-                 </span>
-                 <span className="text-lg font-semibold text-slate-900">
-                   {revenueChartType === 'daily' 
-                     ? formatCurrency(
-                         financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0) / revenueChartPeriod
-                       )
-                     : formatCurrency(
-                         financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0) / revenueChartPeriod
-                       )
-                   }
-                 </span>
-               </div>
-             </div>
-           </div>
+          {/* Detailed Analytics Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Monthly Performance */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Monthly Performance</h3>
+                <BarChart3 className="w-5 h-5 text-slate-600" />
+              </div>
+              
+              <div className="h-48">
+                <canvas ref={trendChartRef}></canvas>
+              </div>
+              
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Best Month</span>
+                  <span className="font-medium text-slate-900">
+                    {calculatedMetrics.bestMonth || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Average Monthly</span>
+                  <span className="font-medium text-slate-900">
+                    {formatCurrency(calculatedMetrics.monthlyAverage)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
+            {/* Payment Status Distribution */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Payment Status</h3>
+                <PieChart className="w-5 h-5 text-slate-600" />
+              </div>
+              
+              <div className="h-48">
+                <canvas ref={paymentStatusChartRef}></canvas>
+              </div>
+              
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-lg font-semibold text-green-600">
+                    {financialStats.paidApplicationsCount}
+                  </div>
+                  <div className="text-xs text-slate-600">Paid</div>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-yellow-600">
+                    {financialStats.pendingRequests}
+                  </div>
+                  <div className="text-xs text-slate-600">Pending</div>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-red-600">
+                    {universityPaymentRequests.filter((r: any) => r.status === 'rejected').length}
+                  </div>
+                  <div className="text-xs text-slate-600">Rejected</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Quick Stats</h3>
+                <TrendingUp className="w-5 h-5 text-slate-600" />
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Last 7 Days</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formatCurrency(financialStats.last7DaysRevenue)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Total Paid Out</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formatCurrency(financialStats.totalPaidOut)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Pending Requests</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formatCurrency(financialStats.totalApproved)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Applications</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {financialAnalytics.applicationTrends.totalApplications}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-200">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-slate-600">Success Rate</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Recent Activity Timeline */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent Financial Activity</h3>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">Recent Activity</h3>
+                <p className="text-sm text-slate-600">Latest financial transactions and events</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-slate-600" />
+                <span className="text-sm text-slate-600">Live</span>
+              </div>
+            </div>
+            
             <div className="space-y-4">
               {financialAnalytics.recentActivity.length > 0 ? (
                 financialAnalytics.recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg">
+                  <div key={index} className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
                     <div className={`w-3 h-3 rounded-full ${
                       activity.type === 'revenue' ? 'bg-green-500' :
                       activity.type === 'payout' ? 'bg-blue-500' :
@@ -1603,7 +2043,7 @@ const PaymentManagement: React.FC = () => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8">
+                <div className="text-center py-12">
                   <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                   <p className="text-slate-500">No recent activity to display</p>
                 </div>
