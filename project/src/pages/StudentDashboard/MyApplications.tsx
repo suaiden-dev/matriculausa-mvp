@@ -138,16 +138,28 @@ const MyApplications: React.FC = () => {
             const newApplications = data || [];
             const currentApplications = applications;
             
-            // Detectar aplicações que agora têm ambas as taxas pagas
+            // Detectar aplicações que tiveram mudanças no status de pagamento
             newApplications.forEach(newApp => {
               const currentApp = currentApplications.find(app => app.id === newApp.id);
-              const bothFeesPaid = !!(newApp.is_application_fee_paid && newApp.is_scholarship_fee_paid);
-              const wasBothFeesPaid = currentApp ? !!(currentApp.is_application_fee_paid && currentApp.is_scholarship_fee_paid) : false;
               
-              // Se agora ambas as taxas estão pagas e antes não estavam, enviar notificação
-              if (bothFeesPaid && !wasBothFeesPaid && currentApp) {
-                console.log('Detectado pagamento completo de ambas as taxas para aplicação:', newApp.id);
-                notifyUniversityBothFeesPaid(newApp);
+              if (currentApp) {
+                // Verificar se Application Fee foi paga agora
+                const applicationFeePaidNow = !!newApp.is_application_fee_paid;
+                const applicationFeePaidBefore = !!currentApp.is_application_fee_paid;
+                
+                if (applicationFeePaidNow && !applicationFeePaidBefore) {
+                  console.log('Detectado pagamento de Application Fee para aplicação:', newApp.id);
+                  notifyUniversityApplicationFeePaid(newApp);
+                }
+                
+                // Verificar se Scholarship Fee foi paga agora
+                const scholarshipFeePaidNow = !!newApp.is_scholarship_fee_paid;
+                const scholarshipFeePaidBefore = !!currentApp.is_scholarship_fee_paid;
+                
+                if (scholarshipFeePaidNow && !scholarshipFeePaidBefore) {
+                  console.log('Detectado pagamento de Scholarship Fee para aplicação:', newApp.id);
+                  notifyUniversityScholarshipFeePaid(newApp);
+                }
               }
             });
             
@@ -265,16 +277,28 @@ const MyApplications: React.FC = () => {
             const newApplications = data || [];
             const currentApplications = applications;
             
-            // Detectar aplicações que agora têm ambas as taxas pagas
+            // Detectar aplicações que tiveram mudanças no status de pagamento
             newApplications.forEach(newApp => {
               const currentApp = currentApplications.find(app => app.id === newApp.id);
-              const bothFeesPaid = !!(newApp.is_application_fee_paid && newApp.is_scholarship_fee_paid);
-              const wasBothFeesPaid = currentApp ? !!(currentApp.is_application_fee_paid && currentApp.is_scholarship_fee_paid) : false;
               
-              // Se agora ambas as taxas estão pagas e antes não estavam, enviar notificação
-              if (bothFeesPaid && !wasBothFeesPaid && currentApp) {
-                console.log('Detectado pagamento completo de ambas as taxas para aplicação (após retorno do pagamento):', newApp.id);
-                notifyUniversityBothFeesPaid(newApp);
+              if (currentApp) {
+                // Verificar se Application Fee foi paga agora
+                const applicationFeePaidNow = !!newApp.is_application_fee_paid;
+                const applicationFeePaidBefore = !!currentApp.is_application_fee_paid;
+                
+                if (applicationFeePaidNow && !applicationFeePaidBefore) {
+                  console.log('Detectado pagamento de Application Fee para aplicação (após retorno do pagamento):', newApp.id);
+                  notifyUniversityApplicationFeePaid(newApp);
+                }
+                
+                // Verificar se Scholarship Fee foi paga agora
+                const scholarshipFeePaidNow = !!newApp.is_scholarship_fee_paid;
+                const scholarshipFeePaidBefore = !!currentApp.is_scholarship_fee_paid;
+                
+                if (scholarshipFeePaidNow && !scholarshipFeePaidBefore) {
+                  console.log('Detectado pagamento de Scholarship Fee para aplicação (após retorno do pagamento):', newApp.id);
+                  notifyUniversityScholarshipFeePaid(newApp);
+                }
               }
             });
             
@@ -752,8 +776,8 @@ const getLevelColor = (level: any) => {
     }
   };
 
-  // Função para notificar universidade quando ambas as taxas foram pagas
-  const notifyUniversityBothFeesPaid = async (application: ApplicationWithScholarship) => {
+  // Função para notificar universidade quando Application Fee for paga
+  const notifyUniversityApplicationFeePaid = async (application: ApplicationWithScholarship) => {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -763,7 +787,7 @@ const getLevelColor = (level: any) => {
         return;
       }
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-both-fees-paid`;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-application-fee-paid`;
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -780,13 +804,51 @@ const getLevelColor = (level: any) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Erro ao enviar notificação para universidade:', errorData);
+        console.error('Erro ao enviar notificação de Application Fee para universidade:', errorData);
       } else {
         const result = await response.json();
-        console.log('Notificação enviada com sucesso:', result);
+        console.log('Notificação de Application Fee enviada com sucesso:', result);
       }
     } catch (error) {
-      console.error('Erro ao notificar universidade:', error);
+      console.error('Erro ao notificar universidade sobre Application Fee:', error);
+    }
+  };
+
+  // Função para notificar universidade quando Scholarship Fee for paga
+  const notifyUniversityScholarshipFeePaid = async (application: ApplicationWithScholarship) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        console.error('Usuário não autenticado para notificação');
+        return;
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-scholarship-fee-paid`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          application_id: application.id,
+          user_id: user?.id,
+          scholarship_id: application.scholarship_id
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro ao enviar notificação de Scholarship Fee para universidade:', errorData);
+      } else {
+        const result = await response.json();
+        console.log('Notificação de Scholarship Fee enviada com sucesso:', result);
+      }
+    } catch (error) {
+      console.error('Erro ao notificar universidade sobre Scholarship Fee:', error);
     }
   };
 

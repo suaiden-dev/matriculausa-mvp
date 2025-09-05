@@ -220,6 +220,38 @@ serve(async (req) => {
           }
 
           console.log(`✅ [approve-zelle-payment-automatic] Nova scholarship_application criada: ${newApp.id}`)
+          
+          // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
+          try {
+            console.log(`📤 [approve-zelle-payment-automatic] Enviando notificação de ${normalizedFeeTypeGlobal} para universidade...`);
+            
+            const notificationEndpoint = normalizedFeeTypeGlobal === 'application_fee' 
+              ? 'notify-university-application-fee-paid'
+              : 'notify-university-scholarship-fee-paid';
+            
+            const notificationResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/${notificationEndpoint}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({
+                application_id: newApp.id,
+                user_id: user_id,
+                scholarship_id: scholarshipId
+              }),
+            });
+
+            if (notificationResponse.ok) {
+              const notificationResult = await notificationResponse.json();
+              console.log(`✅ [approve-zelle-payment-automatic] Notificação de ${normalizedFeeTypeGlobal} enviada com sucesso:`, notificationResult);
+            } else {
+              const errorData = await notificationResponse.json();
+              console.error(`❌ [approve-zelle-payment-automatic] Erro ao enviar notificação de ${normalizedFeeTypeGlobal}:`, errorData);
+            }
+          } catch (notificationError) {
+            console.error(`❌ [approve-zelle-payment-automatic] Erro ao notificar universidade sobre ${normalizedFeeTypeGlobal}:`, notificationError);
+          }
         } else {
           // Atualizar scholarship_application existente usando o student_id correto
           const { data: updateData, error: appError } = await supabaseClient
@@ -238,6 +270,38 @@ serve(async (req) => {
 
           console.log(`✅ [approve-zelle-payment-automatic] ${normalizedFeeTypeGlobal} marcado como true para scholarship_id: ${scholarshipId} (app_id: ${existingApp.id})`)
           console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
+          
+          // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
+          try {
+            console.log(`📤 [approve-zelle-payment-automatic] Enviando notificação de ${normalizedFeeTypeGlobal} para universidade...`);
+            
+            const notificationEndpoint = normalizedFeeTypeGlobal === 'application_fee' 
+              ? 'notify-university-application-fee-paid'
+              : 'notify-university-scholarship-fee-paid';
+            
+            const notificationResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/${notificationEndpoint}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({
+                application_id: existingApp.id,
+                user_id: user_id,
+                scholarship_id: scholarshipId
+              }),
+            });
+
+            if (notificationResponse.ok) {
+              const notificationResult = await notificationResponse.json();
+              console.log(`✅ [approve-zelle-payment-automatic] Notificação de ${normalizedFeeTypeGlobal} enviada com sucesso:`, notificationResult);
+            } else {
+              const errorData = await notificationResponse.json();
+              console.error(`❌ [approve-zelle-payment-automatic] Erro ao enviar notificação de ${normalizedFeeTypeGlobal}:`, errorData);
+            }
+          } catch (notificationError) {
+            console.error(`❌ [approve-zelle-payment-automatic] Erro ao notificar universidade sobre ${normalizedFeeTypeGlobal}:`, notificationError);
+          }
         }
       }
     }
