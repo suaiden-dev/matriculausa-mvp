@@ -42,6 +42,22 @@ BEGIN
     status = 'active',
     updated_at = now();
   
+  -- Create affiliate_admin record
+  INSERT INTO affiliate_admins (user_id, email, name, phone, is_active)
+  VALUES (
+    target_user_id,
+    user_email,
+    COALESCE((SELECT raw_user_meta_data ->> 'name' FROM auth.users WHERE id = target_user_id), 'Affiliate Admin'),
+    COALESCE((SELECT raw_user_meta_data ->> 'phone' FROM auth.users WHERE id = target_user_id), ''),
+    true
+  )
+  ON CONFLICT (user_id) DO UPDATE SET
+    email = EXCLUDED.email,
+    name = EXCLUDED.name,
+    phone = EXCLUDED.phone,
+    is_active = true,
+    updated_at = now();
+  
   -- Return success result
   result := json_build_object(
     'success', true, 

@@ -37,7 +37,7 @@ export const ZelleWaitingPage: React.FC = () => {
       console.log('�� [ZelleWaiting] Parâmetros:', {
         user_id: user?.id,
         fee_type_global: feeType,
-        temp_payment_id: paymentId,
+        payment_id: paymentId,
         scholarshipsIds
       });
 
@@ -49,7 +49,7 @@ export const ZelleWaitingPage: React.FC = () => {
         body: {
           user_id: user.id,
           fee_type_global: feeType,
-          temp_payment_id: paymentId,
+          payment_id: paymentId,
           scholarship_ids: scholarshipsIds
         }
       });
@@ -67,7 +67,7 @@ export const ZelleWaitingPage: React.FC = () => {
     }
   };
 
-  const paymentId = searchParams.get('temp_payment_id');
+  const paymentId = searchParams.get('payment_id');
   const feeType = searchParams.get('fee_type');
   const amount = searchParams.get('amount');
   const scholarshipsIds = searchParams.get('scholarshipsIds');
@@ -127,6 +127,9 @@ export const ZelleWaitingPage: React.FC = () => {
             if (response === 'the proof of payment is valid.') {
               // Resposta positiva específica - aprovar automaticamente
               console.log('✅ [ZelleWaiting] Resposta positiva específica detectada - aprovando automaticamente');
+              
+              // Desabilitar verificação do banco ANTES de aprovar para evitar redirecionamento duplicado
+              shouldCheckDatabase.current = false;
               
               // Chamar Edge Function para aprovar automaticamente
               try {

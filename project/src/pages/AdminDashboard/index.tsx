@@ -141,7 +141,7 @@ const AdminDashboard: React.FC = () => {
       }
       setError(null);
 
-      // Load universities
+      // Load universities first
       const { data: universitiesData, error: universitiesError } = await supabase
         .from('universities')
         .select('*')
@@ -150,6 +150,42 @@ const AdminDashboard: React.FC = () => {
       if (universitiesError) {
         console.error('Error loading universities:', universitiesError);
         throw new Error(`Failed to load universities: ${universitiesError.message}`);
+      }
+
+      // Load user profiles separately
+      let userProfiles: { [key: string]: any } = {};
+      let userEmails: { [key: string]: string } = {};
+      
+      try {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('user_id, full_name, phone, status');
+        
+        if (!profilesError && profilesData) {
+          userProfiles = profilesData.reduce((acc: { [key: string]: any }, profile: any) => {
+            acc[profile.user_id] = {
+              full_name: profile.full_name,
+              phone: profile.phone,
+              status: profile.status
+            };
+            return acc;
+          }, {});
+        }
+      } catch (profileError) {
+        console.warn('Could not load user profiles:', profileError);
+      }
+
+      // Load user emails using the admin function
+      try {
+        const { data: adminUsersData, error: adminUsersError } = await supabase.rpc('get_admin_users_data');
+        if (!adminUsersError && adminUsersData) {
+          userEmails = adminUsersData.reduce((acc: { [key: string]: string }, user: any) => {
+            acc[user.id] = user.email;
+            return acc;
+          }, {});
+        }
+      } catch (emailError) {
+        console.warn('Could not load user emails:', emailError);
       }
 
       // Try to load users using the admin function
@@ -240,7 +276,11 @@ const AdminDashboard: React.FC = () => {
       }
 
       // Process data
-      const processedUniversities = universitiesData || [];
+      const processedUniversities = (universitiesData || []).map((university: any) => ({
+        ...university,
+        user_email: userEmails[university.user_id] || null,
+        user_profile: userProfiles[university.user_id] || null
+      }));
       const processedScholarships = scholarshipsData || [];
       const processedApplications = (applicationsData || []).map((app: any) => ({
         id: app.id,
