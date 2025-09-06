@@ -622,6 +622,43 @@ const PaymentManagement = (): React.JSX.Element => {
         // Não falhar o processo se o webhook falhar
       }
 
+      // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
+      try {
+        console.log(`📤 [approveZellePayment] Enviando notificação de ${payment.fee_type} para universidade...`);
+        
+        const notificationEndpoint = payment.fee_type === 'application_fee' 
+          ? 'notify-university-application-fee-paid'
+          : payment.fee_type === 'scholarship_fee'
+          ? 'notify-university-scholarship-fee-paid'
+          : null;
+        
+        if (notificationEndpoint) {
+          const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+              application_id: payment.scholarship_id || payment.student_id, // Usando scholarship_id se disponível, senão student_id
+              user_id: payment.user_id,
+              scholarship_id: payment.scholarship_id || null
+            }),
+          });
+
+          if (notificationResponse.ok) {
+            console.log(`✅ [approveZellePayment] Notificação de ${payment.fee_type} enviada para universidade com sucesso!`);
+          } else {
+            console.warn(`⚠️ [approveZellePayment] Erro ao enviar notificação de ${payment.fee_type} para universidade:`, notificationResponse.status);
+          }
+        } else {
+          console.log(`ℹ️ [approveZellePayment] Tipo de taxa ${payment.fee_type} não requer notificação para universidade`);
+        }
+      } catch (notificationError) {
+        console.error('❌ [approveZellePayment] Erro ao enviar notificação para universidade:', notificationError);
+        // Não falhar o processo se a notificação falhar
+      }
+
       // Recarregar pagamentos Zelle
       await loadZellePayments();
       setShowZelleReviewModal(false);

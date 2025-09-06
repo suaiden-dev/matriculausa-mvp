@@ -321,9 +321,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('🔍 [USEAUTH] Telefone no perfil criado:', newProfile?.phone);
               profile = newProfile;
               
-              // Processar código de afiliado se existir
+              // Processar código de afiliado se existir (do localStorage)
               if (pendingAffiliateCode) {
-                console.log('🎁 [USEAUTH] Processando código de afiliado:', pendingAffiliateCode);
+                console.log('🎁 [USEAUTH] Processando código de afiliado do localStorage:', pendingAffiliateCode);
                 try {
                   // Verificar se o código é válido
                   const { data: affiliateCodeData, error: affiliateError } = await supabase
@@ -465,6 +465,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error('❌ [USEAUTH] Erro inesperado ao atualizar telefone:', err);
           }
         }
+        
+        // Processar código de referência do user_metadata se existir (sempre que o usuário faz login)
+        console.log('🔍 [USEAUTH] Verificando user_metadata:', {
+          hasAffiliateCode: !!session.user.user_metadata?.affiliate_code,
+          affiliateCode: session.user.user_metadata?.affiliate_code,
+          userMetadata: session.user.user_metadata
+        });
+        
+        if (session.user.user_metadata?.affiliate_code) {
+          console.log('🎁 [USEAUTH] Processando código de afiliado do user_metadata:', session.user.user_metadata.affiliate_code);
+          
+          // Verificar se já existe um registro para este código
+          const { data: existingRecord } = await supabase
+            .from('used_referral_codes')
+            .select('id, status')
+            .eq('user_id', session.user.id)
+            .eq('affiliate_code', session.user.user_metadata.affiliate_code)
+            .single();
+          
+          if (existingRecord) {
+            console.log('🔍 [USEAUTH] Registro já existe:', existingRecord);
+            if (existingRecord.status !== 'applied') {
+              console.log('🔍 [USEAUTH] Atualizando status para applied...');
+              await supabase
+                .from('used_referral_codes')
+                .update({ 
+                  status: 'applied',
+                  stripe_coupon_id: 'MATR_' + session.user.user_metadata.affiliate_code,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', existingRecord.id);
+            }
+          } else {
+            console.log('🔍 [USEAUTH] Criando novo registro...');
+            try {
+              // Usar a função validate_and_apply_referral_code para processar o código
+              const { data: validationResult, error: validationError } = await supabase
+                .rpc('validate_and_apply_referral_code', {
+                  user_id_param: session.user.id,
+                  affiliate_code_param: session.user.user_metadata.affiliate_code
+                });
+
+              if (validationError) {
+                console.error('❌ [USEAUTH] Erro ao processar affiliate_code do user_metadata:', validationError);
+              } else if (validationResult?.success) {
+                console.log('✅ [USEAUTH] Affiliate_code do user_metadata processado com sucesso:', validationResult);
+                
+                // Atualizar status para 'applied' imediatamente
+                await supabase
+                  .from('used_referral_codes')
+                  .update({ 
+                    status: 'applied',
+                    stripe_coupon_id: 'MATR_' + session.user.user_metadata.affiliate_code,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('user_id', session.user.id)
+                  .eq('affiliate_code', session.user.user_metadata.affiliate_code);
+              } else {
+                console.log('⚠️ [USEAUTH] Affiliate_code do user_metadata não pôde ser processado:', validationResult?.error);
+              }
+            } catch (error) {
+              console.error('❌ [USEAUTH] Erro ao processar affiliate_code do user_metadata:', error);
+            }
+          }
+        }
       } else {
         setUser(null);
         setSupabaseUser(null);
@@ -477,7 +542,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_, session) => {
         fetchAndSetUser(session);
         setLoading(false);
       }

@@ -10,7 +10,12 @@ interface ZelleCheckoutProps {
   onSuccess?: () => void;
   onError?: (error: string) => void;
   className?: string;
-  metadata?: { [key: string]: any };
+  metadata?: { 
+    [key: string]: any;
+    discount_applied?: boolean;
+    original_amount?: number;
+    final_amount?: number;
+  };
 }
 
 export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
@@ -23,6 +28,15 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   metadata = {}
 }) => {
   const { user } = useAuth();
+  
+  console.log('🔍 [ZelleCheckout] Componente renderizado com props:', {
+    feeType,
+    amount,
+    metadata,
+    discount_applied: metadata?.discount_applied,
+    original_amount: metadata?.original_amount,
+    final_amount: metadata?.final_amount
+  });
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'instructions' | 'upload' | 'success'>('instructions');
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
@@ -227,7 +241,16 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         <div className="bg-white rounded-lg p-4 mb-4 text-left">
           <h4 className="font-semibold text-gray-800 mb-2">Payment Details:</h4>
           <div className="space-y-1 text-sm text-gray-600">
-            <div><strong>Amount:</strong> ${amount.toFixed(2)} USD</div>
+            {metadata?.discount_applied && metadata?.original_amount ? (
+              <div className="space-y-1">
+                <div><strong>Original Amount:</strong> ${metadata.original_amount.toFixed(2)} USD</div>
+                <div><strong>Discount Applied:</strong> -$50.00 USD</div>
+                <div><strong>Final Amount:</strong> <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span></div>
+                <div className="text-green-600 font-medium">🎉 You saved $50.00!</div>
+              </div>
+            ) : (
+              <div><strong>Amount:</strong> ${amount.toFixed(2)} USD</div>
+            )}
             <div><strong>Fee Type:</strong> {feeType.replace('_', ' ')}</div>
             <div><strong>Confirmation Code:</strong> {paymentDetails.confirmationCode}</div>
             <div><strong>Payment Date:</strong> {paymentDetails.paymentDate}</div>
@@ -272,7 +295,23 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               Step 1: Make the Zelle Payment
             </h4>
             <div className="space-y-2 text-sm text-blue-700">
-              <p><strong>Amount:</strong> ${amount.toFixed(2)} USD</p>
+              {(() => {
+                console.log('🔍 [ZelleCheckout] Verificando condições de desconto:', {
+                  discount_applied: metadata?.discount_applied,
+                  original_amount: metadata?.original_amount,
+                  condition: metadata?.discount_applied && metadata?.original_amount
+                });
+                return metadata?.discount_applied && metadata?.original_amount ? (
+                  <div className="space-y-1">
+                    <p><strong>Original Amount:</strong> ${metadata.original_amount.toFixed(2)} USD</p>
+                    <p><strong>Discount Applied:</strong> -$50.00 USD</p>
+                    <p><strong>Final Amount:</strong> <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span></p>
+                    <p className="text-green-600 font-medium">🎉 You saved $50.00!</p>
+                  </div>
+                ) : (
+                  <p><strong>Amount:</strong> ${amount.toFixed(2)} USD</p>
+                );
+              })()}
               <p><strong>Recipient:</strong> [Zelle recipient details will be provided]</p>
               <p><strong>Note:</strong> Include your confirmation code in the payment note</p>
             </div>
