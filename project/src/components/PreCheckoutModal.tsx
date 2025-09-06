@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Dialog } from '@headlessui/react';
-import { X, Gift, AlertCircle, CheckCircle, CreditCard, Shield, Lock, FileText, Scroll, Target } from 'lucide-react';
+import { X, AlertCircle, CheckCircle, Shield, Lock, Scroll } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -65,13 +65,21 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   // Verificar se o usuário tem seller_referral_code
   const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
   
+  // Verificar se o usuário já tem affiliate_code (friend code) do registro
+  const hasAffiliateCode = userProfile?.affiliate_code && userProfile.affiliate_code.trim() !== '';
+  
   console.log('🔍 [PreCheckoutModal] Estados atuais:', {
     termsAccepted,
     showTermsModal,
     hasScrolledToBottom,
     activeTerm: activeTerm ? 'loaded' : 'null',
     loadingTerms,
-    hasSellerReferralCode
+    hasSellerReferralCode,
+    hasAffiliateCode,
+    userAffiliateCode: userProfile?.affiliate_code,
+    discountCode,
+    validationResult,
+    codeApplied
   });
 
   // Reset state when modal opens/closes
@@ -107,6 +115,27 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     }
   }, [isOpen]);
 
+  // Preencher automaticamente o campo de referral code se o usuário já tem affiliate_code
+  useEffect(() => {
+    console.log('🔍 [PreCheckoutModal] useEffect preenchimento automático:', {
+      isOpen,
+      hasAffiliateCode,
+      userAffiliateCode: userProfile?.affiliate_code
+    });
+    
+    if (isOpen && hasAffiliateCode && userProfile?.affiliate_code) {
+      console.log('🔍 [PreCheckoutModal] Preenchendo campo com affiliate_code do usuário:', userProfile.affiliate_code);
+      setDiscountCode(userProfile.affiliate_code);
+      // Automaticamente validar o código preenchido
+      setTimeout(() => {
+        if (userProfile.affiliate_code) {
+          console.log('🔍 [PreCheckoutModal] Chamando validateDiscountCodeForPrefill...');
+          validateDiscountCodeForPrefill(userProfile.affiliate_code);
+        }
+      }, 100);
+    }
+  }, [isOpen, hasAffiliateCode, userProfile?.affiliate_code]);
+
   // Clean up state when component unmounts
   useEffect(() => {
     return () => {
@@ -125,6 +154,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   // Check scroll requirements when activeTerm changes
   useEffect(() => {
     if (activeTerm && showTermsModal) {
+      console.log('🔍 [PreCheckoutModal] activeTerm carregado, verificando scroll');
       // Small delay to ensure DOM is fully rendered
       const timer = setTimeout(() => {
         checkIfContentNeedsScroll();
@@ -138,6 +168,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const loadActiveTerms = async () => {
     try {
       setLoadingTerms(true);
+      console.log('🔍 [PreCheckoutModal] Iniciando busca de termos no banco...');
+      
       const { data, error } = await supabase
         .from('application_terms')
         .select('*')
@@ -146,19 +178,27 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
         .order('created_at', { ascending: false })
         .limit(1);
 
+      console.log('🔍 [PreCheckoutModal] Resultado da query:', { data, error });
+
       if (error) {
-        console.error('Error loading active terms:', error);
+        console.error('❌ [PreCheckoutModal] Erro na query:', error);
         return false;
       }
 
       if (data && data.length > 0) {
+        console.log('✅ [PreCheckoutModal] Dados encontrados no banco:', data[0]);
+        console.log('🔍 [PreCheckoutModal] Content length:', data[0].content?.length);
+        console.log('🔍 [PreCheckoutModal] Content preview:', data[0].content?.substring(0, 100));
+        console.log('🔍 [PreCheckoutModal] Title:', data[0].title);
         setActiveTerm(data[0]);
-        console.log('Active term loaded:', data[0]);
+        console.log('✅ [PreCheckoutModal] activeTerm definido:', data[0]);
         return true; // Indicate success
       }
+      
+      console.log('⚠️ [PreCheckoutModal] Nenhum termo ativo encontrado');
       return false; // Indicate no active terms found
     } catch (error) {
-      console.error('Error loading active terms:', error);
+      console.error('❌ [PreCheckoutModal] Erro inesperado:', error);
       return false; // Indicate failure
     } finally {
       setLoadingTerms(false);
@@ -235,15 +275,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       console.log('🔍 [PreCheckoutModal] Termo padrão criado');
     }
     
-    // CORREÇÃO: Sempre mostrar o modal de termos para garantir consistência
+    // CORREÇÃO: Abrir o modal imediatamente - o useEffect vai garantir que o activeTerm seja carregado
     console.log('🔍 [PreCheckoutModal] Abrindo modal de termos');
     setShowTermsModal(true);
     setHasScrolledToBottom(false);
-    
-    // Check if content needs scrolling after a short delay to ensure DOM is rendered
-    setTimeout(() => {
-      checkIfContentNeedsScroll();
-    }, 100);
   };
 
   // Handle terms acceptance
@@ -272,6 +307,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('🔍 [PreCheckoutModal] Checkbox alterado:', e.target.checked);
     setUserClickedCheckbox(true); // Mark that user interacted with checkbox
+    console.log('🔍 [PreCheckoutModal] userClickedCheckbox definido como true');
     
     if (e.target.checked) {
       // When checkbox is checked, open terms modal
@@ -283,6 +319,88 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setTermsAccepted(false);
       setHasScrolledToBottom(false);
       setShowTermsModal(false); // Ensure modal is closed
+    }
+  };
+
+  // Função para validar código preenchido automaticamente (sem dependências circulares)
+  const validateDiscountCodeForPrefill = async (code: string) => {
+    if (!code.trim()) {
+      console.log('🔍 [PreCheckoutModal] Código vazio, não validando');
+      return;
+    }
+
+    console.log('🔍 [PreCheckoutModal] Validando código preenchido automaticamente:', code);
+    console.log('🔍 [PreCheckoutModal] Estados atuais antes da validação:', {
+      hasUsedReferralCode,
+      user: user?.id,
+      code
+    });
+    setIsValidating(true);
+
+    try {
+      // Check if code exists and is active
+      console.log('🔍 [PreCheckoutModal] Buscando código no banco:', code.trim().toUpperCase());
+      const { data: affiliateCodeData, error: affiliateError } = await supabase
+        .from('affiliate_codes')
+        .select('user_id, code, is_active')
+        .eq('code', code.trim().toUpperCase())
+        .eq('is_active', true)
+        .single();
+
+      console.log('🔍 [PreCheckoutModal] Resultado da busca:', {
+        affiliateCodeData,
+        affiliateError,
+        hasData: !!affiliateCodeData
+      });
+
+      if (affiliateError || !affiliateCodeData) {
+        console.log('🔍 [PreCheckoutModal] ❌ Código preenchido é inválido ou inativo');
+        setValidationResult({
+          isValid: false,
+          message: t('preCheckoutModal.invalidCode')
+        });
+        return;
+      }
+
+      // Check if not self-referral
+      if (affiliateCodeData.user_id === user?.id) {
+        console.log('🔍 [PreCheckoutModal] ❌ Auto-referência detectada no preenchimento');
+        setValidationResult({
+          isValid: false,
+          message: t('preCheckoutModal.selfReferral'),
+          isSelfReferral: true
+        });
+        return;
+      }
+
+      // Check if user already used any code
+      if (hasUsedReferralCode) {
+        console.log('🔍 [PreCheckoutModal] ❌ Usuário já usou código anteriormente');
+        setValidationResult({
+          isValid: false,
+          message: t('preCheckoutModal.alreadyUsedCode')
+        });
+        return;
+      }
+
+      // Valid code
+      console.log('🔍 [PreCheckoutModal] ✅ Código preenchido é válido');
+      setValidationResult({
+        isValid: true,
+        message: t('preCheckoutModal.validCode'),
+        discountAmount: 50
+      });
+      setCodeApplied(true);
+      console.log('🔍 [PreCheckoutModal] Código aplicado com sucesso, codeApplied:', true);
+
+    } catch (error) {
+      console.error('🔍 [PreCheckoutModal] Erro ao validar código preenchido:', error);
+      setValidationResult({
+        isValid: false,
+        message: t('preCheckoutModal.errorValidating')
+      });
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -379,6 +497,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     console.log('🔍 [PreCheckoutModal] validationResult:', validationResult);
     console.log('🔍 [PreCheckoutModal] discountCode:', discountCode);
     console.log('🔍 [PreCheckoutModal] codeApplied:', codeApplied);
+    console.log('🔍 [PreCheckoutModal] hasAffiliateCode:', hasAffiliateCode);
+    console.log('🔍 [PreCheckoutModal] userAffiliateCode:', userProfile?.affiliate_code);
     
     // ✅ CORREÇÃO: Só permite prosseguir se tiver código válido aplicado
     if (validationResult?.isValid && discountCode.trim() && codeApplied) {
@@ -398,6 +518,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       return;
     }
 
+    console.log('🔍 [PreCheckoutModal] handleSkip chamado - prosseguindo sem código');
     onProceedToCheckout();
     onClose();
   };
@@ -409,6 +530,27 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   }
   
   console.log('🔍 [PreCheckoutModal] Modal está aberto, renderizando componente');
+  console.log('🔍 [PreCheckoutModal] Estados finais para renderização:', {
+    hasAffiliateCode,
+    userAffiliateCode: userProfile?.affiliate_code,
+    discountCode,
+    validationResult,
+    codeApplied,
+    termsAccepted,
+    hasUsedReferralCode,
+    userProfile: userProfile ? 'loaded' : 'null',
+    isOpen,
+    feeType,
+    productName,
+    onProceedToCheckout: typeof onProceedToCheckout,
+    onClose: typeof onClose,
+    t: typeof t,
+    supabase: typeof supabase,
+    user: user?.id,
+    loadingTerms,
+    showTermsModal,
+    hasScrolledToBottom
+  });
 
   return (
     <>
@@ -467,10 +609,13 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                 <div className="space-y-4">
                   <div className="text-center">
                     <label className="block text-lg font-semibold text-gray-900 mb-2">
-                      {t('preCheckoutModal.referralCode')}
+                      {hasAffiliateCode ? t('preCheckoutModal.yourReferralCode') : t('preCheckoutModal.referralCode')}
                     </label>
                     <p className="text-sm text-gray-600 mb-4">
-                      {t('preCheckoutModal.enterReferralCode')}
+                      {hasAffiliateCode 
+                        ? t('preCheckoutModal.usingYourReferralCode') 
+                        : t('preCheckoutModal.enterReferralCode')
+                      }
                     </p>
                   </div>
                   
@@ -480,23 +625,30 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                       placeholder={t('preCheckoutModal.placeholder')}
-                      className="flex-1 px-5 py-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-lg tracking-wider"
+                      readOnly={!!hasAffiliateCode}
+                      className={`flex-1 px-5 py-4 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-lg tracking-wider ${
+                        hasAffiliateCode 
+                          ? 'border-green-300 bg-green-50 cursor-not-allowed' 
+                          : 'border-gray-300'
+                      }`}
                       maxLength={8}
                     />
-                    <button
-                      onClick={validateDiscountCode}
-                      disabled={isValidating || !discountCode.trim()}
-                      className="px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-                    >
-                      {isValidating ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>{t('preCheckoutModal.validating')}</span>
-                        </div>
-                      ) : (
-                        t('preCheckoutModal.validate')
-                      )}
-                    </button>
+                    {!hasAffiliateCode && (
+                      <button
+                        onClick={validateDiscountCode}
+                        disabled={isValidating || !discountCode.trim()}
+                        className="px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        {isValidating ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>{t('preCheckoutModal.validating')}</span>
+                          </div>
+                        ) : (
+                          t('preCheckoutModal.validate')
+                        )}
+                      </button>
+                    )}
                   </div>
                   
                   {/* Validation Result */}
@@ -635,7 +787,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                     className="flex-1 overflow-y-auto p-6"
                   >
                     <div 
-                      className="prose prose-slate max-w-none"
+                      className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-gray-900"
                       dangerouslySetInnerHTML={{ __html: activeTerm.content }}
                     />
                     

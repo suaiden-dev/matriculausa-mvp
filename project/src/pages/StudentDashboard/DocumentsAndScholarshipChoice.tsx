@@ -824,7 +824,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                             </div>
                           )}
                           
-                          {hasError && (
+                          {hasError ? (
                             <div className={`flex items-center text-xs sm:text-sm p-2 rounded-lg ${
                               isLanguageError(hasError) 
                                 ? 'text-amber-700 bg-amber-50 border border-amber-200' 
@@ -860,6 +860,21 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                 }
                               </span>
                             </div>
+                          ) : (
+                            <>
+                              {/* Mensagem específica para comprovação de fundos */}
+                              {doc.key === 'funds_proof' && (
+                                <div className="mb-2">
+                                  <div className="flex items-center">
+                                    
+                                    <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 flex items-center rounded-md p-2">
+                                    <DollarSign className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                                      <span className="font-medium">Minimum balance required:</span> <span className="font-semibold">$22,000 USD</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
