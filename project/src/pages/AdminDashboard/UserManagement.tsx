@@ -378,7 +378,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       try {
                         if (newRole === 'affiliate_admin') {
                           // Usar a função RPC para affiliate admin
-                          const { error } = await supabase.rpc('promote_user_to_affiliate_admin', {
+                          const { error } = await supabase.rpc('promote_to_affiliate_admin', {
                             user_email: user.email
                           });
                           if (error) throw error;
@@ -466,7 +466,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                             try {
                               if (newRole === 'affiliate_admin') {
                                 // Usar a função RPC para affiliate admin
-                                const { error } = await supabase.rpc('promote_user_to_affiliate_admin', {
+                                const { error } = await supabase.rpc('promote_to_affiliate_admin', {
                                   user_email: user.email
                                 });
                                 if (error) throw error;
@@ -1193,7 +1193,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         try {
                           if (newRole === 'affiliate_admin') {
                             // Usar a função RPC para affiliate admin
-                            const { error } = await supabase.rpc('promote_user_to_affiliate_admin', {
+                            const { error } = await supabase.rpc('promote_to_affiliate_admin', {
                               user_email: selectedUser.email
                             });
                             if (error) throw error;

@@ -26,7 +26,7 @@ export const useStudentData = (userId?: string) => {
     }
   }, []);
 
-  // Função para calcular a receita real baseada nas taxas pagas
+  // Função para calcular a receita real baseada nas taxas pagas (SEM Application Fee)
   const calculateStudentRevenue = async (studentId: string, profileId: string) => {
     try {
       console.log('🔍 Calculating revenue for student:', studentId, 'profile:', profileId);
@@ -38,34 +38,20 @@ export const useStudentData = (userId?: string) => {
         .from('scholarship_applications')
         .select(`
           id,
-          is_application_fee_paid,
-          is_scholarship_fee_paid,
-          scholarships (
-            application_fee_amount
-          )
+          is_scholarship_fee_paid
         `)
         .eq('student_id', profileId)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
-      if (applicationError) {
-        console.log('🔍 No scholarship application found, using fallback calculation');
-      } else {
+      if (!applicationError && applicationData) {
         console.log('🔍 Application data found:', applicationData);
         
-        // Application Fee (variável - definida pela universidade)
-        if (applicationData.is_application_fee_paid) {
-          const appFeeAmount = applicationData.scholarships?.[0]?.application_fee_amount || 35000; // Default $350.00
-          const appFeeUSD = Number(appFeeAmount) / 100; // Converter de centavos para dólares
-          totalRevenue += appFeeUSD;
-          console.log(`🔍 Application fee added: $${appFeeUSD}`);
-        }
-        
-        // Scholarship Fee (fixa - $850)
+        // Scholarship Fee (fixa - $400) - APENAS esta taxa do sistema
         if (applicationData.is_scholarship_fee_paid) {
-          totalRevenue += 850;
-          console.log('🔍 Scholarship fee added: $850');
+          totalRevenue += 400;
+          console.log('🔍 Scholarship fee added: $400');
         }
       }
       
@@ -143,34 +129,34 @@ export const useStudentData = (userId?: string) => {
             console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
-          // Buscar dados reais dos estudantes
+          // Buscar dados reais dos estudantes (com todas as aplicações para Seller Tracking)
           const { data: realStudentsData, error: realStudentsError } = await supabase
-            .rpc('get_admin_students_analytics', { admin_user_id: userId });
+            .rpc('get_admin_students_tracking', { admin_user_id: userId });
 
           console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
 
           if (!realStudentsError && realStudentsData && realStudentsData.length > 0) {
-            // Processar estudantes e calcular receita real
-            const studentsWithRevenue = await Promise.all(
-              realStudentsData.map(async (student: any) => {
-                const realRevenue = await calculateStudentRevenue(student.student_id, student.profile_id);
-                return {
-                  id: student.student_id,
-                  profile_id: student.profile_id,
-                  user_id: student.student_id,
-                  full_name: student.student_name,
-                  email: student.student_email,
-                  country: student.country,
-                  referred_by_seller_id: student.referred_by_seller_id,
-                  seller_name: student.seller_name,
-                  seller_referral_code: student.seller_referral_code,
-                  referral_code_used: student.referral_code_used,
-                  total_paid: realRevenue, // Usar receita real calculada
-                  created_at: student.created_at,
-                  status: student.status
-                };
-              })
-            );
+            // Processar estudantes usando receita já calculada pela função RPC
+            const studentsWithRevenue = realStudentsData.map((student: any) => {
+              return {
+                id: student.student_id,
+                profile_id: student.profile_id,
+                user_id: student.student_id,
+                full_name: student.student_name,
+                email: student.student_email,
+                country: student.country,
+                referred_by_seller_id: student.referred_by_seller_id,
+                seller_name: student.seller_name,
+                seller_referral_code: student.seller_referral_code,
+                referral_code_used: student.referral_code_used,
+                total_paid: student.total_paid, // Usar receita já calculada pela função RPC
+                created_at: student.created_at,
+                status: student.status,
+                application_status: student.application_status,
+                scholarship_title: student.scholarship_title,
+                university_name: student.university_name
+              };
+            });
             
             processedStudents = studentsWithRevenue;
             
@@ -187,13 +173,11 @@ export const useStudentData = (userId?: string) => {
             console.log('🔍 SQL students function failed or returned no data, will use fallback');
           }
 
-          // Se ambas as funções SQL funcionaram e retornaram dados, não usar fallback
-          if (!realSellersError && !realStudentsError && 
-              realSellersData && realSellersData.length > 0 && 
-              realStudentsData && realStudentsData.length > 0) {
+          // Se ambas as funções SQL funcionaram (mesmo que retornem arrays vazios), não usar fallback
+          if (!realSellersError && !realStudentsError) {
             console.log('🔍 SQL functions successful, skipping fallback');
-            console.log('🔍 Final state - Students loaded via SQL:', realStudentsData.length);
-            console.log('🔍 Final state - Sellers loaded via SQL:', realSellersData.length);
+            console.log('🔍 Final state - Students loaded via SQL:', realStudentsData?.length || 0);
+            console.log('🔍 Final state - Sellers loaded via SQL:', realSellersData?.length || 0);
             
             // Debug: verificar se os dados estão sendo mapeados corretamente
             console.log('🔍 Final processed students:', processedStudents);
@@ -230,175 +214,11 @@ export const useStudentData = (userId?: string) => {
         }
       }
 
-      // Fallback para método antigo se userId não estiver disponível ou se as funções SQL falharem
-      console.log('🔍 Using fallback method to load data directly from tables');
-
-      // Buscar sellers ativos
-      const { data: sellersData, error: sellersError } = await supabase
-        .from('sellers')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      console.log('🔍 Fallback sellers response:', { data: sellersData, error: sellersError });
-
-      if (sellersError) {
-        console.error('Error loading sellers:', sellersError);
-        throw new Error(`Failed to load sellers: ${sellersError.message}`);
-      }
-
-      // Buscar estudantes que têm seller_referral_code preenchido
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .not('seller_referral_code', 'is', null)
-        .neq('seller_referral_code', '')
-        .order('created_at', { ascending: false });
-
-      // Buscar vendedores ativos para filtrar estudantes
-      console.log('🔍 About to query sellers table with select: referral_code, id, name');
-      const { data: activeSellersData, error: activeSellersError } = await supabase
-        .from('sellers')
-        .select('referral_code, id, name')
-        .eq('is_active', true);
-
-      console.log('🔍 Query completed. Data:', activeSellersData?.length, 'Error:', activeSellersError);
-      
-      if (activeSellersError) {
-        console.error('❌ Error loading active sellers:', activeSellersError);
-        console.error('❌ Full error object:', JSON.stringify(activeSellersError, null, 2));
-        throw new Error(`Failed to load active sellers: ${activeSellersError.message}`);
-      }
-
-      // Criar conjunto de códigos de vendedores ativos
-      const activeSellerCodes = new Set(activeSellersData?.map(s => s.referral_code) || []);
-
-      if (studentsError) {
-        console.error('Error loading students:', studentsError);
-        throw new Error(`Failed to load students: ${studentsError.message}`);
-      }
-
-      // Processar estudantes com dados reais - filtrar apenas aqueles referenciados por vendedores ativos
-      const processedStudents = await Promise.all(
-        (studentsData || [])
-          .filter((studentProfile: any) => {
-            const isReferencedByActiveSeller = activeSellerCodes.has(studentProfile.seller_referral_code);
-            if (!isReferencedByActiveSeller) {
-              console.log(`⚠️ Filtering out student ${studentProfile.full_name} (${studentProfile.email}) - referenced by inactive seller with code: ${studentProfile.seller_referral_code}`);
-            }
-            return isReferencedByActiveSeller;
-          })
-          .map(async (studentProfile: any) => {
-            // Calcular receita real para cada estudante
-            const realRevenue = await calculateStudentRevenue(studentProfile.user_id, studentProfile.id);
-            
-            // Processando estudante
-            return {
-              id: studentProfile.id, // Usar o ID da tabela user_profiles
-              profile_id: studentProfile.profile_id, // profile_id é o mesmo que id para user_profiles
-              user_id: studentProfile.user_id,
-              full_name: studentProfile.full_name || 'Name not available',
-              email: studentProfile.email || 'Email not available',
-              country: studentProfile.country || 'Country not available',
-              referred_by_seller_id: null, // Será definido depois
-              seller_name: 'Seller not available',
-              seller_referral_code: studentProfile.seller_referral_code || '',
-              referral_code_used: studentProfile.seller_referral_code || '',
-              total_paid: realRevenue, // Usar receita real calculada
-              created_at: studentProfile.created_at || new Date().toISOString(),
-              status: studentProfile.status || 'active'
-            };
-          })
-      );
-
-      // Debug: verificar dados processados
-      console.log('🔍 Students filtering results:', {
-        totalStudents: studentsData?.length || 0,
-        activeSellerCodes: activeSellerCodes.size,
-        filteredStudents: processedStudents.length,
-        filteredOut: (studentsData?.length || 0) - processedStudents.length
-      });
-      
-      console.log('🔍 Processed Students Data:', processedStudents.map(s => ({
-        name: s.full_name,
-        profile_id: s.profile_id,
-        total_paid: s.total_paid,
-        seller_code: s.seller_referral_code
-      })));
-
-      // Processar vendedores com dados reais
-      const processedSellers = (sellersData || []).map((seller: any) => {
-        const sellerStudents = processedStudents.filter((student: any) => 
-          student.referred_by_seller_id === seller.id
-        );
-        
-        // Calcular receita real baseada nos pagamentos dos estudantes
-        const actualRevenue = sellerStudents.reduce((sum, student) => sum + (student.total_paid || 0), 0);
-        
-        console.log(`🔍 Processing seller: ${seller.seller_name} with code: ${seller.referral_code}, found ${sellerStudents.length} students, actual revenue: ${actualRevenue}`);
-        
-        return {
-          id: seller.id,
-          name: seller.name || 'Name not available',
-          email: seller.email || 'Email not available',
-          referral_code: seller.referral_code || '',
-          is_active: seller.is_active,
-          created_at: seller.created_at || new Date().toISOString(),
-          students_count: sellerStudents.length, // Usar contagem real dos estudantes
-          total_revenue: actualRevenue // Usar receita real calculada
-        };
-      });
-
-      // Atualizar nomes dos sellers nos estudantes
-      processedStudents.forEach((student: any) => {
-        const seller = processedSellers.find((s: any) => s.referral_code === student.seller_referral_code);
-        if (seller) {
-          student.seller_name = seller.name;
-          student.referred_by_seller_id = seller.id; // Atualizar para usar o ID do seller
-          console.log(`🔍 Student ${student.full_name} linked to seller ${seller.name} (${seller.id})`);
-        } else {
-          console.log(`⚠️ Student ${student.full_name} with code ${student.seller_referral_code} has no matching seller`);
-        }
-      });
-
-      console.log('🔍 Final processed data:', {
-        students: processedStudents.map((s: any) => ({
-          name: s.full_name,
-          profile_id: s.profile_id,
-          sellerCode: s.seller_referral_code,
-          sellerId: s.referred_by_seller_id,
-          sellerName: s.seller_name
-        })),
-        sellers: processedSellers.map((s: any) => ({
-          name: s.name,
-          code: s.referral_code,
-          id: s.id,
-          studentsCount: s.students_count
-        }))
-      });
-
-      console.log('🔍 Debug - Processed data:', {
-        sellers: processedSellers.length,
-        students: processedStudents.length,
-        sellerCodes: processedSellers.map((s: any) => s.referral_code),
-        studentSellerCodes: processedStudents.map((s: any) => s.seller_referral_code),
-        sellerDetails: processedSellers.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          code: s.referral_code,
-          students: s.students_count
-        })),
-        studentDetails: processedStudents.map((s: any) => ({
-          id: s.id,
-          profile_id: s.profile_id,
-          name: s.full_name,
-          sellerCode: s.seller_referral_code,
-          sellerName: s.seller_name
-        }))
-      });
-
-      setSellers(processedSellers);
-      setStudents(processedStudents);
+      // Se chegou aqui, as funções SQL falharam - retornar dados vazios
+      console.log('🔍 SQL functions failed, returning empty data');
+      setSellers([]);
+      setStudents([]);
+      return;
 
     } catch (error: any) {
       console.error('Error loading data:', error);

@@ -36,7 +36,7 @@ export const ZelleWaitingPage: React.FC = () => {
       console.log('�� [ZelleWaiting] Parâmetros:', {
         user_id: user?.id,
         fee_type_global: feeType,
-        temp_payment_id: paymentId,
+        payment_id: paymentId,
         scholarshipsIds
       });
 
@@ -48,7 +48,7 @@ export const ZelleWaitingPage: React.FC = () => {
         body: {
           user_id: user.id,
           fee_type_global: feeType,
-          temp_payment_id: paymentId,
+          payment_id: paymentId,
           scholarship_ids: scholarshipsIds
         }
       });
@@ -66,7 +66,7 @@ export const ZelleWaitingPage: React.FC = () => {
     }
   };
 
-  const paymentId = searchParams.get('temp_payment_id');
+  const paymentId = searchParams.get('payment_id');
   const feeType = searchParams.get('fee_type');
   const amount = searchParams.get('amount');
   const scholarshipsIds = searchParams.get('scholarshipsIds');
@@ -123,6 +123,9 @@ export const ZelleWaitingPage: React.FC = () => {
               // Resposta positiva específica - aprovar automaticamente
               console.log('✅ [ZelleWaiting] Resposta positiva específica detectada - aprovando automaticamente');
               
+              // Desabilitar verificação do banco ANTES de aprovar para evitar redirecionamento duplicado
+              shouldCheckDatabase.current = false;
+              
               // Chamar Edge Function para aprovar automaticamente
               try {
                 await approvePaymentAutomatically();
@@ -137,8 +140,7 @@ export const ZelleWaitingPage: React.FC = () => {
                 message: 'Payment Approved! 🎉',
                 details: 'Your payment has been successfully verified and approved.'
               });
-              // Desabilitar verificação do banco para evitar sobrescrita
-              shouldCheckDatabase.current = false;
+              
               // Redirecionar para página de sucesso após 3 segundos
               setTimeout(() => {
                 navigate(`/zelle/success?method=zelle&status=approved&fee_type=${feeType}&amount=${amount}`);
@@ -208,7 +210,7 @@ export const ZelleWaitingPage: React.FC = () => {
           });
           // Redirecionar para página de sucesso após 3 segundos
           setTimeout(() => {
-            navigate('/checkout/success?method=zelle&status=approved');
+            navigate(`/zelle/success?method=zelle&status=approved&fee_type=${feeType}&amount=${amount}`);
           }, 3000);
         } else if (data.status === 'rejected') {
           setPaymentStatus({
