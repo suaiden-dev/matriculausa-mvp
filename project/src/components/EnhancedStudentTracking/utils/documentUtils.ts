@@ -4,61 +4,64 @@ export const handleViewDocument = (doc: any) => {
   console.log('=== DEBUG handleViewDocument ===');
   console.log('Documento recebido:', doc);
   
-  // ✅ CORREÇÃO: Usar file_url em vez de url
-  if (!doc || !doc.file_url) {
-    console.log('Documento ou file_url está vazio ou undefined');
+  // ✅ Aceitar tanto file_url quanto url (fallback)
+  const fileUrl: string | undefined = doc?.file_url || doc?.url;
+  if (!doc || !fileUrl) {
+    console.log('Documento ou file_url/url está vazio ou undefined');
     console.log('doc:', doc);
     console.log('doc.file_url:', doc?.file_url);
+    console.log('doc.url:', doc?.url);
     return;
   }
   
-  console.log('file_url:', doc.file_url);
-  console.log('Tipo de file_url:', typeof doc.file_url);
+  console.log('fileUrl resolvido:', fileUrl);
+  console.log('Tipo de fileUrl:', typeof fileUrl);
   
   // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
   try {
-    if (doc.file_url && doc.file_url.startsWith('https://fitpynguasqqutuhzifx.supabase.co')) {
-      console.log('Usando URL completa do Supabase:', doc.file_url);
-      window.open(doc.file_url, '_blank');
-    } else if (doc.file_url && !doc.file_url.startsWith('http')) {
+    if (fileUrl && fileUrl.startsWith('https://fitpynguasqqutuhzifx.supabase.co')) {
+      console.log('Usando URL completa do Supabase:', fileUrl);
+      window.open(fileUrl, '_blank');
+    } else if (fileUrl && !fileUrl.startsWith('http')) {
       // Se file_url é um path do storage, converter para URL pública
       const publicUrl = supabase.storage
         .from('student-documents')
-        .getPublicUrl(doc.file_url)
+        .getPublicUrl(fileUrl)
         .data.publicUrl;
       
       console.log('URL pública gerada:', publicUrl);
       window.open(publicUrl, '_blank');
     } else {
       // Se já é uma URL completa, usar diretamente
-      console.log('Usando URL existente:', doc.file_url);
-      window.open(doc.file_url, '_blank');
+      console.log('Usando URL existente:', fileUrl);
+      window.open(fileUrl, '_blank');
     }
   } catch (error) {
     console.error('Erro ao gerar URL pública:', error);
     // Fallback: tentar usar a URL original
-    window.open(doc.file_url, '_blank');
+    window.open(fileUrl, '_blank');
   }
 };
 
 export const handleDownloadDocument = async (doc: any) => {
-  // ✅ CORREÇÃO: Usar file_url em vez de url
-  if (!doc.file_url) return;
+  // ✅ Aceitar tanto file_url quanto url (fallback)
+  const fileUrl: string | undefined = doc?.file_url || doc?.url;
+  if (!fileUrl) return;
   
   try {
     console.log('=== DEBUG handleDownloadDocument ===');
     console.log('Documento para download:', doc);
-    console.log('file_url:', doc.file_url);
+    console.log('fileUrl resolvido:', fileUrl);
     
     // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
-    let downloadUrl = doc.file_url;
-    if (doc.file_url && doc.file_url.startsWith('https://fitpynguasqqutuhzifx.supabase.co')) {
+    let downloadUrl = fileUrl;
+    if (fileUrl && fileUrl.startsWith('https://fitpynguasqqutuhzifx.supabase.co')) {
       console.log('Usando URL completa do Supabase para download:', downloadUrl);
-    } else if (doc.file_url && !doc.file_url.startsWith('http')) {
+    } else if (fileUrl && !fileUrl.startsWith('http')) {
       // Se file_url é um path do storage, converter para URL pública
       const publicUrl = supabase.storage
         .from('student-documents')
-        .getPublicUrl(doc.file_url)
+        .getPublicUrl(fileUrl)
         .data.publicUrl;
       downloadUrl = publicUrl;
       console.log('URL pública para download:', downloadUrl);
