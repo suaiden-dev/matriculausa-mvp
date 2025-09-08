@@ -1667,14 +1667,17 @@ const StudentDetails: React.FC = () => {
                           <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                application?.user_profiles?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className={`text-sm font-medium ${
-                                application?.user_profiles?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
-                              }`}>
-                                {application?.user_profiles?.is_application_fee_paid ? 'Paid' : 'Pending'}
-                              </span>
+                              {(() => {
+                                const paid = (application as any)?.is_application_fee_paid ?? application?.user_profiles?.is_application_fee_paid;
+                                return (
+                                  <>
+                                    <div className={`w-2 h-2 rounded-full ${paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                    <span className={`text-sm font-medium ${paid ? 'text-green-700' : 'text-red-700'}`}>
+                                      {paid ? 'Paid' : 'Pending'}
+                                    </span>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </dd>
                         </div>
