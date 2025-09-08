@@ -50,6 +50,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/users')) return 'users';
     if (path.includes('/scholarships')) return 'scholarships';
     if (path.includes('/payments')) return 'payments';
+    if (path.includes('/affiliate-payment-requests')) return 'affiliate-payment-requests';
 
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/transfer-reports')) return 'transfer-reports';
@@ -102,6 +103,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
+    { id: 'affiliate-payment-requests', label: 'Affiliate Payment Requests', icon: CreditCard, path: '/admin/dashboard/affiliate-payment-requests', badge: null },
     { id: 'transfer-reports', label: 'Transfer Reports', icon: FileText, path: '/admin/dashboard/transfer-reports', badge: null },
 
 

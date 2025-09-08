@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import AffiliateAdminDashboardLayout from './AffiliateAdminDashboardLayout';
 import Overview from './Overview';
 import SellerManagement from './SellerManagement';
-
+import PaymentManagement from './PaymentManagement';
 import EnhancedStudentTracking from './EnhancedStudentTrackingRefactored';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
@@ -223,7 +223,7 @@ const AffiliateAdminDashboard: React.FC = () => {
           } 
         />
         <Route path="users" element={<SellerManagement />} />
-
+        <Route path="payments" element={<PaymentManagement />} />
         <Route 
           path="students" 
           element={
