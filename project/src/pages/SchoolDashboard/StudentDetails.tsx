@@ -297,97 +297,19 @@ const StudentDetails: React.FC = () => {
     if (!application) return;
     
     try {
-      console.log('=== Buscando todos os uploads do aluno ===');
+      console.log('=== Buscando uploads específicos do aluno ===');
       console.log('Application ID:', application.id);
       console.log('Student user_id:', application.user_profiles?.user_id);
-      console.log('Application status:', application.status);
-      console.log('Acceptance letter URL:', application.acceptance_letter_url);
-      console.log('Acceptance letter status:', application.acceptance_letter_status);
       
-      // Primeiro, vamos verificar a estrutura da tabela document_request_uploads
-      const { data: sampleUploads, error: sampleError } = await supabase
-        .from('document_request_uploads')
-        .select('*')
-        .limit(5);
-      
-      if (sampleError) {
-        console.error("Error fetching sample uploads:", sampleError);
-      } else {
-        console.log('Estrutura da tabela document_request_uploads:', sampleUploads);
-      }
-      
-      // Verificar também a estrutura da tabela document_requests
-      const { data: sampleRequests, error: sampleRequestsError } = await supabase
-        .from('document_requests')
-        .select('*')
-        .limit(5);
-      
-      if (sampleRequestsError) {
-        console.error("Error fetching sample requests:", sampleRequestsError);
-      } else {
-        console.log('Estrutura da tabela document_requests:', sampleRequests);
-      }
-      
-      // Primeiro, buscar document_requests para esta aplicação
-      const { data: requestsForApp, error: requestsError } = await supabase
-        .from('document_requests')
-        .select('*')
-        .eq('scholarship_application_id', application.id);
-      
-      if (requestsError) {
-        console.log('Erro ao buscar document_requests para a aplicação:', requestsError);
-      } else {
-        console.log('Document requests encontrados para a aplicação:', requestsForApp);
-      }
-      
-      // Verificar se há uploads para esta aplicação específica
-      const { data: uploadsForApp, error: errorApp } = await supabase
-        .from('document_request_uploads')
-        .select(`
-          *,
-          document_requests(
-            id,
-            title,
-            description,
-            created_at,
-            is_global,
-            university_id,
-            scholarship_application_id
-          )
-        `)
-        .eq('document_requests.scholarship_application_id', application.id);
-      
-      if (errorApp) {
-        console.log('Erro ao buscar uploads para a aplicação:', errorApp);
-      } else {
-        console.log('Uploads encontrados diretamente para a aplicação:', uploadsForApp);
-        if (uploadsForApp && uploadsForApp.length > 0) {
-          console.log('Detalhes dos uploads encontrados:');
-          uploadsForApp.forEach((upload, index) => {
-            console.log(`Upload ${index + 1}:`, {
-              id: upload.id,
-              document_request_id: upload.document_request_id,
-              scholarship_application_id: upload.document_requests?.scholarship_application_id,
-              uploaded_by: upload.uploaded_by
-            });
-          });
-        }
-      }
-      
-      // Usar os uploads encontrados diretamente para a aplicação
       let uploads: any[] = [];
-      if (uploadsForApp && uploadsForApp.length > 0) {
-        uploads = uploadsForApp;
-      }
       
-      // Se não encontrou nada, tentar buscar por uploaded_by
-      if (uploads.length === 0) {
-        console.log('Tentativa alternativa: buscando por uploaded_by =', application.user_profiles?.user_id);
-        let { data: uploadsByUser, error: error1 } = await supabase
+      // Estratégia 1: Buscar uploads através dos document_requests da aplicação
+      try {
+        const { data: uploadsForApp, error: errorApp } = await supabase
           .from('document_request_uploads')
           .select(`
             *,
-            document_requests(
+            document_requests!inner(
               id,
               title,
               description,
@@ -397,32 +319,53 @@ const StudentDetails: React.FC = () => {
               scholarship_application_id
             )
           `)
-          .eq('uploaded_by', application.user_profiles?.user_id);
+          .eq('document_requests.scholarship_application_id', application.id);
         
-        if (error1) {
-          console.log('Erro ao buscar por uploaded_by:', error1);
-        } else if (uploadsByUser && uploadsByUser.length > 0) {
-          console.log('Uploads encontrados por uploaded_by:', uploadsByUser);
-          uploads = uploadsByUser;
-        } else {
-          console.log('Nenhum upload encontrado por uploaded_by');
+        if (errorApp) {
+          console.log('Erro ao buscar uploads por aplicação:', errorApp);
+        } else if (uploadsForApp && uploadsForApp.length > 0) {
+          console.log('Uploads encontrados por aplicação:', uploadsForApp.length);
+          uploads = uploadsForApp;
+        }
+      } catch (error) {
+        console.log('Erro na estratégia 1:', error);
+      }
+      
+      // Estratégia 2: Se não encontrou por aplicação, buscar por uploaded_by (ID do usuário)
+      if (uploads.length === 0 && application.user_profiles?.user_id) {
+        try {
+          console.log('Tentativa alternativa: buscando por uploaded_by =', application.user_profiles.user_id);
+          const { data: uploadsByUser, error: error1 } = await supabase
+            .from('document_request_uploads')
+            .select(`
+              *,
+              document_requests(
+                id,
+                title,
+                description,
+                created_at,
+                is_global,
+                university_id,
+                scholarship_application_id
+              )
+            `)
+            .eq('uploaded_by', application.user_profiles.user_id);
+          
+          if (error1) {
+            console.log('Erro ao buscar por uploaded_by:', error1);
+          } else if (uploadsByUser && uploadsByUser.length > 0) {
+            console.log('Uploads encontrados por uploaded_by:', uploadsByUser.length);
+            uploads = uploadsByUser;
+          }
+        } catch (error) {
+          console.log('Erro na estratégia 2:', error);
         }
       }
       
-      // Se ainda não encontrou nada, tentar buscar todos os uploads
+      // Se não encontrou nada, retornar array vazio (não buscar todos os uploads!)
       if (uploads.length === 0) {
-        console.log('Tentativa final: buscando todos os uploads');
-        let { data: allUploads, error: error2 } = await supabase
-          .from('document_request_uploads')
-          .select('*');
-        
-        if (error2) {
-          console.log('Erro ao buscar todos os uploads:', error2);
-        } else if (allUploads && allUploads.length > 0) {
-          console.log('Total de uploads na tabela:', allUploads.length);
-          console.log('Primeiros 3 uploads:', allUploads.slice(0, 3));
-          uploads = allUploads; // Atribuir os resultados à variável uploads
-        }
+        console.log('Nenhum upload encontrado para este aluno específico');
+        uploads = [];
       }
 
       console.log('Uploads finais encontrados:', uploads);
