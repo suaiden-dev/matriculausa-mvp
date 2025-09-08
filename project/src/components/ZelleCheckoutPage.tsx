@@ -454,21 +454,49 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
                 // Atualizar pagamento no banco com resultado do n8n
                 console.log('💾 [ZelleCheckout] Atualizando pagamento no banco com resultado do n8n...');
-                
+
                 try {
+                  // Aguardar um pouco para o n8n processar e criar o registro
+                  await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos de delay
+                  
                   // Buscar o pagamento mais recente do usuário para este tipo de taxa
-                  const { data: recentPayment, error: findError } = await supabase
-                    .from('zelle_payments')
-                    .select('id')
-                    .eq('user_id', user?.id)
-                    .eq('fee_type', normalizedFeeType)
-                    .eq('status', 'pending_verification')
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                  // Tentar várias vezes se não encontrar
+                  let recentPayment = null;
+                  let findError = null;
+                  let attempts = 0;
+                  const maxAttempts = 5;
+                  
+                  while (attempts < maxAttempts && !recentPayment) {
+                    attempts++;
+                    console.log(`🔍 [ZelleCheckout] Tentativa ${attempts}/${maxAttempts} de buscar pagamento...`);
+                    
+                    const { data, error } = await supabase
+                      .from('zelle_payments')
+                      .select('id')
+                      .eq('user_id', user?.id)
+                      .eq('fee_type', normalizedFeeType)
+                      .eq('status', 'pending_verification')
+                      .order('created_at', { ascending: false })
+                      .limit(1)
+                      .single();
+
+                    if (error && error.code === 'PGRST116') {
+                      // Nenhum registro encontrado, aguardar mais um pouco
+                      console.log(`⏳ [ZelleCheckout] Pagamento não encontrado na tentativa ${attempts}, aguardando...`);
+                      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 segundo de delay
+                      continue;
+                    }
+                    
+                    if (error) {
+                      findError = error;
+                      break;
+                    }
+                    
+                    recentPayment = data;
+                  }
 
                   if (findError || !recentPayment) {
-                    console.error('❌ [ZelleCheckout] Pagamento não encontrado:', findError);
+                    console.error('❌ [ZelleCheckout] Pagamento não encontrado após todas as tentativas:', findError);
                     return;
                   }
 
@@ -491,7 +519,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     console.log('✅ [ZelleCheckout] Pagamento atualizado com sucesso:', updateData);
                   }
                 } catch (updateError) {
-                  console.error('❌ [ZelleCheckout] Erro ao chamar Edge Function:', updateError);
+                  console.error('❌ [ZelleCheckout] Erro ao processar pagamento:', updateError);
                 }
               }
               
