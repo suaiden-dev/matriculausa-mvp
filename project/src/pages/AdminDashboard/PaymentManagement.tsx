@@ -494,6 +494,22 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           console.log('✅ [approveZellePayment] has_paid_selection_process_fee marcado como true');
           console.log('🔍 [approveZellePayment] Dados atualizados:', updateData);
+          
+          // Registrar no faturamento
+          console.log('💰 [approveZellePayment] Registrando selection_process no faturamento...');
+          const { error: billingError } = await supabase.rpc('register_payment_billing', {
+            user_id_param: payment.user_id,
+            fee_type_param: 'selection_process',
+            amount_param: payment.amount,
+            payment_session_id_param: `zelle_${payment.id}`,
+            payment_method_param: 'zelle'
+          });
+          
+          if (billingError) {
+            console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
+          } else {
+            console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
+          }
         }
       } else {
         console.log('⚠️ [approveZellePayment] fee_type_global não é selection_process:', payment.fee_type_global);
@@ -501,9 +517,9 @@ const PaymentManagement = (): React.JSX.Element => {
 
       console.log('🔍 [approveZellePayment] Verificando condição I-20 Control Fee...');
       console.log('🔍 [approveZellePayment] payment.fee_type_global === "i-20_control_fee":', payment.fee_type_global === 'i-20_control_fee');
-      console.log('🔍 [approveZellePayment] payment.fee_type === "i-20_control_fee":', payment.fee_type === 'i-20_control_fee');
+      console.log('🔍 [approveZellePayment] payment.fee_type === "i20_control":', payment.fee_type === 'i20_control');
       
-      if (payment.fee_type_global === 'i-20_control_fee' || payment.fee_type === 'i-20_control_fee') {
+      if (payment.fee_type_global === 'i-20_control_fee' || payment.fee_type === 'i20_control') {
         console.log('🎯 [approveZellePayment] Entrando na condição i20_control_fee');
         console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_i20_control_fee = true WHERE user_id =', payment.user_id);
         
@@ -524,6 +540,22 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           console.log('✅ [approveZellePayment] has_paid_i20_control_fee marcado como true');
           console.log('🔍 [approveZellePayment] Dados atualizados i20_control_fee:', updateData);
+          
+          // Registrar no faturamento
+          console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento...');
+          const { error: billingError } = await supabase.rpc('register_payment_billing', {
+            user_id_param: payment.user_id,
+            fee_type_param: 'i20_control_fee',
+            amount_param: payment.amount,
+            payment_session_id_param: `zelle_${payment.id}`,
+            payment_method_param: 'zelle'
+          });
+          
+          if (billingError) {
+            console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
+          } else {
+            console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
+          }
         }
       }
 
@@ -549,6 +581,24 @@ const PaymentManagement = (): React.JSX.Element => {
         } else {
           console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true`);
           console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
+          
+          // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
+          if (payment.fee_type === 'scholarship_fee') {
+            console.log('💰 [approveZellePayment] Registrando scholarship_fee no faturamento...');
+            const { error: billingError } = await supabase.rpc('register_payment_billing', {
+              user_id_param: payment.user_id,
+              fee_type_param: 'scholarship_fee',
+              amount_param: payment.amount,
+              payment_session_id_param: `zelle_${payment.id}`,
+              payment_method_param: 'zelle'
+            });
+            
+            if (billingError) {
+              console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
+            } else {
+              console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
+            }
+          }
         }
 
         // Se for application_fee, também atualizar user_profiles

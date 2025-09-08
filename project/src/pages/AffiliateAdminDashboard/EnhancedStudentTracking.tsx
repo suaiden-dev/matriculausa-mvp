@@ -1,47 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  useStudentData,
-  useStudentDetails,
-  useFilters,
-  getFilteredAndSortedData,
-  handleViewDocument,
-  handleDownloadDocument,
-  StudentDetailsView,
-  DocumentsView,
-  AdvancedFilters,
-  StatsCards,
-  SellersList
-} from '../../components/EnhancedStudentTracking';
 import { 
   GraduationCap, 
   Search, 
-  Filter, 
   Eye, 
   DollarSign, 
-  Calendar, 
   MapPin, 
   User, 
   ChevronDown,
   ChevronRight,
   Users,
-  Phone,
-  Building,
-  Award,
   FileText,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
   ArrowLeft,
-  Home,
   BarChart3,
-  Settings,
   TrendingUp,
   TrendingDown,
-  Clock,
-  Filter as FilterIcon
+  Filter
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface StudentInfo {
   student_id: string;
@@ -76,17 +54,6 @@ interface StudentInfo {
   };
 }
 
-interface FeePayment {
-  payment_id: string;
-  fee_type: string;
-  fee_name: string;
-  amount_paid: number;
-  currency: string;
-  payment_status: string;
-  payment_date: string;
-  stripe_payment_intent: string;
-  notes: string;
-}
 
 interface ScholarshipApplication {
   id: string;
@@ -163,15 +130,14 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [expandedSellers, setExpandedSellers] = useState<Set<string>>(new Set());
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [studentDetails, setStudentDetails] = useState<StudentInfo | null>(null);
-  const [feeHistory, setFeeHistory] = useState<FeePayment[]>([]);
   const [scholarshipApplication, setScholarshipApplication] = useState<ScholarshipApplication | null>(null);
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showStudentDetails, setShowStudentDetails] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Hook para configurações dinâmicas de taxas
+  const { feeConfig, getFeeAmount, formatFeeAmount } = useFeeConfig();
 
   useEffect(() => {
     console.log('🔍 studentDocuments:', studentDocuments);
@@ -344,20 +310,20 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       // Buscar sellers ativos usando função RPC
       const { data: sellersData, error: sellersError } = await supabase
         .rpc('get_admin_sellers_analytics_fixed', { 
-          admin_user_id: currentUser?.id 
+          admin_user_id: userId 
         });
 
       console.log('🔍 Fallback sellers response:', { data: sellersData, error: sellersError });
 
       if (sellersError) {
         console.error('Error loading sellers:', sellersError);
-        throw new Error(`Failed to load sellers: ${sellersError.message}`);
+        throw new Error(`Failed to load sellers: ${String(sellersError)}`);
       }
 
       // Buscar estudantes usando função RPC
-      const { data: studentsData, error: studentsError } = await supabase
+        const { data: studentsData } = await supabase
         .rpc('get_admin_students_analytics', { 
-          admin_user_id: currentUser?.id 
+          admin_user_id: userId 
         });
 
       // Usar os dados de sellers já carregados pela função RPC
@@ -369,16 +335,16 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       if (activeSellersError) {
         console.error('❌ Error loading active sellers:', activeSellersError);
         console.error('❌ Full error object:', JSON.stringify(activeSellersError, null, 2));
-        throw new Error(`Failed to load active sellers: ${activeSellersError.message}`);
+        throw new Error(`Failed to load active sellers: ${String(activeSellersError)}`);
       }
 
       // Criar conjunto de códigos de vendedores ativos
-      const activeSellerCodes = new Set(activeSellersData?.map(s => s.referral_code) || []);
+      const activeSellerCodes = new Set(activeSellersData?.map((s: any) => s.referral_code) || []);
       // Códigos de vendedores ativos
 
-      if (studentsError) {
-        console.error('Error loading students:', studentsError);
-        throw new Error(`Failed to load students: ${studentsError.message}`);
+      if (!studentsData) {
+        console.error('Error loading students: No data returned');
+        throw new Error('Failed to load students: No data returned');
       }
 
       // Processar estudantes com dados reais - filtrar apenas aqueles referenciados por vendedores ativos
@@ -511,18 +477,15 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   }, [loadUniversities]);
 
   // Carregar detalhes de um estudante específico
-  const loadStudentDetails = useCallback(async (studentId: string, profile_id: string) => {
+  const loadStudentDetails = useCallback(async (studentId: string) => {
     try {
       console.log('🔍 Loading details for student:', studentId);
-      setLoadingStudentDetails(true);
       setSelectedStudent(studentId);
 
       // Primeiro, tentar usar as funções SQL criadas para obter detalhes do estudante
       console.log('🔍 Calling get_student_detailed_info with studentId:', studentId);
       
       let studentData = null;
-      let studentError = null;
-      let documentsData: any[] = [];
       
       try {
         const { data: sqlData, error: sqlError } = await supabase.rpc(
@@ -535,13 +498,54 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         if (!sqlError && sqlData && sqlData.length > 0) {
           studentData = sqlData[0];
           console.log('🔍 SQL function returned data:', studentData);
+          
+          // ✅ REPLICAR LÓGICA DO SELLER: Carregar dados da scholarship mesmo quando SQL funciona
+          console.log('🔍 [ENHANCED_STUDENT_TRACKING] Carregando dados da scholarship como no SellerDashboard...');
+          
+          // Buscar aplicação de bolsa mais recente (mesma lógica do SellerDashboard)
+          const { data: appData, error: applicationError } = await supabase
+            .from('scholarship_applications')
+            .select(`
+              *,
+              scholarships (
+                id,
+                title,
+                application_fee_amount,
+                scholarship_fee_amount,
+                universities (
+                  id,
+                  name
+                )
+              )
+            `)
+            .eq('student_id', profile_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          console.log("🔍 [ENHANCED_STUDENT_TRACKING] appData (como no Seller):", appData);
+          
+          if (!applicationError && appData?.scholarships) {
+            console.log('🔍 [ENHANCED_STUDENT_TRACKING] Atualizando studentData com dados da scholarship:', appData.scholarships);
+            
+            // Atualizar studentData com os detalhes da bolsa (mesma lógica do SellerDashboard)
+            studentData = {
+              ...studentData,
+              scholarship: {
+                application_fee_amount: appData.scholarships.application_fee_amount,
+                scholarship_fee_amount: appData.scholarships.scholarship_fee_amount
+              }
+            };
+            
+            console.log('🔍 [ENHANCED_STUDENT_TRACKING] studentData atualizado com scholarship:', studentData);
+          } else {
+            console.log('🔍 [ENHANCED_STUDENT_TRACKING] Nenhum dado de scholarship encontrado em appData');
+          }
         } else {
           console.log('🔍 SQL function failed or returned no data, using fallback');
-          studentError = sqlError;
         }
       } catch (sqlException) {
         console.log('🔍 SQL function exception:', sqlException);
-        studentError = sqlException;
       }
 
       // Se a função SQL falhou ou retornou dados vazios, usar fallback robusto
@@ -557,12 +561,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
         if (profileError) {
           console.error('Error loading user profile:', profileError);
-          setError('Failed to load student profile');
           return;
         }
 
         // Buscar aplicação de bolsa mais recente
-        const { data: applicationData, error: applicationError } = await supabase
+        const { data: applicationData } = await supabase
           .from('scholarship_applications')
           .select(`
             *,
@@ -577,12 +580,15 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               )
             )
           `)
-          .eq('student_id', profile_id)
+          .eq('student_id', studentId)
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
 
-        console.log('🔍 Application data 13:', applicationData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application data loaded:', applicationData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship data from application:', applicationData?.scholarships);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application fee from scholarship:', applicationData?.scholarships?.application_fee_amount);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship fee from scholarship:', applicationData?.scholarships?.scholarship_fee_amount);
 
 
         let sellerData = null;
@@ -590,7 +596,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           // Buscar seller usando função RPC
           const { data: sellersResult } = await supabase
             .rpc('get_admin_sellers_analytics_fixed', { 
-              admin_user_id: currentUser?.id 
+              admin_user_id: userId 
             });
           const sellerResult = sellersResult?.find((s: any) => s.referral_code === profileData.seller_referral_code);
           
@@ -600,14 +606,14 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         }
 
         // Buscar histórico de taxas
-        const { data: feesData, error: feesError } = await supabase
+        const { data: feesData } = await supabase
           .from('stripe_connect_transfers')
           .select('*')
           .eq('user_id', studentId)
           .eq('status', 'succeeded');
 
         // Extrair documentos da aplicação principal
-        let documentsData: any = applicationData[0].documents;
+        let documentsData: any = applicationData?.documents;
         // if (applicationsData && applicationsData.length > 0) {
         //   applicationsData.forEach((application: any) => {
         //     if (application.documents && Array.isArray(application.documents)) {
@@ -659,7 +665,10 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
         setStudentDocuments(applicationData?.documents);
 
-        console.log('🔍 Fallback data constructed:', studentData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Fallback data constructed:', studentData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship data:', applicationData?.scholarships);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application fee amount:', applicationData?.scholarships?.[0]?.application_fee_amount);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship fee amount:', applicationData?.scholarships?.[0]?.scholarship_fee_amount);
       }
       
       console.log('🔍 Student Documents 1:', studentData);
@@ -671,6 +680,22 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         console.log('🔍 Application status value:', studentData.application_status);
         console.log('🔍 Full student details object:', JSON.stringify(studentData, null, 2));
 
+        console.log('🔍 Searching for application with studentId:', studentId);
+        
+        // Primeiro, buscar o user_id do estudante
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('user_id')
+          .eq('id', studentId)
+          .single();
+        
+        if (profileError || !profileData) {
+          console.error('❌ Error loading profile for student:', studentId, profileError);
+          return;
+        }
+        
+        console.log('🔍 Found user_id for student:', profileData.user_id);
+        
         const { data: applicationData, error: applicationError } = await supabase
           .from('scholarship_applications')
           .select(`
@@ -686,10 +711,18 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               )
             )
           `)
-          .eq('student_id', profile_id)
+          .eq('student_id', profileData.user_id)
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
+
+        console.log('🔍 Application Data Debug:', {
+          applicationData,
+          applicationError,
+          studentId,
+          hasAcceptanceLetter: !!applicationData?.acceptance_letter_url,
+          acceptanceLetterUrl: applicationData?.acceptance_letter_url
+        });
 
           studentData.documents = applicationData?.documents;
 
@@ -699,8 +732,34 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         
         console.log('🔍 Student Documents 2:', studentData);
 
-        // Definir aplicação de bolsa
-        if (studentData.selected_scholarship_id) {
+        // Definir aplicação de bolsa usando dados reais do applicationData
+        if (applicationData) {
+          console.log('🔍 Setting scholarship application with real data:', {
+            acceptance_letter_url: applicationData.acceptance_letter_url,
+            hasAcceptanceLetter: !!applicationData.acceptance_letter_url
+          });
+          
+          setScholarshipApplication({
+            id: applicationData.id,
+            status: applicationData.status || 'pending',
+            student_process_type: applicationData.student_process_type || 'Not specified',
+            applied_at: applicationData.created_at || new Date().toISOString(),
+            reviewed_at: applicationData.updated_at || new Date().toISOString(),
+            notes: applicationData.notes || '',
+            documents: applicationData.documents || [],
+            acceptance_letter_status: applicationData.acceptance_letter_status || 'pending',
+            acceptance_letter_url: applicationData.acceptance_letter_url || '',
+            is_application_fee_paid: applicationData.is_application_fee_paid || false,
+            is_scholarship_fee_paid: applicationData.is_scholarship_fee_paid || false,
+            paid_at: applicationData.updated_at || new Date().toISOString(),
+            payment_status: applicationData.payment_status || 'pending',
+            has_paid_selection_process_fee: applicationData.has_paid_selection_process_fee || false,
+            has_paid_i20_control_fee: applicationData.has_paid_i20_control_fee || false
+          });
+        } else if (studentData.selected_scholarship_id) {
+          // Fallback caso não haja applicationData
+          console.log('🔍 Setting scholarship application with fallback data (no acceptance letter)');
+          
           setScholarshipApplication({
             id: studentData.selected_scholarship_id,
             status: studentData.application_status || 'pending',
@@ -721,23 +780,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         }
 
         // Definir histórico de taxas
-        if (studentData.total_fees_paid > 0) {
-          setFeeHistory([{
-            payment_id: 'fallback',
-            fee_type: 'application',
-            fee_name: 'Application Fee',
-            amount_paid: studentData.total_fees_paid,
-            currency: 'USD',
-            payment_status: 'succeeded',
-            payment_date: studentData.registration_date,
-            stripe_payment_intent: 'fallback',
-            notes: 'Fee payment recorded'
-          }]);
-        } else {
-          setFeeHistory([]);
-        }
-      } else {
-        setError('Student details not found');
+        // Taxa history removed for now
       }
 
       console.log('🔍 Final state after loading:', {
@@ -753,14 +796,12 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
     } catch (error: any) {
       console.error('Error loading student details:', error);
-      setError('Failed to load student details');
-    } finally {
-      setLoadingStudentDetails(false);
     }
   }, []);
 
   // Aplicar filtros e ordenação
-  const { filteredSellers, filteredStudents } = getFilteredAndSortedData();
+  const filteredSellers = sellers;
+  const filteredStudents = students;
   
   // Debug: verificar estado dos dados
   console.log('🔍 Data state check:', {
@@ -823,7 +864,6 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const backToList = () => {
     setSelectedStudent(null);
     setStudentDetails(null);
-    setFeeHistory([]);
     setScholarshipApplication(null);
     setStudentDocuments([]);
   };
@@ -843,8 +883,36 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       
       let totalRevenue = 0;
       
+      // Buscar pagamentos Zelle aprovados para este estudante
+      const { data: zellePayments, error: zelleError } = await supabase
+        .from('zelle_payments')
+        .select('fee_type, amount')
+        .eq('user_id', studentId)
+        .eq('status', 'approved');
+
+      if (!zelleError && zellePayments && zellePayments.length > 0) {
+        console.log('🔍 Zelle payments found:', zellePayments);
+        
+        // Se há pagamentos Zelle, usar apenas eles (não duplicar com outros métodos)
+        // EXCLUIR application_fee pois é da universidade, não do seller/admin
+        zellePayments.forEach(payment => {
+          if (payment.fee_type !== 'application_fee') {
+            totalRevenue += Number(payment.amount);
+            console.log(`🔍 Zelle payment added: ${payment.fee_type || 'selection_process_fee'} - $${payment.amount}`);
+          } else {
+            console.log(`🔍 Zelle payment EXCLUDED (university fee): ${payment.fee_type} - $${payment.amount}`);
+          }
+        });
+        
+        console.log(`🔍 Total revenue from Zelle payments (excluding application_fee): $${totalRevenue}`);
+        return totalRevenue; // Retornar apenas os pagamentos Zelle (sem application_fee)
+      }
+      
+      // Se não há pagamentos Zelle, usar o método tradicional
+      console.log('🔍 No Zelle payments found, using traditional calculation');
+      
       // Buscar aplicação de bolsa do estudante
-      const { data: applicationData, error: applicationError } = await supabase
+      const { data: applicationData } = await supabase
         .from('scholarship_applications')
         .select(`
           id,
@@ -859,23 +927,25 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         .limit(1)
         .single();
 
-      if (applicationError) {
+      if (!applicationData) {
         console.log('🔍 No scholarship application found, using fallback calculation');
       } else {
         console.log('🔍 Application data found:', applicationData);
         
         // Application Fee (variável - definida pela universidade)
+        // EXCLUIR application_fee pois é da universidade, não do seller/admin
         if (applicationData.is_application_fee_paid) {
           const appFeeAmount = applicationData.scholarships?.[0]?.application_fee_amount || 35000; // Default $350.00
           const appFeeUSD = Number(appFeeAmount) / 100; // Converter de centavos para dólares
-          totalRevenue += appFeeUSD;
-          console.log(`🔍 Application fee added: $${appFeeUSD}`);
+          // totalRevenue += appFeeUSD; // EXCLUÍDO: Application fee é da universidade
+          console.log(`🔍 Application fee EXCLUDED (university fee): $${appFeeUSD}`);
         }
         
-        // Scholarship Fee (fixa - $850)
+        // Scholarship Fee (fixa - $400)
         if (applicationData.is_scholarship_fee_paid) {
-          totalRevenue += 850;
-          console.log('🔍 Scholarship fee added: $850');
+          const scholarshipFee = getFeeAmount('scholarship_fee');
+          totalRevenue += scholarshipFee;
+          console.log(`🔍 Scholarship fee added: $${scholarshipFee}`);
         }
       }
       
@@ -892,16 +962,18 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       if (!profileError && profileData) {
         console.log('🔍 Profile data found:', profileData);
         
-        // Selection Process Fee (fixa - $999)
+        // Selection Process Fee (dinâmica)
         if (profileData.has_paid_selection_process_fee) {
-          totalRevenue += 999;
-          console.log('🔍 Selection process fee added: $999');
+          const selectionFee = getFeeAmount('selection_process');
+          totalRevenue += selectionFee;
+          console.log(`🔍 Selection process fee added: $${selectionFee}`);
         }
         
-        // I-20 Control Fee (fixa - $999)
+        // I-20 Control Fee (dinâmica)
         if (profileData.has_paid_i20_control_fee) {
-          totalRevenue += 999;
-          console.log('🔍 I-20 control fee added: $999');
+          const i20Fee = getFeeAmount('i-20_control_fee');
+          totalRevenue += i20Fee;
+          console.log(`🔍 I-20 control fee added: $${i20Fee}`);
         }
       }
       
@@ -1456,7 +1528,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">$999.00</span>
+                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
                            )}
                          </div>
                        </div>
@@ -1474,9 +1546,23 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                          </span>
                          {studentDetails?.is_application_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             ${studentDetails?.scholarship?.application_fee_amount ? 
-                               (Number(studentDetails.scholarship.application_fee_amount) / 100).toFixed(2) : 
-                               '350.00'}
+                             {(() => {
+                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application Fee Debug:', {
+                                 hasScholarship: !!studentDetails?.scholarship,
+                                 applicationFeeAmount: studentDetails?.scholarship?.application_fee_amount,
+                                 isApplicationFeePaid: studentDetails?.is_application_fee_paid,
+                                 defaultFee: getFeeAmount('application_fee')
+                               });
+                               
+                               if (studentDetails?.scholarship?.application_fee_amount) {
+                                 const amount = Number(studentDetails.scholarship.application_fee_amount);
+                                 console.log('🔍 [ENHANCED_STUDENT_TRACKING] Using dynamic amount (already in dollars):', amount);
+                                 return formatFeeAmount(amount);
+                               } else {
+                                 console.log('🔍 [ENHANCED_STUDENT_TRACKING] Using default amount:', getFeeAmount('application_fee'));
+                                 return formatFeeAmount(getFeeAmount('application_fee'));
+                               }
+                             })()}
                            </span>
                          )}
                        </div>
@@ -1494,9 +1580,19 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                          </span>
                          {studentDetails?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             ${studentDetails?.scholarship?.scholarship_fee_amount ? 
-                               (Number(studentDetails.scholarship.scholarship_fee_amount) / 100).toFixed(2) : 
-                               '850.00'}
+                             {(() => {
+                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship Fee Debug:', {
+                                 hasScholarship: !!studentDetails?.scholarship,
+                                 scholarshipFeeAmount: studentDetails?.scholarship?.scholarship_fee_amount,
+                                 isScholarshipFeePaid: studentDetails?.is_scholarship_fee_paid,
+                                 defaultFee: getFeeAmount('scholarship_fee')
+                               });
+                               
+                               // Scholarship Fee usa valor configurado no sistema (não valor do banco)
+                               const fixedAmount = getFeeAmount('scholarship_fee');
+                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Using system-configured scholarship amount:', fixedAmount);
+                               return formatFeeAmount(fixedAmount);
+                             })()}
                            </span>
                          )}
                        </div>
@@ -1514,7 +1610,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">$999.00</span>
+                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
                            )}
                          </div>
                        </div>
@@ -1683,7 +1779,14 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                         The student's acceptance letter and any other required documents, such as the I-20 Control Fee receipt.
                       </p>
                       
-                      {scholarshipApplication?.acceptance_letter_url ? (
+                      {(() => {
+                        console.log('🔍 Acceptance Letter Display Check:', {
+                          scholarshipApplication,
+                          hasAcceptanceLetter: !!scholarshipApplication?.acceptance_letter_url,
+                          acceptanceLetterUrl: scholarshipApplication?.acceptance_letter_url
+                        });
+                        return scholarshipApplication?.acceptance_letter_url;
+                      })() ? (
                         <div className="text-center py-8 bg-green-50 border-2 border-green-200 rounded-3xl">
                           <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1834,7 +1937,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  <FilterIcon className="h-4 w-4" />
+                  <Filter className="h-4 w-4" />
                   Advanced
                 </button>
               </div>
@@ -2122,7 +2225,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <button
-                                      onClick={() => loadStudentDetails(student.id, student.profile_id)}
+                                      onClick={() => loadStudentDetails(student.id)}
                                       className="text-[#05294E] hover:text-[#041f38] flex items-center space-x-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                                     >
                                       <Eye className="h-4 w-4" />

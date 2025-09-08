@@ -42,6 +42,16 @@ export const useStudentDetails = () => {
 
         if (!sqlError && sqlData && sqlData.length > 0) {
           studentData = sqlData[0];
+          
+          // Adicionar dados do scholarship se disponíveis
+          if (studentData.application_fee_amount || studentData.scholarship_fee_amount) {
+            studentData.scholarship = {
+              application_fee_amount: studentData.application_fee_amount,
+              scholarship_fee_amount: studentData.scholarship_fee_amount
+            };
+          }
+          
+          console.log('🔍 [USE_STUDENT_DETAILS] SQL data loaded with scholarship:', studentData.scholarship);
         } else {
           studentError = sqlError;
         }
@@ -136,12 +146,16 @@ export const useStudentDetails = () => {
           application_status: applicationData?.status || 'Pending',
           documents: documentsData || [],
           scholarship: applicationData?.scholarships ? {
-            application_fee_amount: applicationData.scholarships[0]?.application_fee_amount,
-            scholarship_fee_amount: applicationData.scholarships[0]?.scholarship_fee_amount
+            application_fee_amount: applicationData.scholarships?.application_fee_amount,
+            scholarship_fee_amount: applicationData.scholarships?.scholarship_fee_amount
           } : undefined
         };
 
         setStudentDocuments(applicationData?.documents);
+        
+        console.log('🔍 [USE_STUDENT_DETAILS] Scholarship data loaded:', applicationData?.scholarships);
+        console.log('🔍 [USE_STUDENT_DETAILS] Application fee amount:', applicationData?.scholarships?.application_fee_amount);
+        console.log('🔍 [USE_STUDENT_DETAILS] Scholarship fee amount:', applicationData?.scholarships?.scholarship_fee_amount);
       }
       
       if (studentData) {

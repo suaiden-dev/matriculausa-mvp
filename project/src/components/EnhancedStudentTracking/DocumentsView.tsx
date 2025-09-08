@@ -5,6 +5,7 @@ interface DocumentsViewProps {
   studentDocuments: any[];
   documentRequests: any[];
   scholarshipApplication: any;
+  studentId?: string;
   onViewDocument: (doc: any) => void;
   onDownloadDocument: (doc: any) => void;
 }
@@ -13,6 +14,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   studentDocuments,
   documentRequests,
   scholarshipApplication,
+  studentId,
   onViewDocument,
   onDownloadDocument
 }) => {
@@ -33,15 +35,37 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         return;
       }
 
-      // Se temos studentDocuments, tentar encontrar o user_id para buscar a aplicação
+      // Se não temos studentId, não podemos buscar aplicação específica
+      if (!studentId) {
+        console.log('⚠️ [DOCUMENTS VIEW] No studentId provided, cannot fetch specific application');
+        setRealScholarshipApplication(null);
+        return;
+      }
+
       if (studentDocuments && studentDocuments.length > 0) {
         setLoadingApplication(true);
         try {
-          // Buscar a aplicação onde o usuário pagou a application fee
-          // Primeiro, tentar buscar pela aplicação que já temos
-          let applications = null;
-          let error = null;
+          console.log('🔍 [DOCUMENTS VIEW] Searching for application for specific student:', studentId);
           
+          // Buscar o id da tabela user_profiles usando o user_id (studentId)
+          const { data: profileData, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', studentId)
+            .single();
+          
+          if (profileError || !profileData) {
+            console.error('❌ [DOCUMENTS VIEW] Error loading profile for student:', studentId, profileError);
+            setRealScholarshipApplication(null);
+            return;
+          }
+          
+          console.log('🔍 [DOCUMENTS VIEW] Found profile_id for student:', profileData.id);
+          
+          let applications: any[] = [];
+          let error: any = null;
+          
+          // Primeiro, tentar buscar pela aplicação existente se fornecida
           if (scholarshipApplication?.id) {
             const { data, error: appError } = await supabase
               .from('scholarship_applications')
@@ -64,12 +88,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             }
           }
           
-          // Se não encontrou pela aplicação existente, buscar a aplicação onde pagou a application fee
+          // Se não encontrou pela aplicação existente, buscar a aplicação do estudante específico
           if (!applications || applications.length === 0) {
-            
-            // Primeiro, tentar buscar especificamente pela aplicação da Odina University
-            // que sabemos que tem o acceptance letter
-            const { data: odinaApp, error: odinaError } = await supabase
+            const { data: studentApp, error: studentAppError } = await supabase
               .from('scholarship_applications')
               .select(`
                 *,
@@ -77,21 +98,20 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   id,
                   title,
                   universities(
-                    id,
-                    name
-                  )
+                  id,
+                  name
                 )
-              `)
-              .eq('is_application_fee_paid', true)
-              .not('acceptance_letter_url', 'is', null)
-              .order('created_at', { ascending: false })
-              .limit(1);
-            
-            if (!odinaError && odinaApp && odinaApp.length > 0) {
-              applications = odinaApp;
+              )
+            `)
+            .eq('student_id', profileData.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          
+            if (!studentAppError && studentApp && studentApp.length > 0) {
+              applications = studentApp;
               error = null;
             } else {
-              
+              // Fallback: buscar aplicação que tenha paid application fee como alternativa
               const { data, error: paidAppError } = await supabase
                 .from('scholarship_applications')
                 .select(`
@@ -113,8 +133,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 applications = data;
                 error = null;
               } else {
-                
-                // Fallback: buscar a mais recente se não encontrou nenhuma paga
+                // Último fallback: buscar a mais recente
                 const { data, error: recentError } = await supabase
                   .from('scholarship_applications')
                   .select(`
@@ -131,7 +150,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   .order('created_at', { ascending: false })
                   .limit(1);
                 
-                applications = data;
+                applications = data || [];
                 error = recentError;
               }
             }
@@ -139,10 +158,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
           if (!error && applications && applications.length > 0) {
             const app = applications[0];
+            console.log('🔍 [DOCUMENTS VIEW] Found application for student:', app);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
             setRealScholarshipApplication(app);
+          } else {
+            console.log('❌ [DOCUMENTS VIEW] No application found for student:', studentId, 'profile_id:', profileData.id);
+            setRealScholarshipApplication(null);
           }
-        } catch (error) {
-          console.error('Error fetching real application:', error);
+        } catch (err) {
+          console.error('❌ [DOCUMENTS VIEW] Error fetching application:', err);
+          setRealScholarshipApplication(null);
         } finally {
           setLoadingApplication(false);
         }
@@ -150,7 +176,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     };
 
     fetchRealApplication();
-  }, [scholarshipApplication, studentDocuments]);
+  }, [scholarshipApplication, studentDocuments, studentId]);
 
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
