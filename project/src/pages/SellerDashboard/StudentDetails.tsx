@@ -1175,39 +1175,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                           <dd className="mt-1">
                             {(() => {
                               const acceptanceStatus = (studentInfo as any)?.acceptance_letter_status as string | undefined;
-                              const appStatus = (scholarshipApplication?.status || (studentInfo as any)?.application_status) as string | undefined;
-                              
-                              let label = 'Pending Acceptance';
-                              let color = 'text-yellow-700';
-                              let dot = 'bg-yellow-500';
-                              
-                              if ((appStatus && ['enrolled'].includes(appStatus)) || acceptanceStatus === 'approved') {
-                                label = 'Enrolled';
-                                color = 'text-green-700';
-                                dot = 'bg-green-500';
-                              } else if (appStatus && ['approved', 'accepted'].includes(appStatus)) {
-                                label = 'Approved';
-                                color = 'text-green-700';
-                                dot = 'bg-green-500';
-                              } else if (acceptanceStatus === 'signed') {
-                                label = 'Letter Signed';
-                                color = 'text-purple-700';
-                                dot = 'bg-purple-500';
-                              } else if (acceptanceStatus === 'sent') {
-                                label = 'Letter Sent';
-                                color = 'text-blue-700';
-                                dot = 'bg-blue-500';
-                              } else if (acceptanceStatus === 'pending') {
-                                label = 'Pending';
-                                color = 'text-yellow-700';
-                                dot = 'bg-yellow-500';
-                              }
+                              const isEnrolled = acceptanceStatus === 'approved';
+                              const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
+                              const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
+                              const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
                               
                               return (
-                                <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-2">
                                   <div className={`w-2 h-2 rounded-full ${dot}`}></div>
                                   <span className={`text-sm font-medium ${color}`}>{label}</span>
-                                </div>
+                              </div>
                               );
                             })()}
                           </dd>
