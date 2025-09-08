@@ -19,6 +19,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
 
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
@@ -42,7 +43,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           let error = null;
           
           if (scholarshipApplication?.id) {
-            console.log('🔍 [DOCUMENTS VIEW] Checking existing application:', scholarshipApplication.id);
             const { data, error: appError } = await supabase
               .from('scholarship_applications')
               .select(`
@@ -60,15 +60,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               .single();
             
             if (!appError && data) {
-              console.log('✅ [DOCUMENTS VIEW] Found existing application:', data);
-              console.log('🔍 [DOCUMENTS VIEW] Application fee paid:', data.is_application_fee_paid);
               applications = [data];
             }
           }
           
           // Se não encontrou pela aplicação existente, buscar a aplicação onde pagou a application fee
           if (!applications || applications.length === 0) {
-            console.log('🔍 [DOCUMENTS VIEW] Searching for application with paid application fee...');
             
             // Primeiro, tentar buscar especificamente pela aplicação da Odina University
             // que sabemos que tem o acceptance letter
@@ -91,11 +88,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               .limit(1);
             
             if (!odinaError && odinaApp && odinaApp.length > 0) {
-              console.log('✅ [DOCUMENTS VIEW] Found application with acceptance letter:', odinaApp);
               applications = odinaApp;
               error = null;
             } else {
-              console.log('⚠️ [DOCUMENTS VIEW] No application with acceptance letter found, trying paid applications...');
               
               const { data, error: paidAppError } = await supabase
                 .from('scholarship_applications')
@@ -115,11 +110,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                 .limit(1);
             
               if (!paidAppError && data && data.length > 0) {
-                console.log('✅ [DOCUMENTS VIEW] Found application with paid fee:', data);
                 applications = data;
                 error = null;
               } else {
-                console.log('⚠️ [DOCUMENTS VIEW] No paid application found, trying most recent...');
                 
                 // Fallback: buscar a mais recente se não encontrou nenhuma paga
                 const { data, error: recentError } = await supabase
@@ -146,12 +139,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
           if (!error && applications && applications.length > 0) {
             const app = applications[0];
-            console.log('🔍 [DOCUMENTS VIEW] Found real application:', app);
-            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
-            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
             setRealScholarshipApplication(app);
-          } else {
-            console.log('⚠️ [DOCUMENTS VIEW] No applications found or error:', error);
           }
         } catch (error) {
           console.error('Error fetching real application:', error);
@@ -167,14 +155,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
   
-  // Debug: mostrar qual aplicação está sendo usada
-  useEffect(() => {
-    console.log('🔍 [DOCUMENTS VIEW] Current application:', currentApplication);
-    console.log('🔍 [DOCUMENTS VIEW] Has acceptance letter:', !!currentApplication?.acceptance_letter_url);
-    if (currentApplication?.acceptance_letter_url) {
-      console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', currentApplication.acceptance_letter_url);
-    }
-  }, [currentApplication]);
 
   // ✅ GAMBIARRA: Função para extrair nome do arquivo e construir URL completa
   const getDocumentInfo = (upload: any) => {
@@ -192,12 +172,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     // O file_url já inclui 'uploads/', então não precisamos adicionar novamente
     const fullUrl = upload.file_url ? `${baseUrl}${upload.file_url}` : null;
     
-    console.log('🔗 [DOCUMENT VIEW] URL construction:', {
-      original: upload.file_url,
-      baseUrl,
-      fullUrl,
-      filename
-    });
     
     return {
       filename,
@@ -220,7 +194,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     return `${baseUrl}${application.acceptance_letter_url}`;
   };
 
-  console.log('Document requests:', documentRequests);
 
   return (
     <div className="space-y-8">
@@ -241,9 +214,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         </div>
         
         <div className="p-6">
-          {documentRequests && documentRequests.length > 0 ? (
+          {(() => {
+            // ✅ CORREÇÃO: Filtrar acceptance letter dos document requests
+            const filteredRequests = documentRequests?.filter(request => request.id !== 'acceptance_letter') || [];
+            return filteredRequests;
+          })().length > 0 ? (
             <div className="space-y-4">
-              {documentRequests.map((request) => (
+              {(() => {
+                // ✅ CORREÇÃO: Filtrar acceptance letter dos document requests
+                const filteredRequests = documentRequests?.filter(request => request.id !== 'acceptance_letter') || [];
+                return filteredRequests;
+              })().map((request) => (
                 <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -255,37 +236,37 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         </div>
                         <div>
                           <h4 className="text-lg font-semibold text-slate-900">
-                            {request.document_requests?.title || 'Document Request'}
+                            {request.title || 'Document Request'}
                           </h4>
-                          {request.document_requests?.description && (
+                          {request.description && (
                             <p className="text-sm text-slate-600 mt-1">
-                              {request.document_requests.description}
+                              {request.description}
                             </p>
                           )}
                         </div>
                       </div>
                       
                       <div className="flex items-center space-x-4 text-sm text-slate-500">
-                        {request.document_requests?.due_date && (
+                        {request.due_date && (
                           <span className="flex items-center">
                             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 01-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            Due: {formatDate(request.document_requests.due_date)}
+                            Due: {formatDate(request.due_date)}
                           </span>
                         )}
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          request.document_requests?.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          request.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
                         }`}>
-                          {request.document_requests?.is_global ? 'Global Request' : 'Individual Request'}
+                          {request.is_global ? 'Global Request' : 'Individual Request'}
                         </span>
                       </div>
                     </div>
                     
-                    {request.document_requests?.attachment_url && (
+                    {request.attachment_url && (
                       <div className="ml-4">
                         <button
-                          onClick={() => onViewDocument({ file_url: request.document_requests.attachment_url, type: 'template' })}
+                          onClick={() => onViewDocument({ file_url: request.attachment_url, type: 'template' })}
                           className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center space-x-2"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -308,62 +289,71 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     </h5>
                     
                     <div className="bg-white border border-slate-200 rounded-2xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-900">
-                              {getDocumentInfo(request).filename}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              Submitted on {formatDate(request.uploaded_at)}
-                            </p>
-                            <p className="text-xs text-slate-400 mt-1">
-                              Response to: {request.document_requests?.title || 'Document Request'}
-                            </p>
-                          </div>
+                      {request.document_request_uploads && request.document_request_uploads.length > 0 ? (
+                        request.document_request_uploads.map((upload: any) => {
+                          const { filename, fullUrl } = getDocumentInfo(upload);
+                          return (
+                            <div key={upload.id} className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-slate-900">{filename}</p>
+                                  <p className="text-sm text-slate-500">
+                                    Submitted on {formatDate(upload.uploaded_at)}
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    Response to: {request.title || 'Document Request'}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center space-x-3">
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                  upload.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  upload.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  upload.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-slate-100 text-slate-800'
+                                }`}>
+                                  {upload.status === 'approved' ? 'Approved' :
+                                   upload.status === 'rejected' ? 'Rejected' :
+                                   upload.status === 'under_review' ? 'Under Review' :
+                                   'Pending'}
+                                </span>
+                                
+                                <button
+                                  onClick={() => onViewDocument({
+                                    ...upload,
+                                    file_url: fullUrl,
+                                    filename
+                                  })}
+                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  View
+                                </button>
+                                
+                                <button
+                                  onClick={() => onDownloadDocument({
+                                    ...upload,
+                                    file_url: fullUrl,
+                                    filename
+                                  })}
+                                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  Download
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-slate-500">No response submitted yet</p>
                         </div>
-                        
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            request.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            request.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-slate-100 text-slate-800'
-                          }`}>
-                            {request.status === 'approved' ? 'Approved' :
-                             request.status === 'rejected' ? 'Rejected' :
-                             request.status === 'under_review' ? 'Under Review' :
-                             'Pending'}
-                          </span>
-                          
-                          <button
-                            onClick={() => onViewDocument({
-                              ...request,
-                              file_url: getDocumentInfo(request).fullUrl,
-                              filename: getDocumentInfo(request).filename
-                            })}
-                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            View
-                          </button>
-                          
-                          <button
-                            onClick={() => onDownloadDocument({
-                              ...request,
-                              file_url: getDocumentInfo(request).fullUrl,
-                              filename: getDocumentInfo(request).filename
-                            })}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            Download
-                          </button>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -487,8 +477,11 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       </div>
 
       {/* No Document Requests Message */}
-      {(!documentRequests || documentRequests.length === 0) && 
-       (!studentDocuments || studentDocuments.length === 0) && (
+      {(() => {
+        const filteredRequests = documentRequests?.filter(request => request.id !== 'acceptance_letter') || [];
+        return (!filteredRequests || filteredRequests.length === 0) && 
+               (!studentDocuments || studentDocuments.length === 0);
+      })() && (
         <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
