@@ -47,11 +47,12 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
       }
       setError(null);
       
-      // Load university data
+      // Load university data - ensure only one result
       const { data: universityData, error: universityError } = await supabase
         .from('universities')
         .select('*')
         .eq('user_id', user.id)
+        .limit(1)
         .maybeSingle();
 
       if (universityError) throw universityError;
@@ -66,7 +67,25 @@ export const UniversityProvider: React.FC<UniversityProviderProps> = ({ children
           .order('created_at', { ascending: false });
 
         if (scholarshipsError) throw scholarshipsError;
-        setScholarships(scholarshipsData || []);
+        
+        // Load application counts for each scholarship
+        const scholarshipsWithCounts = await Promise.all(
+          (scholarshipsData || []).map(async (scholarship) => {
+            const { count, error: countError } = await supabase
+              .from('scholarship_applications')
+              .select('*', { count: 'exact', head: true })
+              .eq('scholarship_id', scholarship.id);
+            
+            if (countError) {
+              console.error('Error loading application count for scholarship:', scholarship.id, countError);
+              return { ...scholarship, application_count: 0 };
+            }
+            
+            return { ...scholarship, application_count: count || 0 };
+          })
+        );
+        
+        setScholarships(scholarshipsWithCounts);
 
         // Load featured scholarships
         await loadFeaturedScholarships();

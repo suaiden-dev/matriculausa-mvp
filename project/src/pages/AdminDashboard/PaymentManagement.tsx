@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { UniversityPaymentRequestService, type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
+import { formatCentsToDollars } from '../../utils/currency';
 import { 
   CheckCircle, 
   XCircle, 
@@ -20,24 +21,36 @@ import {
   Grid3X3,
   Clock,
   CheckCircle2,
-  Shield
+  Shield,
+  MessageSquare
 } from 'lucide-react';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
+import ZellePaymentReviewModal from '../../components/ZellePaymentReviewModal';
 
 interface PaymentRecord {
   id: string;
   student_id: string;
+  user_id?: string; // ID do usuário na tabela zelle_payments
   student_name: string;
   student_email: string;
   university_id: string;
   university_name: string;
   scholarship_id?: string;
   scholarship_title?: string;
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control_fee' | 'application_fee' | 'scholarship_fee';
+  fee_type_global?: string; // Campo usado na tabela zelle_payments
   amount: number;
   status: 'paid' | 'pending' | 'failed';
   payment_date?: string;
   stripe_session_id?: string;
   created_at: string;
+  // Novos campos para Zelle
+  payment_method?: 'stripe' | 'zelle' | 'manual';
+  payment_proof_url?: string;
+  admin_notes?: string;
+  zelle_status?: 'pending_verification' | 'approved' | 'rejected';
+  reviewed_by?: string;
+  reviewed_at?: string;
 }
 
 interface PaymentStats {
@@ -52,7 +65,7 @@ const FEE_TYPES = [
   { value: 'selection_process', label: 'Selection Process Fee', color: 'bg-blue-100 text-blue-800' },
   { value: 'application', label: 'Application Fee', color: 'bg-green-100 text-green-800' },
   { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-blue-100 text-[#05294E]' },
-  { value: 'i20_control', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
+  { value: 'i20_control_fee', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
 ];
 
 const STATUS_OPTIONS = [
@@ -62,11 +75,12 @@ const STATUS_OPTIONS = [
   { value: 'failed', label: 'Failed' },
 ];
 
-const PaymentManagement: React.FC = () => {
+const PaymentManagement = (): React.JSX.Element => {
   const { user } = useAuth();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [universities, setUniversities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PaymentStats>({
     totalRevenue: 0,
     totalPayments: 0,
@@ -91,14 +105,20 @@ const PaymentManagement: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   // Estados para University Payment Requests
-  const [activeTab, setActiveTab] = useState<'payments' | 'university-requests'>('payments');
+  const [activeTab, setActiveTab] = useState<'payments' | 'university-requests' | 'zelle-payments'>('payments');
   const [universityRequests, setUniversityRequests] = useState<UniversityPaymentRequest[]>([]);
   const [loadingUniversityRequests, setLoadingUniversityRequests] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UniversityPaymentRequest | null>(null);
   const [showRequestDetails, setShowRequestDetails] = useState(false);
-  const [universityRequestsViewMode, setUniversityRequestsViewMode] = useState<'grid' | 'list'>('grid');
+  const [universityRequestsViewMode, setUniversityRequestsViewMode] = useState<'grid' | 'list'>('list');
   const [adminBalance, setAdminBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState(false);
+
+  // Estados para Zelle Payments
+  const [zellePayments, setZellePayments] = useState<PaymentRecord[]>([]);
+  const [loadingZellePayments, setLoadingZellePayments] = useState(false);
+  const [selectedZellePayment, setSelectedZellePayment] = useState<PaymentRecord | null>(null);
+  const [zelleViewMode, setZelleViewMode] = useState<'grid' | 'list'>('list');
 
   // Estados para modais de ações
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -109,20 +129,47 @@ const PaymentManagement: React.FC = () => {
   const [adminNotes, setAdminNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Estados para modais de Zelle
+  const [showZelleNotesModal, setShowZelleNotesModal] = useState(false);
+  const [showZelleReviewModal, setShowZelleReviewModal] = useState(false);
+  const [zelleAdminNotes, setZelleAdminNotes] = useState('');
+  const [zelleActionLoading, setZelleActionLoading] = useState(false);
+  const [zelleRejectReason, setZelleRejectReason] = useState('');
+
   // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20); // 20 itens por página para melhor visualização
 
+  const hasLoadedPayments = useRef(false);
+  const hasLoadedUniversities = useRef(false);
+  const hasLoadedUniversityRequests = useRef(false);
+  const hasLoadedZellePayments = useRef(false);
+
+  // Estados para modal de comprovante Zelle
+  const [showZelleProofModal, setShowZelleProofModal] = useState(false);
+  const [selectedZelleProofUrl, setSelectedZelleProofUrl] = useState<string>('');
+  const [selectedZelleProofFileName, setSelectedZelleProofFileName] = useState<string>('');
+
   useEffect(() => {
     if (user && user.role === 'admin') {
-      loadPaymentData();
-      loadUniversities();
+      if (!hasLoadedPayments.current) {
+        loadPaymentData();
+        hasLoadedPayments.current = true;
+      }
+      if (!hasLoadedUniversities.current) {
+        loadUniversities();
+        hasLoadedUniversities.current = true;
+      }
     }
   }, [user]);
 
   useEffect(() => {
-    if (activeTab === 'university-requests') {
+    if (activeTab === 'university-requests' && !hasLoadedUniversityRequests.current) {
       loadUniversityPaymentRequests();
+      hasLoadedUniversityRequests.current = true;
+    } else if (activeTab === 'zelle-payments' && !hasLoadedZellePayments.current) {
+      loadZellePayments();
+      hasLoadedZellePayments.current = true;
     }
   }, [activeTab]);
 
@@ -192,10 +239,129 @@ const PaymentManagement: React.FC = () => {
     }
   };
 
+  const loadZellePayments = async () => {
+    try {
+      setLoadingZellePayments(true);
+      console.log('🔍 Loading Zelle payments...');
+
+      // Buscar pagamentos Zelle sem join, filtrando apenas registros com valores > 0
+      const { data: zellePaymentsData, error: zelleError } = await supabase
+        .from('zelle_payments')
+        .select('*')
+        .gt('amount', 0)
+        .order('created_at', { ascending: false });
+
+      if (zelleError) {
+        console.error('Error in zelle payments query:', zelleError);
+        throw zelleError;
+      }
+
+      console.log('📊 Zelle payments data:', zellePaymentsData);
+
+      // Converter pagamentos Zelle em registros de pagamento
+      const zellePaymentRecords: PaymentRecord[] = [];
+      
+      if (zellePaymentsData && zellePaymentsData.length > 0) {
+        // Buscar dados dos usuários em uma única consulta
+        const userIds = zellePaymentsData.map(p => p.user_id).filter(Boolean);
+        const studentProfileIds = zellePaymentsData.map(p => p.student_profile_id).filter(Boolean);
+        const allUserIds = [...new Set([...userIds, ...studentProfileIds])];
+
+        console.log('🔍 User IDs to fetch:', allUserIds);
+
+        let userProfiles: any[] = [];
+        if (allUserIds.length > 0) {
+          // Buscar por user_id (que corresponde ao auth.users.id) e também por id (que é o user_profiles.id)
+          // Incluir também informações da universidade
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('user_profiles')
+            .select('id, user_id, full_name, email, university_id')
+            .in('user_id', allUserIds);
+
+          if (profilesError) {
+            console.error('Error loading user profiles:', profilesError);
+          } else {
+            userProfiles = profilesData || [];
+            console.log('👥 User profiles loaded:', userProfiles);
+          }
+        }
+
+        // Processar cada pagamento Zelle
+        zellePaymentsData.forEach((zellePayment: any) => {          
+          // Buscar o perfil do usuário pelo user_id (auth.users.id)
+          const student = userProfiles.find(p => p.user_id === zellePayment.user_id);
+          
+          // Determinar o nome do estudante (usar email se full_name for igual ao email ou estiver vazio)
+          const studentName = student?.full_name && student.full_name !== student?.email 
+            ? student.full_name 
+            : student?.email || 'Unknown User';
+         
+          const paymentRecord: PaymentRecord = {
+            id: zellePayment.id,
+            student_id: student?.id || zellePayment.student_profile_id || '',
+            user_id: zellePayment.user_id, // Campo necessário para a função approveZellePayment
+            student_name: studentName,
+            student_email: student?.email || 'Email not available',
+            university_id: student?.university_id || '',
+            university_name: 'N/A', // TODO: Implementar busca de universidade separadamente
+            fee_type: zellePayment.fee_type || 'selection_process',
+            fee_type_global: zellePayment.fee_type_global, // Campo necessário para a função approveZellePayment
+            amount: parseFloat(zellePayment.amount) || 0,
+            status: 'pending',
+            payment_date: zellePayment.created_at,
+            created_at: zellePayment.created_at,
+            payment_method: 'zelle',
+            payment_proof_url: zellePayment.screenshot_url,
+            admin_notes: zellePayment.admin_notes,
+            zelle_status: zellePayment.status,
+            reviewed_by: zellePayment.admin_approved_by,
+            reviewed_at: zellePayment.admin_approved_at
+          };
+
+          zellePaymentRecords.push(paymentRecord);
+        });
+      }
+
+      setZellePayments(zellePaymentRecords);
+      console.log('✅ Zelle payments loaded:', zellePaymentRecords.length);
+    } catch (error) {
+      console.error('❌ Error loading Zelle payments:', error);
+      setError('Failed to load Zelle payments');
+    } finally {
+      setLoadingZellePayments(false);
+    }
+  };
+
+  // Funções para forçar recarregamento quando necessário
+
+  const forceRefreshAll = () => {
+    hasLoadedPayments.current = false;
+    hasLoadedUniversities.current = false;
+    hasLoadedUniversityRequests.current = false;
+    hasLoadedZellePayments.current = false;
+    
+    if (user && user.role === 'admin') {
+      loadPaymentData();
+      loadUniversities();
+      hasLoadedPayments.current = true;
+      hasLoadedUniversities.current = true;
+    }
+    
+    if (activeTab === 'university-requests') {
+      loadUniversityPaymentRequests();
+      hasLoadedUniversityRequests.current = true;
+    } else if (activeTab === 'zelle-payments') {
+      loadZellePayments();
+      hasLoadedZellePayments.current = true;
+    }
+  };
+
   const approveUniversityRequest = async (id: string) => {
     try {
       await UniversityPaymentRequestService.adminApprove(id, user!.id);
       await loadUniversityPaymentRequests();
+      // Recarregar saldo do admin também
+      await loadAdminBalance();
     } catch (error: any) {
       console.error('Error approving request:', error);
     }
@@ -206,6 +372,8 @@ const PaymentManagement: React.FC = () => {
       setActionLoading(true);
       await UniversityPaymentRequestService.adminReject(id, user!.id, rejectReason);
       await loadUniversityPaymentRequests();
+      // Recarregar saldo do admin também
+      await loadAdminBalance();
       setShowRejectModal(false);
       setRejectReason('');
     } catch (error: any) {
@@ -244,6 +412,345 @@ const PaymentManagement: React.FC = () => {
     }
   };
 
+  // Funções para Zelle Payments - Legacy (removidas, usando novo modal)
+
+  const addZelleAdminNotes = async (paymentId: string) => {
+    try {
+      setZelleActionLoading(true);
+      
+      const payment = zellePayments.find(p => p.id === paymentId);
+      if (!payment) throw new Error('Payment not found');
+
+      // Atualizar as notas do admin na tabela zelle_payments
+      const { error } = await supabase
+        .from('zelle_payments')
+        .update({
+          admin_notes: zelleAdminNotes,
+          admin_approved_by: user!.id,
+          admin_approved_at: new Date().toISOString()
+        })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      // Recarregar pagamentos Zelle
+      await loadZellePayments();
+      setShowZelleNotesModal(false);
+      setZelleAdminNotes('');
+      
+      console.log('📝 Zelle payment notes added successfully');
+    } catch (error: any) {
+      console.error('Error adding Zelle payment notes:', error);
+    } finally {
+      setZelleActionLoading(false);
+    }
+  };
+
+  const approveZellePayment = async (paymentId: string) => {
+    try {
+      setZelleActionLoading(true);
+      
+      const payment = zellePayments.find(p => p.id === paymentId);
+      if (!payment) throw new Error('Payment not found');
+
+      console.log('🔍 [approveZellePayment] Aprovando pagamento:', payment);
+
+      // Atualizar o status do pagamento para aprovado
+          const { error } = await supabase
+      .from('zelle_payments')
+      .update({
+        status: 'approved',
+        admin_approved_by: user!.id,
+        admin_approved_at: new Date().toISOString()
+      })
+      .eq('id', paymentId);
+
+      if (error) throw error;
+
+      // MARCAR COMO PAGO NAS TABELAS CORRETAS
+      console.log('💰 [approveZellePayment] Marcando como pago nas tabelas corretas...');
+      console.log('🔍 [approveZellePayment] payment.fee_type_global:', payment.fee_type_global);
+      console.log('🔍 [approveZellePayment] payment.fee_type:', payment.fee_type);
+      console.log('🔍 [approveZellePayment] payment.user_id:', payment.user_id);
+      
+      if (payment.fee_type_global === 'selection_process') {
+        console.log('🎯 [approveZellePayment] Entrando na condição selection_process');
+        console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_selection_process_fee = true WHERE user_id =', payment.user_id);
+        
+        // Marcar no user_profiles
+        const { data: updateData, error: profileError } = await supabase
+          .from('user_profiles')
+          .update({ 
+            has_paid_selection_process_fee: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', payment.user_id)
+          .select();
+
+        console.log('🔍 [approveZellePayment] Resultado da atualização:', { updateData, profileError });
+
+        if (profileError) {
+          console.error('❌ [approveZellePayment] Erro ao marcar selection_process_fee:', profileError);
+        } else {
+          console.log('✅ [approveZellePayment] has_paid_selection_process_fee marcado como true');
+          console.log('🔍 [approveZellePayment] Dados atualizados:', updateData);
+        }
+      } else {
+        console.log('⚠️ [approveZellePayment] fee_type_global não é selection_process:', payment.fee_type_global);
+      }
+
+      console.log('🔍 [approveZellePayment] Verificando condição I-20 Control Fee...');
+      console.log('🔍 [approveZellePayment] payment.fee_type_global === "i-20_control_fee":', payment.fee_type_global === 'i-20_control_fee');
+      console.log('🔍 [approveZellePayment] payment.fee_type === "i-20_control_fee":', payment.fee_type === 'i-20_control_fee');
+      
+      if (payment.fee_type_global === 'i-20_control_fee' || payment.fee_type === 'i-20_control_fee') {
+        console.log('🎯 [approveZellePayment] Entrando na condição i20_control_fee');
+        console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_i20_control_fee = true WHERE user_id =', payment.user_id);
+        
+        // Marcar no user_profiles
+        const { data: updateData, error: profileError } = await supabase
+          .from('user_profiles')
+          .update({ 
+            has_paid_i20_control_fee: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', payment.user_id)
+          .select();
+
+        console.log('🔍 [approveZellePayment] Resultado da atualização i20_control_fee:', { updateData, profileError });
+
+        if (profileError) {
+          console.error('❌ [approveZellePayment] Erro ao marcar i20_control_fee:', profileError);
+        } else {
+          console.log('✅ [approveZellePayment] has_paid_i20_control_fee marcado como true');
+          console.log('🔍 [approveZellePayment] Dados atualizados i20_control_fee:', updateData);
+        }
+      }
+
+      if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
+        console.log('🎯 [approveZellePayment] Entrando na condição scholarship_applications');
+        console.log('🔍 [approveZellePayment] fee_type:', payment.fee_type);
+        console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.student_id);
+        
+        // Marcar no scholarship_applications
+        const { data: updateData, error: appError } = await supabase
+          .from('scholarship_applications')
+          .update({ 
+            [payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('student_id', payment.student_id)
+          .select();
+
+        console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications:', { updateData, appError });
+
+        if (appError) {
+          console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications:', appError);
+        } else {
+          console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true`);
+          console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
+        }
+
+        // Se for application_fee, também atualizar user_profiles
+        if (payment.fee_type === 'application_fee') {
+          console.log('🎯 [approveZellePayment] Atualizando user_profiles para application_fee');
+          console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET is_application_fee_paid = true WHERE user_id =', payment.user_id);
+          
+          const { data: profileUpdateData, error: profileError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              is_application_fee_paid: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', payment.user_id)
+            .select();
+
+          console.log('🔍 [approveZellePayment] Resultado da atualização user_profiles:', { profileUpdateData, profileError });
+
+          if (profileError) {
+            console.error('❌ [approveZellePayment] Erro ao marcar is_application_fee_paid no user_profiles:', profileError);
+          } else {
+            console.log('✅ [approveZellePayment] is_application_fee_paid marcado como true no user_profiles');
+            console.log('🔍 [approveZellePayment] Dados atualizados user_profiles:', profileUpdateData);
+          }
+        }
+      }
+
+      // ENVIAR WEBHOOK PARA NOTIFICAR O ALUNO SOBRE APROVAÇÃO
+      console.log('📤 [approveZellePayment] Enviando notificação de aprovação para o aluno...');
+      
+      try {
+        // Buscar nome do admin
+        const { data: adminProfile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('user_id', user!.id)
+          .single();
+
+        const adminName = adminProfile?.full_name || 'Admin';
+
+        // Payload para notificar o aluno sobre a aprovação
+        const approvalPayload = {
+          tipo_notf: "Pagamento aprovado",
+          email_aluno: payment.student_email,
+          nome_aluno: payment.student_name,
+          email_universidade: "",
+          o_que_enviar: `Seu pagamento de ${payment.fee_type} no valor de $${payment.amount} foi aprovado e processado com sucesso!`,
+          payment_id: paymentId,
+          fee_type: payment.fee_type,
+          amount: payment.amount,
+          approved_by: adminName
+        };
+
+        console.log('📤 [approveZellePayment] Payload de aprovação:', approvalPayload);
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(approvalPayload),
+        });
+
+        if (webhookResponse.ok) {
+          console.log('✅ [approveZellePayment] Notificação de aprovação enviada com sucesso!');
+        } else {
+          console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação de aprovação:', webhookResponse.status);
+        }
+      } catch (webhookError) {
+        console.error('❌ [approveZellePayment] Erro ao enviar webhook de aprovação:', webhookError);
+        // Não falhar o processo se o webhook falhar
+      }
+
+      // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
+      try {
+        console.log(`📤 [approveZellePayment] Enviando notificação de ${payment.fee_type} para universidade...`);
+        
+        const notificationEndpoint = payment.fee_type === 'application_fee' 
+          ? 'notify-university-application-fee-paid'
+          : payment.fee_type === 'scholarship_fee'
+          ? 'notify-university-scholarship-fee-paid'
+          : null;
+        
+        if (notificationEndpoint) {
+          const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+              application_id: payment.scholarship_id || payment.student_id, // Usando scholarship_id se disponível, senão student_id
+              user_id: payment.user_id,
+              scholarship_id: payment.scholarship_id || null
+            }),
+          });
+
+          if (notificationResponse.ok) {
+            console.log(`✅ [approveZellePayment] Notificação de ${payment.fee_type} enviada para universidade com sucesso!`);
+          } else {
+            console.warn(`⚠️ [approveZellePayment] Erro ao enviar notificação de ${payment.fee_type} para universidade:`, notificationResponse.status);
+          }
+        } else {
+          console.log(`ℹ️ [approveZellePayment] Tipo de taxa ${payment.fee_type} não requer notificação para universidade`);
+        }
+      } catch (notificationError) {
+        console.error('❌ [approveZellePayment] Erro ao enviar notificação para universidade:', notificationError);
+        // Não falhar o processo se a notificação falhar
+      }
+
+      // Recarregar pagamentos Zelle
+      await loadZellePayments();
+      setShowZelleReviewModal(false);
+      
+      console.log('✅ [approveZellePayment] Zelle payment approved, marked as paid, and student notified successfully');
+    } catch (error: any) {
+      console.error('❌ [approveZellePayment] Error approving Zelle payment:', error);
+    } finally {
+      setZelleActionLoading(false);
+    }
+  };
+
+  const rejectZellePayment = async (paymentId: string, reason?: string) => {
+    try {
+      setZelleActionLoading(true);
+      
+      const payment = zellePayments.find(p => p.id === paymentId);
+      if (!payment) throw new Error('Payment not found');
+
+      console.log('🔍 [rejectZellePayment] Rejeitando pagamento:', payment);
+
+      // Atualizar o status do pagamento para rejeitado
+          const { error } = await supabase
+      .from('zelle_payments')
+      .update({
+        status: 'rejected',
+        admin_notes: reason || zelleRejectReason
+      })
+      .eq('id', paymentId);
+
+      if (error) throw error;
+
+      // ENVIAR WEBHOOK PARA NOTIFICAR O ALUNO
+      console.log('📤 [rejectZellePayment] Enviando notificação de rejeição para o aluno...');
+      
+      try {
+        // Buscar nome do admin
+        const { data: adminProfile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('user_id', user!.id)
+          .single();
+
+        const adminName = adminProfile?.full_name || 'Admin';
+
+        // Payload para notificar o aluno sobre a rejeição
+        const rejectionPayload = {
+          tipo_notf: "Pagamento rejeitado",
+          email_aluno: payment.student_email,
+          nome_aluno: payment.student_name,
+          email_universidade: "",
+          o_que_enviar: `Seu pagamento de ${payment.fee_type} no valor de $${payment.amount} foi rejeitado. Motivo: ${reason || zelleRejectReason}`,
+          payment_id: paymentId,
+          fee_type: payment.fee_type,
+          amount: payment.amount,
+          rejection_reason: reason || zelleRejectReason,
+          rejected_by: adminName
+        };
+
+        console.log('📤 [rejectZellePayment] Payload de rejeição:', rejectionPayload);
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(rejectionPayload),
+        });
+
+        if (webhookResponse.ok) {
+          console.log('✅ [rejectZellePayment] Notificação de rejeição enviada com sucesso!');
+        } else {
+          console.warn('⚠️ [rejectZellePayment] Erro ao enviar notificação de rejeição:', webhookResponse.status);
+        }
+      } catch (webhookError) {
+        console.error('❌ [rejectZellePayment] Erro ao enviar webhook de rejeição:', webhookError);
+        // Não falhar o processo se o webhook falhar
+      }
+
+      // Recarregar pagamentos Zelle
+      await loadZellePayments();
+      setShowZelleReviewModal(false);
+      setZelleRejectReason('');
+      
+      console.log('✅ [rejectZellePayment] Zelle payment rejected and student notified successfully');
+    } catch (error: any) {
+      console.error('❌ [rejectZellePayment] Error rejecting Zelle payment:', error);
+    } finally {
+      setZelleActionLoading(false);
+    }
+  };
+
   // Funções auxiliares para abrir modais
   const openRejectModal = (id: string) => {
     const request = universityRequests.find(r => r.id === id);
@@ -263,6 +770,44 @@ const PaymentManagement: React.FC = () => {
     setShowAddNotesModal(true);
   };
 
+  // Funções auxiliares para abrir modais de Zelle
+
+  const openZelleReviewModal = (paymentId: string) => {
+    const payment = zellePayments.find(p => p.id === paymentId);
+    setSelectedZellePayment(payment || null);
+    setShowZelleReviewModal(true);
+  };
+
+  const handleZelleReviewSuccess = () => {
+    // Recarregar os pagamentos Zelle após aprovação/rejeição
+    loadZellePayments();
+    setShowZelleReviewModal(false);
+    setSelectedZellePayment(null);
+  };
+
+  const openZelleNotesModal = (paymentId: string) => {
+    const payment = zellePayments.find(p => p.id === paymentId);
+    if (payment) {
+      setSelectedZellePayment(payment);
+      setZelleAdminNotes(payment.admin_notes || '');
+      setShowZelleNotesModal(true);
+    }
+  };
+
+  const openZelleProofModal = (paymentId: string) => {
+    const payment = zellePayments.find(p => p.id === paymentId);
+    if (payment && payment.payment_proof_url) {
+      // Se payment_proof_url já é uma URL completa, usar diretamente
+      // Se é um caminho relativo, construir URL completa
+      let fullUrl = payment.payment_proof_url;
+      if (!payment.payment_proof_url.startsWith('http')) {
+        fullUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${payment.payment_proof_url}`;
+      }
+      setSelectedZelleProofUrl(fullUrl);
+      setSelectedZelleProofFileName(`Zelle Payment Proof - ${payment.student_name}`);
+      setShowZelleProofModal(true);
+    }
+  };
 
   const loadPaymentData = async () => {
     try {
@@ -270,7 +815,7 @@ const PaymentManagement: React.FC = () => {
       console.log('🔍 Loading payment data...');
 
       // Primeiro vamos verificar se há aplicações
-      const { data: simpleApps, error: simpleError } = await supabase
+      const { data: simpleApps } = await supabase
         .from('scholarship_applications')
         .select('*');
 
@@ -351,7 +896,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'selection_process',
-          amount: 60000, // $600.00 em centavos
+          amount: 99900, // $999.00 em centavos
           status: student.has_paid_selection_process_fee ? 'paid' : 'pending',
           payment_date: student.has_paid_selection_process_fee ? app.created_at : undefined,
           created_at: app.created_at
@@ -368,7 +913,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'application',
-          amount: 35000, // $350.00 em centavos
+          amount: 350, // $350.00
           status: student.is_application_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_application_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
@@ -385,7 +930,7 @@ const PaymentManagement: React.FC = () => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'scholarship',
-          amount: 85000, // $850.00 em centavos
+          amount: 40000, // $400.00 em centavos
           status: student.is_scholarship_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_scholarship_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
@@ -401,8 +946,8 @@ const PaymentManagement: React.FC = () => {
           university_name: universityName,
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
-          fee_type: 'i20_control',
-          amount: 125000, // $1,250.00 em centavos
+          fee_type: 'i20_control_fee',
+          amount: 99900, // $999.00 em centavos
           status: 'pending',
           created_at: app.created_at
         });
@@ -488,8 +1033,8 @@ const PaymentManagement: React.FC = () => {
             university_name: 'Stanford University',
             scholarship_id: 'sample-scholarship-3',
             scholarship_title: 'Business Leadership Scholarship',
-            fee_type: 'i20_control',
-            amount: 150,
+            fee_type: 'i20_control_fee',
+            amount: 99900, // $999.00 em centavos
             status: 'pending',
             created_at: '2024-01-25T11:00:00Z'
           }
@@ -697,28 +1242,52 @@ const PaymentManagement: React.FC = () => {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        <div className="flex items-center justify-between">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('payments')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'payments'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Student Payments
+            </button>
+            <button
+              onClick={() => setActiveTab('university-requests')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'university-requests'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              University Payment Requests
+            </button>
+            <button
+              onClick={() => setActiveTab('zelle-payments')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'zelle-payments'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Zelle Payments
+            </button>
+          </nav>
+          
+          {/* Botão de Refresh */}
           <button
-            onClick={() => setActiveTab('payments')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'payments'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            onClick={forceRefreshAll}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            title="Refresh all data"
           >
-            Student Payments
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
           </button>
-          <button
-            onClick={() => setActiveTab('university-requests')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'university-requests'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            University Payment Requests
-          </button>
-        </nav>
+        </div>
       </div>
 
       {/* Student Payments Tab Content */}
@@ -730,7 +1299,7 @@ const PaymentManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">Total Revenue</p>
-              <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
+              <p className="text-2xl font-bold">${formatCentsToDollars(stats.totalRevenue).toLocaleString()}</p>
             </div>
             <DollarSign size={32} className="text-blue-200" />
           </div>
@@ -994,7 +1563,7 @@ const PaymentManagement: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                        ${payment.amount}
+                        ${formatCentsToDollars(payment.amount)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1054,7 +1623,7 @@ const PaymentManagement: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 mb-1">
                   <DollarSign className="h-4 w-4 text-green-500" />
-                  <span className="font-bold text-green-700">${payment.amount}</span>
+                  <span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
                 </div>
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar className="h-4 w-4 text-gray-400" />
@@ -1444,7 +2013,6 @@ const PaymentManagement: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
                                 <div className="font-medium">${request.amount_usd.toLocaleString()}</div>
-                                <div className="text-gray-500">{request.amount_coins} coins</div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -1803,6 +2371,327 @@ const PaymentManagement: React.FC = () => {
         </div>
       )}
 
+      {/* Zelle Payments Tab Content */}
+      {activeTab === 'zelle-payments' && (
+        <div className="space-y-6">
+          {/* Stats Cards for Zelle Payments */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <CreditCard className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Zelle Payments</p>
+                  <p className="text-2xl font-bold text-gray-900">{zellePayments.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Pending Review</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {zellePayments.filter(p => p.zelle_status === 'pending_verification').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Approved</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {zellePayments.filter(p => p.zelle_status === 'approved').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow border">
+              <div className="flex items-center">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <XCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Rejected</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {zellePayments.filter(p => p.zelle_status === 'rejected').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Zelle Payments List */}
+          <div className="bg-white rounded-xl shadow border">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Zelle Payments</h2>
+                  <p className="text-gray-600 mt-1">Review and approve Zelle payment proofs</p>
+                </div>
+                <div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
+                  <button
+                    onClick={() => setZelleViewMode('grid')}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                      zelleViewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Grid view"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setZelleViewMode('list')}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                      zelleViewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="List view"
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+              {loadingZellePayments ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : zellePayments.length === 0 ? (
+                <div className="text-center py-12">
+                  <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Zelle Payments</h3>
+                  <p className="text-gray-500">No Zelle payments are currently pending review.</p>
+                </div>
+              ) : (
+              <div className="p-6">
+                {zelleViewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {zellePayments.map((payment) => (
+                      <div 
+                        key={payment.id}
+                        className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors cursor-pointer border"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 text-lg mb-1">
+                              {payment.student_name}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {payment.student_email}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {payment.university_name}
+                            </p>
+                        </div>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
+                            payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' :
+                            payment.zelle_status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {payment.zelle_status === 'pending_verification' && <Clock className="w-3 h-3 mr-1" />}
+                            {payment.zelle_status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
+                            {payment.zelle_status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
+                            {payment.zelle_status === 'pending_verification' ? 'Pending Review' :
+                             payment.zelle_status === 'approved' ? 'Approved' :
+                             payment.zelle_status === 'rejected' ? 'Rejected' :
+                             payment.zelle_status}
+                            </span>
+                      </div>
+                      
+                        <div className="mb-4">
+                          <div className="text-2xl font-bold text-gray-900 mb-2">
+                            ${formatCentsToDollars(payment.amount)}
+                        </div>
+                          <p className="text-sm text-gray-600 capitalize">
+                            {payment.fee_type.replace('_', ' ')}
+                          </p>
+                        </div>
+
+                        <div className="text-sm text-gray-500 mb-4">
+                          {new Date(payment.created_at).toLocaleDateString()}
+                      </div>
+
+                      {payment.payment_proof_url && (
+                        <div className="mb-4">
+                          <button
+                            onClick={() => openZelleProofModal(payment.id)}
+                            className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                          >
+                            <Eye size={16} />
+                            Proof
+                          </button>
+                        </div>
+                      )}
+
+                      {payment.admin_notes && (
+                        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Admin Notes:</strong> {payment.admin_notes}
+                          </p>
+                        </div>
+                      )}
+
+                        {/* Action Buttons */}
+                        {payment.zelle_status === 'pending_verification' && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openZelleReviewModal(payment.id);
+                              }}
+                              className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Review Payment
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openZelleNotesModal(payment.id);
+                            }}
+                            className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Add Notes
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // List View (Table)
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Student
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Fee Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Amount
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {zellePayments.map((payment) => (
+                            <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10">
+                                    <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                      <User className="h-5 w-5 text-gray-600" />
+                                    </div>
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {payment.student_name}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {payment.student_email}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900 capitalize">
+                                  {payment.fee_type.replace('_', ' ')}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  <div className="font-medium">${formatCentsToDollars(payment.amount)}</div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
+                                  payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  payment.zelle_status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {payment.zelle_status === 'pending_verification' && <Clock className="w-3 h-3 mr-1" />}
+                                  {payment.zelle_status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
+                                  {payment.zelle_status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
+                                  {payment.zelle_status === 'pending_verification' ? 'Pending Review' :
+                                   payment.zelle_status === 'approved' ? 'Approved' :
+                                   payment.zelle_status === 'rejected' ? 'Rejected' :
+                                   payment.zelle_status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(payment.created_at).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div className="flex items-center justify-end space-x-2">
+                                                                     {payment.payment_proof_url && (
+                                     <button
+                                       onClick={() => openZelleProofModal(payment.id)}
+                                       className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                                     >
+                                       <Eye size={16} />
+                                       Proof
+                                     </button>
+                                   )}
+                                  
+                                  {payment.zelle_status === 'pending_verification' && (
+                            <button
+                              onClick={() => openZelleReviewModal(payment.id)}
+                              className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                            >
+                              <CheckCircle size={16} />
+                              Review Payment
+                            </button>
+                        )}
+                        
+                        <button
+                          onClick={() => openZelleNotesModal(payment.id)}
+                                    className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                        >
+                                    <MessageSquare size={16} />
+                                    Notes
+                        </button>
+                      </div>
+                              </td>
+                            </tr>
+                  ))}
+                        </tbody>
+                      </table>
+                    </div>
+                </div>
+              )}
+            </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Payment Details Modal */}
       {showDetails && selectedPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -1846,7 +2735,7 @@ const PaymentManagement: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Amount</label>
-                    <p className="mt-1 text-sm text-gray-900 font-semibold">${selectedPayment.amount}</p>
+                    <p className="mt-1 text-sm text-gray-900 font-semibold">${formatCentsToDollars(selectedPayment.amount)}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Status</label>
@@ -2038,6 +2927,224 @@ const PaymentManagement: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Zelle Payment Review Modal */}
+      {showZelleReviewModal && selectedZellePayment && user && (
+        <ZellePaymentReviewModal
+          isOpen={showZelleReviewModal}
+          onClose={() => {
+            setShowZelleReviewModal(false);
+            setSelectedZellePayment(null);
+          }}
+          payment={{
+            id: selectedZellePayment.id,
+            user_id: selectedZellePayment.student_id,
+            student_name: selectedZellePayment.student_name,
+            student_email: selectedZellePayment.student_email,
+            fee_type: selectedZellePayment.fee_type,
+            amount: selectedZellePayment.amount,
+            status: selectedZellePayment.zelle_status || 'pending_verification',
+            payment_date: selectedZellePayment.payment_date,
+            screenshot_url: selectedZellePayment.payment_proof_url,
+            created_at: selectedZellePayment.created_at
+          }}
+          onSuccess={handleZelleReviewSuccess}
+          adminId={user.id}
+          onApprove={approveZellePayment}
+          onReject={rejectZellePayment}
+        />
+      )}
+
+      {/* Zelle Payment Modals - Legacy (removed) */}
+      {false && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Approve Zelle Payment</h3>
+              <button 
+                onClick={() => setShowZelleReviewModal(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <p className="text-green-800 font-medium">Payment Approval</p>
+                </div>
+                <p className="text-green-700 text-sm mt-2">
+                  You are about to approve the {selectedZellePayment?.fee_type?.replace('_', ' ')} fee payment 
+                  of ${formatCentsToDollars(selectedZellePayment?.amount || 0)} for {selectedZellePayment?.student_name}.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowZelleReviewModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => selectedZellePayment && approveZellePayment(selectedZellePayment.id)}
+                  disabled={zelleActionLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {zelleActionLoading ? 'Approving...' : 'Approve Payment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Zelle Payment Modal */}
+      {false && selectedZellePayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Reject Zelle Payment</h3>
+              <button 
+                onClick={() => setShowZelleReviewModal(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <XCircle className="h-5 w-5 text-red-600 mr-2" />
+                  <p className="text-red-800 font-medium">Payment Rejection</p>
+                </div>
+                <p className="text-red-700 text-sm mt-2">
+                  You are about to reject the {selectedZellePayment?.fee_type?.replace('_', ' ')} fee payment 
+                  of ${formatCentsToDollars(selectedZellePayment?.amount || 0)} for {selectedZellePayment?.student_name}.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Rejection
+                </label>
+                
+                {/* Opções pré-definidas */}
+                <div className="mb-3">
+                  <p className="text-sm text-gray-600 mb-2">Common rejection reasons:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      'Proof illegible or incomplete',
+                      'Incorrect amount',
+                      'Proof does not match payment',
+                      'Incorrect payment information',
+                      'Proof too old',
+                      'Missing identification on proof'
+                    ].map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() => setZelleRejectReason(reason)}
+                        className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full border border-gray-300 transition-colors"
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <textarea
+                  value={zelleRejectReason}
+                  onChange={(e) => setZelleRejectReason(e.target.value)}
+                  placeholder="Describe the reason for payment rejection. This text will be sent to the student via notification..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setShowZelleReviewModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => selectedZellePayment && rejectZellePayment(selectedZellePayment.id)}
+                  disabled={!zelleRejectReason.trim() || zelleActionLoading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {zelleActionLoading ? 'Rejecting...' : 'Reject Payment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Zelle Admin Notes Modal */}
+      {showZelleNotesModal && selectedZellePayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Add Admin Notes</h3>
+              <button 
+                onClick={() => setShowZelleNotesModal(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Admin Notes for Zelle Payment
+                </label>
+                <textarea
+                  value={zelleAdminNotes}
+                  onChange={(e) => setZelleAdminNotes(e.target.value)}
+                  placeholder="Add any administrative notes or comments about this Zelle payment..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4">
+              <button
+                onClick={() => setShowZelleNotesModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => addZelleAdminNotes(selectedZellePayment.id)}
+                disabled={!zelleAdminNotes.trim() || zelleActionLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {zelleActionLoading ? 'Adding Notes...' : 'Add Notes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+
+
+      {/* Zelle Proof Modal */}
+      {showZelleProofModal && selectedZelleProofUrl && (
+        <DocumentViewerModal
+          documentUrl={selectedZelleProofUrl}
+          fileName={selectedZelleProofFileName}
+          onClose={() => setShowZelleProofModal(false)}
+        />
       )}
     </div>
   );

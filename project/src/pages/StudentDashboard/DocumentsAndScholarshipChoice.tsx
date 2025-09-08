@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { 
   Upload, 
   CheckCircle, 
-  AlertTriangle, 
   User, 
   GraduationCap, 
   DollarSign,
@@ -36,7 +35,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showDocumentSection, setShowDocumentSection] = useState(false);
+
   
   const navigate = useNavigate();
 
@@ -60,10 +59,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
     if (savedProcessType) {
       console.log('Loading processType from localStorage:', savedProcessType);
       setProcessType(savedProcessType);
-      // Se já tem processType, mostrar seção de documentos
-      if (!documentsApproved) {
-        setShowDocumentSection(true);
-      }
+      // Se já tem processType, documentos serão mostrados automaticamente
     }
   }, [documentsApproved]);
 
@@ -92,6 +88,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   const handleUpload = async () => {
     setUploading(true);
     setError(null);
+    setFieldErrors({}); // Limpar erros anteriores
     try {
       if (!user) throw new Error('User not authenticated');
       
@@ -158,6 +155,10 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         body: JSON.stringify(webhookBody),
       });
       
+      if (!webhookResponse.ok) {
+        throw new Error(`Webhook request failed: ${webhookResponse.status} ${webhookResponse.statusText}`);
+      }
+      
       const webhookResult = await webhookResponse.json();
       
       // Processar resposta da análise
@@ -173,22 +174,24 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       if (!n8nData && webhookResult.response_passaport !== undefined) {
         n8nData = webhookResult;
       }
+
+      console.log('n8nData', n8nData);
       
       if (n8nData) {
-        const respPassport = n8nData.response_passaport;
-        const respFunds = n8nData.response_funds;
-        const respDegree = n8nData.response_degree;
+        const respPassport = n8nData[0].response_passaport;
+        const respFunds = n8nData[0].response_funds;
+        const respDegree = n8nData[0].response_degree;
 
         const passportOk = respPassport === true;
         const fundsOk = respFunds === true;
         const degreeOk = respDegree === true;
 
         const passportErr = typeof respPassport === 'string' ? respPassport : 
-                           (passportOk ? '' : (n8nData.details_passport || 'Invalid document.'));
+                           (passportOk ? '' : (n8nData[0].details_passport || 'Invalid document.'));
         const fundsErr = typeof respFunds === 'string' ? respFunds : 
-                        (fundsOk ? '' : (n8nData.details_funds || 'Invalid document.'));
+                        (fundsOk ? '' : (n8nData[0].details_funds || 'Invalid document.'));
         const degreeErr = typeof respDegree === 'string' ? respDegree : 
-                         (degreeOk ? '' : (n8nData.details_degree || 'Invalid document.'));
+                         (degreeOk ? '' : (n8nData[0].details_degree || 'Invalid document.'));
 
         const allValid = passportOk && fundsOk && degreeOk;
         
@@ -231,9 +234,9 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           
           // Salvar dados no localStorage para manual review
           const errorData = {
-            passport: passportErr || 'Invalid document.',
-            funds_proof: fundsErr || 'Invalid document.',
-            diploma: degreeErr || 'Invalid document.',
+            passport: getFormattedErrorMessage(passportErr || 'Invalid document.', 'passport'),
+            funds_proof: getFormattedErrorMessage(fundsErr || 'Invalid document.', 'fundsProof'),
+            diploma: getFormattedErrorMessage(degreeErr || 'Invalid document.', 'diploma'),
           };
           
           console.log('Saving to localStorage for manual review:');
@@ -257,13 +260,56 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           });
         }
       } else {
+        // Resposta inesperada ou erro no n8n - tratar como erro e ir para manual review
+        console.error('Unexpected n8n response:', webhookResult);
+        
+        // Salvar documentos para revisão manual
+        await supabase
+          .from('user_profiles')
+          .update({
+            documents: uploadedDocs,
+            documents_uploaded: true,
+            documents_status: 'under_review',
+          })
+          .eq('user_id', user.id);
+
+        // Salvar dados no localStorage para manual review
+        const errorData = {
+          passport: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'passport'),
+          funds_proof: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'fundsProof'),
+          diploma: getFormattedErrorMessage('Document analysis failed. Please review manually.', 'diploma'),
+        };
+        
+        localStorage.setItem('documentAnalysisErrors', JSON.stringify(errorData));
+        localStorage.setItem('documentUploadedDocs', JSON.stringify(uploadedDocs));
+        
         setAnalyzing(false);
-        setError('Unexpected response from document analysis. Please try again.');
+        setError('Document analysis failed. Please continue to manual review.');
+        setFieldErrors(errorData);
+        
+        // Limpar todos os arquivos para permitir nova seleção
+        setFiles({ passport: null, diploma: null, funds_proof: null });
       }
     } catch (e: any) {
+      console.error('Upload error:', e);
       setUploading(false);
       setAnalyzing(false);
-      setError(e.message || 'Upload failed');
+      
+      // Em caso de erro, definir erros genéricos para forçar manual review
+      const genericErrors = {
+        passport: getFormattedErrorMessage('Upload failed. Please review manually.', 'passport'),
+        funds_proof: getFormattedErrorMessage('Upload failed. Please review manually.', 'fundsProof'),
+        diploma: getFormattedErrorMessage('Upload failed. Please review manually.', 'diploma'),
+      };
+      
+      setFieldErrors(genericErrors);
+      setError(e.message || 'Upload failed. Please continue to manual review.');
+      
+      // Salvar dados de erro no localStorage para manual review
+      if (user) {
+        localStorage.setItem('documentAnalysisErrors', JSON.stringify(genericErrors));
+        localStorage.setItem('documentUploadedDocs', JSON.stringify([]));
+      }
     }
   };
 
@@ -317,7 +363,8 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               .insert({ 
                 student_id: profile.id, 
                 scholarship_id: scholarshipId, 
-                status: 'pending' 
+                status: 'pending',
+                student_process_type: localStorage.getItem('studentProcessType') || null
               })
               .select('id')
               .single();
@@ -410,8 +457,6 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       // Se documentos já aprovados, vai direto para pagamento
       if (documentsApproved) {
         navigate('/student/dashboard/application-fee');
-      } else {
-        setShowDocumentSection(true);
       }
     } catch (e) {
       console.error('Error in saveStudentType:', e);
@@ -430,6 +475,145 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
 
   // Verificar se todos os arquivos foram selecionados
   const allFilesSelected = DOCUMENT_TYPES.every((doc) => files[doc.key]);
+
+  // Função para detectar se o erro é sobre documentos não estarem em inglês
+  const isLanguageError = (errorMessage: string): boolean => {
+    const languageErrorKeywords = [
+      'not in english',
+      'not in english.',
+      'document is not in english',
+      'document is not in english.',
+      'not in english language',
+      'not in english language.',
+      'language is not english',
+      'language is not english.',
+      'not written in english',
+      'not written in english.',
+      'not in the english language',
+      'not in the english language.',
+      'the document is not in english',
+      'the document is not in english.',
+      'this document is not in english',
+      'this document is not in english.',
+      'provide an english version',
+      'english version or certified translation',
+      'please provide an english version',
+      'please provide an english version or certified translation',
+      'all documents must be in english',
+      'document must be in english'
+    ];
+    
+    return languageErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
+  // Função para detectar se o erro é sobre acesso a dados do documento
+  const isAccessError = (errorMessage: string): boolean => {
+    const accessErrorKeywords = [
+      'unable to access',
+      'unable to access diploma data',
+      'unable to access passport data',
+      'unable to access funds data',
+      'cannot access',
+      'cannot access diploma data',
+      'cannot access passport data',
+      'cannot access funds data',
+      'access denied',
+      'failed to access',
+      'failed to access diploma data',
+      'failed to access passport data',
+      'failed to access funds data'
+    ];
+    
+    return accessErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
+  // Função para detectar se o erro é sobre dados de fundos não disponíveis
+  const isFundsDataError = (errorMessage: string): boolean => {
+    const fundsDataErrorKeywords = [
+      'dados de extrato não disponíveis',
+      'funds statement data not available',
+      'los datos del extracto bancario no están disponibles',
+      'extrato não disponível',
+      'extract not available',
+      'extracto no disponible',
+      'dados de fundos não disponíveis',
+      'fund data not available',
+      'datos de fondos no disponibles'
+    ];
+    
+    return fundsDataErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
+  // Função para detectar se o erro é sobre campo 'moeda' não encontrado
+  const isCurrencyFieldError = (errorMessage: string): boolean => {
+    const currencyFieldErrorKeywords = [
+      'campo \'moeda\' não foi encontrado',
+      'field \'moeda\' not found',
+      'campo \'currency\' not found',
+      'field \'currency\' not found',
+      'moeda não foi encontrado',
+      'currency not found',
+      'moeda não encontrado',
+      'currency field not found',
+      'campo moeda não encontrado',
+      'currency field missing',
+      'moeda field missing',
+      'campo de moeda não encontrado',
+      'currency field not available',
+      'moeda field not available'
+    ];
+    
+    return currencyFieldErrorKeywords.some(keyword => 
+      errorMessage.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
+
+
+  // Função para obter mensagem de erro formatada
+  const getFormattedErrorMessage = (errorMessage: string, documentType: string): string => {
+    if (isLanguageError(errorMessage)) {
+      // Mensagens específicas para cada tipo de documento
+      if (documentType === 'diploma') {
+        return "Your high school diploma must be in English. Please provide an English version or certified translation.";
+      } else if (documentType === 'funds_proof') {
+        return "Your bank statement must be in English. Please provide an English version or certified translation.";
+      } else if (documentType === 'passport') {
+        return "Your passport must be in English. Please provide an English version or certified translation.";
+      }
+      
+      // Fallback para outros tipos
+      return t('studentDashboard.documentsAndScholarshipChoice.languageError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    
+    if (isAccessError(errorMessage)) {
+      return t('studentDashboard.documentsAndScholarshipChoice.accessError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    
+    if (isFundsDataError(errorMessage)) {
+      return t('studentDashboard.documentsAndScholarshipChoice.fundsDataError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    
+    if (isCurrencyFieldError(errorMessage)) {
+      return t('studentDashboard.documentsAndScholarshipChoice.currencyFieldError', { 
+        documentType: t(`studentDashboard.documentsAndScholarshipChoice.${documentType}`) 
+      });
+    }
+    
+    return errorMessage;
+  };
 
   if (!userProfile) return null;
 
@@ -566,13 +750,25 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
             <div className="text-center mb-6 sm:mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
                 {t('studentDashboard.documentsAndScholarshipChoice.step2Title')}
-              </h2>
-              <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto mb-2 px-2">
-                {t('studentDashboard.documentsAndScholarshipChoice.step2Description')}
-              </p>
-              <p className="text-xs sm:text-sm text-slate-500 px-2">
-                <strong>{t('studentDashboard.documentsAndScholarshipChoice.step2Note')}</strong>
-              </p>
+              </h2>              
+              {/* Seção Importante com destaque amarelo e link do parceiro */}
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+                <p className="text-sm text-amber-800 font-bold mb-2">
+                  {t('studentDashboard.documentsAndScholarshipChoice.step2Important').split('.')[0]}.
+                </p>
+                <p className="text-sm text-amber-700 leading-relaxed">
+                  {t('studentDashboard.documentsAndScholarshipChoice.step2Important').split('.')[1]?.trim()}{' '}
+                  <a 
+                    href={`https://${t('studentDashboard.documentsAndScholarshipChoice.step2PartnerUrl')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-600 hover:text-amber-800 underline font-medium transition-colors"
+                  >
+                    {t('studentDashboard.documentsAndScholarshipChoice.step2PartnerUrl')}
+                  </a>
+                  .
+                </p>
+              </div>
             </div>
 
             {/* Document Upload List */}
@@ -590,11 +786,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                   }`}>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                       <div className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full flex-shrink-0 ${
-                        hasError ? 'bg-red-100' :
+                        hasError ? 'bg-yellow-100' :
                         hasFile ? 'bg-green-100' : 'bg-slate-100'
                       }`}>
                         <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                          hasError ? 'text-red-600' :
+                          hasError ? 'text-yellow-600' :
                           hasFile ? 'text-green-600' : 'text-slate-600'
                         }`} />
                       </div>
@@ -628,13 +824,57 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                             </div>
                           )}
                           
-                          {hasError && (
-                            <div className="flex items-start text-xs sm:text-sm text-red-600 bg-red-50 p-2 rounded-lg">
-                              <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 mr-2 mt-0.5 flex-shrink-0" />
-                              <span className="flex items-center justify-center">
-                                <span className="break-words">{hasError}</span>
+                          {hasError ? (
+                            <div className={`flex items-center text-xs sm:text-sm p-2 rounded-lg ${
+                              isLanguageError(hasError) 
+                                ? 'text-amber-700 bg-amber-50 border border-amber-200' 
+                                : isAccessError(hasError)
+                                ? 'text-blue-700 bg-blue-50 border border-blue-200'
+                                : isFundsDataError(hasError)
+                                ? 'text-green-700 bg-green-50 border border-green-200'
+                                : isCurrencyFieldError(hasError)
+                                ? 'text-purple-700 bg-purple-50 border border-purple-200'
+                                : 'text-yellow-600 bg-yellow-50 border border-yellow-200'
+                            }`}>
+                              <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
+                                isLanguageError(hasError) 
+                                  ? 'bg-amber-500' 
+                                  : isAccessError(hasError)
+                                  ? 'bg-blue-500'
+                                  : isFundsDataError(hasError)
+                                  ? 'bg-green-500'
+                                  : isCurrencyFieldError(hasError)
+                                  ? 'bg-purple-500'
+                                  : 'bg-yellow-500'
+                              }`}></div>
+                              <span className="break-words">
+                                {isLanguageError(hasError) 
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.languageError')
+                                  : isAccessError(hasError)
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.accessError')
+                                  : isFundsDataError(hasError)
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.fundsDataError')
+                                  : isCurrencyFieldError(hasError)
+                                  ? t('studentDashboard.documentsAndScholarshipChoice.currencyFieldError')
+                                  : hasError
+                                }
                               </span>
                             </div>
+                          ) : (
+                            <>
+                              {/* Mensagem específica para comprovação de fundos */}
+                              {doc.key === 'funds_proof' && (
+                                <div className="mb-2">
+                                  <div className="flex items-center">
+                                    
+                                    <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 flex items-center rounded-md p-2">
+                                    <DollarSign className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                                      <span className="font-medium">Minimum balance required:</span> <span className="font-semibold">$22,000 USD</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -644,9 +884,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               })}
             </div>
 
+
+
             {/* Upload Button */}
             <div className="text-center flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">
-              {Object.values(fieldErrors).some(Boolean) && (
+              {(Object.values(fieldErrors).some(Boolean) || error) && (
                 <button
                   onClick={() => navigate('/student/dashboard/manual-review')}
                   disabled={analyzing}
@@ -679,11 +921,11 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                 )}
               </button>
               
-              {error && (
-                <div className="mt-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+              {/* {error && (
+                <div className="mt-4 text-sm text-yellow-600 bg-yellow-50 p-3 rounded-lg">
                   {error}
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         )}

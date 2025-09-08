@@ -31,6 +31,8 @@ import { PreCheckoutModal } from '../../components/PreCheckoutModal';
 import FavoriteButton from '../../components/FavoriteButton';
 import FavoritesFilter from '../../components/FavoritesFilter';
 import PaymentRequiredBlocker from '../../components/PaymentRequiredBlocker';
+import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlockedMessage';
+import { useApplicationFeeStatus } from '../../hooks/useApplicationFeeStatus';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -42,6 +44,14 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   applications
 }) => {
   const { t } = useTranslation();
+  
+  // Hook para verificar se usuário já tem application fee paga
+  const { 
+    hasPaidApplicationFee, 
+    committedUniversity, 
+    committedScholarship, 
+    loading: applicationFeeLoading 
+  } = useApplicationFeeStatus();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
@@ -302,8 +312,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   }, [userProfile?.has_paid_selection_process_fee, refetchUserProfile]);
 
-  // Check if user needs to pay selection process fee
-  if (userProfile && !userProfile.has_paid_selection_process_fee) {
+  // Check if user needs to pay selection process fee (only for students)
+  if (user && user.role === 'student' && userProfile && !userProfile.has_paid_selection_process_fee) {
     return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
   }
 
@@ -376,7 +386,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       case 'online':
         return t('studentDashboard.findScholarships.filters.online');
       case 'in_person':
-        return t('studentDashboard.findScholarships.scholarshipCard.onCampus');
+        return t('studentDashboard.findScholarships.scholarshipCard.inPerson');
       case 'hybrid':
         return t('studentDashboard.findScholarships.filters.hybrid');
       default:
@@ -384,6 +394,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     }
   };
 
+  // Função para calcular dias até o deadline
   const getDaysUntilDeadline = (deadline: string) => {
     const today = new Date();
     const deadlineDate = new Date(deadline);
@@ -392,11 +403,12 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     return diffDays;
   };
 
+  // Função para obter status e cor do deadline
   const getDeadlineStatus = (deadline: string) => {
     const days = getDaysUntilDeadline(deadline);
     if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
     if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50' };
-    if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50' };
+    if (days <= 30) return { status: 'warning', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   };
 
@@ -689,6 +701,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     return !isInFeatured;
   });
 
+  // Se usuário já tem application fee paga, mostrar mensagem de bloqueio
+  if (!applicationFeeLoading && hasPaidApplicationFee) {
+    return (
+      <ApplicationFeeBlockedMessage 
+        committedUniversity={committedUniversity}
+        committedScholarship={committedScholarship}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 pt-4 sm:pt-6 md:pt-10 px-4 sm:px-6 lg:px-0 pb-8 sm:pb-12" data-testid="scholarship-list">
       {/* Header */}
@@ -769,7 +791,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
               </select>
             </div>
 
-            {/* Delivery Mode Filter */}
+            {/* Course Modality Filter */}
             <div>
               <label htmlFor="delivery-mode-filter" className="block text-xs font-medium text-slate-700 mb-1 md:hidden">{t('studentDashboard.findScholarships.filters.studyMode')}</label>
               <select
@@ -1093,6 +1115,22 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                               ${formatAmount(scholarship.original_value_per_credit || scholarship.per_credit_cost || 'N/A')}
                             </span>
                           </div>
+                          
+                          {/* Application Fee Information */}
+                          <div className="pt-2 border-t border-slate-200">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                              <span className="text-sm font-bold text-purple-600">
+                                ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400 text-center mt-1">
+                              {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                                t('scholarshipsPage.scholarshipCard.customFee') : 
+                                t('scholarshipsPage.scholarshipCard.standardFee')
+                              }
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1287,8 +1325,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                 )}
                 
                 {/* Favorite Button */}
-                <div className={`absolute top-3 sm:top-4 z-20 ${
-                  scholarship.is_exclusive ? 'right-20 sm:right-24' : 'right-3 sm:right-4'
+                <div className={`absolute top-3 z-20 ${
+                  scholarship.is_exclusive ? 'right-4 sm:right-4 sm:top-12' : 'right-3 sm:right-4 top-3'
                 }`}>
                   <FavoriteButton
                     isFavorite={isFavorite(scholarship.id)}
@@ -1323,7 +1361,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
                   {/* Program Details */}
                   <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    {/* Delivery Mode */}
+                    {/* Course Modality */}
                     {scholarship.delivery_mode && (
                       <div className="flex items-center justify-between p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex items-center">
@@ -1384,6 +1422,22 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                       <div className="flex items-center justify-between text-xs text-slate-500 pt-1 sm:pt-2 border-t border-slate-200">
                         <span>{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
                         <span>${formatAmount(scholarship.original_value_per_credit)}</span>
+                      </div>
+                      
+                      {/* Application Fee Information */}
+                      <div className="pt-2 border-t border-slate-200">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                          <span className="font-semibold text-purple-600">
+                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-400 text-center mt-1">
+                          {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                            t('scholarshipsPage.scholarshipCard.customFee') : 
+                            t('scholarshipsPage.scholarshipCard.standardFee')
+                          }
+                        </div>
                       </div>
                     </div>
                   </div>

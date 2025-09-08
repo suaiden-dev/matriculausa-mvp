@@ -1,38 +1,3 @@
-/*
-PROMPT PARA IA DESIGNER:
-
-Você é um designer de UI/UX especializado em landing pages para empresas de educação internacional. 
-Precisa melhorar o design desta página "For Universities" seguindo estas diretrizes:
-
-OBJETIVO: Página para universidades se tornarem parceiras de uma plataforma de recrutamento internacional
-
-MELHORIAS SOLICITADAS:
-1. Layout mais moderno e clean
-2. Melhor hierarquia visual
-3. Micro-interações e animações sutis
-4. Melhor uso de espaçamento e tipografia
-5. Cards mais atrativos e interativos
-6. Gradientes e cores mais sofisticados
-7. Melhor responsividade mobile
-8. Elementos visuais mais premium
-
-RESTRIÇÕES:
-- NÃO altere o conteúdo/texto existente
-- Mantenha as cores da marca (#05294E e #D0151C)
-- Preserve toda a funcionalidade existente
-- Mantenha a estrutura de seções atual
-
-FOQUE EM:
-- Animações CSS/JS sutis
-- Melhor uso de sombras e profundidade
-- Cards com hover effects mais elegantes
-- Tipografia mais moderna
-- Layout mais dinâmico
-- Elementos visuais premium
-
-NÃO SABE O CONTEÚDO ESPECÍFICO - FOQUE APENAS NO DESIGN VISUAL
-*/
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';

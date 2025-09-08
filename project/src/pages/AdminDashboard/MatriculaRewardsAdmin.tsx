@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   CreditCard,
   Banknote,
-  User
+  User,
+  GraduationCap
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -107,7 +108,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
   const [stats, setStats] = useState<MatriculaRewardsStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'referrers' | 'activity' | 'moderation' | 'payouts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'referrers' | 'activity' | 'moderation' | 'payouts' | 'students'>('overview');
   // const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState('30d');
   const { user } = useAuth();
@@ -116,6 +117,46 @@ const MatriculaRewardsAdmin: React.FC = () => {
   // Payouts state
   const [payouts, setPayouts] = useState<any[]>([]);
   const [loadingPayouts, setLoadingPayouts] = useState<boolean>(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  
+  // Payout filters state
+  const [payoutFilters, setPayoutFilters] = useState({
+    status: 'all',
+    method: 'all',
+    dateRange: 'all'
+  });
+  
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Students state
+  const [students, setStudents] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState<boolean>(false);
+
+  // Students filters state
+  const [studentFilters, setStudentFilters] = useState({
+    affiliateCodeStatus: 'all', // 'all', 'has_code', 'no_code'
+    balanceRange: 'all', // 'all', 'positive', 'zero', 'high' (>1000)
+    referralRange: 'all', // 'all', 'none', 'low' (1-5), 'medium' (6-20), 'high' (>20)
+    activityRange: 'all' // 'all', '7d', '30d', '90d', '1y'
+  });
+
+  // Students search state
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+
+  // Students pagination state
+  const [currentStudentsPage, setCurrentStudentsPage] = useState(1);
+  const [studentsPerPage, setStudentsPerPage] = useState(15);
+
+  // Modal states
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
+  const [selectedPayoutId, setSelectedPayoutId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
 
   const formatActivityDate = (iso?: string | null) => {
     if (!iso) return '—';
@@ -235,6 +276,106 @@ const MatriculaRewardsAdmin: React.FC = () => {
     return new Date(now.getTime() - 30*24*60*60*1000);
   };
 
+  // Filter payouts based on current filters and search term
+  const filteredPayouts = payouts.filter(request => {
+    // Search term filtering
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm || 
+      (request.universities?.name && request.universities.name.toLowerCase().includes(searchLower)) ||
+      (request.payout_invoices?.[0]?.invoice_number && request.payout_invoices[0].invoice_number.toLowerCase().includes(searchLower)) ||
+      (request.id && request.id.toLowerCase().includes(searchLower)) ||
+      (request.payout_method && request.payout_method.toLowerCase().includes(searchLower)) ||
+      (request.status && request.status.toLowerCase().includes(searchLower));
+
+    // Status filtering
+    const matchesStatus = payoutFilters.status === 'all' || request.status === payoutFilters.status;
+    
+    // Method filtering
+    const matchesMethod = payoutFilters.method === 'all' || request.payout_method === payoutFilters.method;
+    
+    // Date range filtering
+    const matchesDateRange = payoutFilters.dateRange === 'all' || 
+      (request.created_at && new Date(request.created_at) >= getRangeStart(payoutFilters.dateRange));
+
+    return matchesSearch && matchesStatus && matchesMethod && matchesDateRange;
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredPayouts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPayouts = filteredPayouts.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, payoutFilters.status, payoutFilters.method, payoutFilters.dateRange]);
+
+  // Students pagination logic
+  const filteredStudents = students.filter(student => {
+    const searchLower = studentSearchTerm.toLowerCase();
+    const matchesSearch = !studentSearchTerm || 
+      (student.full_name && student.full_name.toLowerCase().includes(searchLower)) ||
+      (student.user_email && student.user_email.toLowerCase().includes(searchLower)) ||
+      (student.affiliate_code && student.affiliate_code.toLowerCase().includes(searchLower));
+
+         // Affiliate Code Status filtering
+     const hasAffiliateCode = !!student.affiliate_code;
+     const matchesAffiliateCodeStatus = studentFilters.affiliateCodeStatus === 'all' || 
+       (studentFilters.affiliateCodeStatus === 'has_code' && hasAffiliateCode) ||
+       (studentFilters.affiliateCodeStatus === 'no_code' && !hasAffiliateCode);
+
+    // Balance Range filtering
+    const currentBalance = Number(student.current_balance || 0);
+    let matchesBalanceRange = true;
+    if (studentFilters.balanceRange === 'positive') {
+      matchesBalanceRange = currentBalance > 0;
+    } else if (studentFilters.balanceRange === 'zero') {
+      matchesBalanceRange = currentBalance === 0;
+    } else if (studentFilters.balanceRange === 'high') {
+      matchesBalanceRange = currentBalance > 1000;
+    }
+
+    // Referral Range filtering
+    const totalReferrals = Number(student.total_referrals || 0);
+    let matchesReferralRange = true;
+    if (studentFilters.referralRange === 'none') {
+      matchesReferralRange = totalReferrals === 0;
+    } else if (studentFilters.referralRange === 'low') {
+      matchesReferralRange = totalReferrals >= 1 && totalReferrals <= 5;
+    } else if (studentFilters.referralRange === 'medium') {
+      matchesReferralRange = totalReferrals >= 6 && totalReferrals <= 20;
+    } else if (studentFilters.referralRange === 'high') {
+      matchesReferralRange = totalReferrals > 20;
+    }
+
+    // Activity Range filtering
+    const lastActivityDate = student.last_activity ? new Date(student.last_activity) : null;
+    let matchesActivityRange = true;
+    if (studentFilters.activityRange === '7d') {
+      matchesActivityRange = lastActivityDate ? lastActivityDate >= new Date(Date.now() - 7*24*60*60*1000) : false;
+    } else if (studentFilters.activityRange === '30d') {
+      matchesActivityRange = lastActivityDate ? lastActivityDate >= new Date(Date.now() - 30*24*60*60*1000) : false;
+    } else if (studentFilters.activityRange === '90d') {
+      matchesActivityRange = lastActivityDate ? lastActivityDate >= new Date(Date.now() - 90*24*60*60*1000) : false;
+    } else if (studentFilters.activityRange === '1y') {
+      matchesActivityRange = lastActivityDate ? lastActivityDate >= new Date(Date.now() - 365*24*60*60*1000) : false;
+    }
+
+    return matchesSearch && matchesAffiliateCodeStatus && matchesBalanceRange && matchesReferralRange && matchesActivityRange;
+  });
+
+  // Students pagination logic
+  const totalStudentsPages = Math.ceil(filteredStudents.length / studentsPerPage);
+  const studentsStartIndex = (currentStudentsPage - 1) * studentsPerPage;
+  const studentsEndIndex = studentsStartIndex + studentsPerPage;
+  const paginatedStudents = filteredStudents.slice(studentsStartIndex, studentsEndIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentStudentsPage(1);
+  }, [studentSearchTerm, studentFilters.affiliateCodeStatus, studentFilters.balanceRange, studentFilters.referralRange, studentFilters.activityRange]);
+
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     const key = `${user.id}-${dateRange}`;
@@ -246,6 +387,9 @@ const MatriculaRewardsAdmin: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'payouts') {
       void loadPayoutRequests();
+    }
+    if (activeTab === 'students') {
+      void loadStudentsData();
     }
   }, [activeTab]);
 
@@ -274,13 +418,28 @@ const MatriculaRewardsAdmin: React.FC = () => {
   const approve = async (id: string) => {
     try { await PayoutService.adminApprove(id, user!.id); await loadPayoutRequests(); } catch(e:any){ setError(e.message); }
   };
-  const markPaid = async (id: string) => {
-    const ref = prompt('Payment reference (optional)') || undefined;
-    try { await PayoutService.adminMarkPaid(id, user!.id, ref); await loadPayoutRequests(); } catch(e:any){ setError(e.message); }
+  const markPaid = async (id: string, reference?: string) => {
+    try { 
+      await PayoutService.adminMarkPaid(id, user!.id, reference); 
+      await loadPayoutRequests(); 
+      setShowMarkPaidModal(false);
+      setSelectedPayoutId(null);
+      setPaymentReference('');
+    } catch(e:any){ 
+      setError(e.message); 
+    }
   };
-  const reject = async (id: string) => {
-    const reason = prompt('Reason to reject') || 'No reason';
-    try { await PayoutService.adminReject(id, user!.id, reason); await loadPayoutRequests(); } catch(e:any){ setError(e.message); }
+  
+  const reject = async (id: string, reason: string) => {
+    try { 
+      await PayoutService.adminReject(id, user!.id, reason); 
+      await loadPayoutRequests(); 
+      setShowRejectModal(false);
+      setSelectedPayoutId(null);
+      setRejectReason('');
+    } catch(e:any){ 
+      setError(e.message); 
+    }
   };
 
   const loadMatriculaRewardsStats = async () => {
@@ -465,6 +624,26 @@ const MatriculaRewardsAdmin: React.FC = () => {
     return csvRows.join('\n');
   };
 
+  const loadStudentsData = async () => {
+    try {
+      setLoadingStudents(true);
+      setError(null);
+      
+      const { data, error } = await supabase
+        .rpc('export_matricula_rewards_data', { date_range: dateRange });
+      
+      if (error) throw error;
+      
+      setStudents(data || []);
+    } catch (err: any) {
+      console.error('[Admin] Failed to load students data:', err);
+      setError('Failed to load students data');
+      setStudents([]);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
   // Future: moderation handlers can be re-enabled when UI is added
 
   if (!user || user.role !== 'admin') {
@@ -561,10 +740,8 @@ const MatriculaRewardsAdmin: React.FC = () => {
           <nav className="-mb-px flex space-x-8">
               {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
-              { id: 'referrers', label: 'Top Referrers', icon: Crown },
-              { id: 'activity', label: 'Recent Activity', icon: Activity },
               { id: 'payouts', label: 'Payout Requests', icon: DollarSign },
-              { id: 'moderation', label: 'Moderation', icon: Shield }
+              { id: 'students', label: 'Students', icon: GraduationCap },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -589,51 +766,46 @@ const MatriculaRewardsAdmin: React.FC = () => {
         {activeTab === 'overview' && stats && (
           <div className="space-y-8">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center justify-between">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-6">System Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Total Users</p>
-                    <p className="text-3xl font-bold text-slate-900">{stats.totalUsers.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.totalUsers.toLocaleString()}</p>
                   </div>
                   <div className="bg-blue-100 p-3 rounded-lg">
-                    <Users className="h-6 w-6 text-blue-600" />
+                    <Users className="h-5 w-5 text-blue-600" />
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Total Referrals</p>
-                    <p className="text-3xl font-bold text-slate-900">{stats.totalReferrals.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.totalReferrals.toLocaleString()}</p>
                   </div>
                   <div className="bg-green-100 p-3 rounded-lg">
-                    <TrendingUp className="h-6 w-6 text-green-600" />
+                    <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Coins Spent</p>
-                    <p className="text-3xl font-bold text-slate-900">{stats.totalCoinsSpent.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.totalCoinsSpent.toLocaleString()}</p>
                   </div>
                   <div className="bg-red-100 p-3 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-red-600" />
+                    <DollarSign className="h-5 w-5 text-red-600" />
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Coins Earned</p>
-                    <p className="text-3xl font-bold text-slate-900">{stats.totalCoinsEarned.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.totalCoinsEarned.toLocaleString()}</p>
                   </div>
                   <div className="bg-yellow-100 p-3 rounded-lg">
-                    <Award className="h-6 w-6 text-yellow-600" />
+                    <Award className="h-5 w-5 text-yellow-600" />
                   </div>
                 </div>
               </div>
@@ -852,107 +1024,8 @@ const MatriculaRewardsAdmin: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'referrers' && stats && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-            <div className="p-6 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900">Top Referrers</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Referrals</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Earnings</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Conversion Rate</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
-                  {stats.topReferrers.map((referrer, idx) => (
-                    <tr key={`${referrer.userId || referrer.email || 'ref'}-${idx}`}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-slate-900">{referrer.fullName}</div>
-                          <div className="text-sm text-slate-500">{referrer.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                        {referrer.totalReferrals}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                        {Number(referrer.totalEarnings ?? 0).toLocaleString()} coins
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                        {Number(referrer.conversionRate ?? 0).toFixed(1)}%
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button 
-                          className="text-purple-600 hover:text-purple-900"
-                          aria-label="View referrer details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'activity' && stats && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-            <div className="p-6 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900">Recent Activity</h3>
-            </div>
-            <div className="divide-y divide-slate-200">
-              {stats.recentActivity.map((activity, idx) => {
-                const title =
-                  activity.type === 'referral'
-                    ? 'Referral credit'
-                    : activity.type === 'redemption'
-                    ? 'Reward redemption'
-                    : activity.type === 'share'
-                    ? 'Referral link shared'
-                    : 'Referral link click';
-                return (
-                  <div key={`${activity.id || activity.createdAt}-${idx}`} className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${
-                          activity.type === 'referral' ? 'bg-green-100' :
-                          activity.type === 'redemption' ? 'bg-purple-100' :
-                          activity.type === 'share' ? 'bg-blue-100' : 'bg-yellow-100'
-                        }`}>
-                          {activity.type === 'referral' && <TrendingUp className="h-4 w-4 text-green-600" />}
-                          {activity.type === 'redemption' && <Award className="h-4 w-4 text-purple-600" />}
-                          {activity.type === 'share' && <Activity className="h-4 w-4 text-blue-600" />}
-                          {activity.type === 'click' && <Eye className="h-4 w-4 text-yellow-600" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{title}</p>
-                          <p className="text-xs text-slate-500">{activity.fullName}</p>
-                          {activity.description && (
-                            <p className="text-sm text-slate-500">{activity.description}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        {typeof activity.amount === 'number' && (
-                          <p className="text-sm font-medium text-slate-900">{activity.amount} coins</p>
-                        )}
-                        <p className="text-sm text-slate-500">{formatActivityDate(activity.createdAt)}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
+        
         {activeTab === 'payouts' && (
           <div className="space-y-6">
             {/* Header */}
@@ -972,15 +1045,114 @@ const MatriculaRewardsAdmin: React.FC = () => {
               </div>
             </div>
 
+            {/* Search and Filters */}
+            <div className="bg-white border border-slate-200 rounded-lg p-4">
+              <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="flex items-center space-x-3">
+                  <div className="flex-1 max-w-md">
+                    <label htmlFor="search" className="sr-only">Search payout requests</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <input
+                        id="search"
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search by university name, invoice number, ID, method, or status..."
+                        className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      />
+                      {searchTerm && (
+                        <button
+                          onClick={() => setSearchTerm('')}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        >
+                          <svg className="h-4 w-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="text-sm text-slate-600">
+                    <span className="font-medium">{filteredPayouts.length}</span> of <span className="font-medium">{payouts.length}</span> requests
+                  </div>
+                </div>
+
+                {/* Filters Row */}
+                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-200">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-slate-700">Status:</label>
+                    <select
+                      value={payoutFilters.status}
+                      onChange={(e) => setPayoutFilters(prev => ({ ...prev, status: e.target.value }))}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="paid">Paid</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-slate-700">Method:</label>
+                    <select
+                      value={payoutFilters.method}
+                      onChange={(e) => setPayoutFilters(prev => ({ ...prev, method: e.target.value }))}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="all">All Methods</option>
+                      <option value="zelle">Zelle</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="stripe">Stripe</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-slate-700">Period:</label>
+                    <select
+                      value={payoutFilters.dateRange}
+                      onChange={(e) => setPayoutFilters(prev => ({ ...prev, dateRange: e.target.value }))}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="7d">Last 7 days</option>
+                      <option value="30d">Last 30 days</option>
+                      <option value="90d">Last 90 days</option>
+                      <option value="1y">Past year</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setPayoutFilters({ status: 'all', method: 'all', dateRange: 'all' });
+                      setSearchTerm('');
+                    }}
+                    className="px-3 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {['pending', 'approved', 'paid', 'rejected'].map((status) => {
-                const count = payouts.filter((r: any) => r.status === status).length;
+                const count = filteredPayouts.filter((r: any) => r.status === status).length;
                 const config = getPayoutStatusConfig(status);
                 const Icon = config.icon;
                 
                 return (
-                  <div key={status} className={`${config.bgColor} border border-slate-200 rounded-xl p-4`}>
+                  <div key={status} className={`bg-white border border-slate-200 rounded-xl p-4`}>
                     <div className="flex items-center justify-between">
                       <div>
                                                  <p className="text-sm font-medium text-slate-600 capitalize">
@@ -1007,7 +1179,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
                   <p className="text-slate-600">Loading payout requests...</p>
                 </div>
               </div>
-            ) : payouts.length === 0 ? (
+            ) : filteredPayouts.length === 0 ? (
               <div className="text-center py-12">
                 <div className="bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                   <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1015,166 +1187,712 @@ const MatriculaRewardsAdmin: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 mb-2">
-                  No requests found
+                  {payouts.length === 0 ? 'No requests found' : 'No requests match your search and filters'}
                 </h3>
                 <p className="text-slate-600">
-                  University payout requests will appear here
+                  {payouts.length === 0 ? 'University payout requests will appear here' : 'Try adjusting your search terms or filters to see more results'}
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {payouts.map((request: any) => {
-                  const statusConfig = getPayoutStatusConfig(request.status);
-                  const methodConfig = getPayoutMethodConfig(request.payout_method);
-                  const StatusIcon = statusConfig.icon;
-                  const MethodIcon = methodConfig.icon;
-                  
-                  return (
-                    <div 
-                      key={request.id} 
-                      className={`${statusConfig.bgColor} border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200`}
-                    >
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-lg ${statusConfig.color}`}>
-                            <StatusIcon className="h-5 w-5" />
-                          </div>
-                          <div>
-                                                         <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusConfig.color}`}>
-                               {request.status === 'pending' ? 'Pending' :
-                                request.status === 'approved' ? 'Approved' :
-                                request.status === 'paid' ? 'Paid' :
-                                request.status === 'rejected' ? 'Rejected' : 'Cancelled'}
-                             </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs text-slate-500">Invoice</div>
-                          <div className="font-mono text-sm text-slate-700">
-                            {request.payout_invoices?.[0]?.invoice_number || request.id.slice(0, 8)}
-                          </div>
-                        </div>
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          University
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Invoice
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Method
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {paginatedPayouts.map((request: any) => {
+                        const statusConfig = getPayoutStatusConfig(request.status);
+                        const methodConfig = getPayoutMethodConfig(request.payout_method);
+                        const StatusIcon = statusConfig.icon;
+                        const MethodIcon = methodConfig.icon;
+                        
+                        return (
+                          <tr key={request.id} className="hover:bg-slate-50 transition-colors duration-150">
+                            {/* University */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                    <svg className="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-slate-900">
+                                    {request.universities?.name || 'University not found'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Invoice */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-slate-900 font-mono">
+                                {request.payout_invoices?.[0]?.invoice_number || request.id.slice(0, 8)}
+                              </div>
+                            </td>
+
+                            {/* Amount */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-slate-900">
+                                <div className="font-semibold">{request.amount_coins} coins</div>
+                                <div className="text-slate-500">${Number(request.amount_usd).toFixed(2)}</div>
+                              </div>
+                            </td>
+
+                            {/* Method */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className={`p-1.5 rounded-lg ${methodConfig.bgColor}`}>
+                                  <MethodIcon className={`h-4 w-4 ${methodConfig.color}`} />
+                                </div>
+                                <span className="ml-2 text-sm text-slate-900 capitalize">
+                                  {String(request.payout_method).replace('_', ' ')}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Status */}
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className={`p-1.5 rounded-lg ${statusConfig.color}`}>
+                                  <StatusIcon className="h-4 w-4" />
+                                </div>
+                                <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                                  {request.status === 'pending' ? 'Pending' :
+                                   request.status === 'approved' ? 'Approved' :
+                                   request.status === 'paid' ? 'Paid' :
+                                   request.status === 'rejected' ? 'Rejected' : 'Cancelled'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Date */}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                              {formatActivityDate(request.created_at)}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              {request.status === 'pending' && (
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => approve(request.id)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1.5 px-3 rounded-md transition-colors duration-200 flex items-center space-x-1"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>Approve</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPayoutId(request.id);
+                                      setRejectReason('');
+                                      setShowRejectModal(true);
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium py-1.5 px-3 rounded-md transition-colors duration-200 flex items-center space-x-1"
+                                  >
+                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    <span>Reject</span>
+                                  </button>
+                                </div>
+                              )}
+
+                              {request.status === 'approved' && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedPayoutId(request.id);
+                                    setPaymentReference('');
+                                    setShowMarkPaidModal(true);
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700 text-white text-xs font-medium py-1.5 px-3 rounded-md transition-colors duration-200 flex items-center space-x-1"
+                                >
+                                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  <span>Mark as Paid</span>
+                                </button>
+                              )}
+
+                              {(request.status === 'paid' || request.status === 'rejected' || request.status === 'cancelled') && (
+                                <span className="text-slate-400 text-xs">No actions available</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+              {/* Pagination Controls */}
+              {filteredPayouts.length > 0 && (
+                <div className="bg-white border border-slate-200 rounded-lg p-4 mt-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+                    {/* Items per page selector */}
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm text-slate-700">Show:</label>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                          setItemsPerPage(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                      <span className="text-sm text-slate-600">per page</span>
+                    </div>
+
+                    {/* Page info */}
+                    <div className="text-sm text-slate-600">
+                      Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                      <span className="font-medium">{Math.min(endIndex, filteredPayouts.length)}</span> of{' '}
+                      <span className="font-medium">{filteredPayouts.length}</span> results
+                    </div>
+
+                    {/* Pagination buttons */}
+                    <div className="flex items-center space-x-2">
+                      {/* Previous button */}
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+
+                      {/* Page numbers */}
+                      <div className="flex items-center space-x-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                                currentPage === pageNum
+                                  ? 'bg-[#05294E] text-white'
+                                  : 'bg-white text-slate-500 border border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
                       </div>
 
-                      {/* University Info */}
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 rounded-lg bg-slate-100">
-                          <svg className="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-900 truncate">
-                            {request.universities?.name || 'University not found'}
-                          </h3>
-                        </div>
-                      </div>
+                      {/* Next button */}
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            
+          </div>
+        )}
 
-                      {/* Amount */}
-                      <div className="bg-white rounded-lg p-4 mb-4 border border-slate-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <div className="p-1.5 rounded-lg bg-yellow-100">
-                              <svg className="h-4 w-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                              </svg>
-                            </div>
-                                                         <span className="text-sm font-medium text-slate-600">Amount</span>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-slate-900">
-                              {request.amount_coins} coins
-                            </div>
-                            <div className="text-sm text-slate-600">
-                              ${Number(request.amount_usd).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+        {activeTab === 'students' && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900">Students</h3>
+                <p className="text-slate-600 mt-2">
+                  View and manage students participating in the Matricula Rewards program.
+                </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                  <div className="text-sm text-blue-600 font-medium">
+                    Total: {students.length} students
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                      {/* Payment Method */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-2">
-                          <div className={`p-1.5 rounded-lg ${methodConfig.bgColor}`}>
-                            <MethodIcon className={`h-4 w-4 ${methodConfig.color}`} />
-                          </div>
-                          <span className="text-sm font-medium text-slate-600">Method</span>
-                        </div>
-                        <span className="text-sm font-medium text-slate-800 capitalize">
-                          {String(request.payout_method).replace('_', ' ')}
-                        </span>
-                      </div>
-
-                      {/* Payment Details */}
-                      <div className="mb-4">
-                                                 <div className="text-sm font-medium text-slate-600 mb-2">Payment Details</div>
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          {formatPaymentDetails(request.payout_details_preview, request.payout_method) || (
-                            <span className="text-slate-400 text-xs">No payment details</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Date */}
-                      <div className="flex items-center space-x-2 mb-4">
-                        <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            {/* Search and Filters */}
+            <div className="bg-white border border-slate-200 rounded-lg p-4">
+              <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="flex items-center space-x-3">
+                  <div className="flex-1 max-w-md">
+                    <label htmlFor="studentSearch" className="sr-only">Search students</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        <span className="text-sm text-slate-600">
-                          {formatActivityDate(request.created_at)}
-                        </span>
                       </div>
-
-                      {/* Actions */}
-                      {request.status === 'pending' && (
-                        <div className="flex space-x-2 pt-4 border-t border-slate-200">
-                          <button
-                            onClick={() => approve(request.id)}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                                                         <span>Approve</span>
-                          </button>
-                          <button
-                            onClick={() => reject(request.id)}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                                                         <span>Reject</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {request.status === 'approved' && (
-                        <div className="pt-4 border-t border-slate-200">
-                          <button
-                            onClick={() => markPaid(request.id)}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                                                         <span>Mark as Paid</span>
-                          </button>
-                        </div>
+                      <input
+                        id="studentSearch"
+                        type="text"
+                        value={studentSearchTerm}
+                        onChange={(e) => setStudentSearchTerm(e.target.value)}
+                        placeholder="Search by name, email, or affiliate code..."
+                        className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      />
+                      {studentSearchTerm && (
+                        <button
+                          onClick={() => setStudentSearchTerm('')}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        >
+                          <svg className="h-4 w-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+                  
+                  <div className="text-sm text-slate-600">
+                    <span className="font-medium">{filteredStudents.length}</span> of <span className="font-medium">{students.length}</span> students
+                  </div>
+                </div>
+
+                {/* Filters Row */}
+                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-200">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-slate-700">Affiliate Code:</label>
+                    <select
+                      value={studentFilters.affiliateCodeStatus}
+                      onChange={(e) => setStudentFilters(prev => ({ ...prev, affiliateCodeStatus: e.target.value }))}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="all">All</option>
+                      <option value="has_code">Has Code</option>
+                      <option value="no_code">No Code</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-slate-700">Balance:</label>
+                    <select
+                      value={studentFilters.balanceRange}
+                      onChange={(e) => setStudentFilters(prev => ({ ...prev, balanceRange: e.target.value }))}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="all">All</option>
+                      <option value="positive">Positive</option>
+                      <option value="zero">Zero</option>
+                                             <option value="high">High (&gt;1000)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-slate-700">Referrals:</label>
+                    <select
+                      value={studentFilters.referralRange}
+                      onChange={(e) => setStudentFilters(prev => ({ ...prev, referralRange: e.target.value }))}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="all">All</option>
+                      <option value="none">None</option>
+                      <option value="low">1-5</option>
+                      <option value="medium">6-20</option>
+                                             <option value="high">&gt;20</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm font-medium text-slate-700">Activity:</label>
+                    <select
+                      value={studentFilters.activityRange}
+                      onChange={(e) => setStudentFilters(prev => ({ ...prev, activityRange: e.target.value }))}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="7d">Last 7 days</option>
+                      <option value="30d">Last 30 days</option>
+                      <option value="90d">Last 90 days</option>
+                      <option value="1y">Past year</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setStudentFilters({ affiliateCodeStatus: 'all', balanceRange: 'all', referralRange: 'all', activityRange: 'all' });
+                      setStudentSearchTerm('');
+                    }}
+                    className="px-3 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Students List */}
+            {loadingStudents ? (
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Loading students data...</p>
+                </div>
+              </div>
+            ) : filteredStudents.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <GraduationCap className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">
+                  {students.length === 0 ? 'No students found' : 'No students match your search and filters'}
+                </h3>
+                <p className="text-slate-600">
+                  {students.length === 0 
+                    ? 'No students are currently participating in the Matricula Rewards program'
+                    : 'Try adjusting your search terms or filters to see more results'
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Student
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Affiliate Code
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Referrals
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Total Earned
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Total Spent
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Current Balance
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Last Activity
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-200">
+                        {paginatedStudents.map((student, idx) => (
+                          <tr key={`${student.user_email || student.full_name || 'student'}-${idx}`} className="hover:bg-slate-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-shrink-0">
+                                  <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                                    <User className="h-5 w-5 text-slate-600" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-slate-900">
+                                    {student.full_name || 'Student Name'}
+                                  </div>
+                                  <div className="text-sm text-slate-500">
+                                    {student.user_email || 'student@email.com'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-slate-900">
+                                {student.affiliate_code ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {student.affiliate_code}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">No code</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">
+                              {Number(student.total_referrals || 0).toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">
+                              <div className="flex items-center justify-end space-x-1">
+                                <Award className="h-4 w-4 text-yellow-500" />
+                                <span>{Number(student.total_earnings || 0).toLocaleString()}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">
+                              <div className="flex items-center justify-end space-x-1">
+                                <DollarSign className="h-4 w-4 text-red-500" />
+                                <span>{Number(student.total_spent || 0).toLocaleString()}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-900">
+                              <div className="flex items-center justify-end space-x-1">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  Number(student.current_balance || 0) > 0 ? 'bg-green-500' : 'bg-slate-300'
+                                }`}></div>
+                                <span className={`font-medium ${
+                                  Number(student.current_balance || 0) > 0 ? 'text-green-700' : 'text-slate-500'
+                                }`}>
+                                  {Number(student.current_balance || 0).toLocaleString()}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-slate-500">
+                              {formatActivityDate(student.last_activity)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Students Pagination Controls */}
+                {filteredStudents.length > 0 && (
+                  <div className="bg-white border border-slate-200 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+                      {/* Items per page selector */}
+                      <div className="flex items-center space-x-2">
+                        <label className="text-sm text-slate-700">Show:</label>
+                        <select
+                          value={studentsPerPage}
+                          onChange={(e) => {
+                            setStudentsPerPage(Number(e.target.value));
+                            setCurrentStudentsPage(1);
+                          }}
+                          className="px-2 py-1 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        >
+                          <option value={15}>15</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                        <span className="text-sm text-slate-600">per page</span>
+                      </div>
+
+                      {/* Page info */}
+                      <div className="text-sm text-slate-600">
+                        Showing <span className="font-medium">{studentsStartIndex + 1}</span> to{' '}
+                        <span className="font-medium">{Math.min(studentsEndIndex, filteredStudents.length)}</span> of{' '}
+                        <span className="font-medium">{filteredStudents.length}</span> students
+                      </div>
+
+                      {/* Pagination buttons */}
+                      <div className="flex items-center space-x-2">
+                        {/* Previous button */}
+                        <button
+                          onClick={() => setCurrentStudentsPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentStudentsPage === 1}
+                          className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+
+                        {/* Page numbers */}
+                        <div className="flex items-center space-x-1">
+                          {Array.from({ length: Math.min(5, totalStudentsPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalStudentsPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentStudentsPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentStudentsPage >= totalStudentsPages - 2) {
+                              pageNum = totalStudentsPages - 4 + i;
+                            } else {
+                              pageNum = currentStudentsPage - 2 + i;
+                            }
+
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => setCurrentStudentsPage(pageNum)}
+                                className={`px-3 py-2 text-sm font-medium rounded-md ${
+                                  currentStudentsPage === pageNum
+                                    ? 'bg-[#05294E] text-white'
+                                    : 'bg-white text-slate-500 border border-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Next button */}
+                        <button
+                          onClick={() => setCurrentStudentsPage(prev => Math.min(prev + 1, totalStudentsPages))}
+                          disabled={currentStudentsPage === totalStudentsPages}
+                          className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
-
-        {activeTab === 'moderation' && (
-          <MatriculaRewardsModeration />
-        )}
       </div>
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Reject Payout Request</h3>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setSelectedPayoutId(null);
+                  setRejectReason('');
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="rejectReason" className="block text-sm font-medium text-slate-700 mb-2">
+                Reason for rejection
+              </label>
+              <textarea
+                id="rejectReason"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter the reason for rejecting this payout request..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setSelectedPayoutId(null);
+                  setRejectReason('');
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded-md hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => selectedPayoutId && reject(selectedPayoutId, rejectReason || 'No reason provided')}
+                disabled={!rejectReason.trim()}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Reject Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark as Paid Modal */}
+      {showMarkPaidModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Mark Payout as Paid</h3>
+              <button
+                onClick={() => {
+                  setShowMarkPaidModal(false);
+                  setSelectedPayoutId(null);
+                  setPaymentReference('');
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="paymentReference" className="block text-sm font-medium text-slate-700 mb-2">
+                Payment Reference (Optional)
+              </label>
+              <input
+                type="text"
+                id="paymentReference"
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+                placeholder="Enter payment reference, transaction ID, or any notes..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowMarkPaidModal(false);
+                  setSelectedPayoutId(null);
+                  setPaymentReference('');
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded-md hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => selectedPayoutId && markPaid(selectedPayoutId, paymentReference || undefined)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
+              >
+                Mark as Paid
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

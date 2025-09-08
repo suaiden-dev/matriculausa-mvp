@@ -13,18 +13,21 @@ import {
   Crown,
   CheckCircle,
   User,
-  ChevronDown
+  ChevronDown,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface AffiliateAdminDashboardLayoutProps {
   user: any;
   children: React.ReactNode;
+  onRefresh?: () => void;
 }
 
 const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps> = ({
   user,
-  children
+  children,
+  onRefresh
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -163,6 +166,18 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
               >
                 <Menu className="h-5 w-5" />
               </button>
+              
+              {/* Refresh Button */}
+              {onRefresh && (
+                <button
+                  onClick={() => onRefresh()}
+                  className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  aria-label="Refresh data"
+                  title="Refresh data"
+                >
+                  <Activity className="h-5 w-5" />
+                </button>
+              )}
               
               <div className="hidden md:block">
                 <h1 className="text-2xl font-bold text-slate-900">

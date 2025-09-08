@@ -28,13 +28,13 @@ const PaymentNotifications: React.FC = () => {
       loadNotifications();
       // Set up real-time subscription for new notifications
       const channel = supabase
-        .channel('payment_notifications')
+        .channel('university_notifications')
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
-            table: 'payment_notifications',
+            table: 'university_notifications',
             filter: `university_id=eq.${university.id}`,
           },
           (payload) => {
@@ -56,6 +56,8 @@ const PaymentNotifications: React.FC = () => {
     
     try {
       setLoading(true);
+      // Temporariamente comentado até a tabela payment_notifications ser criada
+      /*
       const { data, error } = await supabase
         .from('payment_notifications')
         .select('*')
@@ -67,6 +69,11 @@ const PaymentNotifications: React.FC = () => {
       
       setNotifications(data || []);
       setUnreadCount(data?.filter(n => !n.is_read).length || 0);
+      */
+      
+      // Por enquanto, usar dados vazios
+      setNotifications([]);
+      setUnreadCount(0);
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
@@ -76,12 +83,15 @@ const PaymentNotifications: React.FC = () => {
 
   const markAsRead = async (notificationId: string) => {
     try {
+      // Temporariamente comentado até a tabela payment_notifications ser criada
+      /*
       const { error } = await supabase
         .from('payment_notifications')
         .update({ is_read: true })
         .eq('id', notificationId);
 
       if (error) throw error;
+      */
 
       setNotifications(prev =>
         prev.map(n =>
@@ -98,6 +108,8 @@ const PaymentNotifications: React.FC = () => {
     if (!university?.id) return;
     
     try {
+      // Temporariamente comentado até a tabela payment_notifications ser criada
+      /*
       const { error } = await supabase
         .from('payment_notifications')
         .update({ is_read: true })
@@ -105,6 +117,7 @@ const PaymentNotifications: React.FC = () => {
         .eq('is_read', false);
 
       if (error) throw error;
+      */
 
       setNotifications(prev =>
         prev.map(n => ({ ...n, is_read: true }))

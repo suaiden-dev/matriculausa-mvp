@@ -79,6 +79,153 @@
     "learnHowItWorks": "Learn How It Works",
     "contentLockedMessage": "This content is locked until payment is completed"
   },
+  "zelleCheckout": {
+    "title": "Zelle Payment Checkout",
+    "subtitle": "Complete your payment via Zelle transfer",
+    "backToPaymentSelection": "Back to Payment Selection",
+    "paymentSummary": "Payment Summary",
+    "paymentMethod": "Payment Method",
+    "amount": "Amount",
+    "instructions": "Payment Instructions",
+    "step1": "Step 1: Open your Zelle app",
+    "step2": "Step 2: Send payment to",
+    "step3": "Step 3: Use the exact amount shown above",
+    "step4": "Step 4: Add a reference note",
+    "uploadReceipt": "Upload Receipt",
+    "uploadReceiptDescription": "Upload your Zelle payment receipt",
+    "dragAndDrop": "Drag and drop your file here, or click to select",
+    "supportedFormats": "Supported formats: JPG, PNG, PDF (max 10MB)",
+    "removeFile": "Remove file",
+    "paymentDetails": "Payment Details",
+    "confirmationCode": "Confirmation Code",
+    "confirmationCodePlaceholder": "Enter Zelle confirmation code",
+    "paymentDate": "Payment Date",
+    "recipientEmail": "Recipient Email",
+    "recipientEmailPlaceholder": "Email used in Zelle",
+    "recipientName": "Recipient Name",
+    "recipientNamePlaceholder": "Name used in Zelle",
+    "submitPayment": "Submit Payment",
+    "processing": "Processing...",
+    "activeDiscount": "Active Discount",
+    "discountApplied": "Discount applied",
+    "originalAmount": "Original amount",
+    "discountedAmount": "Discounted amount",
+    "savings": "You saved",
+    "error": {
+      "fileRequired": "Please select a receipt file",
+      "detailsRequired": "Please fill in all payment details",
+      "uploadFailed": "Failed to upload receipt",
+      "paymentFailed": "Error processing payment"
+    },
+    "importantInfo": {
+      "title": "Important Information",
+      "securePayment": "Secure Payment",
+      "securePaymentDesc": "Your payment information is encrypted and secure",
+      "verificationRequired": "Verification Required",
+      "verificationRequiredDesc": "Payment will be verified automatically within 24 hours",
+      "zelleTransfer": "Zelle Transfer",
+      "zelleTransferDesc": "Complete the transfer and upload your confirmation",
+      "paymentInstructions": "Payment Instructions",
+      "step1": "Complete Zelle transfer to the provided recipient",
+      "step2": "Save the confirmation screenshot",
+      "step3": "Upload your confirmation screenshot",
+      "step4": "Submit for automatic verification"
+    },
+    "requirements": {
+      "title": "Important: Your payment confirmation MUST include:",
+      "confirmationCode": "Confirmation Code",
+      "confirmationCodeDesc": "The unique transaction code from Zelle",
+      "paymentDate": "Payment Date",
+      "paymentDateDesc": "When the transfer was completed",
+      "paymentAmount": "Payment Amount",
+      "paymentAmountDesc": "The exact amount transferred",
+      "recipient": "Recipient",
+      "recipientDesc": "Who received the payment"
+    },
+    "steps": {
+      "title": "Complete these steps:",
+      "step1": "Complete your Zelle transfer of",
+      "step2": "Save the payment confirmation screenshot that shows all required information",
+      "step3": "Upload your confirmation screenshot below",
+      "step4": "Submit for automatic verification (completed within 24 hours)"
+    },
+    "reviewDetails": "Review your payment details"
+  },
+  "zelleWaiting": {
+    "title": "Waiting for Verification",
+    "subtitle": "We are analyzing your payment receipt",
+    "analyzingPayment": "Analyzing your payment receipt...",
+    "waitTime": "Wait time",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "error": "Error"
+    },
+    "messages": {
+      "analyzing": "Analyzing your payment receipt...",
+      "approved": "Payment approved! 🎉",
+      "rejected": "Payment rejected ❌",
+      "error": "Error verifying payment"
+    },
+    "details": {
+      "analyzing": "Our team is verifying your receipt. This may take a few minutes.",
+      "approved": "Your payment has been verified and approved successfully.",
+      "rejected": "Your receipt was not approved. Please check that all information is visible.",
+      "error": "An error occurred while verifying your payment. Please try again."
+    },
+    "actions": {
+      "tryAgain": "Try Again",
+      "contactSupport": "Contact Support",
+      "backToCheckout": "Back to Dashboard"
+    },
+    "redirecting": "Redirecting to success page...",
+    "analysisTime": "Analysis time: ~40 seconds",
+    "paymentInfo": {
+      "title": "Payment Information",
+      "feeType": "Fee Type:",
+      "amount": "Amount:",
+      "paymentId": "Payment ID:"
+    },
+    "helpText": {
+      "default": "If the process takes longer than 2 minutes, please contact support.",
+      "underReview": "Your payment is under review. Please wait for verification."
+    }
+  },
+  "zelleSuccess": {
+    "title": "Zelle Payment Successful!",
+    "subtitle": "Thank you for your payment! Your Zelle payment has been verified and approved.",
+    "invalidStatus": {
+      "title": "Invalid Payment Status",
+      "message": "This page is only for successful Zelle payments.",
+      "returnHome": "Return Home"
+    },
+    "paymentDetails": {
+      "title": "Payment Details",
+      "subtitle": "Zelle payment verified",
+      "feeType": "Fee Type:",
+      "amount": "Amount:",
+      "status": "Status:",
+      "approved": "Approved"
+    },
+    "whatsNext": {
+      "title": "What's Next?",
+      "step1": "Your Zelle payment has been verified and approved",
+      "step2": "You can now access all features of the application process",
+      "step3": "Our team will contact you shortly with next steps"
+    },
+    "actions": {
+      "goToDashboard": "Go to Dashboard",
+      "returnHome": "Return Home"
+    },
+    "feeTypes": {
+      "i-20_control_fee": "I-20 Control Fee",
+      "application_fee": "Application Fee",
+      "scholarship_fee": "Scholarship Fee",
+      "selection_process": "Selection Process Fee",
+      "default": "Payment"
+    }
+  },
   "home": {
     "hero": {
       "title": "Your Gateway to American Universities",
@@ -137,19 +284,19 @@
         },
         "q2": {
           "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee (US$600) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "answer": "The Selection Process Fee (US$999) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         "q3": {
           "question": "What is the Scholarship Fee?",
-          "answer": "The Scholarship Fee (US$850) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+          "answer": "The Scholarship Fee (US$400) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
         },
         "q4": {
           "question": "What is the Application Fee?",
-          "answer": "The Application Fee (US$350) is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform."
+          "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform."
         },
         "q5": {
           "question": "What is the I-20 Control Fee?",
-          "answer": "The I-20 Control Fee (US$1,250) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+          "answer": "The I-20 Control Fee (US$999) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
         },
         "q6": {
           "question": "Are there any other fees I should be aware of?",
@@ -239,7 +386,7 @@
         "items": ["Academic history & achievements", "Career goals & preferences", "Financial requirements"]
       },
       "selectionFee": {
-        "title": "Pay Selection Fee ($600)",
+        "title": "Pay Selection Fee ($999)",
         "description": "Unlock all scholarships. This fee is final and non-refundable.",
         "items": ["Access to scholarship browse", "Initiate application process", "One-time fee"]
       },
@@ -249,17 +396,17 @@
         "items": ["Select multiple scholarships", "Secure document upload", "Automated initial analysis"]
       },
       "applicationFee": {
-        "title": "Pay Application Fee ($350)",
+        "title": "Pay Application Fee (As per university)",
         "description": "Confirm your university. This fee is final and non-refundable.",
         "items": ["See approved scholarships", "Confirm university choice", "Secure your spot"]
       },
       "scholarshipFee": {
-        "title": "Pay Scholarship Fee ($850)",
+        "title": "Pay Scholarship Fee ($400)",
         "description": "Get direct chat with your university. This fee is final and non-refundable.",
         "items": ["Direct chat with university", "Submit additional documents", "Final scholarship commitment"]
       },
       "i20Fee": {
-        "title": "Pay I-20 Control Fee ($1,250)",
+        "title": "Pay I-20 Control Fee ($999)",
         "description": "Needed for your F-1 visa. This fee is final and non-refundable.",
         "items": ["Essential for F-1 student visa", "Covers I-20 processing", "10-day payment window"]
       }
@@ -291,19 +438,19 @@
       },
       "q2": {
         "question": "What is the Selection Process Fee?",
-        "answer": "The Selection Process Fee (US$600) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "answer": "The Selection Process Fee (US$999) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
       },
       "q3": {
         "question": "What is the Scholarship Fee?",
-        "answer": "The Scholarship Fee (US$850) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
+        "answer": "The Scholarship Fee (US$400) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
       },
       "q4": {
         "question": "What is the Application Fee?",
-        "answer": "The Application Fee (US$350) is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform. This fee is final and non-refundable."
+        "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform. This fee is final and non-refundable."
       },
       "q5": {
         "question": "What is the I-20 Control Fee?",
-        "answer": "The I-20 Control Fee (US$1,250) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
+        "answer": "The I-20 Control Fee (US$999) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
       }
     }
   },
@@ -349,7 +496,7 @@
       "engineering": "Engineering",
       "anyField": "Any Field",
       "online": "Online",
-      "onCampus": "On Campus",
+      "inPerson": "In Person",
       "hybrid": "Hybrid",
       "opt": "OPT",
       "cpt": "CPT",
@@ -362,16 +509,16 @@
         "doctorate": "Doctorate",
         "undergraduate": "Undergraduate"
       },
-      "deliveryModes": {
+      "courseModalities": {
         "online": "Online",
-        "onCampus": "On Campus",
+        "inPerson": "In Person",
         "hybrid": "Hybrid",
         "mixed": "Mixed"
       }
     },
     "scholarshipCard": {
       "university": "University:",
-      "studyMode": "Study Mode",
+      "studyMode": "Course Modality",
       "workAuthorization": "Work Authorization",
       "financialOverview": "Financial Overview",
       "originalPrice": "Original Price",
@@ -420,9 +567,9 @@
       "programInformation": "Program Information",
       "academicLevel": "Academic Level",
       "notSpecified": "Not specified",
-      "studyMode": "Study Mode",
+      "studyMode": "Course Modality",
       "onlineLearning": "Online Learning",
-      "onCampus": "On Campus",
+      "inPerson": "In Person",
       "hybridMode": "Hybrid Mode",
       "programDuration": "Program Duration",
       "language": "Language",
@@ -619,7 +766,11 @@
       "createAccount": "Create Account",
       "creatingAccount": "Creating Account...",
       "createStudentAccount": "Create Student Account",
-      "createUniversityAccount": "Create University Account"
+      "createUniversityAccount": "Create University Account",
+      "termsNotice": "By clicking Create Account, you agree to our ",
+      "terms": "Terms of Use",
+      "and": " and ",
+      "privacyPolicy": "Privacy Policy"
     },
     "modals": {
       "verification": {
@@ -1120,6 +1271,9 @@
       "description": "Start your journey to American education by completing our comprehensive selection process.",
       "completeApplicationProcess": "Complete your application process",
       "discountApplied": "✨ You have a discount coupon applied!",
+      "sellerReferralCodeBlocked": "Matricula Rewards Blocked",
+      "sellerReferralCodeMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
+      "sellerReferralCodeInfo": "Seller referral code detected - Matricula Rewards not available",
       "startButton": "Start Selection Process"
     },
     "stats": {
@@ -1217,7 +1371,7 @@
         "active": "active",
         "academicLevel": "Academic Level",
         "fieldOfStudy": "Field of Study",
-        "studyMode": "Study Mode",
+        "studyMode": "Course Modality",
         "workAuthorization": "Work Authorization",
         "minValue": "Min Value",
         "maxValue": "Max Value",
@@ -1259,7 +1413,7 @@
         "featured": "Featured",
         "exclusive": "Exclusive",
         "university": "University:",
-        "studyMode": "Study Mode",
+        "studyMode": "Course Modality",
         "workAuthorization": "Work Authorization",
         "financialOverview": "Financial Overview",
         "originalPrice": "Original Price:",
@@ -1276,7 +1430,7 @@
         "deselect": "Deselect",
         "selectScholarship": "Select Scholarship",
         "checking": "Checking...",
-        "onCampus": "On Campus",
+        "inPerson": "In Person",
         "mixed": "Mixed",
         "more": "more"
       },
@@ -1443,9 +1597,14 @@
       "statusChangeDescription": "I am already in the US with another visa (e.g., tourist) and want to change my status to student.",
       "continueToDocuments": "Continue to Documents",
       "saving": "Saving...",
-      "step2Title": "Upload Required Documents",
-      "step2Description": "Please upload the following documents to proceed with your application process.",
-      "step2Note": "All files must be clear and legible. Each field accepts only one file.",
+      "step2Title": "Document Upload",
+      "step2Description": "Upload the required documents for your application.",
+      "step2Important": "IMPORTANT: All documents must be in English. If your documents are in another language, you can request certified translation through our partner Lush America.",
+      "step2PartnerUrl": "www.lushamerica.com",
+      "languageError": "This document is not in English. Please provide an English version or certified translation.",
+      "accessError": "Unable to access {{documentType}} data. The file may be corrupted or in an unsupported format. Please try uploading a new file.",
+      "fundsDataError": "Funds statement data not available in {{documentType}}. The document may not contain sufficient fund information or be in an unreadable format. Please try uploading a clearer document.",
+      "currencyFieldError": "Internal system error processing currency data in {{documentType}}. The document may not contain valid currency information or be in an unsupported format. Please try uploading a clearer document.",
       "passport": "Passport",
       "passportDescription": "Valid passport document",
       "diploma": "High School Diploma",
@@ -1865,6 +2024,7 @@
         "downloadTransferForm": "Download Transfer Form",
         "view": "View",
         "enrolledMessage": "You have been enrolled! Check your dashboard for next steps.",
+        "noFilesUploadedYet": "No files uploaded yet.",
         "documentRequestsDescription": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
         "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."
       },
@@ -2031,7 +2191,9 @@
     "closeModal": "Close modal",
     "securePaymentViaStripe": "Secure payment via Stripe",
     "referralCode": "Referral Code",
+    "yourReferralCode": "Your Referral Code",
     "enterReferralCode": "Enter your referral code to get a discount",
+    "usingYourReferralCode": "Using the referral code you used during registration",
     "placeholder": "Enter code",
     "validate": "Validate",
     "validating": "Validating...",
@@ -2039,6 +2201,11 @@
     "invalidCode": "Invalid or inactive code",
     "selfReferral": "You cannot use your own referral code",
     "alreadyUsedCode": "You have already used a referral code previously",
+    "sellerReferralCodeBlocked": "You cannot use Matricula Rewards codes because you have a seller referral code",
+    "sellerReferralCodeBlockedTitle": "Matricula Rewards Blocked",
+    "sellerReferralCodeBlockedMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
+    "sellerReferralCodeInfoTitle": "Seller Referral Code Detected",
+    "sellerReferralCodeInfoMessage": "You registered with a seller referral code, so Matricula Rewards codes are not available. You can still proceed with payment at the regular price.",
     "validCode": "Valid code! $50 discount applied",
     "errorValidating": "Error validating code",
     "codeAlreadyUsed": "Code already used",

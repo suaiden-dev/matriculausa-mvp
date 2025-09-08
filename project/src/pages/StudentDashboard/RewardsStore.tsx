@@ -998,13 +998,25 @@ const RewardsStore: React.FC = () => {
 
       {/* University Confirmation Modal */}
       {showConfirmation && confirmationData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="p-6 border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900">
-                  Confirm University
-                </h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl max-w-lg w-full border border-white/20">
+            {/* Header com gradiente sutil */}
+            <div className="relative p-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white rounded-t-2xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-indigo-50/30 rounded-t-2xl"></div>
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div>
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-700 bg-clip-text text-transparent">
+                      Confirm University
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {isEnrolledStudent && userUniversity && selectedUniversity?.id === userUniversity.id
+                        ? 'Your enrolled university'
+                        : 'Verify your university'
+                      }
+                    </p>
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setShowConfirmation(false);
@@ -1012,98 +1024,121 @@ const RewardsStore: React.FC = () => {
                     setSelectedUniversity(null);
                     setSelectedDiscount(null);
                   }}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center transition-all duration-200 group"
                   title="Close modal"
                 >
-                  <XCircle className="h-6 w-6" />
+                  <XCircle className="h-5 w-5 text-slate-500 group-hover:text-slate-700 transition-colors" />
                 </button>
               </div>
-              <p className="text-slate-600 mt-2">
-                {isEnrolledStudent && userUniversity && selectedUniversity?.id === userUniversity.id
-                  ? `This is your enrolled university: ${userUniversity.name}`
-                  : 'Please verify this is your university before proceeding'
-                }
-              </p>
               
               {/* Mensagem especial para alunos matriculados */}
               {isEnrolledStudent && userUniversity && selectedUniversity?.id === userUniversity.id && (
-                <div className="mt-3 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
+                <div className="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 text-green-700 px-4 py-3 rounded-xl text-sm shadow-sm">
                   <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    <span>✅ You're enrolled at this university - tuition discount will be automatically applied!</span>
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="font-medium">Tuition discount will be automatically applied!</span>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="p-6">
-              {/* University Info */}
-              <div className="bg-slate-50 rounded-lg p-4 mb-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Building className="h-6 w-6 text-blue-600" />
+            <div className="p-6 space-y-6">
+              {/* University Info - Card com design moderno */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-6 border border-slate-200/50">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/30 to-indigo-100/30 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
+                
+                <div className="relative">
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                      <Building className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-slate-800 mb-1">{confirmationData.name}</h3>
+                      <p className="text-slate-600 flex items-center">
+                        <MapPin className="h-4 w-4 mr-2 text-slate-400" />
+                        {confirmationData.location}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{confirmationData.name}</h3>
-                    <p className="text-sm text-slate-600">{confirmationData.location}</p>
-                  </div>
-                </div>
 
-                <div className="space-y-3 text-sm">
-                  {confirmationData.website && (
-                    <div className="flex items-center space-x-2">
-                      <Globe className="h-4 w-4 text-slate-400" />
-                      <span className="text-slate-600">Website: {confirmationData.website}</span>
-                    </div>
-                  )}
-                  {confirmationData.established_year && (
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-slate-400" />
-                      <span className="text-slate-600">Established: {confirmationData.established_year}</span>
-                    </div>
-                  )}
-                  {confirmationData.student_count && (
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-slate-400" />
-                      <span className="text-slate-600">{confirmationData.student_count.toLocaleString()} students</span>
-                    </div>
-                  )}
-                  {confirmationData.type && (
-                    <div className="flex items-center space-x-2">
-                      <Shield className="h-4 w-4 text-slate-400" />
-                      <span className="text-slate-600">Type: {confirmationData.type}</span>
-                    </div>
-                  )}
-                  {confirmationData.campus_size && (
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-slate-400" />
-                      <span className="text-slate-600">Campus: {confirmationData.campus_size}</span>
-                    </div>
-                  )}
+                  {/* Grid de informações organizadas */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {confirmationData.website && (
+                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Globe className="h-4 w-4 text-blue-500" />
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Website</span>
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">{confirmationData.website}</span>
+                      </div>
+                    )}
+                    {confirmationData.established_year && (
+                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Calendar className="h-4 w-4 text-indigo-500" />
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Established</span>
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">{confirmationData.established_year}</span>
+                      </div>
+                    )}
+                    {confirmationData.student_count && (
+                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Users className="h-4 w-4 text-emerald-500" />
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Students</span>
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">{confirmationData.student_count.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {confirmationData.type && (
+                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Shield className="h-4 w-4 text-purple-500" />
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Type</span>
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">{confirmationData.type}</span>
+                      </div>
+                    )}
+                    {confirmationData.campus_size && (
+                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 col-span-2">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <MapPin className="h-4 w-4 text-rose-500" />
+                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Campus Size</span>
+                        </div>
+                        <span className="text-sm text-slate-700 font-medium">{confirmationData.campus_size}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Discount Info */}
+              {/* Discount Info - Card destacado */}
               {selectedDiscount && (
-                <div className="bg-green-50 rounded-lg p-4 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-slate-900">Tuition Discount</h4>
-                      <p className="text-sm text-slate-600">{selectedDiscount.name}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">
-                        ${selectedDiscount.discount_amount}
+                <div className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100/50 rounded-2xl p-6 border border-green-200/50">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-green-200/40 to-emerald-200/40 rounded-full -translate-y-12 translate-x-12 blur-xl"></div>
+                  
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-lg font-bold text-slate-800 mb-1">Tuition Discount</h4>
+                        <p className="text-slate-600 text-sm">{selectedDiscount.name}</p>
                       </div>
-                      <div className="text-sm text-slate-600">
-                        {selectedDiscount.cost_coins} Matricula Coins
+                      <div className="text-right">
+                        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                          ${selectedDiscount.discount_amount}
+                        </div>
+                        <div className="text-sm text-slate-500 font-medium">
+                          {selectedDiscount.cost_coins} Matricula Coins
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Action Buttons - Design moderno */}
               <div className="flex space-x-3">
                 <button
                   onClick={() => {
@@ -1112,18 +1147,18 @@ const RewardsStore: React.FC = () => {
                     setSelectedUniversity(null);
                     setSelectedDiscount(null);
                   }}
-                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                  className="flex-1 px-6 py-3 border-2 border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleRedeemTuitionDiscount}
                   disabled={redeemingTuition === selectedDiscount?.id}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-300"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:from-green-300 disabled:to-emerald-400 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform disabled:transform-none"
                 >
                   {redeemingTuition === selectedDiscount?.id ? (
                     <div className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                       <span>Processing...</span>
                     </div>
                   ) : (

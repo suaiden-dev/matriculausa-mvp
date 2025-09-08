@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
+import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
 // Remover os imports das imagens
 // import WelcomeImg from '../../assets/page 7.png';
 // import SupportImg from '../../assets/page 8.png';
@@ -42,6 +43,8 @@ const ApplicationChatPage: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
+  const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
   // Ajustar tipo de activeTab para incluir 'welcome'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
 
@@ -65,6 +68,16 @@ const ApplicationChatPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [refetchUserProfile]);
 
+  // Monitorar mudanças no estado do modal para debug
+  useEffect(() => {
+    console.log('🔍 [ApplicationChatPage] Estado do modal mudou:', {
+      showI20ControlFeeModal,
+      selectedPaymentMethod,
+      i20Loading,
+      i20Error
+    });
+  }, [showI20ControlFeeModal, selectedPaymentMethod, i20Loading, i20Error]);
+
   // Buscar data de pagamento da scholarship fee (agora usando scholarship_applications)
   useEffect(() => {
     // Removido: busca antiga usando user.id
@@ -74,22 +87,36 @@ const ApplicationChatPage: React.FC = () => {
   useEffect(() => {
     async function fetchScholarshipFeeDeadline() {
       if (!userProfile?.id) return;
-      const { data } = await supabase
-        .from('scholarship_applications')
-        .select('id, updated_at, is_scholarship_fee_paid')
-        .eq('student_id', userProfile.id)
-        .eq('is_scholarship_fee_paid', true)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-      if (data?.updated_at) {
-        const paidDate = new Date(data.updated_at);
-        const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000);
-        setScholarshipFeeDeadline(deadline);
-      } else {
+      
+      try {
+        const { data, error } = await supabase
+          .from('scholarship_applications')
+          .select('id, updated_at, is_scholarship_fee_paid')
+          .eq('student_id', userProfile.id)
+          .eq('is_scholarship_fee_paid', true)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        
+        if (error) {
+          console.error('Erro ao buscar scholarship fee deadline:', error);
+          setScholarshipFeeDeadline(null);
+          return;
+        }
+        
+        // Verificar se há dados e pegar o primeiro resultado
+        if (data && data.length > 0 && data[0]?.updated_at) {
+          const paidDate = new Date(data[0].updated_at);
+          const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000);
+          setScholarshipFeeDeadline(deadline);
+        } else {
+          setScholarshipFeeDeadline(null);
+        }
+      } catch (error) {
+        console.error('Erro inesperado ao buscar scholarship fee deadline:', error);
         setScholarshipFeeDeadline(null);
       }
     }
+    
     fetchScholarshipFeeDeadline();
   }, [userProfile]);
 
@@ -122,34 +149,80 @@ const ApplicationChatPage: React.FC = () => {
 
   // Função para iniciar o pagamento do I-20 Control Fee
   const handlePayI20 = async () => {
+    console.log('🔍 [ApplicationChatPage] handlePayI20 chamada');
+    console.log('🔍 [ApplicationChatPage] Estado atual showI20ControlFeeModal:', showI20ControlFeeModal);
+    console.log('🔍 [ApplicationChatPage] Estado atual selectedPaymentMethod:', selectedPaymentMethod);
+    
+    // Resetar o estado antes de abrir o modal
+    setSelectedPaymentMethod(null);
+    setI20Error(null);
+    
+    // Abrir o modal do I-20 Control Fee ao invés de redirecionar diretamente
+    setShowI20ControlFeeModal(true);
+    
+    console.log('🔍 [ApplicationChatPage] setShowI20ControlFeeModal(true) executado');
+  };
+
+  // Função para lidar com a seleção do método de pagamento
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
+    setSelectedPaymentMethod(method);
+  };
+
+  // Função para fechar o modal
+  const handleCloseI20Modal = () => {
+    setShowI20ControlFeeModal(false);
+    setSelectedPaymentMethod(null);
+  };
+
+  // Função para processar o pagamento
+  const handleProceedPayment = async () => {
+    if (!selectedPaymentMethod) return;
+    
     setI20Loading(true);
     setI20Error(null);
+    
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          success_url: window.location.origin + '/student/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
-          cancel_url: window.location.origin + '/student/i20-control-fee-error',
-          price_id: STRIPE_PRODUCTS.controlFee.priceId,
-        }),
-      });
-      const data = await res.json();
-      if (data.session_url) {
-        window.location.href = data.session_url;
-      } else {
-        setI20Error(t('studentDashboard.applicationChatPage.errors.paymentSessionError'));
+      if (selectedPaymentMethod === 'stripe') {
+        // Redirecionar para o Stripe
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            success_url: window.location.origin + '/student/dashboard/i20-control-fee-success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: window.location.origin + '/student/dashboard/i20-control-fee-error',
+            price_id: STRIPE_PRODUCTS.controlFee.priceId,
+          }),
+        });
+        const data = await res.json();
+        if (data.session_url) {
+          window.location.href = data.session_url;
+        } else {
+          setI20Error(t('studentDashboard.applicationChatPage.errors.paymentSessionError'));
+        }
+      } else if (selectedPaymentMethod === 'zelle') {
+        // Redirecionar para a página de pagamento Zelle (mesma rota das outras taxas)
+        const params = new URLSearchParams({
+          feeType: 'i20_control_fee',
+          amount: '1250',
+          scholarshipsIds: applicationDetails.scholarships?.id || ''
+        });
+        
+        // Adicionar campo específico para I-20 Control Fee
+        params.append('i20ControlFeeAmount', '1250');
+        
+        window.location.href = `/checkout/zelle?${params.toString()}`;
       }
     } catch (err) {
-              setI20Error(t('studentDashboard.applicationChatPage.errors.paymentRedirectError'));
+      setI20Error(t('studentDashboard.applicationChatPage.errors.paymentRedirectError'));
     } finally {
       setI20Loading(false);
+      handleCloseI20Modal();
     }
   };
 
@@ -180,6 +253,15 @@ const ApplicationChatPage: React.FC = () => {
     } catch (e) {
       alert(t('studentDashboard.applicationChatPage.errors.downloadFailed'));
     }
+  };
+
+  // Função utilitária para garantir que a URL seja completa
+  const ensureCompleteUrl = (url: string) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // ✅ CORREÇÃO: Usar a URL correta do Supabase
+    return `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/${url}`;
   };
 
   // Montar as abas dinamicamente com ícones distintos
@@ -745,6 +827,15 @@ const ApplicationChatPage: React.FC = () => {
         {previewUrl && (
           <DocumentViewerModal documentUrl={previewUrl || ''} onClose={() => setPreviewUrl(null)} />
         )}
+
+        {/* Modal do I-20 Control Fee */}
+        <I20ControlFeeModal
+          isOpen={showI20ControlFeeModal}
+          onClose={handleCloseI20Modal}
+          onProceed={handleProceedPayment}
+          selectedPaymentMethod={selectedPaymentMethod}
+          onPaymentMethodSelect={handlePaymentMethodSelect}
+        />
       </div>
     </div>
   );

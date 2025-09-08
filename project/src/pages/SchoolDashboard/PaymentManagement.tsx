@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -8,30 +8,37 @@ import {
   Filter, 
   Download, 
   Eye, 
-  Calendar, 
-  User, 
-  Building, 
   CreditCard, 
-  Banknote, 
   Search, 
   ChevronLeft, 
   ChevronRight, 
   Loader2,
-  Award,
   FileText,
   Globe,
   Plus,
   XCircle,
   Shield,
-  Save
+  BarChart3,
+  PieChart,
+  Calendar,
+  Users,
+  Target,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
+
+// Declare Chart.js types
+declare global {
+  interface Window {
+    Chart: any;
+  }
+}
 import { useUniversity } from '../../context/UniversityContext';
 import { useAuth } from '../../hooks/useAuth';
 import { usePayments } from '../../hooks/usePayments';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { UniversityPaymentRequestService } from '../../services/UniversityPaymentRequestService';
 import { supabase } from '../../lib/supabase';
-import { useNavigate } from 'react-router-dom';
 
 const PaymentManagement: React.FC = () => {
   const { university } = useUniversity();
@@ -53,8 +60,6 @@ const PaymentManagement: React.FC = () => {
     handlePageChange,
     handlePageSizeChange,
     exportPayments,
-    hasPayments,
-    hasFilters,
   } = usePayments(university?.id);
   
   // UI state
@@ -75,7 +80,59 @@ const PaymentManagement: React.FC = () => {
   const [universityPaymentRequests, setUniversityPaymentRequests] = useState<any[]>([]);
   const [loadingUniversityRequests, setLoadingUniversityRequests] = useState(false);
   const [universityBalance, setUniversityBalance] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'student-payments' | 'university-requests'>('student-payments');
+  const [activeTab, setActiveTab] = useState<'student-payments' | 'university-requests' | 'financial-overview'>('financial-overview');
+  
+  // Financial statistics state
+  const [financialStats, setFinancialStats] = useState({
+    totalRevenue: 0,
+    last7DaysRevenue: 0,
+    totalPaidOut: 0,
+    totalApproved: 0,
+    pendingRequests: 0,
+    paidApplicationsCount: 0
+  });
+
+  // Detailed financial analytics state
+  const [financialAnalytics, setFinancialAnalytics] = useState({
+    dailyRevenue: [] as Array<{date: string, amount: number}>,
+    monthlyRevenue: [] as Array<{month: string, amount: number}>,
+    applicationTrends: {
+      totalApplications: 0,
+      paidApplications: 0,
+      conversionRate: 0,
+      averageFee: 0
+    },
+    paymentMethodBreakdown: {
+      zelle: 0,
+      bank_transfer: 0,
+      stripe: 0
+    },
+    recentActivity: [] as Array<{date: string, type: string, amount: number, description: string}>
+  });
+
+  // Revenue chart filter state
+  const [revenueChartType, setRevenueChartType] = useState<'daily' | 'monthly'>('daily');
+  const [revenueChartPeriod, setRevenueChartPeriod] = useState<number>(7);
+  
+  // Chart refs for Chart.js
+  const revenueChartRef = useRef<HTMLCanvasElement>(null);
+  const paymentStatusChartRef = useRef<HTMLCanvasElement>(null);
+  const trendChartRef = useRef<HTMLCanvasElement>(null);
+  
+  // Chart instances
+  const [revenueChart, setRevenueChart] = useState<any>(null);
+  const [paymentStatusChart, setPaymentStatusChart] = useState<any>(null);
+  const [trendChart, setTrendChart] = useState<any>(null);
+  
+  // Calculated metrics state
+  const [calculatedMetrics, setCalculatedMetrics] = useState({
+    revenueGrowth: 0,
+    conversionTarget: 0,
+    monthlyAverage: 0,
+    bestMonth: '',
+    totalApplications: 0
+  });
+  
   
   // Request details modal state
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -84,7 +141,6 @@ const PaymentManagement: React.FC = () => {
   // Stripe Connect status state
   const [hasStripeConnect, setHasStripeConnect] = useState(false);
   const [loadingStripeStatus, setLoadingStripeStatus] = useState(true);
-  const navigate = useNavigate();
   
   const handleExport = async () => {
     try {
@@ -104,6 +160,25 @@ const PaymentManagement: React.FC = () => {
       setExporting(false);
     }
   };
+
+
+  // Load Chart.js dynamically
+  useEffect(() => {
+    const loadChartJS = async () => {
+      if (typeof window !== 'undefined' && !window.Chart) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.async = true;
+        document.head.appendChild(script);
+        
+        script.onload = () => {
+          console.log('Chart.js loaded successfully');
+        };
+      }
+    };
+    
+    loadChartJS();
+  }, []);
 
   const checkStripeConnectStatus = async () => {
     if (!university?.id) return;
@@ -153,76 +228,84 @@ const PaymentManagement: React.FC = () => {
       const requests = await UniversityPaymentRequestService.listUniversityPaymentRequests(university.id);
       setUniversityPaymentRequests(requests);
       
-      // Calcular saldo disponível baseado no faturamento real da universidade
-      // O saldo deve considerar apenas requests já pagos (não pending/approved)
+      // Calcular total de payment requests (pending, approved e paid) - rejeitados NÃO são subtraídos do saldo
       const totalPaidOut = requests
         .filter((r: any) => r.status === 'paid')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      // SOLUÇÃO FINAL: Buscar apenas as bolsas únicas que têm aplicações pagas
-      // Usar uma query mais eficiente para evitar duplicatas
-      const { data: scholarshipsWithPaidApps, error: revenueError } = await supabase
-        .from('scholarships')
-        .select(`
-          id,
-          application_fee_amount,
-          university_id
-        `)
-        .eq('university_id', university.id);
-      
-      if (revenueError) {
-        console.error('Error fetching scholarships:', revenueError);
-      }
-      
-      // Buscar quais bolsas têm pelo menos uma aplicação paga
-      const { data: paidApplications, error: paidError } = await supabase
-        .from('scholarship_applications')
-        .select('scholarship_id')
-        .eq('is_application_fee_paid', true);
-      
-      if (paidError) {
-        console.error('Error fetching paid applications:', paidError);
-      }
-      
-      // Criar um Set com os IDs das bolsas que têm aplicações pagas
-      const paidScholarshipIds = new Set(paidApplications?.map(app => app.scholarship_id) || []);
-      
-      // Filtrar apenas as bolsas que têm aplicações pagas e somar seus valores
-      const totalApplicationFeesReceived = scholarshipsWithPaidApps
-        ?.filter(scholarship => paidScholarshipIds.has(scholarship.id))
-        .reduce((sum: number, scholarship: any) => {
-          const feeAmount = scholarship.application_fee_amount || 0;
-          return sum + feeAmount;
-        }, 0) || 0;
-      
-      // O saldo disponível é: Faturamento Real - Pago - Aprovado (reservado)
       const totalApproved = requests
         .filter((r: any) => r.status === 'approved')
         .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      // Saldo disponível = Faturamento Real - Pago - Aprovado (reservado)
-      const availableBalance = Math.max(0, totalApplicationFeesReceived - totalPaidOut - totalApproved);
+      const totalPending = requests
+        .filter((r: any) => r.status === 'pending')
+        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      console.log('💰 [Balance] Calculation (FIXED):', {
-        totalApplicationFeesReceived,
-        totalPaidOut,
-        totalApproved,
-        availableBalance,
-        uniqueScholarshipsWithPaidApplications: paidScholarshipIds.size,
-        totalScholarships: scholarshipsWithPaidApps?.length || 0,
-        totalApplicationsPaid: paidApplications?.length || 0,
-        requestsCount: requests.length,
-        paidRequests: requests.filter(r => r.status === 'paid').length,
-        pendingRequests: requests.filter(r => r.status === 'pending').length,
-        approvedRequests: requests.filter(r => r.status === 'approved').length,
-        requests: requests.map(r => ({
-          id: r.id.slice(0, 8),
-          status: r.status,
-          amount: r.amount_usd
-        }))
-      });
+      const totalRejected = requests
+        .filter((r: any) => r.status === 'rejected')
+        .reduce((sum: number, r: any) => sum + r.amount_usd, 0);
       
-      setUniversityBalance(availableBalance);
+             // Calcular receita baseada APENAS em application fees pagas (TODAS as aplicações, não apenas 90 dias)
+       const { data: paidApplications, error: paidError } = await supabase
+         .from('scholarship_applications')
+         .select(`
+           scholarship_id,
+           created_at,
+           is_application_fee_paid,
+           scholarships!inner(
+             university_id,
+             application_fee_amount
+           )
+         `)
+         .eq('is_application_fee_paid', true)
+         .eq('scholarships.university_id', university.id);
+       
+       if (paidError) {
+         console.error('Error fetching paid applications:', paidError);
+       }
+       
+       // Calcular receita total APENAS de application fees - converter de centavos para dólares
+       const totalApplicationFeeRevenue = paidApplications?.reduce((sum: number, app: any) => {
+         const feeAmount = app.scholarships?.application_fee_amount || 0;
+         return sum + (feeAmount / 100); // Converter de centavos para dólares
+       }, 0) || 0;
+       
+       // Calcular receita de application fees dos últimos 7 dias
+       const sevenDaysAgo = new Date();
+       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+       
+       const last7DaysApplicationFeeRevenue = paidApplications?.filter((app: any) => {
+         const appDate = new Date(app.created_at);
+         return appDate >= sevenDaysAgo;
+       }).reduce((sum: number, app: any) => {
+         const feeAmount = app.scholarships?.application_fee_amount || 0;
+         return sum + (feeAmount / 100);
+       }, 0) || 0;
+      
+             // Calcular saldo disponível: Application fees - Payment requests (pending + approved + paid) + rejeitados voltam ao saldo
+       const availableBalance = Math.max(0, totalApplicationFeeRevenue - totalPaidOut - totalApproved - totalPending);
+       setUniversityBalance(availableBalance);
+       
+       // Atualizar estatísticas financeiras
+       setFinancialStats({
+         totalRevenue: totalApplicationFeeRevenue,
+         last7DaysRevenue: last7DaysApplicationFeeRevenue,
+         totalPaidOut,
+         totalApproved,
+         pendingRequests: requests.filter((r: any) => r.status === 'pending').length,
+         paidApplicationsCount: paidApplications?.length || 0
+       });
+       
+       console.log('💰 [Balance] Calculation:', {
+         totalApplicationFeeRevenue,
+         last7DaysApplicationFeeRevenue,
+         totalPaidOut,
+         totalApproved,
+         totalPending,
+         totalRejected,
+         availableBalance,
+         paidApplicationsCount: paidApplications?.length || 0
+       });
     } catch (error: any) {
       console.error('Error loading university payment requests:', error);
     } finally {
@@ -230,17 +313,436 @@ const PaymentManagement: React.FC = () => {
     }
   };
 
+  // Função para carregar análises financeiras detalhadas
+  const loadFinancialAnalytics = async () => {
+    if (!university?.id) return;
+    
+    try {
+             // Buscar aplicações dos últimos 90 dias para análise temporal (APENAS application fees)
+       const ninetyDaysAgo = new Date();
+       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+       
+       const { data: applications, error: appsError } = await supabase
+         .from('scholarship_applications')
+         .select(`
+           id,
+           created_at,
+           is_application_fee_paid,
+           scholarships!inner(
+             university_id,
+             application_fee_amount
+           )
+         `)
+         .eq('scholarships.university_id', university.id)
+         .gte('created_at', ninetyDaysAgo.toISOString())
+         .order('created_at', { ascending: false });
+
+      if (appsError) {
+        console.error('Error fetching applications for analytics:', appsError);
+        return;
+      }
+
+             // Calcular receita diária de application fees dos últimos 30 dias
+       const dailyRevenue = [];
+       for (let i = 29; i >= 0; i--) {
+         const date = new Date();
+         date.setDate(date.getDate() - i);
+         const dateStr = date.toISOString().split('T')[0];
+         
+         const dayApplicationFeeRevenue = applications?.filter(app => {
+           const appDate = new Date(app.created_at).toISOString().split('T')[0];
+           return appDate === dateStr && app.is_application_fee_paid;
+         }).reduce((sum, app) => {
+           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+           return sum + ((scholarship?.application_fee_amount || 0) / 100);
+         }, 0) || 0;
+         
+         dailyRevenue.push({ date: dateStr, amount: dayApplicationFeeRevenue });
+       }
+
+       // Calcular receita mensal de application fees dos últimos 12 meses
+       const monthlyRevenue = [];
+       for (let i = 11; i >= 0; i--) {
+         const date = new Date();
+         date.setMonth(date.getMonth() - i);
+         const monthStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+         
+         const monthApplicationFeeRevenue = applications?.filter(app => {
+           const appDate = new Date(app.created_at);
+           return appDate.getMonth() === date.getMonth() && 
+                  appDate.getFullYear() === date.getFullYear() && 
+                  app.is_application_fee_paid;
+         }).reduce((sum, app) => {
+           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+           return sum + ((scholarship?.application_fee_amount || 0) / 100);
+         }, 0) || 0;
+         
+         monthlyRevenue.push({ month: monthStr, amount: monthApplicationFeeRevenue });
+       }
+
+             // Calcular tendências de aplicação (APENAS application fees)
+       const totalApplications = applications?.length || 0;
+       const paidApplications = applications?.filter(app => app.is_application_fee_paid).length || 0;
+       const conversionRate = totalApplications > 0 ? (paidApplications / totalApplications) * 100 : 0;
+       const averageApplicationFee = paidApplications > 0 ? 
+         applications?.filter(app => app.is_application_fee_paid)
+           .reduce((sum, app) => {
+             const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+             return sum + ((scholarship?.application_fee_amount || 0) / 100);
+           }, 0) / paidApplications : 0;
+
+      // Calcular breakdown por método de pagamento (porcentagens)
+      const totalPaymentRequests = universityPaymentRequests.length;
+      const zelleCount = universityPaymentRequests.filter(r => r.payout_method === 'zelle').length;
+      const bankTransferCount = universityPaymentRequests.filter(r => r.payout_method === 'bank_transfer').length;
+      const stripeCount = universityPaymentRequests.filter(r => r.payout_method === 'stripe').length;
+      
+      const paymentMethodBreakdown = {
+        zelle: totalPaymentRequests > 0 ? Math.round((zelleCount / totalPaymentRequests) * 100) : 0,
+        bank_transfer: totalPaymentRequests > 0 ? Math.round((bankTransferCount / totalPaymentRequests) * 100) : 0,
+        stripe: totalPaymentRequests > 0 ? Math.round((stripeCount / totalPaymentRequests) * 100) : 0
+      };
+
+             // Criar atividade recente (últimos 10 eventos) - APENAS application fees e payment requests
+       const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
+       
+       // Adicionar application fees pagas recentes
+       applications?.slice(0, 5).forEach(app => {
+         if (app.is_application_fee_paid) {
+           const scholarship = Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships;
+           recentActivity.push({
+             date: app.created_at,
+             type: 'revenue',
+             amount: (scholarship?.application_fee_amount || 0) / 100,
+             description: 'Application fee received'
+           });
+         }
+       });
+
+       // Adicionar payment requests recentes
+       universityPaymentRequests.slice(0, 5).forEach(request => {
+         recentActivity.push({
+           date: request.created_at,
+           type: request.status === 'paid' ? 'payout' : 'request',
+           amount: request.amount_usd,
+           description: `Payment request ${request.status}`
+         });
+       });
+
+       // Ordenar por data e pegar os 10 mais recentes
+       recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+       recentActivity.splice(10);
+
+       setFinancialAnalytics({
+         dailyRevenue,
+         monthlyRevenue,
+         applicationTrends: {
+           totalApplications,
+           paidApplications,
+           conversionRate,
+           averageFee: averageApplicationFee
+         },
+         paymentMethodBreakdown,
+         recentActivity
+       });
+
+    } catch (error: any) {
+      console.error('Error loading financial analytics:', error);
+    }
+  };
+
+  // Create revenue chart
+  const createRevenueChart = () => {
+    if (!revenueChartRef.current || !window.Chart) return;
+
+    // Destroy existing chart
+    if (revenueChart) {
+      revenueChart.destroy();
+    }
+
+    const ctx = revenueChartRef.current.getContext('2d');
+    const data = revenueChartType === 'daily' 
+      ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod)
+      : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod);
+
+    const chart = new window.Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map(item => 
+          revenueChartType === 'daily' 
+            ? new Date((item as any).date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : (item as any).month
+        ),
+        datasets: [{
+          label: 'Revenue',
+          data: data.map(item => item.amount),
+          borderColor: '#05294E',
+          backgroundColor: 'rgba(5, 41, 78, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#05294E',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+          pointHoverRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(5, 41, 78, 0.9)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#05294E',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              label: function(context: any) {
+                return `Revenue: $${context.parsed.y.toFixed(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+              callback: function(value: any) {
+                return '$' + value.toFixed(0);
+              }
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        }
+      }
+    });
+
+    setRevenueChart(chart);
+  };
+
+  // Create payment status pie chart
+  const createPaymentStatusChart = () => {
+    if (!paymentStatusChartRef.current || !window.Chart) return;
+
+    // Destroy existing chart
+    if (paymentStatusChart) {
+      paymentStatusChart.destroy();
+    }
+
+    const ctx = paymentStatusChartRef.current.getContext('2d');
+    
+    // Calculate payment status distribution
+    const totalPaid = financialStats.paidApplicationsCount;
+    const totalPending = financialStats.pendingRequests;
+    const totalRejected = universityPaymentRequests.filter((r: any) => r.status === 'rejected').length;
+
+    const chart = new window.Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Paid', 'Pending', 'Rejected'],
+        datasets: [{
+          data: [totalPaid, totalPending, totalRejected],
+          backgroundColor: [
+            '#10B981', // Green for paid
+            '#F59E0B', // Yellow for pending
+            '#EF4444'  // Red for rejected
+          ],
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              usePointStyle: true,
+              font: {
+                size: 12
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(5, 41, 78, 0.9)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#05294E',
+            borderWidth: 1,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(context: any) {
+                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                return `${context.label}: ${context.parsed} (${percentage}%)`;
+              }
+            }
+          }
+        },
+        cutout: '60%'
+      }
+    });
+
+    setPaymentStatusChart(chart);
+  };
+
+  // Create trend analysis chart
+  const createTrendChart = () => {
+    if (!trendChartRef.current || !window.Chart) return;
+
+    // Destroy existing chart
+    if (trendChart) {
+      trendChart.destroy();
+    }
+
+    const ctx = trendChartRef.current.getContext('2d');
+    const data = financialAnalytics.monthlyRevenue.slice(-6); // Last 6 months
+
+    const chart = new window.Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(item => (item as any).month),
+        datasets: [{
+          label: 'Revenue',
+          data: data.map(item => item.amount),
+          backgroundColor: 'rgba(5, 41, 78, 0.8)',
+          borderColor: '#05294E',
+          borderWidth: 1,
+          borderRadius: 4,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(5, 41, 78, 0.9)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#05294E',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              label: function(context: any) {
+                return `Revenue: $${context.parsed.y.toFixed(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+              callback: function(value: any) {
+                return '$' + value.toFixed(0);
+              }
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+
+    setTrendChart(chart);
+  };
+
+  // Calculate real metrics
+  const calculateRealMetrics = () => {
+    // Calculate revenue growth (comparing last 7 days vs previous 7 days)
+    const last7Days = financialAnalytics.dailyRevenue.slice(-7);
+    const previous7Days = financialAnalytics.dailyRevenue.slice(-14, -7);
+    
+    const last7DaysTotal = last7Days.reduce((sum, day) => sum + day.amount, 0);
+    const previous7DaysTotal = previous7Days.reduce((sum, day) => sum + day.amount, 0);
+    
+    const revenueGrowth = previous7DaysTotal > 0 
+      ? ((last7DaysTotal - previous7DaysTotal) / previous7DaysTotal) * 100 
+      : 0;
+
+    // Calculate monthly average
+    const monthlyAverage = financialAnalytics.monthlyRevenue.length > 0
+      ? financialAnalytics.monthlyRevenue.reduce((sum, month) => sum + month.amount, 0) / financialAnalytics.monthlyRevenue.length
+      : 0;
+
+    // Find best month
+    const bestMonth = financialAnalytics.monthlyRevenue.length > 0
+      ? financialAnalytics.monthlyRevenue.reduce((max, month) => 
+          month.amount > max.amount ? month : max
+        ).month
+      : '';
+
+    // Calculate conversion target (industry average or based on historical data)
+    const conversionTarget = financialAnalytics.applicationTrends.conversionRate > 0
+      ? Math.min(95, financialAnalytics.applicationTrends.conversionRate * 1.1) // 10% above current
+      : 85; // Default industry target
+
+    setCalculatedMetrics({
+      revenueGrowth,
+      conversionTarget,
+      monthlyAverage,
+      bestMonth,
+      totalApplications: financialAnalytics.applicationTrends.totalApplications
+    });
+  };
+
+  // Update charts when data changes
+  useEffect(() => {
+    if (window.Chart && financialAnalytics.dailyRevenue.length > 0) {
+      createRevenueChart();
+      createPaymentStatusChart();
+      createTrendChart();
+    }
+  }, [financialAnalytics, revenueChartType, revenueChartPeriod]);
+
+  // Calculate metrics when financial data changes
+  useEffect(() => {
+    if (financialAnalytics.dailyRevenue.length > 0) {
+      calculateRealMetrics();
+    }
+  }, [financialAnalytics]);
+
   // Carregar payment requests da universidade quando a universidade mudar
   React.useEffect(() => {
     if (university?.id) {
       loadUniversityPaymentRequests();
       checkStripeConnectStatus();
+      loadFinancialAnalytics();
     }
   }, [university?.id]);
 
-  const handleFilterChange = () => {
-    setShowFilters(false);
-  };
 
   // Real-time validation of requested amount
   const validatePaymentAmount = (amount: number) => {
@@ -262,6 +764,25 @@ const PaymentManagement: React.FC = () => {
     return paymentRequestAmount > 0 && paymentRequestAmount <= universityBalance;
   };
 
+  // Check if payout details are valid based on method
+  const isPayoutDetailsValid = () => {
+    if (payoutMethod === 'bank_transfer') {
+      return payoutDetails.bank_name && 
+             payoutDetails.account_name && 
+             payoutDetails.routing_number && 
+             payoutDetails.account_number;
+    }
+    if (payoutMethod === 'zelle') {
+      // Zelle requer email OU telefone (não ambos), Account holder name é opcional
+      return (payoutDetails.zelle_email || payoutDetails.zelle_phone) && 
+             !(payoutDetails.zelle_email && payoutDetails.zelle_phone);
+    }
+    if (payoutMethod === 'stripe') {
+      return payoutDetails.stripe_email;
+    }
+    return true;
+  };
+
   const handleSubmitPaymentRequest = async () => {
     if (!user?.id || !university?.id) return;
     
@@ -277,6 +798,21 @@ const PaymentManagement: React.FC = () => {
     if (paymentRequestAmount > availableBalance) {
       setError(`Insufficient balance. You have ${formatCurrency(availableBalance)} available, but requested ${formatCurrency(paymentRequestAmount)}.`);
       setTimeout(() => setError(null), 5000);
+      return;
+    }
+    
+    // Payout details validation
+    if (!isPayoutDetailsValid()) {
+      let errorMessage = 'Please fill in all required payment details.';
+      if (payoutMethod === 'zelle') {
+        errorMessage = 'Please provide either Zelle email or phone number (not both).';
+      } else if (payoutMethod === 'bank_transfer') {
+        errorMessage = 'Please fill in all required bank details.';
+      } else if (payoutMethod === 'stripe') {
+        errorMessage = 'Please provide Stripe email.';
+      }
+      setError(errorMessage);
+      setTimeout(() => setError(null), 3000);
       return;
     }
     
@@ -319,21 +855,6 @@ const PaymentManagement: React.FC = () => {
     }).format(amount);
   };
 
-  const formatScholarshipAmount = (amount: number | null | undefined) => {
-    if (!amount) return 'N/A';
-    // If amount is already in cents (like from transfer), format normally
-    if (amount >= 100) {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(amount / 100);
-    }
-    // If amount is already in dollars, format directly
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -389,68 +910,146 @@ const PaymentManagement: React.FC = () => {
       title="Complete your profile to manage payment requests"
       description="Finish setting up your university profile to track and manage scholarship payment requests"
     >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">Payment Requests Management</h1>
-            <p className="text-gray-600 mt-2">Monitor and manage all scholarship payment requests and application fees</p>
-          </div>
-          <div className="flex items-center space-x-3 ml-8">
-            <button
-              onClick={() => setShowPaymentRequestModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Request Payment
-            </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 ease-in-out"
-            >
-              <Filter className={`w-4 h-4 mr-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
-              Filters
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] disabled:opacity-50"
-            >
-              {exporting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              Export CSV
-            </button>
+      <div className="min-h-screen">
+        {/* Header + Tabs Section */}
+        <div className="w-full">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div className="max-w-full mx-auto bg-slate-50">
+              {/* Header: title + note + counter */}
+              <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                    Payment Management
+                  </h1>
+                  <p className="mt-2 text-sm sm:text-base text-slate-600">
+                    Monitor and manage all scholarship payment requests and application fees.
+                  </p>
+                  <p className="mt-3 text-sm text-slate-500">
+                    Track student payments and request payouts from your available balance.
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
+                    <DollarSign className="w-5 h-5 mr-2" />
+                    {formatCurrency(universityBalance)} Available
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs Section */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8">
+                  <nav className="flex space-x-8 overflow-x-auto" role="tablist">
+                    <button
+                      onClick={() => setActiveTab('financial-overview')}
+                      className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                        activeTab === 'financial-overview' 
+                          ? 'border-[#05294E] text-[#05294E]' 
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                      type="button"
+                      aria-selected={activeTab === 'financial-overview'}
+                      role="tab"
+                    >
+                      <TrendingUp className={`w-5 h-5 mr-2 transition-colors ${
+                        activeTab === 'financial-overview' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
+                      Financial Overview
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('student-payments')}
+                      className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                        activeTab === 'student-payments' 
+                          ? 'border-[#05294E] text-[#05294E]' 
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                      type="button"
+                      aria-selected={activeTab === 'student-payments'}
+                      role="tab"
+                    >
+                      <FileText className={`w-5 h-5 mr-2 transition-colors ${
+                        activeTab === 'student-payments' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
+                      Student Payments
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('university-requests')}
+                      className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                        activeTab === 'university-requests' 
+                          ? 'border-[#05294E] text-[#05294E]' 
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                      type="button"
+                      aria-selected={activeTab === 'university-requests'}
+                      role="tab"
+                    >
+                      <CreditCard className={`w-5 h-5 mr-2 transition-colors ${
+                        activeTab === 'university-requests' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
+                      University Requests
+                    </button>
+                  </nav>
+                </div>
+              </div>
+
+              {/* Action Buttons Section */}
+              <div className="border-t border-slate-200 bg-white">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <h2 className="text-lg font-semibold text-slate-900">
+                        {activeTab === 'student-payments' ? 'Student Payment Records' : 
+                         activeTab === 'university-requests' ? 'University Payment Requests' : 
+                         'Financial Overview & Analytics'}
+                      </h2>
+                      <p className="text-sm text-slate-600 mt-1">
+                        {activeTab === 'student-payments' 
+                          ? 'View and export all student payment transactions and application fees'
+                          : activeTab === 'university-requests'
+                          ? 'Request payouts from your available balance and track request status'
+                          : 'Comprehensive financial analytics, trends, and performance metrics'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      {activeTab === 'university-requests' && (
+                        <button
+                          onClick={() => setShowPaymentRequestModal(true)}
+                          className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-colors"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Request Payment
+                        </button>
+                      )}
+                      {activeTab === 'student-payments' && (
+                        <button
+                          onClick={() => setShowFilters(!showFilters)}
+                          className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-all duration-200 ease-in-out"
+                        >
+                          <Filter className={`w-4 h-4 mr-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
+                          Filters
+                        </button>
+                      )}
+                      <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#05294E] hover:bg-[#05294E]/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] disabled:opacity-50"
+                      >
+                        {exporting ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-2" />
+                        )}
+                        Export CSV
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('student-payments')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'student-payments'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Student Payments
-          </button>
-          <button
-            onClick={() => setActiveTab('university-requests')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'university-requests'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            University Payment Requests
-          </button>
-        </nav>
-      </div>
 
             {/* Student Payments Tab Content */}
       {activeTab === 'student-payments' && (
@@ -459,27 +1058,30 @@ const PaymentManagement: React.FC = () => {
           <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
             showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
           }`}>
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label htmlFor="search-query" className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                  <input
-                    id="search-query"
-                    type="text"
-                    placeholder="Search by name or email..."
-                    value={filters.search_query}
-                    onChange={(e) => updateFilters({ search_query: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    aria-label="Search payment requests by student name or email"
-                  />
+                  <label htmlFor="search-query" className="block text-sm font-medium text-slate-700 mb-2">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      id="search-query"
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={filters.search_query}
+                      onChange={(e) => updateFilters({ search_query: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                      aria-label="Search payment requests by student name or email"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label htmlFor="application-status-filter" className="block text-sm font-medium text-gray-700 mb-2">Application Status</label>
+                  <label htmlFor="application-status-filter" className="block text-sm font-medium text-slate-700 mb-2">Application Status</label>
                   <select
                     id="application-status-filter"
                     value={filters.application_status_filter}
                     onChange={(e) => updateFilters({ application_status_filter: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     aria-label="Filter by application status"
                   >
                     <option value="all">All Statuses</option>
@@ -490,12 +1092,12 @@ const PaymentManagement: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="payment-type-filter" className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+                  <label htmlFor="payment-type-filter" className="block text-sm font-medium text-slate-700 mb-2">Payment Type</label>
                   <select
                     id="payment-type-filter"
                     value={filters.payment_type_filter}
                     onChange={(e) => updateFilters({ payment_type_filter: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     aria-label="Filter by payment type"
                   >
                     <option value="all">All Types</option>
@@ -504,14 +1106,14 @@ const PaymentManagement: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="date-from" className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                  <label htmlFor="date-from" className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
                   <div className="space-y-2">
                     <input
                       id="date-from"
                       type="date"
                       value={filters.date_from}
                       onChange={(e) => updateFilters({ date_from: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                       aria-label="Filter payment requests from date"
                     />
                     <input
@@ -519,16 +1121,16 @@ const PaymentManagement: React.FC = () => {
                       type="date"
                       value={filters.date_to}
                       onChange={(e) => updateFilters({ date_to: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                       aria-label="Filter payment requests to date"
                     />
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-gray-600 hover:text-gray-800"
+                  className="text-sm text-slate-600 hover:text-slate-800 transition-colors"
                 >
                   Clear all filters
                 </button>
@@ -536,88 +1138,70 @@ const PaymentManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border">
+          {/* Student Payment Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-3 bg-blue-100 rounded-xl">
                   <FileText className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Applications</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total_applications}</p>
+                  <p className="text-sm font-medium text-slate-600">Total Applications</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.total_applications}</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Application Fees Received</p>
-                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total_revenue)}</p>
-                  <p className="text-xs text-gray-500">From paid applications</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
+                <div className="p-3 bg-green-100 rounded-xl">
                   <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Paid Application Fees</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.paid_application_fees}</p>
+                  <p className="text-sm font-medium text-slate-600">Paid Application Fees</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.paid_application_fees}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
+                <div className="p-3 bg-yellow-100 rounded-xl">
                   <Clock className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending Application Fees</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pending_application_fees}</p>
+                  <p className="text-sm font-medium text-slate-600">Pending Application Fees</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.pending_application_fees}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Shield className="w-6 h-6 text-purple-600" />
+                <div className="p-3 bg-purple-100 rounded-xl">
+                  <DollarSign className="w-6 h-6 text-purple-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Available Balance</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
-                    ) : (
-                      formatCurrency(universityBalance)
-                    )}
-                  </p>
-                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                   <p className="text-2xl font-bold text-slate-900">{formatCurrency(stats.total_revenue)}</p>
+                   <p className="text-xs text-slate-500">From application fees</p>
+                 </div>
               </div>
             </div>
           </div>
 
           {/* Payment Requests Table */}
-          <div className="bg-white shadow border rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Payment Requests</h3>
+                <h3 className="text-lg font-medium text-slate-900">Payment Requests</h3>
                 <div className="flex items-center space-x-4">
-                  <label htmlFor="page-size-select" className="text-sm text-gray-600">Show:</label>
+                  <label htmlFor="page-size-select" className="text-sm text-slate-600">Show:</label>
                   <select
                     id="page-size-select"
                     value={pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
                     aria-label="Select number of payment requests to display per page"
                   >
                     <option value={10}>10</option>
@@ -808,39 +1392,39 @@ const PaymentManagement: React.FC = () => {
         <>
                     {/* Stripe Connect Banner - Only show if not connected */}
                     {!loadingStripeStatus && !hasStripeConnect && (
-                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6">
+                      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
-                          <div className="p-3 bg-[#05294E] rounded-lg">
+                          <div className="p-3 bg-[#05294E] rounded-xl">
                             <CreditCard className="w-6 h-6 text-white" />
                           </div>
                           <div className="flex-1">
-                            <h2 className="text-xl font-semibold text-gray-900 mb-2">Upgrade to Stripe Connect</h2>
-                            <p className="text-gray-600 text-sm mb-4">Skip payment requests, get paid instantly!</p>
+                            <h2 className="text-xl font-semibold text-slate-900 mb-2">Upgrade to Stripe Connect</h2>
+                            <p className="text-slate-600 text-sm mb-4">Skip payment requests, get paid instantly!</p>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                                 <CheckCircle className="w-4 h-4 text-[#05294E]" />
                                 <div>
-                                  <h4 className="font-medium text-gray-900 text-sm">Instant Payments</h4>
-                                  <p className="text-xs text-gray-600">Application fees go directly to your account</p>
+                                  <h4 className="font-medium text-slate-900 text-sm">Instant Payments</h4>
+                                  <p className="text-xs text-slate-600">Application fees go directly to your account</p>
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                                 <TrendingUp className="w-4 h-4 text-[#05294E]" />
                                 <div>
-                                  <h4 className="text-sm font-medium text-gray-900">No More Delays</h4>
-                                  <p className="text-xs text-gray-600">Skip admin approval and waiting periods</p>
+                                  <h4 className="text-sm font-medium text-slate-900">No More Delays</h4>
+                                  <p className="text-xs text-slate-600">Skip admin approval and waiting periods</p>
                                 </div>
                               </div>
                             </div>
                             
                             <button
-                              onClick={() => navigate('/school/dashboard/stripe-connect')}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#05294E] text-white text-sm font-medium rounded-lg hover:bg-[#05294E]/80 transition-colors"
+                              disabled
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-400 text-white text-sm font-medium rounded-lg cursor-not-allowed opacity-60"
                             >
                               <CreditCard className="w-4 h-4" />
-                              Connect Stripe Account
+                              Under Development
                             </button>
                           </div>
                         </div>
@@ -849,9 +1433,9 @@ const PaymentManagement: React.FC = () => {
 
                     {/* Stripe Connect Success Message - Only show if connected */}
                     {!loadingStripeStatus && hasStripeConnect && (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-6 shadow-sm mb-6">
+                      <div className="bg-green-50 border border-green-200 rounded-2xl p-6 shadow-sm mb-6">
                         <div className="flex items-start gap-4">
-                          <div className="p-3 bg-green-100 rounded-lg">
+                          <div className="p-3 bg-green-100 rounded-xl">
                             <CheckCircle className="w-6 h-6 text-green-600" />
                           </div>
                           <div className="flex-1">
@@ -867,59 +1451,92 @@ const PaymentManagement: React.FC = () => {
                       </div>
                     )}
 
-          {/* Stats Cards for University Requests */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border">
+          {/* University Requests Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FileText className="w-6 h-6 text-blue-600" />
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Requests</p>
-                  <p className="text-2xl font-bold text-gray-900">{universityPaymentRequests.length}</p>
-                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {loadingUniversityRequests ? (
+                       <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                     ) : (
+                       formatCurrency(financialStats.totalRevenue)
+                     )}
+                   </p>
+                   <p className="text-xs text-slate-500">From application fees</p>
+                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-green-600" />
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <CreditCard className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Requested</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(universityPaymentRequests.reduce((sum, r) => sum + r.amount_usd, 0))}
+                  <p className="text-sm font-medium text-slate-600">Total Requested</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    {loadingUniversityRequests ? (
+                      <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                    ) : (
+                      formatCurrency(universityPaymentRequests.reduce((sum, r) => sum + r.amount_usd, 0))
+                    )}
                   </p>
+                  <p className="text-xs text-slate-500">All payment requests</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
+                <div className="p-3 bg-yellow-100 rounded-xl">
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Pending Payment Requests</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {loadingUniversityRequests ? (
+                       <div className="animate-pulse bg-slate-200 h-8 w-8 rounded"></div>
+                     ) : (
+                       financialStats.pendingRequests
+                     )}
+                   </p>
+                   <p className="text-xs text-slate-500">Awaiting approval</p>
+                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex items-center">
+                <div className="p-3 bg-purple-100 rounded-xl">
                   <Shield className="w-6 h-6 text-purple-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Available Balance</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {loadingUniversityRequests ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
-                    ) : (
-                      formatCurrency(universityBalance)
-                    )}
-                  </p>
-                </div>
+                                 <div className="ml-4">
+                   <p className="text-sm font-medium text-slate-600">Available Balance</p>
+                   <p className="text-2xl font-bold text-slate-900">
+                     {loadingUniversityRequests ? (
+                       <div className="animate-pulse bg-slate-200 h-8 w-20 rounded"></div>
+                     ) : (
+                       formatCurrency(universityBalance)
+                     )}
+                   </p>
+                   <p className="text-xs text-slate-500">Application fees - active payment requests</p>
+                 </div>
               </div>
             </div>
           </div>
 
+
           {/* University Payment Requests Section */}
-        <div className="bg-white shadow border rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">University Payment Requests</h3>
-              <p className="text-sm text-gray-600">Your submitted payment requests and their status</p>
+              <h3 className="text-lg font-medium text-slate-900">University Payment Requests</h3>
+              <p className="text-sm text-slate-600">Your submitted payment requests and their status</p>
             </div>
           </div>
 
@@ -976,7 +1593,6 @@ const PaymentManagement: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
                           <div className="font-medium">{formatCurrency(request.amount_usd)}</div>
-                          <div className="text-gray-500">{request.amount_coins} coins</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1012,6 +1628,31 @@ const PaymentManagement: React.FC = () => {
                             View Details
                           </button>
                           
+                          {/* Botão de cancelamento para requests pendentes */}
+                          {request.status === 'pending' && (
+                            <button
+                              onClick={async () => {
+                                if (window.confirm(`Are you sure you want to cancel this payment request for ${formatCurrency(request.amount_usd)}? The amount will be returned to your available balance.`)) {
+                                  try {
+                                    await UniversityPaymentRequestService.cancelPaymentRequest(request.id, user!.id);
+                                    // Recarregar requests e saldo
+                                    await loadUniversityPaymentRequests();
+                                    setSuccessMessage('Payment request cancelled successfully. Amount returned to your balance.');
+                                    setTimeout(() => setSuccessMessage(null), 5000);
+                                  } catch (error: any) {
+                                    setError(error.message || 'Failed to cancel payment request');
+                                    setTimeout(() => setError(null), 5000);
+                                  }
+                                }
+                              }}
+                              className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                              title="Cancel this payment request and return amount to balance"
+                            >
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Cancel
+                            </button>
+                          )}
+                          
                           {/* Alertas quando há notas do admin */}
                           {request.admin_notes && (
                             <div className="flex items-center space-x-1">
@@ -1041,6 +1682,364 @@ const PaymentManagement: React.FC = () => {
             </div>
           )}
         </div>
+        </>
+      )}
+
+      {/* Financial Overview Tab Content */}
+      {activeTab === 'financial-overview' && (
+        <>
+
+          {/* Key Financial Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Total Revenue Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl">
+                  <DollarSign className="w-6 h-6 text-green-600" />
+                </div>
+                <div className={`flex items-center ${calculatedMetrics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {calculatedMetrics.revenueGrowth >= 0 ? (
+                    <ArrowUpRight className="w-4 h-4 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4 mr-1" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {calculatedMetrics.revenueGrowth >= 0 ? '+' : ''}{calculatedMetrics.revenueGrowth.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {formatCurrency(financialStats.totalRevenue)}
+                </p>
+              </div>
+            </div>
+
+            {/* Conversion Rate Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Conversion Rate</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-slate-500">Applications to payments</p>
+              </div>
+            </div>
+
+            {/* Available Balance Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
+                  <Shield className="w-6 h-6 text-purple-600" />
+                </div>
+
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Available Balance</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {formatCurrency(universityBalance)}
+                </p>
+                <p className="text-xs text-slate-500">Ready for withdrawal</p>
+              </div>
+            </div>
+
+            {/* Average Fee Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-xl">
+                  <FileText className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="flex items-center text-yellow-600">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">
+                    {calculatedMetrics.totalApplications} apps
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-600 mb-1">Avg. Application Fee</p>
+                <p className="text-3xl font-bold text-slate-900 mb-1">
+                  {formatCurrency(financialAnalytics.applicationTrends.averageFee)}
+                </p>
+                <p className="text-xs text-slate-500">Per application</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Charts Section */}
+          {/* Revenue Trend Chart - Full Width */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">Revenue Trend</h3>
+                <p className="text-sm text-slate-600">Application fee revenue over time</p>
+              </div>
+              
+              {/* Time Period Filters */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Quick Period Buttons */}
+                <div className="flex space-x-1 bg-slate-100 rounded-lg p-1">
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('daily');
+                      setRevenueChartPeriod(7);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'daily' && revenueChartPeriod === 7
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    7D
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('daily');
+                      setRevenueChartPeriod(30);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'daily' && revenueChartPeriod === 30
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    30D
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('monthly');
+                      setRevenueChartPeriod(3);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'monthly' && revenueChartPeriod === 3
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    3M
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('monthly');
+                      setRevenueChartPeriod(6);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'monthly' && revenueChartPeriod === 6
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    6M
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRevenueChartType('monthly');
+                      setRevenueChartPeriod(12);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      revenueChartType === 'monthly' && revenueChartPeriod === 12
+                        ? 'bg-[#05294E] text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    1Y
+                  </button>
+                </div>
+                
+                {/* Custom Period Selector */}
+               
+              </div>
+            </div>
+            
+            <div className="h-64">
+              <canvas ref={revenueChartRef}></canvas>
+            </div>
+            
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-slate-600">
+                {revenueChartType === 'daily' 
+                  ? `Last ${revenueChartPeriod} day${revenueChartPeriod > 1 ? 's' : ''}`
+                  : `Last ${revenueChartPeriod} month${revenueChartPeriod > 1 ? 's' : ''}`
+                }
+              </span>
+              <span className="font-semibold text-slate-900">
+                {revenueChartType === 'daily' 
+                  ? formatCurrency(
+                      financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0)
+                    )
+                  : formatCurrency(
+                      financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0)
+                    )
+                }
+              </span>
+            </div>
+          </div>
+
+          {/* Detailed Analytics Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Monthly Performance */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Monthly Performance</h3>
+                <BarChart3 className="w-5 h-5 text-slate-600" />
+              </div>
+              
+              <div className="h-48">
+                <canvas ref={trendChartRef}></canvas>
+              </div>
+              
+              <div className="mt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Best Month</span>
+                  <span className="font-medium text-slate-900">
+                    {calculatedMetrics.bestMonth || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Average Monthly</span>
+                  <span className="font-medium text-slate-900">
+                    {formatCurrency(calculatedMetrics.monthlyAverage)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Status Distribution */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Payment Status</h3>
+                <PieChart className="w-5 h-5 text-slate-600" />
+              </div>
+              
+              <div className="h-48">
+                <canvas ref={paymentStatusChartRef}></canvas>
+              </div>
+              
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-lg font-semibold text-green-600">
+                    {financialStats.paidApplicationsCount}
+                  </div>
+                  <div className="text-xs text-slate-600">Paid</div>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-yellow-600">
+                    {financialStats.pendingRequests}
+                  </div>
+                  <div className="text-xs text-slate-600">Pending</div>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-red-600">
+                    {universityPaymentRequests.filter((r: any) => r.status === 'rejected').length}
+                  </div>
+                  <div className="text-xs text-slate-600">Rejected</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Quick Stats</h3>
+                <TrendingUp className="w-5 h-5 text-slate-600" />
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Last 7 Days</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formatCurrency(financialStats.last7DaysRevenue)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Total Paid Out</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formatCurrency(financialStats.totalPaidOut)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Pending Requests</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {formatCurrency(financialStats.totalApproved)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Applications</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {financialAnalytics.applicationTrends.totalApplications}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-slate-200">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {financialAnalytics.applicationTrends.conversionRate.toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-slate-600">Success Rate</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity Timeline */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">Recent Activity</h3>
+                <p className="text-sm text-slate-600">Latest financial transactions and events</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-slate-600" />
+                <span className="text-sm text-slate-600">Live</span>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {financialAnalytics.recentActivity.length > 0 ? (
+                financialAnalytics.recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                    <div className={`w-3 h-3 rounded-full ${
+                      activity.type === 'revenue' ? 'bg-green-500' :
+                      activity.type === 'payout' ? 'bg-blue-500' :
+                      'bg-yellow-500'
+                    }`}></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-slate-900">{activity.description}</p>
+                      <p className="text-xs text-slate-600">
+                        {new Date(activity.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${
+                        activity.type === 'revenue' ? 'text-green-600' :
+                        activity.type === 'payout' ? 'text-blue-600' :
+                        'text-yellow-600'
+                      }`}>
+                        {activity.type === 'revenue' ? '+' : '-'}{formatCurrency(activity.amount)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-500">No recent activity to display</p>
+                </div>
+              )}
+            </div>
+          </div>
         </>
       )}
 
@@ -1113,18 +2112,86 @@ const PaymentManagement: React.FC = () => {
               {/* Dynamic fields */}
               {payoutMethod === 'zelle' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input placeholder="Zelle email" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_email: e.target.value})}/>
-                  <input placeholder="Zelle phone" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_phone: e.target.value})}/>
-                  <input placeholder="Account holder name" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}/>
+                  <div>
+                    <input 
+                      placeholder="Zelle email *" 
+                      type='email'
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_email: e.target.value, zelle_phone: ''})}
+                    />
+                    {!payoutDetails.zelle_email && !payoutDetails.zelle_phone && <p className="text-xs text-red-600 mt-1">Zelle email or phone is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Zelle phone *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_phone: e.target.value, zelle_email: ''})}
+                    />
+                    {!payoutDetails.zelle_email && !payoutDetails.zelle_phone && <p className="text-xs text-red-600 mt-1">Zelle email or phone is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Account holder name (optional)" 
+                      className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Optional - useful for verification or records</p>
+                  </div>
                 </div>
               )}
               {payoutMethod === 'bank_transfer' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input placeholder="Bank name" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, bank_name: e.target.value})}/>
-                  <input placeholder="Account holder name" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}/>
-                  <input placeholder="Routing number" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, routing_number: e.target.value})}/>
-                  <input placeholder="Account number" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, account_number: e.target.value})}/>
-                  <input placeholder="SWIFT / IBAN (optional)" className="border border-gray-300 rounded-lg px-3 py-2" onChange={(e)=> setPayoutDetails({...payoutDetails, swift: e.target.value, iban: e.target.value})}/>
+                  <div>
+                    <input 
+                      placeholder="Bank name *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.bank_name ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, bank_name: e.target.value})}
+                    />
+                    {!payoutDetails.bank_name && <p className="text-xs text-red-600 mt-1">Bank name is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Account holder name *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.account_name ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}
+                    />
+                    {!payoutDetails.account_name && <p className="text-xs text-red-600 mt-1">Account holder name is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Routing number *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.routing_number ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, routing_number: e.target.value})}
+                    />
+                    {!payoutDetails.routing_number && <p className="text-xs text-red-600 mt-1">Routing number is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="Account number *" 
+                      className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        !payoutDetails.account_number ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, account_number: e.target.value})}
+                    />
+                    {!payoutDetails.account_number && <p className="text-xs text-red-600 mt-1">Account number is required</p>}
+                  </div>
+                  <div>
+                    <input 
+                      placeholder="SWIFT / IBAN (optional)" 
+                      className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e)=> setPayoutDetails({...payoutDetails, swift: e.target.value, iban: e.target.value})}
+                    />
+                  </div>
                 </div>
               )}
               {payoutMethod === 'stripe' && (
@@ -1138,13 +2205,19 @@ const PaymentManagement: React.FC = () => {
                 <button onClick={()=> setShowPaymentRequestModal(false)} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Cancel</button>
                 <button 
                   onClick={handleSubmitPaymentRequest} 
-                  disabled={submittingPayout || !isPaymentAmountValid()} 
+                  disabled={submittingPayout || !isPaymentAmountValid() || !isPayoutDetailsValid()} 
                   className={`px-4 py-2 rounded-lg text-white transition-colors ${
-                    isPaymentAmountValid() 
+                    isPaymentAmountValid() && isPayoutDetailsValid()
                       ? 'bg-indigo-600 hover:bg-indigo-700' 
                       : 'bg-gray-400 cursor-not-allowed'
                   } disabled:opacity-60`}
-                  title={!isPaymentAmountValid() ? 'Please enter a valid amount within your available balance' : 'Submit payment request'}
+                  title={!isPaymentAmountValid() ? 'Please enter a valid amount within your available balance' : 
+                         !isPayoutDetailsValid() ? 
+                           (payoutMethod === 'zelle' ? 'Please provide either Zelle email or phone number (not both)' :
+                            payoutMethod === 'bank_transfer' ? 'Please fill in all required bank details' :
+                            payoutMethod === 'stripe' ? 'Please provide Stripe email' :
+                            'Please fill in all required payment details') : 
+                         'Submit payment request'}
                 >
                   {submittingPayout ? 'Submitting...' : 'Submit request'}
                 </button>

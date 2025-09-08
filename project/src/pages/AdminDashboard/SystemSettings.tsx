@@ -12,10 +12,16 @@ import {
   RefreshCw,
   CheckCircle,
   AlertTriangle,
-  Info
+  Info,
+  Star,
+  Building,
+  GraduationCap
 } from 'lucide-react';
+import FeaturedScholarshipsManagement from './FeaturedScholarshipsManagement';
+import FeaturedUniversitiesManagement from './FeaturedUniversitiesManagement';
 
 const SystemSettings: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState({
     // Platform Settings
     autoApproveUniversities: false,
@@ -60,6 +66,27 @@ const SystemSettings: React.FC = () => {
     
     setTimeout(() => setSaved(false), 3000);
   };
+
+  const tabs = [
+    {
+      id: 'general',
+      label: 'General Settings',
+      icon: Settings,
+      color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      id: 'featured-scholarships',
+      label: 'Featured Scholarships',
+      icon: Star,
+      color: 'bg-yellow-100 text-yellow-600'
+    },
+    {
+      id: 'featured-universities',
+      label: 'Featured Universities',
+      icon: Building,
+      color: 'bg-green-100 text-green-600'
+    }
+  ];
 
   const settingSections = [
     {
@@ -188,6 +215,169 @@ const SystemSettings: React.FC = () => {
     }
   ];
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'featured-scholarships':
+        return <FeaturedScholarshipsManagement />;
+      case 'featured-universities':
+        return <FeaturedUniversitiesManagement />;
+      default:
+        return (
+          <>
+            {/* System Status */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
+                <Database className="h-5 w-5 mr-2 text-green-500" />
+                System Status
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800">Database</p>
+                      <p className="text-xs text-green-600">Operational</p>
+                    </div>
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800">API Services</p>
+                      <p className="text-xs text-green-600">Operational</p>
+                    </div>
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800">Email Service</p>
+                      <p className="text-xs text-green-600">Operational</p>
+                    </div>
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800">File Storage</p>
+                      <p className="text-xs text-green-600">Operational</p>
+                    </div>
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Settings Sections */}
+            {settingSections.map((section, sectionIndex) => {
+              const Icon = section.icon;
+              
+              return (
+                <div key={sectionIndex} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+                  <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${section.color}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    {section.title}
+                  </h3>
+                  
+                  <div className="space-y-6">
+                    {section.settings.map((setting, settingIndex) => (
+                      <div key={settingIndex} className="flex items-center justify-between py-4 border-b border-slate-100 last:border-b-0">
+                        <div className="flex-1">
+                          <label className="text-sm font-medium text-slate-900 block mb-1">
+                            {setting.label}
+                          </label>
+                          <p className="text-sm text-slate-500">{setting.description}</p>
+                        </div>
+                        
+                        <div className="ml-6">
+                          {setting.type === 'toggle' && (
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={settings[setting.key as keyof typeof settings] as boolean}
+                                onChange={(e) => handleSettingChange(setting.key, e.target.checked)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#05294E] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#05294E]"></div>
+                            </label>
+                          )}
+                          
+                          {setting.type === 'number' && (
+                            <input
+                              type="number"
+                              min={setting.min}
+                              max={setting.max}
+                              value={settings[setting.key as keyof typeof settings] as number}
+                              onChange={(e) => handleSettingChange(setting.key, parseInt(e.target.value))}
+                              className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
+                            />
+                          )}
+                          
+                          {setting.type === 'text' && (
+                            <input
+                              type="text"
+                              value={settings[setting.key as keyof typeof settings] as string}
+                              onChange={(e) => handleSettingChange(setting.key, e.target.value)}
+                              className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
+                            />
+                          )}
+                          
+                          {setting.type === 'email' && (
+                            <input
+                              type="email"
+                              value={settings[setting.key as keyof typeof settings] as string}
+                              onChange={(e) => handleSettingChange(setting.key, e.target.value)}
+                              className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
+                            />
+                          )}
+                          
+                          {setting.type === 'select' && (
+                            <select
+                              value={settings[setting.key as keyof typeof settings] as string}
+                              onChange={(e) => handleSettingChange(setting.key, e.target.value)}
+                              className="w-40 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
+                            >
+                              {setting.options?.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Warning Notice */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+              <div className="flex items-start">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-yellow-800 mb-2">Important Notice</h4>
+                  <p className="text-sm text-yellow-700">
+                    Changes to system settings may affect platform functionality. Please review all changes carefully before saving. 
+                    Some settings may require a system restart to take effect.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -197,182 +387,68 @@ const SystemSettings: React.FC = () => {
           <p className="text-slate-600">Configure platform settings and preferences</p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          {saved && (
-            <div className="flex items-center text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Settings saved</span>
-            </div>
-          )}
-          
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-[#05294E] text-white px-6 py-3 rounded-xl hover:bg-[#112335] transition-colors font-medium flex items-center disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
+        {activeTab === 'general' && (
+          <div className="flex items-center space-x-3">
+            {saved && (
+              <div className="flex items-center text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">Settings saved</span>
+              </div>
             )}
-          </button>
-        </div>
-      </div>
-
-      {/* System Status */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-          <Database className="h-5 w-5 mr-2 text-green-500" />
-          System Status
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-800">Database</p>
-                <p className="text-xs text-green-600">Operational</p>
-              </div>
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-          
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-800">API Services</p>
-                <p className="text-xs text-green-600">Operational</p>
-              </div>
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-          
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-800">Email Service</p>
-                <p className="text-xs text-green-600">Operational</p>
-              </div>
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-          
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-800">File Storage</p>
-                <p className="text-xs text-green-600">Operational</p>
-              </div>
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Settings Sections */}
-      {settingSections.map((section, sectionIndex) => {
-        const Icon = section.icon;
-        
-        return (
-          <div key={sectionIndex} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${section.color}`}>
-                <Icon className="h-4 w-4" />
-              </div>
-              {section.title}
-            </h3>
             
-            <div className="space-y-6">
-              {section.settings.map((setting, settingIndex) => (
-                <div key={settingIndex} className="flex items-center justify-between py-4 border-b border-slate-100 last:border-b-0">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium text-slate-900 block mb-1">
-                      {setting.label}
-                    </label>
-                    <p className="text-sm text-slate-500">{setting.description}</p>
-                  </div>
-                  
-                  <div className="ml-6">
-                    {setting.type === 'toggle' && (
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={settings[setting.key as keyof typeof settings] as boolean}
-                          onChange={(e) => handleSettingChange(setting.key, e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#05294E] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#05294E]"></div>
-                      </label>
-                    )}
-                    
-                    {setting.type === 'number' && (
-                      <input
-                        type="number"
-                        min={setting.min}
-                        max={setting.max}
-                        value={settings[setting.key as keyof typeof settings] as number}
-                        onChange={(e) => handleSettingChange(setting.key, parseInt(e.target.value))}
-                        className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
-                      />
-                    )}
-                    
-                    {setting.type === 'text' && (
-                      <input
-                        type="text"
-                        value={settings[setting.key as keyof typeof settings] as string}
-                        onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-                        className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
-                      />
-                    )}
-                    
-                    {setting.type === 'email' && (
-                      <input
-                        type="email"
-                        value={settings[setting.key as keyof typeof settings] as string}
-                        onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-                        className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
-                      />
-                    )}
-                    
-                    {setting.type === 'select' && (
-                      <select
-                        value={settings[setting.key as keyof typeof settings] as string}
-                        onChange={(e) => handleSettingChange(setting.key, e.target.value)}
-                        className="w-40 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#112335] text-sm"
-                      >
-                        {setting.options?.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-[#05294E] text-white px-6 py-3 rounded-xl hover:bg-[#112335] transition-colors font-medium flex items-center disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </button>
           </div>
-        );
-      })}
+        )}
+      </div>
 
-      {/* Warning Notice */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-        <div className="flex items-start">
-          <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 mt-0.5" />
-          <div>
-            <h4 className="font-medium text-yellow-800 mb-2">Important Notice</h4>
-            <p className="text-sm text-yellow-700">
-              Changes to system settings may affect platform functionality. Please review all changes carefully before saving. 
-              Some settings may require a system restart to take effect.
-            </p>
-          </div>
+      {/* Tabs */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2">
+        <div className="flex space-x-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  isActive
+                    ? 'bg-[#05294E] text-white shadow-lg'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                  isActive ? 'bg-white bg-opacity-20' : tab.color
+                }`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <span className="text-sm">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="min-h-[600px]">
+        {renderTabContent()}
       </div>
     </div>
   );

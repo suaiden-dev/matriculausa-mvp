@@ -57,7 +57,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     
     // Páginas públicas que não precisam de verificação
     const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];
-    if (publicPaths.some(path => currentPath.startsWith(path))) {
+    if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) {
+      console.log('🔀 [AUTHREDIRECT] Rota pública detectada:', currentPath);
       return;
     }
     
@@ -71,31 +72,25 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       
       // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
-        console.log('🔀 [AUTHREDIRECT] Usuário na página de login/auth');
-        console.log('🔀 [AUTHREDIRECT] User role:', user.role);
-        console.log('🔀 [AUTHREDIRECT] Current path:', currentPath);
-        
         // Redirecionamento baseado no role
         if (user.role === 'admin') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando admin para /admin/dashboard');
           navigate('/admin/dashboard', { replace: true });
           return;
         }
         
         if (user.role === 'affiliate_admin') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando affiliate_admin para /affiliate-admin/dashboard');
           navigate('/affiliate-admin/dashboard', { replace: true });
           return;
         }
         
         if (user.role === 'seller') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando seller para /seller/dashboard');
           navigate('/seller/dashboard', { replace: true });
           return;
         }
         
         if (user.role === 'student') {
-          console.log('🔀 [AUTHREDIRECT] Redirecionando student para /student/dashboard');
+          // Estudantes agora aceitam termos automaticamente durante o registro
+          // Não precisamos mais verificar termos aceitos
           navigate('/student/dashboard', { replace: true });
           return;
         }
@@ -150,6 +145,9 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/student/dashboard', { replace: true });
         return;
       }
+
+      // Estudantes não precisam mais verificar termos aceitos
+      // Eles aceitam automaticamente durante o registro
       
       // Se usuário é admin e está tentando acessar áreas restritas de outros roles
       if (user.role === 'admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {

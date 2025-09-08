@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { useSmartChat } from '../../contexts/SmartChatContext';
+
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
 import ScholarshipBrowser from './ScholarshipBrowser';
@@ -30,6 +30,9 @@ import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import ManualReview from './manual-review';
+import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
+import I20ControlFeeSuccess from './I20ControlFeeSuccess';
+import I20ControlFeeError from './I20ControlFeeError';
 
 interface StudentProfile {
   id: string;
@@ -67,8 +70,7 @@ const StudentDashboard: React.FC = () => {
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
   
-  // Hook para controlar visibilidade do SmartChat
-  const { isSmartChatOpen } = useSmartChat();
+
   
   // Fase 5: Referral Code System
   const { 
@@ -124,6 +126,7 @@ const StudentDashboard: React.FC = () => {
             annual_value_with_scholarship,
             scholarship_type,
             work_permissions,
+            application_fee_amount,
             universities (id, name, logo_url, location, is_approved)
           `)
           .eq('is_active', true);
@@ -279,8 +282,8 @@ const StudentDashboard: React.FC = () => {
       <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
         {/* Área de proteção para o botão */}
         <div className="floating-cart-area" />
-        {/* Botão do Carrinho - Oculto quando SmartChat estiver aberto */}
-        {!isSmartChatOpen && (
+        {/* Botão do Carrinho */}
+        {(
           <div
             style={{
               position: 'fixed',
@@ -406,10 +409,13 @@ const StudentDashboard: React.FC = () => {
           <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
           <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
           <Route path="/application-fee-error" element={<ApplicationFeeError />} />
+          <Route path="i20-control-fee-success" element={<I20ControlFeeSuccess />} />
+          <Route path="i20-control-fee-error" element={<I20ControlFeeError />} />
           <Route path="application-fee" element={<ApplicationFeePage />} />
           <Route path="rewards" element={<MatriculaRewards />} />
           <Route path="rewards/store" element={<RewardsStore />} />
           <Route path="manual-review" element={<ManualReview />} />
+          <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
         </Routes>
         
         {/* Fase 5: Modal de Parabéns para Código de Referência */}

@@ -8,6 +8,7 @@ import DocumentUploadModal from '../../components/DocumentUploadModal';
 import StudentTypeModal from '../../components/StudentTypeModal';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
+import { formatCentsToDollars } from '../../utils/currency';
 
 const CartPage: React.FC = () => {
   const { t } = useTranslation();
@@ -236,14 +237,18 @@ const CartPage: React.FC = () => {
               feeType="application_fee"
               scholarshipsIds={selectedScholarship ? [selectedScholarship] : []}
               buttonText={`${t('studentDashboard.cartPage.payApplicationFee')} ($${selectedScholarship && cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount 
-                ? Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount).toFixed(2)
+                ? (Number(cart.find(item => item.scholarships.id === selectedScholarship)?.scholarships.application_fee_amount) / 100).toFixed(2)
                 : '350.00'
               })`}
               successUrl={`${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
               cancelUrl={`${window.location.origin}/student/dashboard/application-fee-error`}
               disabled={!selectedScholarship}
               beforeCheckout={createOrGetApplication}
-              metadata={{ selected_scholarship_id: selectedScholarship }}
+              metadata={{ 
+                selected_scholarship_id: selectedScholarship,
+                student_process_type: studentType || window.localStorage.getItem('studentProcessType') || null
+              }}
+              studentProcessType={studentType || window.localStorage.getItem('studentProcessType') || null}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
             />
             <div className="mt-3 text-center">

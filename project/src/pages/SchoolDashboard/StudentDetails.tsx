@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
 import ApplicationChat from '../../components/ApplicationChat';
 import { useApplicationChat } from '../../hooks/useApplicationChat';
@@ -50,7 +51,7 @@ const StudentDetails: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents'>('details');
 
-  // Removido: student_documents como fonte primária; usaremos application.documents
+  // Documentos básicos do aluno (passport, diploma, funds_proof) para a aba Documents
   const [studentDocs, setStudentDocs] = useState<any[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
   // Modal para justificar solicitação de mudanças
@@ -95,7 +96,18 @@ const StudentDetails: React.FC = () => {
   // Inicializar estado da Acceptance Letter baseado na aplicação
   useEffect(() => {
     if (application) {
-      setAcceptanceLetterUploaded(application.acceptance_letter_status === 'approved');
+      console.log('=== useEffect Acceptance Letter disparado ===');
+      console.log('Application status:', application.status);
+      console.log('Acceptance letter URL:', application.acceptance_letter_url);
+      console.log('Acceptance letter status:', application.acceptance_letter_status);
+      
+      // Usar a lógica correta que verifica se a carta foi enviada
+      const shouldBeUploaded = !!(application.acceptance_letter_url && 
+        application.acceptance_letter_status && 
+        application.acceptance_letter_status !== 'pending');
+      
+      console.log('Setting acceptanceLetterUploaded to:', shouldBeUploaded);
+      setAcceptanceLetterUploaded(shouldBeUploaded);
     }
   }, [application]);
 
@@ -116,6 +128,9 @@ const StudentDetails: React.FC = () => {
   const fetchApplicationDetails = async () => {
     if (!applicationId) return;
 
+    console.log('=== fetchApplicationDetails iniciado ===');
+    console.log('Application ID:', applicationId);
+    
     setLoading(true);
     setError(null);
 
@@ -135,7 +150,14 @@ const StudentDetails: React.FC = () => {
       }
       
       if (data) {
+        console.log('=== Dados recebidos do banco ===');
+        console.log('Status da aplicação:', data.status);
+        console.log('Acceptance letter URL:', data.acceptance_letter_url);
+        console.log('Acceptance letter status:', data.acceptance_letter_status);
+        console.log('Acceptance letter sent at:', data.acceptance_letter_sent_at);
+        
         setApplication(data as ApplicationDetails);
+        console.log('=== Estado application atualizado ===');
         // Mantemos uma cópia simplificada para compatibilidade antiga
         const appDocs = (data as any).documents;
         if (Array.isArray(appDocs) && appDocs.length > 0) {
@@ -169,6 +191,7 @@ const StudentDetails: React.FC = () => {
       setError("Failed to load application details. Please try again.");
     } finally {
       setLoading(false);
+      console.log('=== fetchApplicationDetails finalizado ===');
     }
   };
 
@@ -207,11 +230,16 @@ const StudentDetails: React.FC = () => {
   // Carregar dados dos documentos quando a aplicação for carregada
   useEffect(() => {
     if (applicationId && application?.user_profiles?.user_id) {
+      console.log('=== useEffect fetchStudentDocuments disparado ===');
+      console.log('Application ID:', applicationId);
+      console.log('Application status:', application?.status);
+      console.log('Acceptance letter URL:', application?.acceptance_letter_url);
+      console.log('Acceptance letter status:', application?.acceptance_letter_status);
       console.log('Carregando dados dos documentos para application:', applicationId);
       fetchDocumentRequests();
       fetchStudentDocuments();
     }
-  }, [applicationId, application]);
+  }, [applicationId, application]); // Incluída a dependência 'application' para garantir que os documentos sejam recarregados quando a aplicação for atualizada
 
   const fetchDocumentRequests = async () => {
     if (!application) return;
@@ -265,12 +293,16 @@ const StudentDetails: React.FC = () => {
     }
   };
 
-  const fetchStudentDocuments = async () => {
+    const fetchStudentDocuments = async () => {
     if (!application) return;
     
     try {
       console.log('=== Buscando todos os uploads do aluno ===');
-      console.log('Student user_id:', application.user_profiles.user_id);
+      console.log('Application ID:', application.id);
+      console.log('Student user_id:', application.user_profiles?.user_id);
+      console.log('Application status:', application.status);
+      console.log('Acceptance letter URL:', application.acceptance_letter_url);
+      console.log('Acceptance letter status:', application.acceptance_letter_status);
       
       // Primeiro, vamos verificar a estrutura da tabela document_request_uploads
       const { data: sampleUploads, error: sampleError } = await supabase
@@ -284,17 +316,36 @@ const StudentDetails: React.FC = () => {
         console.log('Estrutura da tabela document_request_uploads:', sampleUploads);
       }
       
-      // Buscar TODOS os uploads do aluno na tabela document_request_uploads
-      // Vamos tentar diferentes campos que podem identificar o usuário
-      let uploads: any[] = [];
-      let uploadsError: any = null;
+      // Verificar também a estrutura da tabela document_requests
+      const { data: sampleRequests, error: sampleRequestsError } = await supabase
+        .from('document_requests')
+        .select('*')
+        .limit(5);
       
-      // Tentativa 1: usando uploaded_by
-      let { data: uploadsByUser, error: error1 } = await supabase
+      if (sampleRequestsError) {
+        console.error("Error fetching sample requests:", sampleRequestsError);
+      } else {
+        console.log('Estrutura da tabela document_requests:', sampleRequests);
+      }
+      
+      // Primeiro, buscar document_requests para esta aplicação
+      const { data: requestsForApp, error: requestsError } = await supabase
+        .from('document_requests')
+        .select('*')
+        .eq('scholarship_application_id', application.id);
+      
+      if (requestsError) {
+        console.log('Erro ao buscar document_requests para a aplicação:', requestsError);
+      } else {
+        console.log('Document requests encontrados para a aplicação:', requestsForApp);
+      }
+      
+      // Verificar se há uploads para esta aplicação específica
+      const { data: uploadsForApp, error: errorApp } = await supabase
         .from('document_request_uploads')
         .select(`
           *,
-          document_requests!inner(
+          document_requests(
             id,
             title,
             description,
@@ -304,22 +355,39 @@ const StudentDetails: React.FC = () => {
             scholarship_application_id
           )
         `)
-        .eq('uploaded_by', application.user_profiles.user_id);
+        .eq('document_requests.scholarship_application_id', application.id);
       
-      if (error1) {
-        console.log('Erro ao buscar por uploaded_by:', error1);
-      } else if (uploadsByUser && uploadsByUser.length > 0) {
-        console.log('Uploads encontrados por uploaded_by:', uploadsByUser);
-        uploads = uploadsByUser;
+      if (errorApp) {
+        console.log('Erro ao buscar uploads para a aplicação:', errorApp);
+      } else {
+        console.log('Uploads encontrados diretamente para a aplicação:', uploadsForApp);
+        if (uploadsForApp && uploadsForApp.length > 0) {
+          console.log('Detalhes dos uploads encontrados:');
+          uploadsForApp.forEach((upload, index) => {
+            console.log(`Upload ${index + 1}:`, {
+              id: upload.id,
+              document_request_id: upload.document_request_id,
+              scholarship_application_id: upload.document_requests?.scholarship_application_id,
+              uploaded_by: upload.uploaded_by
+            });
+          });
+        }
       }
       
-      // Tentativa 2: usando user_id
+      // Usar os uploads encontrados diretamente para a aplicação
+      let uploads: any[] = [];
+      if (uploadsForApp && uploadsForApp.length > 0) {
+        uploads = uploadsForApp;
+      }
+      
+      // Se não encontrou nada, tentar buscar por uploaded_by
       if (uploads.length === 0) {
-        let { data: uploadsByUserId, error: error2 } = await supabase
+        console.log('Tentativa alternativa: buscando por uploaded_by =', application.user_profiles?.user_id);
+        let { data: uploadsByUser, error: error1 } = await supabase
           .from('document_request_uploads')
           .select(`
             *,
-            document_requests!inner(
+            document_requests(
               id,
               title,
               description,
@@ -329,70 +397,116 @@ const StudentDetails: React.FC = () => {
               scholarship_application_id
             )
           `)
-          .eq('user_id', application.user_profiles.user_id);
+          .eq('uploaded_by', application.user_profiles?.user_id);
         
-        if (error2) {
-          console.log('Erro ao buscar por user_id:', error2);
-        } else if (uploadsByUserId && uploadsByUserId.length > 0) {
-          console.log('Uploads encontrados por user_id:', uploadsByUserId);
-          uploads = uploadsByUserId;
+        if (error1) {
+          console.log('Erro ao buscar por uploaded_by:', error1);
+        } else if (uploadsByUser && uploadsByUser.length > 0) {
+          console.log('Uploads encontrados por uploaded_by:', uploadsByUser);
+          uploads = uploadsByUser;
+        } else {
+          console.log('Nenhum upload encontrado por uploaded_by');
         }
       }
       
-      // Tentativa 3: buscar todos e filtrar por scholarship_application_id
+      // Se ainda não encontrou nada, tentar buscar todos os uploads
       if (uploads.length === 0) {
-        let { data: allUploads, error: error3 } = await supabase
+        console.log('Tentativa final: buscando todos os uploads');
+        let { data: allUploads, error: error2 } = await supabase
           .from('document_request_uploads')
-          .select(`
-            *,
-            document_requests!inner(
-              id,
-              title,
-              description,
-              created_at,
-              is_global,
-              university_id,
-              scholarship_application_id
-            )
-          `);
+          .select('*');
         
-        if (error3) {
-          console.log('Erro ao buscar todos os uploads:', error3);
-        } else if (allUploads) {
-          // Filtrar por scholarship_application_id
-          uploads = allUploads.filter(upload => 
-            upload.document_requests?.scholarship_application_id === application.id
-          );
-          console.log('Uploads filtrados por scholarship_application_id:', uploads);
+        if (error2) {
+          console.log('Erro ao buscar todos os uploads:', error2);
+        } else if (allUploads && allUploads.length > 0) {
+          console.log('Total de uploads na tabela:', allUploads.length);
+          console.log('Primeiros 3 uploads:', allUploads.slice(0, 3));
+          uploads = allUploads; // Atribuir os resultados à variável uploads
         }
       }
 
       console.log('Uploads finais encontrados:', uploads);
 
-      if (!uploads || uploads.length === 0) {
-        console.log('Nenhum upload encontrado para este aluno');
+      // Buscar também a carta de aceite da aplicação
+      let acceptanceLetterDoc = null;
+      console.log('=== Verificando carta de aceite ===');
+      console.log('application.acceptance_letter_url:', application.acceptance_letter_url);
+      console.log('application.acceptance_letter_status:', application.acceptance_letter_status);
+      console.log('application.acceptance_letter_sent_at:', application.acceptance_letter_sent_at);
+      
+      // Verificar se há carta de aceite
+      // Aceitar se tiver URL e status não for 'pending'
+      // Aceitar também se tiver URL mesmo sem status definido
+      if (application.acceptance_letter_url && application.acceptance_letter_url.trim() !== '') {
+        acceptanceLetterDoc = {
+          id: `acceptance_letter_${application.id}`,
+          filename: application.acceptance_letter_url?.split('/').pop() || 'Acceptance Letter',
+          file_url: application.acceptance_letter_url,
+          status: application.acceptance_letter_status || 'sent',
+          uploaded_at: application.acceptance_letter_sent_at || new Date().toISOString(),
+          request_title: 'Acceptance Letter',
+          request_description: 'Official acceptance letter from the university',
+          request_created_at: application.acceptance_letter_sent_at || new Date().toISOString(),
+          is_global: false,
+          request_type: 'Acceptance Letter',
+          is_acceptance_letter: true
+        };
+        console.log('Carta de aceite encontrada:', acceptanceLetterDoc);
+      } else {
+        console.log('Carta de aceite NÃO encontrada ou status é pending');
+        console.log('Motivos possíveis:');
+        console.log('- acceptance_letter_url está vazio:', !application.acceptance_letter_url);
+        console.log('- acceptance_letter_status está vazio:', !application.acceptance_letter_status);
+        console.log('- acceptance_letter_status é pending:', application.acceptance_letter_status === 'pending');
+        console.log('- acceptance_letter_url valor:', application.acceptance_letter_url);
+        console.log('- acceptance_letter_status valor:', application.acceptance_letter_status);
+      }
+
+      // Combinar uploads com a carta de aceite
+      let allDocuments = [...uploads];
+      if (acceptanceLetterDoc) {
+        allDocuments.unshift(acceptanceLetterDoc); // Colocar a carta de aceite no topo
+      }
+
+      console.log('=== Resumo final ===');
+      console.log('Uploads encontrados:', uploads.length);
+      console.log('Carta de aceite encontrada:', !!acceptanceLetterDoc);
+      console.log('Total de documentos:', allDocuments.length);
+
+      if (!allDocuments || allDocuments.length === 0) {
+        console.log('Nenhum documento encontrado para este aluno');
         setStudentDocuments([]);
         return;
       }
 
       // Formatar os documentos para exibição
-      const studentDocuments = uploads.map(upload => {
-        console.log('=== Formatando upload ===');
-        console.log('Upload original:', upload);
-        console.log('file_url:', upload.file_url);
-        console.log('Tipo de file_url:', typeof upload.file_url);
+      const studentDocuments = allDocuments.map(doc => {
+        console.log('=== Formatando documento ===');
+        console.log('Documento original:', doc);
+        console.log('file_url:', doc.file_url);
+        console.log('Tipo de file_url:', typeof doc.file_url);
+        
+        // Determinar o nome do arquivo
+        let filename = 'Document';
+        if (doc.file_url) {
+          const urlParts = doc.file_url.split('/');
+          filename = urlParts[urlParts.length - 1] || 'Document';
+        } else if (doc.filename) {
+          filename = doc.filename;
+        }
         
         const formatted = {
-          id: upload.id,
-          filename: upload.file_url?.split('/').pop() || 'Document',
-          file_url: upload.file_url,
-          status: upload.status || 'under_review',
-          uploaded_at: upload.uploaded_at || upload.created_at,
-          request_title: upload.document_requests?.title,
-          request_description: upload.document_requests?.description,
-          request_created_at: upload.document_requests?.created_at,
-          is_global: upload.document_requests?.is_global || false,
-          request_type: upload.document_requests?.is_global ? 'Global Request' : 'Individual Request'
+          id: doc.id,
+          filename: filename,
+          file_url: doc.file_url,
+          status: doc.status || 'under_review',
+          uploaded_at: doc.uploaded_at || doc.created_at,
+          request_title: doc.request_title || doc.title || 'Document Request',
+          request_description: doc.request_description || doc.description || '',
+          request_created_at: doc.request_created_at || doc.created_at,
+          is_global: doc.is_global || false,
+          request_type: doc.request_type || 'document',
+          is_acceptance_letter: doc.is_acceptance_letter || false
         };
         
         console.log('Documento formatado:', formatted);
@@ -409,10 +523,7 @@ const StudentDetails: React.FC = () => {
 
   // Debug: verificar estado da autenticação
   useEffect(() => {
-    console.log('=== DEBUG: Estado da autenticação ===');
-    console.log('User:', user);
-    console.log('User ID:', user?.id);
-    console.log('User role:', user?.role);
+    // Estado da autenticação verificado
   }, [user]);
 
   if (loading) {
@@ -442,26 +553,84 @@ const StudentDetails: React.FC = () => {
     );
   }
 
-  const { user_profiles: student, scholarships: scholarship } = application;
+  // Verificar se application existe antes de extrair dados
+  if (!application) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E] mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading application details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Verificar se application.user_profiles existe
+  if (!application.user_profiles) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️</div>
+          <p className="text-slate-600">Student profile not found</p>
+          <p className="text-sm text-slate-500 mt-2">Please check the application data</p>
+        </div>
+      </div>
+    );
+  }
   const latestDocByType = (type: string) => {
-    const docs = (application as any)?.documents as any[] | undefined;
-    const appDoc = Array.isArray(docs) ? docs.find((d) => d.type === type) : undefined;
-    if (appDoc) return { 
-      id: `${type}`, 
-      type, 
-      file_url: appDoc.url, 
-      status: appDoc.status || 'under_review',
-      uploaded_at: appDoc.uploaded_at || appDoc.created_at || null
-    };
-    // fallback compatibilidade
-    const fallbackDoc = studentDocs.find((d) => d.type === type);
-    if (fallbackDoc) {
+    // ✅ CORREÇÃO: Buscar documentos de MÚLTIPLAS fontes para garantir que todos os 3 sejam exibidos
+    
+    // Fonte 1: Documentos da aplicação (scholarship_applications.documents)
+    const appDocsOfType = Array.isArray((application as any)?.documents) 
+      ? (application as any).documents.filter((d: any) => d.type === type)
+      : [];
+    
+    // Fonte 2: Documentos do perfil do aluno (user_profiles.documents)
+    const profileDocsOfType = Array.isArray((application as any)?.user_profiles?.documents)
+      ? (application as any).user_profiles.documents.filter((d: any) => d.type === type)
+      : [];
+    
+    // Fonte 3: Documentos da tabela student_documents
+    const storageDocsOfType = studentDocs.filter(doc => doc.type === type);
+    
+    // Combinar todas as fontes
+    const allDocsOfType = [
+      ...appDocsOfType.map((d: any) => ({ ...d, source: 'application', file_url: d.url || d.file_url })),
+      ...profileDocsOfType.map((d: any) => ({ ...d, source: 'profile', file_url: d.url || d.file_url })),
+      ...storageDocsOfType.map((d: any) => ({ ...d, source: 'storage', file_url: d.file_url }))
+    ];
+    
+    if (allDocsOfType.length > 0) {
+      // Ordenar por uploaded_at e pegar o mais recente
+      const latestDoc = allDocsOfType.sort((a: any, b: any) => {
+        const dateA = new Date(a.uploaded_at || a.created_at || 0).getTime();
+        const dateB = new Date(b.uploaded_at || b.created_at || 0).getTime();
+        return dateB - dateA;
+      })[0];
+      
+      console.log(`latestDocByType(${type}): Found document from source ${latestDoc.source}:`, latestDoc);
+      
+      // ✅ CORREÇÃO: Garantir que file_url seja sempre uma URL completa
+      let finalFileUrl = latestDoc.file_url;
+      
+      // Se file_url não é uma URL completa, construir a URL completa do Supabase
+      if (finalFileUrl && !finalFileUrl.startsWith('http')) {
+        finalFileUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/${finalFileUrl}`;
+        console.log(`latestDocByType(${type}): Construída URL completa:`, finalFileUrl);
+      }
+      
       return {
-        ...fallbackDoc,
-        uploaded_at: fallbackDoc.uploaded_at || fallbackDoc.created_at || null
+        id: latestDoc.id || `temp_${type}_${Date.now()}`,
+        type: latestDoc.type,
+        file_url: finalFileUrl,
+        status: latestDoc.status || 'under_review',
+        uploaded_at: latestDoc.uploaded_at || latestDoc.created_at,
+        source: latestDoc.source
       };
     }
-    return fallbackDoc;
+    
+    console.log(`latestDocByType(${type}): No document found`);
+    return null;
   };
 
   const updateApplicationDocStatus = async (
@@ -588,6 +757,11 @@ const StudentDetails: React.FC = () => {
         console.error('Error sending approval notification:', notificationError);
       }
 
+      // Atualizar o estado local dos documentos do aluno
+      setStudentDocuments(prev => prev.map(doc => 
+        doc.id === documentId ? { ...doc, status: 'approved' } : doc
+      ));
+
       // Recarregar os dados para mostrar o novo status
       fetchStudentDocuments();
 
@@ -601,22 +775,11 @@ const StudentDetails: React.FC = () => {
     if (!doc.file_url) return;
     
     try {
-      console.log('=== DEBUG handleDownloadDocument ===');
-      console.log('Documento para download:', doc);
-      console.log('file_url:', doc.file_url);
-      
-      // Se file_url é um path do storage, converter para URL pública
+      // ✅ CORREÇÃO: Não converter a URL aqui, deixar o DocumentViewerModal fazer isso
+      // Isso permite que o modal teste ambos os buckets (document-attachments e student-documents)
       let downloadUrl = doc.file_url;
-      if (doc.file_url && !doc.file_url.startsWith('http')) {
-        const publicUrl = supabase.storage
-          .from('document-attachments')
-          .getPublicUrl(doc.file_url)
-          .data.publicUrl;
-        downloadUrl = publicUrl;
-        console.log('URL pública para download:', downloadUrl);
-      }
       
-      // Fazer download usando a URL pública
+      // Fazer download usando a URL
       const response = await fetch(downloadUrl);
       if (!response.ok) {
         throw new Error('Failed to download document: ' + response.statusText);
@@ -638,70 +801,96 @@ const StudentDetails: React.FC = () => {
   };
 
   const handleViewDocument = (doc: any) => {
-    console.log('=== DEBUG handleViewDocument ===');
-    console.log('Documento recebido:', doc);
-    console.log('file_url:', doc.file_url);
-    console.log('Tipo de file_url:', typeof doc.file_url);
-    
-    if (!doc.file_url) {
-      console.log('file_url está vazio ou undefined');
+    // Verificação de segurança adicional
+    if (!doc || !doc.file_url) {
       return;
     }
     
-    // Converter a URL do storage para URL pública
-    try {
-      // Se file_url é um path do storage, converter para URL pública
-      if (doc.file_url && !doc.file_url.startsWith('http')) {
-        const publicUrl = supabase.storage
-          .from('document-attachments')
-          .getPublicUrl(doc.file_url)
-          .data.publicUrl;
-        
-        console.log('URL pública gerada:', publicUrl);
-        setPreviewUrl(publicUrl);
-      } else {
-        // Se já é uma URL completa, usar diretamente
-        console.log('Usando URL existente:', doc.file_url);
-        setPreviewUrl(doc.file_url);
-      }
-    } catch (error) {
-      console.error('Erro ao gerar URL pública:', error);
-      // Fallback: tentar usar a URL original
-      setPreviewUrl(doc.file_url);
-    }
+    // ✅ CORREÇÃO: Não converter a URL aqui, deixar o DocumentViewerModal fazer isso
+    // Isso permite que o modal teste ambos os buckets (document-attachments e student-documents)
+    setPreviewUrl(doc.file_url);
   };
 
   const approveDoc = async (type: string) => {
     try {
       setUpdating(type);
-      await updateApplicationDocStatus(type, 'approved');
       
-      // Buscar a aplicação atualizada para verificar o status real
-      const { data: updatedApp } = await supabase
+      // Buscar a aplicação atual para obter os documentos existentes
+      const { data: currentApp, error: fetchError } = await supabase
         .from('scholarship_applications')
         .select('documents')
         .eq('id', applicationId)
         .single();
       
-      if (updatedApp?.documents) {
-        // Verificar se todos os documentos foram aprovados usando os dados atualizados
-        const allDocsApproved = ['passport', 'diploma', 'funds_proof']
-          .every((docType) => {
-            const doc = updatedApp.documents.find((d: any) => d.type === docType);
-            return doc && doc.status === 'approved';
-          });
-        
-        // Se todos os documentos foram aprovados, atualizar status geral
-        if (allDocsApproved) {
-          await supabase
-            .from('user_profiles')
-            .update({ documents_status: 'approved' })
-            .eq('user_id', student.user_id);
-          
-          // Atualizar o estado local também
-          setApplication((prev) => prev ? ({ ...prev, documents: updatedApp.documents } as any) : prev);
-        }
+      if (fetchError) {
+        throw new Error('Failed to fetch current application: ' + fetchError.message);
       }
+
+      // Preparar os documentos atualizados
+      let updatedDocuments = currentApp?.documents || [];
+      const existingDocIndex = updatedDocuments.findIndex((d: any) => d.type === type);
+      
+      if (existingDocIndex >= 0) {
+        // Atualizar documento existente
+        updatedDocuments[existingDocIndex] = {
+          ...updatedDocuments[existingDocIndex],
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        };
+      } else {
+        // Adicionar novo documento aprovado
+        updatedDocuments.push({
+          type,
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user?.id
+        });
+      }
+
+      // Salvar no banco de dados
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: updatedDocuments })
+        .eq('id', applicationId);
+
+      if (updateError) {
+        throw new Error('Failed to update application documents: ' + updateError.message);
+      }
+
+      // Verificar se todos os documentos foram aprovados
+      const allDocsApproved = ['passport', 'diploma', 'funds_proof']
+        .every((docType) => {
+          const doc = updatedDocuments.find((d: any) => d.type === docType);
+          return doc && doc.status === 'approved';
+        });
+      
+      // Se todos os documentos foram aprovados, atualizar status geral
+      if (allDocsApproved) {
+        await supabase
+          .from('user_profiles')
+          .update({ documents_status: 'approved' })
+          .eq('user_id', application.user_profiles.user_id);
+        
+        // Atualizar o estado local da aplicação
+        setApplication((prev) => prev ? ({ ...prev, documents: updatedDocuments } as any) : prev);
+      }
+
+      // Atualizar o estado local dos documentos do aluno
+      setStudentDocs(prev => prev.map(doc => 
+        doc.type === type ? { ...doc, status: 'approved' } : doc
+      ));
+
+      // Atualizar estado local dos documentos
+      setStudentDocs(prev => prev.map(doc => 
+        doc.type === type ? { ...doc, status: 'approved' } : doc
+      ));
+      
+      console.log(`Document ${type} approved successfully`);
+      
+    } catch (error: any) {
+      console.error(`Error approving document ${type}:`, error);
+      alert(`Failed to approve document: ${error.message}`);
     } finally {
       setUpdating(null);
     }
@@ -715,7 +904,7 @@ const StudentDetails: React.FC = () => {
       await supabase
         .from('user_profiles')
         .update({ documents_status: 'under_review' })
-        .eq('user_id', student.user_id);
+        .eq('user_id', application.user_profiles.user_id);
 
       // --- NOTIFICAÇÃO VIA WEBHOOK N8N ---
       try {
@@ -723,7 +912,7 @@ const StudentDetails: React.FC = () => {
         const { data: userData } = await supabase
           .from('user_profiles')
           .select('email')
-          .eq('user_id', student.user_id)
+          .eq('user_id', application.user_profiles.user_id)
           .single();
 
         if (userData?.email) {
@@ -731,7 +920,7 @@ const StudentDetails: React.FC = () => {
           const webhookPayload = {
             tipo_notf: "Documento rejeitado",
             email_aluno: userData.email,
-            nome_aluno: student.full_name,
+            nome_aluno: application.user_profiles.full_name || 'Student',
             email_universidade: user?.email,
             o_que_enviar: `Your document <strong>${documentLabel}</strong> has been rejected and needs changes. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
           };
@@ -765,7 +954,7 @@ const StudentDetails: React.FC = () => {
                   'Authorization': `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({
-                  user_id: student.user_id,
+                  user_id: application.user_profiles.user_id,
                   title: 'Document rejected',
                   message: `Your ${documentLabel} document was rejected. Reason: ${reason}`,
                   type: 'document_rejected',
@@ -796,13 +985,19 @@ const StudentDetails: React.FC = () => {
       await supabase
         .from('user_profiles')
         .update({ documents_status: 'rejected' })
-        .eq('user_id', student.user_id);
+        .eq('user_id', application.user_profiles.user_id);
       // Atualiza aplicação com status e justificativa
       await supabase
         .from('scholarship_applications')
         .update({ status: 'rejected', notes: rejectStudentReason || null })
         .eq('id', applicationId);
-      await fetchApplicationDetails();
+      
+      // Atualizar o estado local da aplicação
+      setApplication(prev => prev ? ({
+        ...prev,
+        status: 'rejected'
+      } as any) : prev);
+      
       setActiveTab('details');
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
@@ -813,11 +1008,6 @@ const StudentDetails: React.FC = () => {
 
   const handleRejectDocument = async (documentId: string, reason: string) => {
     try {
-      console.log('=== DEBUG: handleRejectDocument chamada ===');
-      console.log('Document ID:', documentId);
-      console.log('Reason:', reason);
-      console.log('Application:', application);
-      
       // Primeiro, buscar informações do upload para notificação
       const { data: uploadData, error: fetchError } = await supabase
         .from('document_request_uploads')
@@ -837,8 +1027,6 @@ const StudentDetails: React.FC = () => {
         throw new Error('Failed to fetch upload data: ' + fetchError.message);
       }
 
-      console.log('Upload data encontrado:', uploadData);
-
       // Atualizar o status para rejeitado
       const { error } = await supabase
         .from('document_request_uploads')
@@ -853,18 +1041,18 @@ const StudentDetails: React.FC = () => {
         throw new Error('Failed to reject document: ' + error.message);
       }
 
-      console.log('Status atualizado com sucesso');
+      // Atualizar o estado local dos documentos do aluno
+      setStudentDocuments(prev => prev.map(doc => 
+        doc.id === documentId ? { ...doc, status: 'rejected' } : doc
+      ));
 
       // Enviar notificação ao aluno
       try {
-        console.log('Buscando dados do usuário...');
         const { data: userData } = await supabase
           .from('user_profiles')
           .select('email')
           .eq('user_id', application?.user_profiles.user_id)
           .single();
-
-        console.log('User data encontrado:', userData);
 
         if (userData?.email) {
           const webhookPayload = {
@@ -875,10 +1063,6 @@ const StudentDetails: React.FC = () => {
             o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
           };
 
-          console.log('Enviando webhook...');
-          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
-          console.log('Webhook payload:', webhookPayload);
-          
           try {
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
@@ -886,43 +1070,30 @@ const StudentDetails: React.FC = () => {
               body: JSON.stringify(webhookPayload),
             });
             
-            console.log('Webhook response status:', webhookResponse.status);
-            console.log('Webhook response ok:', webhookResponse.ok);
-            
             if (!webhookResponse.ok) {
               const webhookErrorText = await webhookResponse.text();
               console.error('Webhook error:', webhookErrorText);
-            } else {
-              console.log('Webhook enviado com sucesso');
             }
           } catch (webhookError) {
             console.error('Erro ao enviar webhook:', webhookError);
           }
 
-          console.log('Webhook enviado com sucesso');
-
           // Notificação in-app no sino do aluno — deve ser enviada SEMPRE, independente do e-mail
         }
 
         try {
-          console.log('=== DEBUG: Enviando notificação in-app para rejeição de documento ===');
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
-          console.log('Access token:', accessToken ? 'Presente' : 'Ausente');
-          console.log('Student user ID:', application?.user_profiles.user_id);
-          console.log('Session:', session);
           
           if (accessToken) {
-                          const notificationPayload = {
-                user_id: application?.user_profiles.user_id,
-                title: 'Document rejected',
-                message: `Your document ${uploadData.file_url?.split('/').pop()} was rejected. Reason: ${reason}`,
-                type: 'document_rejected',
-                link: '/student/dashboard',
-              };
-            console.log('Payload da notificação:', notificationPayload);
+            const notificationPayload = {
+              user_id: application?.user_profiles.user_id,
+              title: 'Document rejected',
+              message: `Your document ${uploadData.file_url?.split('/').pop()} was rejected. Reason: ${reason}`,
+              type: 'document_rejected',
+              link: '/student/dashboard',
+            };
             
-            console.log('Chamando Edge Function...');
             const response = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',
               headers: {
@@ -932,39 +1103,27 @@ const StudentDetails: React.FC = () => {
               body: JSON.stringify(notificationPayload),
             });
             
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-            
             let responseData;
             try {
               responseData = await response.json();
-              console.log('Response data:', responseData);
             } catch (parseError) {
               console.error('Erro ao fazer parse da resposta:', parseError);
-              const responseText = await response.text();
-              console.log('Response text:', responseText);
             }
             
             if (!response.ok) {
               console.error('Erro na Edge Function:', responseData);
-            } else {
-              console.log('Notificação criada com sucesso!');
             }
-          } else {
-            console.error('Access token não encontrado');
           }
         } catch (e) {
           console.error('Error sending in-app student notification:', e);
-          console.error('Error details:', e);
         }
       } catch (notificationError) {
         console.error('Error sending rejection notification:', notificationError);
       }
 
       // Recarregar documentos do estudante
-      console.log('Recarregando documentos...');
       fetchStudentDocuments();
-      alert('Document rejected successfully! The student will be notified.');
+      
     } catch (err: any) {
       console.error("Error rejecting document:", err);
       alert(`Failed to reject document: ${err.message}`);
@@ -1021,6 +1180,16 @@ const StudentDetails: React.FC = () => {
     }
   };
 
+  // Função para sanitizar nomes de arquivos (remover acentos, espaços e caracteres especiais)
+  const sanitizeFileName = (fileName: string): string => {
+    return fileName
+      .normalize('NFD') // Decompor caracteres acentuados
+      .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos (acentos)
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Substituir caracteres especiais por underscore
+      .replace(/_+/g, '_') // Remover underscores múltiplos
+      .replace(/^_|_$/g, ''); // Remover underscores do início e fim
+  };
+
   // Função para processar a carta de aceite
   const handleProcessAcceptanceLetter = async () => {
     if (!application || !acceptanceLetterFile) {
@@ -1028,15 +1197,11 @@ const StudentDetails: React.FC = () => {
       return;
     }
 
-    console.log('=== DEBUG handleProcessAcceptanceLetter ===');
-    console.log('Application:', application);
-    console.log('File:', acceptanceLetterFile);
-
     setUploadingAcceptanceLetter(true);
     try {
-      // Upload do arquivo para o storage
-      const fileName = `acceptance_letters/${Date.now()}_${acceptanceLetterFile.name}`;
-      console.log('Uploading file:', fileName);
+      // Sanitizar o nome do arquivo e gerar chave segura
+      const sanitizedFileName = sanitizeFileName(acceptanceLetterFile.name);
+      const fileName = `acceptance_letters/${Date.now()}_${sanitizedFileName}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('document-attachments')
@@ -1046,17 +1211,18 @@ const StudentDetails: React.FC = () => {
         throw new Error('Failed to upload file: ' + uploadError.message);
       }
 
-      console.log('File uploaded successfully:', uploadData);
+      // Obter a URL pública do arquivo
+      const { data: { publicUrl } } = supabase.storage
+        .from('document-attachments')
+        .getPublicUrl(uploadData.path);
 
       // Atualizar a aplicação com a URL da carta de aceite
       const updateData = {
-        acceptance_letter_url: uploadData.path,
-        acceptance_letter_status: 'approved',
+        acceptance_letter_url: publicUrl,
+        acceptance_letter_status: 'sent',
         acceptance_letter_sent_at: new Date().toISOString(),
         status: 'enrolled'
       };
-      
-      console.log('Updating application with:', updateData);
       
       const { error: updateError } = await supabase
         .from('scholarship_applications')
@@ -1067,14 +1233,23 @@ const StudentDetails: React.FC = () => {
         throw new Error('Failed to update application: ' + updateError.message);
       }
 
-      console.log('Application updated successfully');
+      // Atualizar o estado local da aplicação
+      setApplication(prev => prev ? ({
+        ...prev,
+        acceptance_letter_url: publicUrl,
+        acceptance_letter_status: 'sent',
+        acceptance_letter_sent_at: new Date().toISOString(),
+        status: 'enrolled'
+      } as any) : prev);
 
-      // Atualizar o perfil do usuário
+      // Atualizar o estado local da carta de aceite
+      setAcceptanceLetterUploaded(true);
+
+      // Atualizar o perfil do usuário apenas com documents_status
       const { error: profileError } = await supabase
         .from('user_profiles')
         .update({
-          documents_status: 'approved',
-          enrollment_status: 'enrolled'
+          documents_status: 'approved'
         })
         .eq('user_id', application.user_profiles.user_id);
 
@@ -1123,6 +1298,39 @@ const StudentDetails: React.FC = () => {
             console.error('Erro ao enviar webhook:', webhookError);
           }
 
+          // Segundo webhook: Notificar sobre I-20 Control Fee disponível
+          try {
+            const i20ControlFeePayload = {
+              tipo_notf: "I-20 Control Fee Disponível",
+              email_aluno: userData.email,
+              nome_aluno: application.user_profiles.full_name,
+              email_universidade: user?.email,
+              o_que_enviar: `Great news! Your I-20 Control Fee is now available for payment. This fee is required for the issuance of your I-20 document, essential for your F-1 visa. You have 10 days to complete this payment. Please check your dashboard to proceed.`
+            };
+
+            console.log('Enviando webhook I-20 Control Fee...');
+            console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
+            console.log('I-20 Control Fee payload:', i20ControlFeePayload);
+            
+            const i20WebhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(i20ControlFeePayload),
+            });
+            
+            console.log('I-20 Control Fee webhook response status:', i20WebhookResponse.status);
+            console.log('I-20 Control Fee webhook response ok:', i20WebhookResponse.ok);
+            
+            if (!i20WebhookResponse.ok) {
+              const i20WebhookErrorText = await i20WebhookResponse.text();
+              console.error('I-20 Control Fee webhook error:', i20WebhookErrorText);
+            } else {
+              console.log('I-20 Control Fee webhook enviado com sucesso');
+            }
+          } catch (i20WebhookError) {
+            console.error('Erro ao enviar webhook I-20 Control Fee:', i20WebhookError);
+          }
+
           // Notificação in-app no sino do aluno
           try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -1152,10 +1360,9 @@ const StudentDetails: React.FC = () => {
       }
 
       setAcceptanceLetterUploaded(true);
-      alert('Acceptance letter processed successfully! The student is now enrolled and will be notified.');
       
-      // Recarregar dados da aplicação
-      fetchApplicationDetails();
+      // Recarregar apenas os documentos do aluno
+      await fetchStudentDocuments();
     } catch (error: any) {
       console.error('Error processing acceptance letter:', error);
       alert(`Failed to process acceptance letter: ${error.message}`);
@@ -1315,7 +1522,6 @@ const StudentDetails: React.FC = () => {
       // Recarregar solicitações de documentos
       fetchDocumentRequests();
       
-      alert('Document request created successfully! The student will be notified.');
     } catch (err: any) {
       console.error("Error creating document request:", err);
       alert(`Failed to create document request: ${err.message}`);
@@ -1335,7 +1541,7 @@ const StudentDetails: React.FC = () => {
                 Student Application
               </h1>
               <p className="mt-1 text-sm text-slate-600">
-                Review and manage {student.full_name}'s application details
+                Review and manage {application?.user_profiles?.full_name || 'Student'}'s application details
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -1404,19 +1610,19 @@ const StudentDetails: React.FC = () => {
                       <div className="space-y-3">
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Full Name</dt>
-                          <dd className="text-base font-semibold text-slate-900 mt-1">{student.full_name}</dd>
+                          <dd className="text-base font-semibold text-slate-900 mt-1">{application?.user_profiles?.full_name || 'Not provided'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Email</dt>
-                          <dd className="text-base text-slate-900 mt-1">{student.email || 'Not provided'}</dd>
+                          <dd className="text-base text-slate-900 mt-1">{application?.user_profiles?.email || 'Not provided'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Phone</dt>
-                          <dd className="text-base text-slate-900 mt-1">{student.phone || 'Not provided'}</dd>
+                          <dd className="text-base text-slate-900 mt-1">{application?.user_profiles?.phone || 'Not provided'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Country</dt>
-                          <dd className="text-base text-slate-900 mt-1">{student.country || 'Not specified'}</dd>
+                          <dd className="text-base text-slate-900 mt-1">{application?.user_profiles?.country || 'Not specified'}</dd>
                         </div>
                       </div>
                     </div>
@@ -1427,19 +1633,19 @@ const StudentDetails: React.FC = () => {
                       <div className="space-y-3">
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Field of Interest</dt>
-                          <dd className="text-base text-slate-900 mt-1">{student.field_of_interest || 'Not specified'}</dd>
+                          <dd className="text-base text-slate-900 mt-1">{application?.user_profiles?.field_of_interest || 'Not specified'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Academic Level</dt>
-                          <dd className="text-base text-slate-900 mt-1">{student.academic_level || 'Not specified'}</dd>
+                          <dd className="text-base text-slate-900 mt-1">{application?.user_profiles?.academic_level || 'Not specified'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-slate-600">GPA</dt>
-                          <dd className="text-base text-slate-900 mt-1">{student.gpa || 'Not provided'}</dd>
+                          <dd className="text-base text-slate-900 mt-1">{application?.user_profiles?.gpa || 'Not provided'}</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-slate-600">English Proficiency</dt>
-                          <dd className="text-base text-slate-900 mt-1">{student.english_proficiency || 'Not specified'}</dd>
+                          <dd className="text-base text-slate-900 mt-1">{application?.user_profiles?.english_proficiency || 'Not specified'}</dd>
                         </div>
                       </div>
                     </div>
@@ -1462,12 +1668,12 @@ const StudentDetails: React.FC = () => {
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
                               <div className={`w-2 h-2 rounded-full ${
-                                student.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
+                                application?.user_profiles?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
                               }`}></div>
                               <span className={`text-sm font-medium ${
-                                student.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
+                                application?.user_profiles?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
                               }`}>
-                                {student.is_application_fee_paid ? 'Paid' : 'Pending'}
+                                {application?.user_profiles?.is_application_fee_paid ? 'Paid' : 'Pending'}
                               </span>
                             </div>
                           </dd>
@@ -1476,26 +1682,17 @@ const StudentDetails: React.FC = () => {
                           <dt className="text-sm font-medium text-slate-600">Documents Status</dt>
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                student.documents_status === 'approved' ? 'bg-green-500' :
-                                student.documents_status === 'rejected' ? 'bg-red-500' :
-                                student.documents_status === 'pending' ? 'bg-yellow-500' :
-                                student.documents_status === 'analyzing' ? 'bg-blue-500' :
-                                'bg-slate-400'
-                              }`}></div>
-                              <span className={`text-sm font-medium ${
-                                student.documents_status === 'approved' ? 'text-green-700' :
-                                student.documents_status === 'rejected' ? 'text-red-700' :
-                                student.documents_status === 'pending' ? 'text-yellow-700' :
-                                student.documents_status === 'analyzing' ? 'text-blue-700' :
-                                'text-slate-600'
-                              }`}>
-                                {student.documents_status === 'approved' ? 'Approved' :
-                                 student.documents_status === 'rejected' ? 'Rejected' :
-                                 student.documents_status === 'pending' ? 'Pending' :
-                                 student.documents_status === 'analyzing' ? 'Analyzing' :
-                                 student.documents_status || 'Not Started'}
-                              </span>
+                              {(() => {
+                                const statusDisplay = getDocumentStatusDisplay(application?.user_profiles?.documents_status || '');
+                                return (
+                                  <>
+                                    <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
+                                    <span className={`text-sm font-medium ${statusDisplay.color}`}>
+                                      {statusDisplay.text}
+                                    </span>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </dd>
                         </div>
@@ -1537,7 +1734,7 @@ const StudentDetails: React.FC = () => {
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
                         <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
-                        <dd className="text-lg font-semibold text-slate-900">{scholarship.title}</dd>
+                        <dd className="text-lg font-semibold text-slate-900">{application.scholarships.title}</dd>
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
@@ -1545,7 +1742,7 @@ const StudentDetails: React.FC = () => {
                       <div className="flex-1">
                         <dt className="text-sm font-medium text-slate-600">Annual Value</dt>
                         <dd className="text-2xl font-bold text-[#05294E]">
-                          ${Number(scholarship.annual_value_with_scholarship ?? 0).toLocaleString()}
+                          ${Number(application.scholarships.annual_value_with_scholarship ?? 0).toLocaleString()}
                         </dd>
                       </div>
                     </div>
@@ -1553,7 +1750,7 @@ const StudentDetails: React.FC = () => {
                       <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
                         <dt className="text-sm font-medium text-slate-600">Description</dt>
-                        <dd className="text-base text-slate-700 leading-relaxed">{scholarship.description}</dd>
+                        <dd className="text-base text-slate-700 leading-relaxed">{application.scholarships.description}</dd>
                       </div>
                     </div>
                   </div>
@@ -1587,78 +1784,83 @@ const StudentDetails: React.FC = () => {
                       
                       return (
                         <div key={doc.key}>
-                                                     <div className="bg-white p-4">
-                             <div className="flex items-start space-x-4">
-                               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                 </svg>
-                               </div>
-                               <div className="flex-1 min-w-0">
-                                 <div className="flex items-center space-x-3 mb-1">
-                                   <p className="font-medium text-slate-900">{doc.label}</p>
-                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                     status === 'approved' ? 'bg-green-100 text-green-800' :
-                                     status === 'changes_requested' ? 'bg-red-100 text-red-800' :
-                                     status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                                     'bg-slate-100 text-slate-700'
-                                   }`}>
-                                     {status === 'approved' ? 'Approved' :
-                                      status === 'changes_requested' ? 'Changes Requested' :
-                                      status === 'under_review' ? 'Under Review' :
-                                      d?.file_url ? 'Submitted' : 'Not Submitted'}
-                                   </span>
-                                 </div>
-                                 <p className="text-sm text-slate-600">{doc.description}</p>
-                                 {d?.file_url && (
-                                   <p className="text-xs text-slate-400 mt-1">
-                                     Uploaded: {d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : new Date().toLocaleDateString()}
-                                   </p>
-                                 )}
-                                 
-                                 {/* Botões posicionados abaixo das informações */}
-                                 <div className="flex items-center space-x-2 mt-3">
-                                   {/* Botões de ação para documentos Under Review */}
-                                   {d?.file_url && status !== 'approved' && (
-                                     <div className="flex items-center space-x-2 mr-3">
-                                       <button
-                                         onClick={() => d && approveDoc(d.type)}
-                                         disabled={updating === d.type}
-                                         className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                                       >
-                                         Approve
-                                       </button>
-                                       <button
-                                         onClick={() => {
-                                           if (d) {
-                                             setPendingRejectType(d.type);
-                                             setShowReasonModal(true);
-                                           }
-                                         }}
-                                         disabled={updating === d.type}
-                                         className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                                       >
-                                         Reject
-                                       </button>
-                                     </div>
-                                   )}
-                                   
-                                                                       <button 
-                                      onClick={() => handleViewDocument(d)}
-                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                      View Document
-                                    </button>
-                                    <button 
-                                      onClick={() => handleDownloadDocument(d)}
-                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                      Download
-                                    </button>
-                                 </div>
-                               </div>
-                             </div>
-                           </div>
+                          <div className="bg-white p-4">
+                            <div className="flex items-start space-x-4">
+                              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-3 mb-1">
+                                  <p className="font-medium text-slate-900">{doc.label}</p>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    status === 'changes_requested' ? 'bg-red-100 text-red-800' :
+                                    status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-slate-100 text-slate-700'
+                                  }`}>
+                                    {status === 'approved' ? 'Approved' :
+                                     status === 'changes_requested' ? 'Changes Requested' :
+                                     status === 'under_review' ? 'Under Review' :
+                                     d?.file_url ? 'Submitted' : 'Not Submitted'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-600">{doc.description}</p>
+                                {d?.file_url && (
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    Uploaded: {d.uploaded_at ? new Date(d.uploaded_at).toLocaleDateString() : new Date().toLocaleDateString()}
+                                  </p>
+                                )}
+                                
+                                {/* Botões posicionados abaixo das informações */}
+                                <div className="flex items-center space-x-2 mt-3">
+                                  {/* Botões de ação para documentos Under Review */}
+                                  {d?.file_url && status !== 'approved' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                    <div className="flex items-center space-x-2 mr-3">
+                                      <button
+                                        onClick={() => d && approveDoc(d.type)}
+                                        disabled={updating === d.type}
+                                        className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (d) {
+                                            setPendingRejectType(d.type);
+                                            setShowReasonModal(true);
+                                          }
+                                        }}
+                                        disabled={updating === d.type}
+                                        className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Botões de visualização e download - só mostrar se houver documento */}
+                                  {d?.file_url && (
+                                    <>
+                                      <button 
+                                        onClick={() => handleViewDocument(d)}
+                                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                      >
+                                        View Document
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDownloadDocument(d)}
+                                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                      >
+                                        Download
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                           {index < DOCUMENTS_INFO.length - 1 && (
                             <div className="border-t border-slate-200"></div>
                           )}
@@ -1753,7 +1955,7 @@ const StudentDetails: React.FC = () => {
               <MessageCircle className="w-6 h-6 mr-3" />
               Communication Center
             </h2>
-            <p className="text-slate-200 text-sm mt-1">Chat with {student.full_name}</p>
+                                    <p className="text-slate-200 text-sm mt-1">Chat with {student?.full_name || 'Student'}</p>
           </div>
           <div className="p-6">
             <div className="flex-1 flex flex-col">
@@ -1928,84 +2130,86 @@ const StudentDetails: React.FC = () => {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {studentDocuments.map((doc) => (
-                          <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start space-x-4 flex-1">
-                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-slate-900">{doc.filename || 'Document'}</p>
-                                  <div className="flex items-center space-x-2 mt-1">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                    }`}>
-                                      {doc.request_type || 'Individual Request'}
-                                    </span>
-                                    <span className="text-sm text-slate-500">
-                                      Response to: <span className="font-medium text-slate-700">{doc.request_title || 'Unknown Request'}</span>
-                                    </span>
+                        {studentDocuments.map((doc) => {
+                          return (
+                            <div key={doc.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-4 flex-1">
+                                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
                                   </div>
-                                  {doc.request_description && (
-                                    <p className="text-xs text-slate-400 mt-1">{doc.request_description}</p>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-slate-900">{doc.filename || 'Document'}</p>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        doc.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                      }`}>
+                                        {doc.request_type || 'Individual Request'}
+                                      </span>
+                                      <span className="text-sm text-slate-500">
+                                        Response to: <span className="font-medium text-slate-700">{doc.request_title || 'Unknown Request'}</span>
+                                      </span>
+                                    </div>
+                                    {doc.request_description && (
+                                      <p className="text-xs text-slate-400 mt-1">{doc.request_description}</p>
+                                    )}
+                                    <p className="text-xs text-slate-400 mt-1">
+                                      Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown date'}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center space-x-3 ml-4">
+                                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                    doc.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {doc.status === 'approved' ? 'Approved' :
+                                     doc.status === 'rejected' ? 'Rejected' :
+                                     'Under Review'}
+                                  </span>
+                                  
+                                  {/* Botões de ação para documentos Under Review */}
+                                  {doc.status === 'under_review' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() => handleApproveDocument(doc.id)}
+                                        className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setPendingRejectDocumentId(doc.id);
+                                          setShowRejectDocumentModal(true);
+                                        }}
+                                        className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
                                   )}
-                                  <p className="text-xs text-slate-400 mt-1">
-                                    Uploaded: {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'Unknown date'}
-                                  </p>
+                                  
+                                  <button 
+                                    onClick={() => handleDownloadDocument(doc)}
+                                    className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                  >
+                                    Download
+                                  </button>
+                                  <button 
+                                    onClick={() => handleViewDocument(doc)}
+                                    className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+                                  >
+                                    View
+                                  </button>
                                 </div>
-                              </div>
-                              
-                              <div className="flex items-center space-x-3 ml-4">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                  doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                  doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {doc.status === 'approved' ? 'Approved' :
-                                   doc.status === 'rejected' ? 'Rejected' :
-                                   'Under Review'}
-                                </span>
-                                
-                                {/* Botões de ação para documentos Under Review */}
-                                {doc.status === 'under_review' && (
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      onClick={() => handleApproveDocument(doc.id)}
-                                      className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setPendingRejectDocumentId(doc.id);
-                                        setShowRejectDocumentModal(true);
-                                      }}
-                                      className="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                                    >
-                                      Reject
-                                    </button>
-                                  </div>
-                                )}
-                                
-                                <button 
-                                  onClick={() => handleDownloadDocument(doc)}
-                                  className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                                >
-                                  Download
-                                </button>
-                                <button 
-                                  onClick={() => handleViewDocument(doc)}
-                                  className="text-[#05294E] hover:text-[#041f38] text-sm font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                                >
-                                  View
-                                </button>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -2213,7 +2417,7 @@ const StudentDetails: React.FC = () => {
           <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg mx-4 border border-slate-200">
             <h3 className="font-extrabold text-xl mb-6 text-[#05294E] text-center">New Document Request</h3>
             <p className="text-sm text-slate-600 mb-6 text-center">
-              Request a new document from {application.user_profiles.full_name}
+              Request a new document from {application?.user_profiles?.full_name}
             </p>
             
             <div className="space-y-4">

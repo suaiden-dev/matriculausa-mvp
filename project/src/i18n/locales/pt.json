@@ -79,6 +79,153 @@
     "learnHowItWorks": "Aprender Como Funciona",
     "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
   },
+  "zelleCheckout": {
+    "title": "Checkout de Pagamento Zelle",
+    "subtitle": "Complete seu pagamento via transferência Zelle",
+    "backToPaymentSelection": "Voltar à Seleção de Pagamento",
+    "paymentSummary": "Resumo do Pagamento",
+    "paymentMethod": "Método de Pagamento",
+    "amount": "Valor",
+    "instructions": "Instruções de Pagamento",
+    "step1": "Passo 1: Abra seu aplicativo Zelle",
+    "step2": "Passo 2: Envie o pagamento para",
+    "step3": "Passo 3: Use o valor exato mostrado acima",
+    "step4": "Passo 4: Adicione uma nota de referência",
+    "uploadReceipt": "Enviar Comprovante",
+    "uploadReceiptDescription": "Faça upload do comprovante de pagamento do Zelle",
+    "dragAndDrop": "Arraste e solte seu arquivo aqui, ou clique para selecionar",
+    "supportedFormats": "Formatos suportados: JPG, PNG, PDF (máx. 10MB)",
+    "removeFile": "Remover arquivo",
+    "paymentDetails": "Detalhes do Pagamento",
+    "confirmationCode": "Código de Confirmação",
+    "confirmationCodePlaceholder": "Digite o código de confirmação do Zelle",
+    "paymentDate": "Data do Pagamento",
+    "recipientEmail": "Email do Destinatário",
+    "recipientEmailPlaceholder": "Email usado no Zelle",
+    "recipientName": "Nome do Destinatário",
+    "recipientNamePlaceholder": "Nome usado no Zelle",
+    "submitPayment": "Enviar Pagamento",
+    "processing": "Processando...",
+    "activeDiscount": "Desconto Ativo",
+    "discountApplied": "Desconto aplicado",
+    "originalAmount": "Valor original",
+    "discountedAmount": "Valor com desconto",
+    "savings": "Você economizou",
+    "error": {
+      "fileRequired": "Por favor, selecione um arquivo de comprovante",
+      "detailsRequired": "Por favor, preencha todos os detalhes do pagamento",
+      "uploadFailed": "Falha ao fazer upload do comprovante",
+      "paymentFailed": "Erro ao processar o pagamento"
+    },
+    "importantInfo": {
+      "title": "Informações Importantes",
+      "securePayment": "Pagamento Seguro",
+      "securePaymentDesc": "Suas informações de pagamento são criptografadas e seguras",
+      "verificationRequired": "Verificação Necessária",
+      "verificationRequiredDesc": "O pagamento será verificado automaticamente em até 24 horas",
+      "zelleTransfer": "Transferência Zelle",
+      "zelleTransferDesc": "Complete a transferência e envie seu comprovante",
+      "paymentInstructions": "Instruções de Pagamento",
+      "step1": "Complete a transferência Zelle para o destinatário fornecido",
+      "step2": "Salve a captura de tela de confirmação",
+      "step3": "Envie sua captura de tela de confirmação",
+      "step4": "Envie para verificação automática"
+    },
+    "requirements": {
+      "title": "Importante: Seu comprovante de pagamento DEVE incluir:",
+      "confirmationCode": "Código de Confirmação",
+      "confirmationCodeDesc": "O código único da transação do Zelle",
+      "paymentDate": "Data do Pagamento",
+      "paymentDateDesc": "Quando a transferência foi concluída",
+      "paymentAmount": "Valor do Pagamento",
+      "paymentAmountDesc": "O valor exato transferido",
+      "recipient": "Destinatário",
+      "recipientDesc": "Quem recebeu o pagamento"
+    },
+    "steps": {
+      "title": "Complete estes passos:",
+      "step1": "Complete sua transferência Zelle de",
+      "step2": "Salve a captura de tela de confirmação do pagamento que mostra todas as informações necessárias",
+      "step3": "Envie sua captura de tela de confirmação abaixo",
+      "step4": "Envie para verificação automática (concluída em até 24 horas)"
+    },
+    "reviewDetails": "Revise os detalhes do seu pagamento"
+  },
+  "zelleWaiting": {
+    "title": "Aguardando Verificação",
+    "subtitle": "Estamos analisando seu comprovante de pagamento",
+    "analyzingPayment": "Analisando seu comprovante de pagamento...",
+    "waitTime": "Tempo de espera",
+    "status": {
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado",
+      "error": "Erro"
+    },
+    "messages": {
+      "analyzing": "Analisando seu comprovante de pagamento...",
+      "approved": "Pagamento aprovado! 🎉",
+      "rejected": "Pagamento rejeitado ❌",
+      "error": "Erro ao verificar pagamento"
+    },
+    "details": {
+      "analyzing": "Nossa equipe está verificando seu comprovante. Isso pode levar alguns minutos.",
+      "approved": "Seu pagamento foi verificado e aprovado com sucesso.",
+      "rejected": "Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.",
+      "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente."
+    },
+    "actions": {
+      "tryAgain": "Tentar Novamente",
+      "contactSupport": "Contatar Suporte",
+      "backToCheckout": "Voltar ao Dashboard"
+    },
+    "redirecting": "Redirecionando para página de sucesso...",
+    "analysisTime": "Tempo de análise: ~40 segundos",
+    "paymentInfo": {
+      "title": "Informações do Pagamento",
+      "feeType": "Tipo de Taxa:",
+      "amount": "Valor:",
+      "paymentId": "ID do Pagamento:"
+    },
+    "helpText": {
+      "default": "Se o processo demorar mais de 2 minutos, entre em contato com o suporte.",
+      "underReview": "Seu pagamento está em análise. Aguarde a verificação."
+    }
+  },
+  "zelleSuccess": {
+    "title": "Pagamento Zelle Realizado com Sucesso!",
+    "subtitle": "Obrigado pelo seu pagamento! Seu pagamento Zelle foi verificado e aprovado.",
+    "invalidStatus": {
+      "title": "Status de Pagamento Inválido",
+      "message": "Esta página é apenas para pagamentos Zelle bem-sucedidos.",
+      "returnHome": "Voltar ao Início"
+    },
+    "paymentDetails": {
+      "title": "Detalhes do Pagamento",
+      "subtitle": "Pagamento Zelle verificado",
+      "feeType": "Tipo de Taxa:",
+      "amount": "Valor:",
+      "status": "Status:",
+      "approved": "Aprovado"
+    },
+    "whatsNext": {
+      "title": "Próximos Passos",
+      "step1": "Seu pagamento Zelle foi verificado e aprovado",
+      "step2": "Agora você pode acessar todos os recursos do processo de aplicação",
+      "step3": "Nossa equipe entrará em contato em breve com os próximos passos"
+    },
+    "actions": {
+      "goToDashboard": "Ir para o Dashboard",
+      "returnHome": "Voltar ao Início"
+    },
+    "feeTypes": {
+      "i-20_control_fee": "Taxa de Controle I-20",
+      "application_fee": "Taxa de Aplicação",
+      "scholarship_fee": "Taxa de Bolsa",
+      "selection_process": "Taxa de Processo de Seleção",
+      "default": "Pagamento"
+    }
+  },
   "home": {
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
@@ -137,19 +284,19 @@
         },
         "q2": {
           "question": "O que é a Taxa de Processo de Seleção?",
-          "answer": "A Taxa de Processo de Seleção (US$600) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+          "answer": "A Taxa de Processo de Seleção (US$999) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
         },
         "q3": {
           "question": "O que é a Taxa de Bolsa?",
-          "answer": "A Taxa de Bolsa (US$350) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
+          "answer": "A Taxa de Bolsa (US$400) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
         },
         "q4": {
           "question": "O que é a Taxa de Candidatura?",
-          "answer": "A Taxa de Candidatura (US$850) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+          "answer": "A Taxa de Candidatura varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
         },
         "q5": {
           "question": "O que é a Taxa de Controle I-20?",
-          "answer": "A Taxa de Controle I-20 (US$1,250) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
+          "answer": "A Taxa de Controle I-20 (US$999) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
         },
         "q6": {
           "question": "Existem outras taxas que devo conhecer?",
@@ -239,7 +386,7 @@
         "items": ["Histórico acadêmico e conquistas", "Objetivos de carreira e preferências", "Requisitos financeiros"]
       },
       "selectionFee": {
-        "title": "Pague Taxa de Seleção ($600)",
+        "title": "Pague Taxa de Seleção ($999)",
         "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável.",
         "items": ["Acesso para navegar pelas bolsas", "Iniciar processo de candidatura", "Taxa única"]
       },
@@ -249,17 +396,17 @@
         "items": ["Selecione múltiplas bolsas", "Upload seguro de documentos", "Análise inicial automatizada"]
       },
       "applicationFee": {
-        "title": "Pague Taxa de Candidatura ($350)",
+        "title": "Pague Taxa de Candidatura (Conforme a universidade)",
         "description": "Confirme sua universidade. Esta taxa é final e não reembolsável.",
         "items": ["Veja bolsas aprovadas", "Confirme escolha da universidade", "Garanta sua vaga"]
       },
       "scholarshipFee": {
-        "title": "Pague Taxa de Bolsa ($850)",
+        "title": "Pague Taxa de Bolsa ($400)",
         "description": "Obtenha chat direto com sua universidade. Esta taxa é final e não reembolsável.",
         "items": ["Chat direto com universidade", "Envie documentos adicionais", "Compromisso final com bolsa"]
       },
       "i20Fee": {
-        "title": "Pague Taxa de Controle I-20 ($1,250)",
+        "title": "Pague Taxa de Controle I-20 ($999)",
         "description": "Necessário para seu visto F-1. Esta taxa é final e não reembolsável.",
         "items": ["Essencial para visto de estudante F-1", "Cobre processamento I-20", "Janela de pagamento de 10 dias"]
       }
@@ -291,19 +438,19 @@
       },
       "q2": {
         "question": "O que é a Taxa de Processo de Seleção?",
-        "answer": "A Taxa de Processo de Seleção (US$600) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Processo de Seleção (US$999) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
       },
       "q3": {
         "question": "O que é a Taxa de Bolsa?",
-        "answer": "A Taxa de Bolsa (US$350) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Bolsa (US$400) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
       },
       "q4": {
         "question": "O que é a Taxa de Candidatura?",
-        "answer": "A Taxa de Candidatura (US$850) é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Candidatura varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
       },
       "q5": {
         "question": "O que é a Taxa de Controle I-20?",
-        "answer": "A Taxa de Controle I-20 (US$1,250) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto. Esta taxa é final e não reembolsável."
+        "answer": "A Taxa de Controle I-20 (US$999) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto. Esta taxa é final e não reembolsável."
       }
     }
   },
@@ -349,7 +496,7 @@
       "engineering": "Engenharia",
       "anyField": "Qualquer Campo",
       "online": "Online",
-      "onCampus": "No Campus",
+      "inPerson": "Presencial",
       "hybrid": "Híbrido",
       "opt": "OPT",
       "cpt": "CPT",
@@ -362,16 +509,16 @@
         "doctorate": "Doutorado",
         "undergraduate": "Graduação"
       },
-      "deliveryModes": {
+      "courseModalities": {
         "online": "Online",
-        "onCampus": "No Campus",
+        "inPerson": "Presencial",
         "hybrid": "Híbrido",
         "mixed": "Misto"
       }
     },
     "scholarshipCard": {
       "university": "Universidade:",
-      "studyMode": "Modo de Estudo",
+      "studyMode": "Modalidade do Curso",
       "workAuthorization": "Autorização de Trabalho",
       "financialOverview": "Visão Geral Financeira",
       "originalPrice": "Preço Original",
@@ -420,9 +567,9 @@
       "programInformation": "Informações do Programa",
       "academicLevel": "Nível Acadêmico",
       "notSpecified": "Não especificado",
-      "studyMode": "Modo de Estudo",
+      "studyMode": "Modalidade do Curso",
       "onlineLearning": "Aprendizado Online",
-      "onCampus": "No Campus",
+      "inPerson": "Presencial",
       "hybridMode": "Modo Híbrido",
       "programDuration": "Duração do Programa",
       "language": "Idioma",
@@ -619,7 +766,11 @@
       "createAccount": "Criar Conta",
       "creatingAccount": "Criando Conta...",
       "createStudentAccount": "Criar Conta de Estudante",
-      "createUniversityAccount": "Criar Conta de Universidade"
+      "createUniversityAccount": "Criar Conta de Universidade",
+      "termsNotice": "Ao clicar em Criar Conta, você concorda com nossos ",
+      "terms": "Termos de Uso",
+      "and": " e ",
+      "privacyPolicy": "Política de Privacidade"
     },
     "modals": {
       "verification": {
@@ -1217,7 +1368,7 @@
         "active": "ativo",
         "academicLevel": "Nível Acadêmico",
         "fieldOfStudy": "Área de Estudo",
-        "studyMode": "Modo de Estudo",
+        "studyMode": "Modalidade do Curso",
         "workAuthorization": "Autorização de Trabalho",
         "minValue": "Valor Mín",
         "maxValue": "Valor Máx",
@@ -1259,7 +1410,7 @@
         "featured": "Destaque",
         "exclusive": "Exclusiva",
         "university": "Universidade:",
-        "studyMode": "Modo de Estudo",
+        "studyMode": "Modalidade do Curso",
         "workAuthorization": "Autorização de Trabalho",
         "financialOverview": "Visão Geral Financeira",
         "originalPrice": "Preço Original:",
@@ -1276,7 +1427,7 @@
         "deselect": "Desmarcar",
         "selectScholarship": "Selecionar Bolsa",
         "checking": "Verificando...",
-        "onCampus": "No Campus",
+        "inPerson": "Presencial",
         "mixed": "Misto",
         "more": "mais"
       },
@@ -1443,9 +1594,14 @@
       "statusChangeDescription": "Já estou nos EUA com outro visto (ex: turista) e quero mudar meu status para estudante.",
       "continueToDocuments": "Continuar para Documentos",
       "saving": "Salvando...",
-      "step2Title": "Fazer Upload dos Documentos Necessários",
-      "step2Description": "Por favor, faça upload dos seguintes documentos para prosseguir com seu processo de aplicação.",
-      "step2Note": "Todos os arquivos devem estar claros e legíveis. Cada campo aceita apenas um arquivo.",
+      "step2Title": "Upload dos Documentos",
+      "step2Description": "Faça upload dos documentos necessários para sua aplicação.",
+      "step2Important": "IMPORTANTE: Todos os documentos devem estar em inglês. Se seus documentos estiverem em outro idioma, você pode solicitar tradução certificada através do nosso parceiro Lush America.",
+      "step2PartnerUrl": "www.lushamerica.com",
+      "languageError": "Este documento não está em inglês. Forneça uma versão em inglês ou tradução certificada.",
+      "accessError": "Não foi possível acessar os dados do {{documentType}}. O arquivo pode estar corrompido ou em formato não suportado. Tente fazer upload de um novo arquivo.",
+      "fundsDataError": "Dados de extrato não disponíveis no {{documentType}}. O documento pode não conter informações suficientes sobre fundos ou estar em formato não legível. Tente fazer upload de um documento mais claro.",
+      "currencyFieldError": "Erro interno do sistema ao processar dados de moeda no {{documentType}}. O documento pode não conter informações de moeda válidas ou estar em formato não suportado. Tente fazer upload de um documento mais claro.",
       "passport": "Passaporte",
       "passportDescription": "Documento de passaporte válido",
       "diploma": "Diploma do Ensino Médio",
@@ -2034,7 +2190,9 @@
     "closeModal": "Fechar modal",
     "securePaymentViaStripe": "Pagamento seguro via Stripe",
     "referralCode": "Código de Referência",
+    "yourReferralCode": "Seu Código de Referência",
     "enterReferralCode": "Digite seu código de referência para obter desconto",
+    "usingYourReferralCode": "Usando o código de referência que você usou no registro",
     "placeholder": "Digite o código",
     "validate": "Validar",
     "validating": "Validando...",

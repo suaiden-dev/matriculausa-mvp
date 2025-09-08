@@ -15,7 +15,8 @@ import {
   ArrowUpRight,
   Clock,
   AlertTriangle,
-  PlusCircle
+  PlusCircle,
+  Home
 } from 'lucide-react';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -225,9 +226,9 @@ const Overview: React.FC = () => {
       title="Complete your profile to access the dashboard"
       description="Finish setting up your university profile to view analytics, manage scholarships, and connect with students"
     >
-      <div className="space-y-4 sm:space-y-6 lg:space-y-8 pt-4 sm:pt-6 lg:pt-10 px-4 sm:px-6 lg:px-0">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="space-y-6 lg:space-y-8">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-3">
@@ -333,18 +334,7 @@ const Overview: React.FC = () => {
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900">Recent Scholarships</h3>
                   <p className="text-slate-500 text-xs sm:text-sm">Manage your scholarship opportunities</p>
                 </div>
-                {university?.profile_completed && (
-                  <div className="flex justify-end">
-                    <Link
-                      to="/school/dashboard/scholarship/new" 
-                      className="bg-gradient-to-r from-[#05294E] to-blue-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl hover:from-[#05294E]/90 hover:to-blue-600 transition-all duration-300 font-medium text-xs sm:text-sm flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
-                    >
-                      <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      <span className="hidden sm:inline">New Scholarship</span>
-                      <span className="sm:hidden">New</span>
-                    </Link>
-                  </div>
-                )}
+
               </div>
             </div>
             

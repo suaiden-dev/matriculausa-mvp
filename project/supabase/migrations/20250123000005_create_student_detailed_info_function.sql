@@ -24,10 +24,29 @@ RETURNS TABLE (
   is_scholarship_fee_paid boolean,
   has_paid_selection_process_fee boolean,
   has_paid_i20_control_fee boolean,
-  student_process_type text
+  student_process_type text,
+  application_status text,
+  documents jsonb
 ) AS $$
 BEGIN
   RETURN QUERY
+  WITH student_docs AS (
+    SELECT 
+      sd.user_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'id', sd.id,
+          'type', sd.type,
+          'url', sd.file_url,
+          'status', COALESCE(sd.status, 'pending'),
+          'uploaded_at', sd.created_at,
+          'name', sd.file_url
+        )
+      ) as documents
+    FROM student_documents sd
+    WHERE sd.user_id = target_student_id
+    GROUP BY sd.user_id
+  )
   SELECT 
     up.user_id as student_id,
     COALESCE(up.full_name, 'Name not available') as full_name,
@@ -52,13 +71,16 @@ BEGIN
     COALESCE(up.is_scholarship_fee_paid, false) as is_scholarship_fee_paid,
     COALESCE(up.has_paid_selection_process_fee, false) as has_paid_selection_process_fee,
     COALESCE(up.has_paid_i20_control_fee, false) as has_paid_i20_control_fee,
-    COALESCE(sa.student_process_type, 'Not specified') as student_process_type
+    COALESCE(sa.student_process_type, 'Not specified') as student_process_type,
+    COALESCE(sa.status, 'pending') as application_status,
+    COALESCE(sd.documents, '[]'::jsonb) as documents
   FROM user_profiles up
   LEFT JOIN sellers s ON up.seller_referral_code = s.referral_code
   LEFT JOIN stripe_connect_transfers sct ON up.user_id = sct.user_id AND sct.status = 'succeeded'
   LEFT JOIN scholarship_applications sa ON up.user_id = sa.student_id
   LEFT JOIN scholarships sch ON sa.scholarship_id = sch.id
   LEFT JOIN universities u ON sch.university_id = u.id
+  LEFT JOIN student_docs sd ON up.user_id = sd.user_id
   WHERE up.user_id = target_student_id
   GROUP BY 
     up.user_id, up.full_name, up.email, up.phone, up.country, 
@@ -67,7 +89,7 @@ BEGIN
     sch.title, u.name, sa.scholarship_id, up.documents_status,
     up.is_application_fee_paid, up.is_scholarship_fee_paid,
     up.has_paid_selection_process_fee, up.has_paid_i20_control_fee,
-    sa.student_process_type;
+    sa.student_process_type, sa.status, sd.documents;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import '../styles/phone-input.css';
@@ -12,6 +13,7 @@ const SchoolProfileSetup: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
   const { user } = useAuth();
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -39,7 +41,7 @@ const SchoolProfileSetup: React.FC = () => {
     },
     
     // Academic Information
-    programs: [] as string[]
+    programs: [] as string[],
   });
 
   const [newProgram, setNewProgram] = useState('');
@@ -189,7 +191,12 @@ const SchoolProfileSetup: React.FC = () => {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      if (currentStep === 4) {
+        // Se estiver no step 4, finalizar o processo
+        handleSubmit();
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
     }
   };
 
@@ -238,7 +245,7 @@ const SchoolProfileSetup: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your University Profile</h1>
@@ -590,21 +597,10 @@ const SchoolProfileSetup: React.FC = () => {
             ) : (
               <button
                 type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="bg-[#05294E] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#05294E]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                onClick={nextStep}
+                className="bg-[#05294E] text-white px-6 py-2 rounded-lg font-medium hover:bg-[#05294E]/90 transition-colors"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Complete Setup
-                  </>
-                )}
+                Complete Profile
               </button>
             )}
           </div>

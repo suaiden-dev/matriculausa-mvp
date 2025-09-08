@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Search, Users, UserPlus, UserCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,6 +20,7 @@ interface Seller {
 }
 
 const SellerManagement: React.FC = () => {
+  const location = useLocation();
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,10 +37,23 @@ const SellerManagement: React.FC = () => {
   const [localModifications, setLocalModifications] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deactivatedSellers, setDeactivatedSellers] = useState<Set<string>>(new Set());
+  const [showDeactivatedSellers, setShowDeactivatedSellers] = useState(false);
+  const [deactivatedSellersList, setDeactivatedSellersList] = useState<Seller[]>([]);
+  const [linkedStudents, setLinkedStudents] = useState<any[]>([]);
+  const [showLinkedStudents, setShowLinkedStudents] = useState(false);
   const { user: currentUser } = useAuth();
   
   // Memoize the user to prevent unnecessary re-renders
   const memoizedUser = React.useMemo(() => currentUser, [currentUser?.id]);
+
+  // Detect tab parameter from URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    if (tab === 'registration' || tab === 'pending') {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
 
 
@@ -60,30 +75,32 @@ const SellerManagement: React.FC = () => {
       setLoading(true);
       setIsRefreshing(true);
 
-      // Fetch all active sellers
+      // Use RPC function to get sellers filtered by affiliate admin
       const { data: sellersData, error: sellersError } = await supabase
-        .from('sellers')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .rpc('get_admin_sellers_analytics_fixed', { 
+          admin_user_id: currentUser?.id 
+        });
 
       if (sellersError) {
         console.error('❌ Error loading sellers:', sellersError);
         throw new Error(`Failed to load sellers: ${sellersError.message}`);
       }
 
-      // Process seller data
+      // Process seller data from RPC response
       const processedUsers = (sellersData || []).map((seller: any) => ({
-        id: seller.id,
-        user_id: seller.user_id,
-        email: seller.email || null,
-        full_name: seller.name || null,
+        id: seller.seller_id,
+        user_id: seller.seller_id, // RPC returns seller_id as the main ID
+        email: seller.seller_email || null,
+        full_name: seller.seller_name || null,
         role: 'seller' as const,
-        created_at: seller.created_at || null,
-        phone: seller.phone || null,
-        country: seller.territory || null,
+        created_at: seller.last_referral_date || null,
+        phone: null, // Not available in RPC response
+        country: null, // Not available in RPC response
         isSeller: true,
-        hasInactiveAffiliateCode: false
+        hasInactiveAffiliateCode: false,
+        referral_code: seller.referral_code,
+        students_count: seller.students_count,
+        total_revenue: seller.total_revenue
       }));
 
       // Filter out deactivated sellers from database results
@@ -103,11 +120,17 @@ const SellerManagement: React.FC = () => {
 
         // Load deactivated sellers from localStorage on component mount
       useEffect(() => {
-        const storedDeactivated = JSON.parse(localStorage.getItem('deactivatedSellers') || '[]');
-        if (storedDeactivated.length > 0) {
-          setDeactivatedSellers(new Set(storedDeactivated));
-        }
+        // Clear old localStorage data to prevent showing stale deactivated sellers
+        localStorage.removeItem('deactivatedSellers');
+        setDeactivatedSellers(new Set());
       }, []);
+
+  // Load sellers when component mounts or when activeTab changes to management
+  useEffect(() => {
+    if (activeTab === 'management') {
+      loadSellers(true); // Force refresh when switching to management tab
+    }
+  }, [activeTab]);
 
   // Load sellers only once when component mounts
   useEffect(() => {
@@ -139,6 +162,146 @@ const SellerManagement: React.FC = () => {
 
   // Prevent unnecessary re-renders by memoizing the component
   const memoizedSellers = React.useMemo(() => sellers, [sellers]);
+
+  // Function to load deactivated sellers
+  const loadDeactivatedSellers = async () => {
+    try {
+      // Use RPC function to get deactivated sellers filtered by affiliate admin
+      const { data: deactivatedData, error } = await supabase
+        .rpc('get_admin_deactivated_sellers', { 
+          admin_user_id: currentUser?.id 
+        });
+
+      if (error) {
+        console.error('Error loading deactivated sellers:', error);
+        return;
+      }
+
+      const processedDeactivated = (deactivatedData || []).map((seller: any) => ({
+        id: seller.seller_id,
+        user_id: seller.seller_id, // RPC returns seller_id as the main ID
+        email: seller.seller_email || null,
+        full_name: seller.seller_name || null,
+        role: 'student' as const,
+        created_at: seller.last_referral_date || null,
+        phone: null, // Not available in RPC response
+        country: null, // Not available in RPC response
+        isSeller: false,
+        hasInactiveAffiliateCode: false,
+        referral_code: seller.referral_code,
+        students_count: seller.students_count,
+        total_revenue: seller.total_revenue
+      }));
+
+      setDeactivatedSellersList(processedDeactivated);
+    } catch (error) {
+      console.error('Error loading deactivated sellers:', error);
+    }
+  };
+
+  // Function to check if seller has linked students
+  const checkSellerHasStudents = async (sellerId: string) => {
+    try {
+      // Get the seller's referral code directly from sellers table
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('sellers')
+        .select('referral_code')
+        .eq('id', sellerId)
+        .single();
+
+      if (sellerError || !sellerData) {
+        console.error('Error fetching seller:', sellerError);
+        return { hasStudents: false, students: [] };
+      }
+
+      // Check if any students are using this referral code
+      const { data: students, error: studentsError } = await supabase
+        .from('user_profiles')
+        .select('user_id, full_name, email, created_at')
+        .eq('seller_referral_code', sellerData.referral_code)
+        .eq('role', 'student');
+
+      if (studentsError) {
+        console.error('Error checking linked students:', studentsError);
+        return { hasStudents: false, students: [] };
+      }
+
+      return {
+        hasStudents: (students || []).length > 0,
+        students: students || []
+      };
+    } catch (error) {
+      console.error('Error checking seller students:', error);
+      return { hasStudents: false, students: [] };
+    }
+  };
+
+  // Function to reactivate a seller
+  const reactivateSeller = async (sellerId: string, userName: string) => {
+    try {
+      setDemotingUser(sellerId);
+
+      // Step 1: Get the user_id from the seller
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('sellers')
+        .select('user_id')
+        .eq('id', sellerId)
+        .single();
+
+      if (sellerError || !sellerData) {
+        console.error('Error fetching seller data:', sellerError);
+        throw new Error(`Failed to fetch seller data: ${sellerError?.message || 'Seller not found'}`);
+      }
+
+      // Step 2: Reactivate the seller by updating is_active to true
+      const { error: updateError } = await supabase
+        .from('sellers')
+        .update({ is_active: true })
+        .eq('id', sellerId);
+
+      if (updateError) {
+        console.error('Error reactivating seller:', updateError);
+        throw new Error(`Failed to reactivate seller: ${updateError.message}`);
+      }
+
+      // Step 3: Update user role back to seller using RPC function to avoid RLS recursion
+      const { data: roleUpdateResult, error: roleUpdateError } = await supabase
+        .rpc('update_user_role_safe', { 
+          target_user_id: sellerData.user_id, 
+          new_role: 'seller' 
+        });
+
+      if (roleUpdateError) {
+        console.error('Error updating user role:', roleUpdateError);
+        throw new Error(`Failed to update user role: ${roleUpdateError.message}`);
+      }
+
+      if (!roleUpdateResult) {
+        throw new Error('Failed to update user role - insufficient permissions');
+      }
+
+      // Step 4: Remove from deactivated list
+      setDeactivatedSellersList(prev => prev.filter(seller => seller.id !== sellerId));
+      setDeactivatedSellers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(sellerId);
+        return newSet;
+      });
+
+      // Step 5: Refresh sellers data to show updated list
+      await loadSellers(true);
+
+      setSuccessMessage(`${userName} was reactivated successfully!`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+
+    } catch (error: any) {
+      console.error('Error reactivating seller:', error);
+      setErrorMessage(`Error reactivating seller: ${error.message}`);
+      setTimeout(() => setErrorMessage(''), 5000);
+    } finally {
+      setDemotingUser(null);
+    }
+  };
 
     const deactivateSeller = async (sellerId: string, userName: string) => {
     try {
@@ -202,7 +365,22 @@ const SellerManagement: React.FC = () => {
       setDemotingUser(sellerId);
       console.log('🗑️ Starting complete removal for seller:', sellerId, userName);
 
-      // Step 1: Remove from sellers table
+      // Step 1: Check if seller has linked students
+      const { hasStudents, students } = await checkSellerHasStudents(sellerId);
+      
+      if (hasStudents) {
+        console.log('❌ Cannot remove seller - has linked students:', students);
+        setErrorMessage(
+          `Cannot remove ${userName}. This seller has ${students.length} linked student(s). ` +
+          `Please reassign the students to another seller first, or deactivate instead of removing.`
+        );
+        setTimeout(() => setErrorMessage(''), 8000);
+        setShowRemoveModal(false);
+        setSellerToRemove(null);
+        return;
+      }
+
+      // Step 2: Completely remove from sellers table (hard delete)
       const { error: deleteError } = await supabase
         .from('sellers')
         .delete()
@@ -213,40 +391,52 @@ const SellerManagement: React.FC = () => {
         throw new Error(`Failed to delete seller: ${deleteError.message}`);
       }
 
-      // Step 2: Update user role to 'former_seller' in user_profiles
-      const { error: roleUpdateError } = await supabase
-        .from('user_profiles')
-        .update({ 
-          role: 'former_seller',
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', sellerId);
+      // Step 3: Get the user_id from the seller before updating role
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('sellers')
+        .select('user_id')
+        .eq('id', sellerId)
+        .single();
 
-      if (roleUpdateError) {
-        console.error('❌ Error updating user role:', roleUpdateError);
-        console.warn('⚠️ Seller deleted but role update failed');
+      if (sellerError || !sellerData) {
+        console.error('❌ Error fetching seller user_id:', sellerError);
+        console.warn('⚠️ Seller deleted but could not fetch user_id for role update');
+      } else {
+        // Step 4: Update user role to 'student' using RPC function to avoid RLS recursion
+        const { data: roleUpdateResult, error: roleUpdateError } = await supabase
+          .rpc('update_user_role_safe', {
+            target_user_id: sellerData.user_id,
+            new_role: 'student'
+          });
+
+        if (roleUpdateError) {
+          console.error('❌ Error updating user role:', roleUpdateError);
+          console.warn('⚠️ Seller deleted but role update failed');
+        } else if (!roleUpdateResult) {
+          console.warn('⚠️ Seller deleted but role update failed - insufficient permissions');
+        }
       }
 
-      // Step 3: Update local state
+      // Step 4: Update local state
       setSellers(prevSellers => prevSellers.filter(seller => seller.id !== sellerId));
       
-      // Step 4: Remove from deactivated sellers set
+      // Step 5: Remove from deactivated sellers set
       setDeactivatedSellers(prev => {
         const newSet = new Set(prev);
         newSet.delete(sellerId);
         return newSet;
       });
 
-      // Step 5: Remove from localStorage
+      // Step 6: Remove from localStorage
       const storedDeactivated = JSON.parse(localStorage.getItem('deactivatedSellers') || '[]');
       const updatedStored = storedDeactivated.filter((id: string) => id !== sellerId);
       localStorage.setItem('deactivatedSellers', JSON.stringify(updatedStored));
 
-      // Step 6: Close modal
+      // Step 7: Close modal
       setShowRemoveModal(false);
       setSellerToRemove(null);
       
-      // Step 7: Show success message
+      // Step 8: Show success message
       setSuccessMessage(`${userName} was completely removed from the system!`);
       setTimeout(() => setSuccessMessage(''), 3000);
 
@@ -267,9 +457,19 @@ const SellerManagement: React.FC = () => {
   };
 
   // Function to open removal modal
-  const openRemoveModal = (sellerId: string, sellerName: string) => {
+  const openRemoveModal = async (sellerId: string, sellerName: string) => {
     setSellerToRemove({ id: sellerId, name: sellerName });
-    setShowRemoveModal(true);
+    
+    // Check if seller has linked students
+    const { hasStudents, students } = await checkSellerHasStudents(sellerId);
+    
+    if (hasStudents) {
+      setLinkedStudents(students);
+      setShowLinkedStudents(true);
+      setShowRemoveModal(false); // Don't show remove modal
+    } else {
+      setShowRemoveModal(true);
+    }
   };
 
      // Function to confirm deactivation
@@ -396,6 +596,18 @@ const SellerManagement: React.FC = () => {
                      <span className="text-sm text-orange-600">{deactivatedSellers.size} deactivated</span>
                    </div>
                  )}
+                 
+                 <button
+                   onClick={() => {
+                     setShowDeactivatedSellers(!showDeactivatedSellers);
+                     if (!showDeactivatedSellers) {
+                       loadDeactivatedSellers();
+                     }
+                   }}
+                   className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors"
+                 >
+                   {showDeactivatedSellers ? 'Hide Deactivated' : 'Show Deactivated'}
+                 </button>
                </div>
 
                              {/* Search - Simplified */}
@@ -424,6 +636,7 @@ const SellerManagement: React.FC = () => {
                          onClick={() => {
                            setLocalModifications(new Set());
                            setDeactivatedSellers(new Set());
+                           localStorage.removeItem('deactivatedSellers');
                            loadSellers(true);
                          }}
                          disabled={isRefreshing}
@@ -505,6 +718,71 @@ const SellerManagement: React.FC = () => {
                   </table>
                 </div>
 
+                {/* Deactivated Sellers Table */}
+                {showDeactivatedSellers && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Deactivated Sellers</h3>
+                    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                      <table className="min-w-full divide-y divide-gray-300">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Seller
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {deactivatedSellersList.map((seller) => (
+                            <tr key={seller.id}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <span className="text-sm font-medium text-gray-600">
+                                      {(seller.full_name || seller.email || 'S').charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="ml-3">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {seller.full_name || 'Unknown'}
+                                    </div>
+                                    <div className="text-sm text-gray-500">{seller.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                  Deactivated
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatDate(seller.created_at)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => reactivateSeller(seller.id, seller.full_name || seller.email || 'Seller')}
+                                  disabled={demotingUser === seller.id}
+                                  className="text-green-600 hover:text-green-900 disabled:opacity-50 text-xs px-2 py-1 border border-green-200 rounded hover:bg-green-50"
+                                >
+                                  {demotingUser === seller.id ? 'Reactivating...' : 'Reactivate'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
                  {paginatedSellers.length === 0 && filteredSellers.length === 0 && (
                    <div className="text-center py-8">
                      <UserPlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
@@ -547,7 +825,7 @@ const SellerManagement: React.FC = () => {
           )}
 
           {activeTab === 'pending' && (
-            <SellerRegistrationsManager />
+            <SellerRegistrationsManager onRefresh={() => loadSellers(true)} />
           )}
         </div>
       </div>
@@ -598,6 +876,98 @@ const SellerManagement: React.FC = () => {
                  className="px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
                >
                  Remove
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Linked Students Warning Modal */}
+       {showLinkedStudents && sellerToRemove && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+             <div className="flex items-center mb-4">
+               <div className="flex-shrink-0">
+                 <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                   <span className="text-orange-600 text-sm font-medium">⚠️</span>
+                 </div>
+               </div>
+               <div className="ml-3">
+                 <h3 className="text-lg font-medium text-gray-900">Cannot Remove Seller</h3>
+                 <p className="text-sm text-gray-600">
+                   This seller has linked students and cannot be removed.
+                 </p>
+               </div>
+             </div>
+             
+             <div className="mb-4">
+               <p className="text-sm text-gray-700 mb-3">
+                 <strong>{sellerToRemove.name}</strong> has <strong>{linkedStudents.length} linked student(s)</strong> 
+                 who used their referral code. Removing this seller would break the tracking system.
+               </p>
+               
+               <div className="bg-gray-50 rounded-lg p-4">
+                 <h4 className="text-sm font-medium text-gray-900 mb-2">Linked Students:</h4>
+                 <div className="space-y-2 max-h-40 overflow-y-auto">
+                   {linkedStudents.map((student, index) => (
+                     <div key={student.user_id || index} className="flex items-center justify-between text-sm">
+                       <div>
+                         <span className="font-medium text-gray-900">
+                           {student.full_name || 'Unknown Name'}
+                         </span>
+                         <span className="text-gray-500 ml-2">
+                           ({student.email})
+                         </span>
+                       </div>
+                       <span className="text-gray-400 text-xs">
+                         {new Date(student.created_at).toLocaleDateString()}
+                       </span>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             </div>
+
+             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+               <div className="flex">
+                 <div className="flex-shrink-0">
+                   <span className="text-blue-400">💡</span>
+                 </div>
+                 <div className="ml-3">
+                   <h4 className="text-sm font-medium text-blue-800">Recommended Actions:</h4>
+                   <ul className="text-sm text-blue-700 mt-1 space-y-1">
+                     <li>• <strong>Deactivate</strong> the seller instead of removing</li>
+                     <li>• <strong>Reassign</strong> students to another seller first</li>
+                     <li>• <strong>Wait</strong> until students complete their process</li>
+                   </ul>
+                 </div>
+               </div>
+             </div>
+
+             <div className="flex justify-end space-x-3">
+               <button
+                 onClick={() => {
+                   setShowLinkedStudents(false);
+                   setSellerToRemove(null);
+                   setLinkedStudents([]);
+                 }}
+                 className="px-4 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+               >
+                 Close
+               </button>
+               <button
+                 onClick={() => {
+                   setShowLinkedStudents(false);
+                   setSellerToRemove(null);
+                   setLinkedStudents([]);
+                   // Open deactivate modal instead
+                   if (sellerToRemove) {
+                     openDeactivateModal(sellerToRemove.id, sellerToRemove.name);
+                   }
+                 }}
+                 className="px-4 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700"
+               >
+                 Deactivate Instead
                </button>
              </div>
            </div>

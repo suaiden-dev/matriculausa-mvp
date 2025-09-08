@@ -309,7 +309,8 @@ export const usePayments = (universityId: string | undefined) => {
         for (const payment of finalPayments) {
           if (payment.is_application_fee_paid) {
             recalculatedStats.paid_application_fees++;
-            recalculatedStats.total_revenue += payment.amount_charged;
+            // Converter de centavos para dólares
+            recalculatedStats.total_revenue += payment.amount_charged / 100;
           } else {
             recalculatedStats.pending_application_fees++;
           }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import type { User, UserProfile } from '../hooks/useAuth';
 import { 
   X, 
   Award, 
@@ -26,14 +27,16 @@ interface ScholarshipDetailModalProps {
   scholarship: any;
   isOpen: boolean;
   onClose: () => void;
-  userProfile?: any;
+  userProfile?: UserProfile | null;
+  user?: User | null;
 }
 
 const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   scholarship,
   isOpen,
   onClose,
-  userProfile
+  userProfile,
+  user
 }) => {
   const { t } = useTranslation();
   
@@ -83,7 +86,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
     }
   };
 
-  const getDeliveryModeIcon = (mode: string) => {
+  const getCourseModalityIcon = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
         return <Monitor className="h-4 w-4" />;
@@ -96,7 +99,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
     }
   };
 
-  const getDeliveryModeColor = (mode: string) => {
+  const getCourseModalityColor = (mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
         return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -159,7 +162,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             <div className="relative">
               {/* Hero Image */}
               <div className="h-64 overflow-hidden relative">
-                {scholarship.image_url && userProfile?.has_paid_selection_process_fee ? (
+                {scholarship.image_url && (user?.role !== 'student' || (userProfile?.has_paid_selection_process_fee)) ? (
                   <img
                     src={scholarship.image_url}
                     alt={scholarship.title}
@@ -201,9 +204,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     </span>
                     <span className="text-white/80 text-sm flex items-center gap-1">
                       <Building className="h-4 w-4" />
-                      {userProfile?.has_paid_selection_process_fee
-                        ? (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))
-                        : t('scholarshipsPage.modal.universityHidden')}
+                      {user?.role === 'student' && !userProfile?.has_paid_selection_process_fee
+                        ? t('scholarshipsPage.modal.universityHidden')
+                        : (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))}
                     </span>
                   </div>
                 </div>
@@ -267,6 +270,27 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         )}
                       </div>
                     </div>
+                    
+                    {/* Application Fee Information */}
+                    <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-purple-600" />
+                          <span className="text-slate-600 font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-purple-600 text-lg">
+                            ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                          </span>
+                          <div className="text-xs text-slate-400">
+                            {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                              t('scholarshipsPage.scholarshipCard.customFee') : 
+                              t('scholarshipsPage.scholarshipCard.standardFee')
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Program Details */}
@@ -288,12 +312,12 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                         {scholarship.delivery_mode && (
                           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                             <div className="flex items-center gap-2 mb-2">
-                              {getDeliveryModeIcon(scholarship.delivery_mode)}
+                              {getCourseModalityIcon(scholarship.delivery_mode)}
                               <span className="font-semibold text-slate-700">{t('scholarshipsPage.modal.studyMode')}</span>
                             </div>
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getCourseModalityColor(scholarship.delivery_mode)}`}>
                               {scholarship.delivery_mode === 'online' ? t('scholarshipsPage.modal.onlineLearning') : 
-                               scholarship.delivery_mode === 'in_person' ? t('scholarshipsPage.modal.onCampus') : 
+                               scholarship.delivery_mode === 'in_person' ? t('scholarshipsPage.modal.inPerson') : 
                                scholarship.delivery_mode === 'hybrid' ? t('scholarshipsPage.modal.hybridMode') : scholarship.delivery_mode}
                             </span>
                           </div>
@@ -393,7 +417,13 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                       <Building className="h-5 w-5 text-slate-600" />
                       {t('scholarshipsPage.modal.universityInformation')}
                     </h4>
-                    {userProfile?.has_paid_selection_process_fee ? (
+                    {user?.role === 'student' && !userProfile?.has_paid_selection_process_fee ? (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <p className="text-blue-800 text-sm">
+                          {t('scholarshipsPage.modal.universityDetailsLocked')}
+                        </p>
+                      </div>
+                    ) : (
                       <div className="space-y-3">
                         <p className="font-semibold text-slate-900">
                           {scholarship.universities?.name || t('scholarshipsPage.modal.universityNameAvailable')}
@@ -410,12 +440,6 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             {t('scholarshipsPage.modal.ranking')} #{scholarship.universities.ranking}
                           </p>
                         )}
-                      </div>
-                    ) : (
-                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <p className="text-blue-800 text-sm">
-                          {t('scholarshipsPage.modal.universityDetailsLocked')}
-                        </p>
                       </div>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Phone, CheckCircle, X, ArrowLeft, UserCheck, Shield } from 'lucide-react';
+import { Mail, Lock, User, Phone, CheckCircle, UserCheck, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -27,10 +27,6 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  const [hasScrolledToBottomPrivacy, setHasScrolledToBottomPrivacy] = useState(false);
   
   // States for registration code validation
   const [registrationCodeValid, setRegistrationCodeValid] = useState<boolean | null>(null);
@@ -164,7 +160,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
               console.log('✅ [SELLER_REG] Validations passed');
               console.log('🔑 [SELLER_REG] Registration code used:', formData.registration_code);
       
-      // 1. Create user in auth
+      // 1. Create user in auth with seller registration code
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
@@ -172,7 +168,8 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
           data: {
             full_name: formData.full_name,
             role: 'student', // User starts as student, not as seller
-            phone: formData.phone
+            phone: formData.phone,
+            seller_referral_code: formData.registration_code // Usar o mesmo campo que o registro normal
           }
         }
       });
@@ -183,42 +180,11 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
       }
 
       if (!authData.user) {
+        console.error('[SELLER_REG] Usuário não foi criado');
         throw new Error('Failed to create user');
       }
 
-              console.log('✅ [SELLER_REG] User created in auth:', authData.user.id);
-
-      // 2. Create pending registration in seller_registrations table
-              console.log('[SELLER_REG] Trying to create pending registration with data:', {
-        user_id: authData.user.id,
-        admin_id: null,
-        registration_code: formData.registration_code,
-        email: formData.email.trim().toLowerCase(),
-        full_name: formData.full_name,
-        phone: formData.phone,
-        status: 'pending'
-      });
-
-      const { data: registrationData, error: registrationError } = await supabase
-        .from('seller_registrations')
-        .insert({
-          user_id: authData.user.id, // Add the user_id
-          admin_id: null, // Will be filled when admin approves
-          registration_code: formData.registration_code,
-          email: formData.email.trim().toLowerCase(),
-          full_name: formData.full_name,
-          phone: formData.phone,
-          status: 'pending'
-        })
-        .select()
-        .single();
-
-      if (registrationError) {
-        console.error('[SELLER_REG] Error creating pending registration:', registrationError);
-                  throw new Error(`Error creating registration: ${registrationError.message}`);
-      } else {
-                  console.log('[SELLER_REG] Pending registration created successfully:', registrationData);
-      }
+      // 2. User created successfully - profile will be created automatically by trigger
 
       // 3. Clear localStorage
       localStorage.removeItem('pending_seller_registration_code');
@@ -261,20 +227,6 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     setFormData(prev => ({ ...prev, phone: value || '' }));
   };
 
-  // Scroll handlers for terms
-  const handleTermsScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollTop + clientHeight >= scrollHeight - 10) {
-      setHasScrolledToBottom(true);
-    }
-  };
-
-  const handlePrivacyScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollTop + clientHeight >= scrollHeight - 10) {
-      setHasScrolledToBottomPrivacy(true);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -478,39 +430,36 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                 </div>
               </div>
 
-              {/* Terms and Privacy - Largura total */}
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
+              {/* Terms and Privacy Policy Notice */}
+              <div className="flex items-center space-x-3 mb-4">
                   <input
-                    id="terms"
-                    name="terms"
                     type="checkbox"
+                  id="terms-acceptance"
                     checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    required
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="terms" className="text-gray-700">
-                    I accept the{' '}
-                    <button
-                      type="button"
-                      onClick={() => setShowTermsModal(true)}
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      Terms and Conditions
-                    </button>
-                    {' '}and the{' '}
-                    <button
-                      type="button"
-                      onClick={() => setShowPrivacyModal(true)}
-                      className="text-blue-600 hover:text-blue-800 underline"
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] flex-shrink-0"
+                />
+                <label htmlFor="terms-acceptance" className="text-sm text-slate-600 cursor-pointer leading-relaxed">
+                  By clicking Create Seller Account, you agree to our{' '}
+                  <a 
+                    href="/terms-of-service" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
+                  >
+                    Terms of Use
+                  </a>
+                  {' '}and{' '}
+                  <a 
+                    href="/privacy-policy" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
                     >
                       Privacy Policy
-                    </button>
+                  </a>
+                  .
                   </label>
-                </div>
               </div>
 
               {/* Error Message - Largura total */}
@@ -554,95 +503,6 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         </div>
       </div>
 
-      {/* Terms Modal */}
-        {showTermsModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h3 className="text-lg font-medium">Terms and Conditions</h3>
-                <button
-                  onClick={() => setShowTermsModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div 
-                className="p-6 overflow-y-auto max-h-[60vh]"
-                onScroll={handleTermsScroll}
-              >
-                <div className="prose prose-sm max-w-none">
-                  <h4>Terms and Conditions for Sellers</h4>
-                  <p>
-                    By registering as a seller, you agree to the following terms:
-                  </p>
-                  <ul>
-                    <li>You will be responsible for your sales and commissions</li>
-                    <li>Must follow all platform policies</li>
-                    <li>Your access will be activated after administrator approval</li>
-                    <li>You agree to maintain confidentiality of information</li>
-                  </ul>
-                  <p>
-                    These terms may be updated at any time.
-                  </p>
-                </div>
-              </div>
-              <div className="p-6 border-t">
-                <button
-                  onClick={() => setShowTermsModal(false)}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Privacy Modal */}
-        {showPrivacyModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h3 className="text-lg font-medium">Privacy Policy</h3>
-                <button
-                  onClick={() => setShowPrivacyModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div 
-                className="p-6 overflow-y-auto max-h-[60vh]"
-                onScroll={handlePrivacyScroll}
-              >
-                <div className="prose prose-sm max-w-none">
-                  <h4>Privacy Policy for Sellers</h4>
-                  <p>
-                    Your personal information is protected and used only for:
-                  </p>
-                  <ul>
-                    <li>Processing your registration and approval</li>
-                    <li>Managing your seller account</li>
-                    <li>Processing commissions and payments</li>
-                    <li>Service-related communication</li>
-                  </ul>
-                  <p>
-                    We do not share your information with third parties without your consent.
-                  </p>
-                </div>
-              </div>
-              <div className="p-6 border-t">
-                <button
-                  onClick={() => setShowPrivacyModal(false)}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Verification Modal */}
         {showVerificationModal && (

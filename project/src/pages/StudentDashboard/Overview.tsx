@@ -101,6 +101,19 @@ const Overview: React.FC<OverviewProps> = ({
 
   const { user, userProfile } = useAuth();
 
+  // Verificar se há application_fee ou scholarship_fee pagos nas applications
+  const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
+  const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
+
+  // Valores das taxas para o ProgressBar
+  // A application fee agora é variável, então não mostramos um valor específico
+  const dynamicFeeValues = [
+    '$999', // Selection Process Fee (fixo)
+    'As per university', // Application Fee (variável - não mostra valor específico)
+    '$400', // Scholarship Fee (fixo)
+    '$999', // I-20 Control Fee (fixo)
+  ];
+
   // Lógica da barra de progresso dinâmica
   let steps = [];
   if (!userProfile?.has_paid_selection_process_fee) {
@@ -131,7 +144,7 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
-  } else if (!userProfile?.is_application_fee_paid) {
+  } else if (!hasApplicationFeePaid) {
     // Pagou só a Selection Process Fee
     steps = [
       {
@@ -159,7 +172,7 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
-  } else if (!userProfile?.has_paid_college_enrollment_fee) {
+  } else if (!hasScholarshipFeePaid) {
     // Pagou Application Fee
     steps = [
       {
@@ -187,8 +200,8 @@ const Overview: React.FC<OverviewProps> = ({
         current: false,
       },
     ];
-  } else {
-    // Pagou tudo
+  } else if (!userProfile?.has_paid_i20_control_fee) {
+    // Pagou Scholarship Fee, mas não I-20 Control Fee
     steps = [
       {
         label: t('studentDashboard.progressBar.selectionProcessFee'),
@@ -213,6 +226,34 @@ const Overview: React.FC<OverviewProps> = ({
         description: t('studentDashboard.progressBar.payI20Fee'),
         completed: false,
         current: true,
+      },
+    ];
+  } else {
+    // Pagou tudo
+    steps = [
+      {
+        label: t('studentDashboard.progressBar.selectionProcessFee'),
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.applicationFee'),
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.scholarshipFee'),
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.i20ControlFee'),
+        description: t('studentDashboard.progressBar.completed'),
+        completed: true,
+        current: false,
       },
     ];
   }
@@ -243,16 +284,12 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Progress Bar dentro do bloco azul */}
-          {!allCompleted && (
-            <>
-              <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
-                {t('studentDashboard.progressBar.title')}
-              </div>
-              <div className="mb-2 md:mb-4">
-                <ProgressBar steps={steps} />
-              </div>
-            </>
-          )}
+          <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
+            {allCompleted ? 'All Steps Completed! 🎉' : t('studentDashboard.progressBar.title')}
+          </div>
+          <div className="mb-2 md:mb-4">
+            <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
+          </div>
 
           {userProfile && !userProfile.has_paid_selection_process_fee && (
             <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">
@@ -267,9 +304,9 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">$600</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">$999</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${600 - (activeDiscount.discount_amount || 0)}
+                        ${999 - (activeDiscount.discount_amount || 0)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -279,7 +316,7 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">$600</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">$999</div>
                   )}
                 </div>
               </div>
@@ -291,6 +328,8 @@ const Overview: React.FC<OverviewProps> = ({
                   </span>
                 )}
               </p>
+              
+              {/* Botão de pagamento sempre visível */}
               <StripeCheckout 
                 productId="selectionProcess"
                 feeType="selection_process"
@@ -300,6 +339,18 @@ const Overview: React.FC<OverviewProps> = ({
                 successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                 cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
               />
+              
+              {/* Aviso para usuários com seller_referral_code */}
+              {/* {userProfile.seller_referral_code && userProfile.seller_referral_code.trim() !== '' && (
+                <div className="mt-3 text-center">
+                  <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-300/30 rounded-lg px-3 py-2">
+                    <Target className="h-4 w-4 text-amber-300" />
+                    <span className="text-amber-200 text-xs">
+                      {t('studentDashboard.selectionProcess.sellerReferralCodeInfo')}
+                    </span>
+                  </div>
+                </div>
+              )} */}
             </div>
           )}
           {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}
@@ -410,7 +461,7 @@ const Overview: React.FC<OverviewProps> = ({
       </div> */}
       {/* Progress Bar */}
       {/* <div className="overview-progressbar-wrapper">
-        <ProgressBar steps={steps} />
+        <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
       </div> */}
       {/* Outros cards/boxes da overview seguem o mesmo padrão visual */}
       {/* Recent Applications */}

@@ -1,16 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   UserPlus, 
-  GraduationCap, 
   DollarSign, 
   TrendingUp, 
-  Eye,
-  ArrowUpRight,
-  CheckCircle,
-  Activity,
-  Star,
-  Crown
+  ArrowUpRight
 } from 'lucide-react';
 
 interface OverviewProps {
@@ -25,11 +20,11 @@ interface OverviewProps {
   onRefresh: () => void;
 }
 
-const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [], onRefresh }) => {
+const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) => {
+  const navigate = useNavigate();
   const recentSellers = (sellers || []).slice(0, 5);
-  const recentStudents = (students || []).slice(0, 5);
 
-  // Valores padrão para stats
+  // Default values for stats
   const safeStats = {
     totalSellers: stats?.totalSellers || 0,
     activeSellers: stats?.activeSellers || 0,
@@ -37,44 +32,41 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
     totalRevenue: stats?.totalRevenue || 0
   };
 
-  // Verificar se há dados
-  const hasData = safeStats.totalStudents > 0 || safeStats.totalSellers > 0;
-
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('pt-BR', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'USD'
     }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    return new Date(dateString).toLocaleDateString('en-US');
   };
 
   const quickActions = [
     {
       title: 'Add Seller',
-      description: 'Register new affiliate sellers',
+      description: 'Generate registration links',
       icon: UserPlus,
       color: 'bg-gradient-to-r from-blue-500 to-blue-600',
-      link: '/affiliate-admin/dashboard/sellers',
-      count: safeStats.totalSellers
+      link: '/affiliate-admin/dashboard/users?tab=registration',
+      count: null
     },
     {
       title: 'Manage Users',
       description: 'View and manage sellers',
       icon: Users,
       color: 'bg-gradient-to-r from-green-500 to-green-600',
-      link: '/affiliate-admin/dashboard/sellers',
+      link: '/affiliate-admin/dashboard/users',
       count: safeStats.activeSellers
     },
     {
-      title: 'View Reports',
+      title: 'Analytics Dashboard',
       description: 'Track performance and metrics',
       icon: TrendingUp,
       color: 'bg-gradient-to-r from-orange-500 to-orange-600',
       link: '/affiliate-admin/dashboard/analytics',
-      count: safeStats.totalStudents
+      count: null
     }
   ];
 
@@ -90,30 +82,17 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
         </button>
       </div>
 
-      {/* No Data State */}
-      {!hasData && (
-        <div className="text-center py-12">
-          <div className="text-slate-400 mb-4">
-            <TrendingUp className="h-12 w-12 mx-auto" />
-          </div>
-          <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum dado disponível</h3>
-          <p className="text-slate-600">
-            Ainda não há dados para exibir. Os dados aparecerão aqui assim que houver estudantes referenciados ou vendedores cadastrados.
-          </p>
-        </div>
-      )}
 
       {/* Stats Cards */}
-      {hasData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500 mb-1">Total de Vendedores</p>
+                <p className="text-sm font-medium text-slate-500 mb-1">Total Sellers</p>
                 <p className="text-3xl font-bold text-slate-900">{safeStats.totalSellers}</p>
                 <div className="flex items-center mt-2">
                   <Users className="h-4 w-4 text-blue-500 mr-1" />
-                  <span className="text-sm font-medium text-blue-600">{safeStats.activeSellers} ativos</span>
+                  <span className="text-sm font-medium text-blue-600">{safeStats.activeSellers} active</span>
                 </div>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -154,7 +133,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
                 </div>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <GraduationCap className="h-7 w-7 text-white" />
+                <Users className="h-7 w-7 text-white" />
               </div>
             </div>
           </div>
@@ -177,20 +156,26 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
             </div>
           </div>
         </div>
-      )}
+
 
       {/* Quick Actions */}
-      {hasData && (
+      <div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {quickActions.map((action, index) => {
             return (
-              <div key={index} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-lg transition-all duration-300 group cursor-pointer">
+              <div 
+                key={index} 
+                className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-lg transition-all duration-300 group cursor-pointer"
+                onClick={() => navigate(action.link)}
+              >
                 <div className="flex items-center justify-between mb-4">
                   <div className={`w-12 h-12 ${action.color} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     <action.icon className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex items-center">
-                    <span className="text-2xl font-bold text-slate-900 mr-2">{action.count}</span>
+                    {action.count !== null && (
+                      <span className="text-2xl font-bold text-slate-900 mr-2">{action.count}</span>
+                    )}
                     <ArrowUpRight className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
                   </div>
                 </div>
@@ -200,10 +185,141 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
             );
           })}
         </div>
+      </div>
+
+      {/* Top Sellers Section */}
+      {sellers && sellers.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+          <div className="p-6 border-b border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Top Sellers</h3>
+                <p className="text-slate-500 text-sm">
+                  Ranking of top performing sellers based on performance
+                </p>
+              </div>
+              <div className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer">
+                View All
+                <ArrowUpRight className="h-4 w-4 ml-1" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <div className="space-y-4">
+              {/* Top 3 Sellers */}
+              {sellers
+                .sort((a, b) => {
+                  // Sort by number of students first, then by revenue
+                  if (b.students_count !== a.students_count) {
+                    return b.students_count - a.students_count;
+                  }
+                  return (b.total_revenue || 0) - (a.total_revenue || 0);
+                })
+                .slice(0, 3)
+                .map((seller, index) => (
+                  <div 
+                    key={seller.id} 
+                    className="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        {/* Ranking Number */}
+                        <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-700">
+                          {index + 1}
+                        </div>
+                        
+                        {/* Seller Info */}
+                        <div>
+                          <p className="font-semibold text-slate-900">{seller.name}</p>
+                          <p className="text-sm text-slate-600">{seller.email}</p>
+                          <div className="flex items-center space-x-3 mt-1">
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                              {seller.referral_code}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              seller.is_active 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {seller.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Performance Metrics */}
+                      <div className="text-right">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-end space-x-2">
+                            <span className="text-lg font-bold text-slate-900">
+                              {seller.students_count || 0}
+                            </span>
+                            <span className="text-sm text-slate-500">students</span>
+                          </div>
+                          <div className="text-sm font-medium text-slate-700">
+                            {formatCurrency(seller.total_revenue || 0)}
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            {formatDate(seller.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              
+              {/* Additional Sellers (4th to 6th place) */}
+              {sellers.length > 3 && (
+                <div className="pt-4 border-t border-slate-200">
+                  <h4 className="text-sm font-medium text-slate-600 mb-3">Other Sellers</h4>
+                  <div className="space-y-3">
+                    {sellers
+                      .sort((a, b) => {
+                        if (b.students_count !== a.students_count) {
+                          return b.students_count - a.students_count;
+                        }
+                        return (b.total_revenue || 0) - (a.total_revenue || 0);
+                      })
+                      .slice(3, 6)
+                      .map((seller, index) => (
+                        <div 
+                          key={seller.id} 
+                          className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:bg-slate-100 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-6 h-6 bg-slate-300 rounded flex items-center justify-center text-white text-xs font-medium">
+                                {index + 4}
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{seller.name}</p>
+                                <p className="text-xs text-slate-500">{seller.email}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="flex items-center space-x-4">
+                                <span className="text-sm text-slate-700">
+                                  {seller.students_count || 0} students
+                                </span>
+                                <span className="text-sm text-slate-700">
+                                  {formatCurrency(seller.total_revenue || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Recent Data */}
-      {hasData && (
+      <div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Recent Sellers */}
           <div className="lg:col-span-2">
@@ -216,7 +332,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
                       {recentSellers.length} seller{recentSellers.length !== 1 ? 's' : ''} registered
                     </p>
                   </div>
-                  <div className="text-purple-600 hover:text-purple-700 font-medium text-sm flex items-center cursor-pointer">
+                  <div className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer">
                     View All
                     <ArrowUpRight className="h-4 w-4 ml-1" />
                   </div>
@@ -263,93 +379,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], students = [],
             </div>
           </div>
 
-          {/* Sidebar - System Status & Tools */}
-          <div className="space-y-6">
-            {/* System Status */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
-                System Status
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">Database</span>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-sm text-green-600 font-medium">Operational</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">API Services</span>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-sm text-green-600 font-medium">Operational</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">Email Service</span>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-sm text-green-600 font-medium">Operational</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
-                <Activity className="h-5 w-5 mr-2 text-blue-500" />
-                Recent Activity
-              </h3>
-              
-              <div className="space-y-4">
-                {recentStudents.slice(0, 4).map((student, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <GraduationCap className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">
-                        New student referred
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {student.full_name} by {student.seller_name} • {formatDate(student.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                
-                {recentStudents.length === 0 && (
-                  <p className="text-slate-500 text-sm text-center py-4">No recent activity</p>
-                )}
-              </div>
-            </div>
-
-            {/* Affiliate Tools */}
-            <div className="bg-gradient-to-br from-[#05294E] to-blue-700 rounded-2xl shadow-lg text-white p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center">
-                <Crown className="h-5 w-5 mr-2" />
-                Affiliate Tools
-              </h3>
-              <div className="space-y-3">
-                <button
-                  onClick={onRefresh}
-                  className="block w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white py-2 px-4 rounded-xl hover:bg-white/30 transition-all duration-300 font-medium text-sm text-center"
-                >
-                  Refresh Data
-                </button>
-                <div className="block w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white py-2 px-4 rounded-xl hover:bg-white/30 transition-all duration-300 font-medium text-sm text-center cursor-pointer">
-                  View Analytics
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

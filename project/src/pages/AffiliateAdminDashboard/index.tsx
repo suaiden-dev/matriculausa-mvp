@@ -6,7 +6,7 @@ import AffiliateAdminDashboardLayout from './AffiliateAdminDashboardLayout';
 import Overview from './Overview';
 import SellerManagement from './SellerManagement';
 
-import EnhancedStudentTracking from './EnhancedStudentTracking';
+import EnhancedStudentTracking from './EnhancedStudentTrackingRefactored';
 import Analytics from './Analytics';
 import ProfileSettings from './ProfileSettings';
 
@@ -31,6 +31,7 @@ interface Student {
   total_paid: number;
   created_at: string;
   status: string;
+  application_status?: string;
 }
 
 interface Seller {
@@ -57,10 +58,23 @@ const AffiliateAdminDashboard: React.FC = () => {
     activeSellers: 0
   });
 
-  const loadAffiliateAdminData = useCallback(async () => {
+  const loadAffiliateAdminData = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Force refresh - clear cache
+      if (forceRefresh) {
+        console.log('🔄 Force refresh - clearing cache');
+        setStudents([]);
+        setSellers([]);
+        setStats({
+          totalStudents: 0,
+          totalRevenue: 0,
+          totalSellers: 0,
+          activeSellers: 0
+        });
+      }
 
 
 
@@ -109,6 +123,7 @@ const AffiliateAdminDashboard: React.FC = () => {
       };
 
       // Processar vendedores
+      console.log('🔍 Raw sellers data:', sellersData);
       const processedSellers = (sellersData || []).map((seller: any) => ({
         id: seller.seller_id,
         name: seller.seller_name || 'Nome não disponível',
@@ -120,6 +135,7 @@ const AffiliateAdminDashboard: React.FC = () => {
         avg_revenue_per_student: seller.avg_revenue_per_student || 0,
         is_active: seller.is_active
       }));
+      console.log('🔍 Processed sellers:', processedSellers);
 
       // Processar estudantes
       const processedStudents = (studentsData || []).map((student: any) => ({
@@ -133,7 +149,8 @@ const AffiliateAdminDashboard: React.FC = () => {
         referral_code_used: student.referral_code_used || '',
         total_paid: student.total_paid || 0,
         created_at: student.created_at,
-        status: student.status || 'active'
+        status: student.status || 'active',
+        application_status: student.application_status || 'Not specified'
       }));
 
       // Atualizar estatísticas
@@ -169,7 +186,7 @@ const AffiliateAdminDashboard: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Carregando dashboard...</p>
+          <p className="text-slate-600">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -181,7 +198,7 @@ const AffiliateAdminDashboard: React.FC = () => {
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={loadAffiliateAdminData}
+            onClick={() => loadAffiliateAdminData(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             Tentar Novamente
@@ -192,7 +209,7 @@ const AffiliateAdminDashboard: React.FC = () => {
   }
 
   return (
-    <AffiliateAdminDashboardLayout user={user}>
+    <AffiliateAdminDashboardLayout user={user} onRefresh={() => loadAffiliateAdminData(true)}>
       <Routes>
         <Route 
           index 
@@ -201,7 +218,7 @@ const AffiliateAdminDashboard: React.FC = () => {
               stats={stats}
               sellers={sellers}
               students={students}
-              onRefresh={loadAffiliateAdminData}
+              onRefresh={() => loadAffiliateAdminData(true)}
             />
           } 
         />

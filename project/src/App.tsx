@@ -12,6 +12,7 @@ import Universities from './pages/Universities';
 import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
 import TermsAndConditions from './pages/TermsAndConditions';
+import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
 import SchoolProfileSetup from './pages/SchoolProfileSetup';
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
 import StudentDashboard from './pages/StudentDashboard/index';
@@ -39,6 +40,11 @@ import ForUniversities from './pages/ForUniversities';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
+import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
+import { ZelleWaitingPage } from './components/ZelleWaitingPage';
+import CheckoutSuccess from './pages/CheckoutSuccess';
+import ZellePaymentSuccess from './pages/ZellePaymentSuccess';
+import SmartAssistantLayout from './components/SmartAssistantLayout';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -71,10 +77,8 @@ const AppContent = () => {
   }, [location.pathname, location.hash]);
 
   return (
-    <AuthProvider>
-      <AuthRedirect>
-        <Layout>
-          <Routes>
+    <Layout>
+      <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Auth mode="login" />} />
@@ -86,7 +90,8 @@ const AppContent = () => {
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          {/* Student/Admin Dashboard Switch - sempre renderize StudentDashboard por padrão */}
+          {/* Student Routes */}
+          <Route path="/student/terms" element={<StudentTermsAcceptance />} />
           <Route path="/student/dashboard/*" element={<StudentDashboard />} />
           {/* School Routes */}
           <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
@@ -111,21 +116,24 @@ const AppContent = () => {
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/for-universities" element={<ForUniversities />} />
           <Route path="/success" element={<SuccessPage />} />
-          <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
           <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
           <Route path="/payment-error" element={<PaymentErrorPage />} />
-          <Route path="/application-fee-error" element={<ApplicationFeeError />} />
-          <Route path="/i20-control-fee-success" element={<I20ControlFeeSuccess />} />
-          <Route path="/i20-control-fee-error" element={<I20ControlFeeError />} />
           <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
+          {/* Zelle Checkout Routes */}
+          <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
+          <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/zelle/success" element={<ZellePaymentSuccess />} />
+          
+          {/* Smart Assistant Route */}
+          <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
+
           {/* Catch-all route for 404 */}
           <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
           </Routes>
         </Layout>
-      </AuthRedirect>
-    </AuthProvider>
   );
 };
 
@@ -133,7 +141,11 @@ const App: React.FC = () => {
   return (
     <HelmetProvider>
       <Router>
-        <AppContent />
+        <AuthProvider>
+          <AuthRedirect>
+            <AppContent />
+          </AuthRedirect>
+        </AuthProvider>
       </Router>
     </HelmetProvider>
   );

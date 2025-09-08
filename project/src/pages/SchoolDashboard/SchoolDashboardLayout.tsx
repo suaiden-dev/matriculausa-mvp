@@ -30,7 +30,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
 import NotificationsModal from '../../components/NotificationsModal';
-import PaymentNotifications from '../../components/PaymentNotifications';
+
 import { useEnvironment } from '../../hooks/useEnvironment';
 import FeatureBlockedMessage from '../../components/FeatureBlockedMessage';
 
@@ -215,7 +215,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       badge: null,
       dropdown: [
         { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
-        { id: 'whatsapp', label: 'WhatsApp Connection', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
+        { id: 'whatsapp', label: 'WhatsApp AI', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
       ]
     }
   ];
@@ -437,36 +437,63 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Open sidebar</span>
               </button>
-              
-              <div className="hidden md:block">
-                <h1 className="text-2xl font-bold text-slate-900">
-                  {activeTab === 'overview' && 'Overview'}
-                  {activeTab === 'scholarships' && 'Manage Scholarships'}
-                  {activeTab === 'profile' && 'University Profile'}
-                  {activeTab === 'students' && 'Students'}
-                  {activeTab === 'selection-process' && 'Selection Process'}
-                  {activeTab === 'analytics' && 'Payment Management'}
-                  {activeTab === 'stripe-connect' && 'Stripe Connect'}
-          
-                  {activeTab === 'payment-dashboard' && 'Payment Dashboard'}
-                </h1>
-                <p className="text-slate-600">
-                  {activeTab === 'overview' && 'Monitor your university performance'}
-                  {activeTab === 'scholarships' && 'Create and manage scholarship opportunities'}
-                  {activeTab === 'profile' && 'Keep your university information up to date'}
-                  {activeTab === 'students' && 'Manage applicants and students'}
-                  {activeTab === 'selection-process' && 'Review and approve student applications'}
-                  {activeTab === 'analytics' && 'Track and manage scholarship payment requests'}
-                  {activeTab === 'stripe-connect' && 'Manage your Stripe Connect integration'}
-          
-                  {activeTab === 'payment-dashboard' && 'Monitor payment activities'}
-                </p>
-              </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Payment Notifications */}
-              <PaymentNotifications />
+              {/* Notifications */}
+              <div className="relative notifications-container">
+                <button
+                  onClick={() => {
+                    // Em mobile, abre modal; em desktop, abre dropdown
+                    if (window.innerWidth < 768) {
+                      setShowNotificationsModal(true);
+                    } else {
+                      setShowNotif(!showNotif);
+                    }
+                  }}
+                  className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Notifications"
+                >
+                  <Bell className="h-5 w-5 text-slate-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium min-w-[20px]">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown - only show on desktop */}
+                {showNotif && (
+                  <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                    <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
+                      <span>Notifications</span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
+                        <span className="text-slate-300">|</span>
+                        <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-sm text-slate-500">No notifications</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${!n.read_at ? 'bg-slate-50' : ''}`} onClick={() => openNotification(n)}>
+                            <div className="text-sm font-medium text-slate-900 flex items-center justify-between">
+                              <span>{n.title}</span>
+                              {!n.read_at && <span className="ml-2 h-2 w-2 rounded-full bg-blue-500 inline-block"></span>}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-0.5">{n.message}</div>
+                            <div className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+
 
               {/* User Menu */}
               <div className="relative">
@@ -543,78 +570,80 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className="flex justify-center pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
-          {/* Welcome Message for Incomplete Profiles */}
-          {(!university || !university.profile_completed) && (
-            <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
-              <div className="absolute inset-0 bg-black/10"></div>
-              <div className="relative">
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
-                    {university?.image_url ? (
-                      <img 
-                        src={university.image_url} 
-                        alt={`${university.name} logo`}
-                        className="w-full h-full object-cover rounded-2xl"
-                      />
-                    ) : (
-                      <Building className="h-8 w-8 text-white" />
+        <main className="pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
+          <div className="max-w-7xl mx-auto">
+            {/* Welcome Message for Incomplete Profiles */}
+            {(!university || !university.profile_completed) && !location.pathname.includes('/profile') && (
+              <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
+                <div className="absolute inset-0 bg-black/10"></div>
+                <div className="relative">
+                  <div className="flex items-center space-x-4 mb-6">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center overflow-hidden">
+                      {university?.image_url ? (
+                        <img 
+                          src={university.image_url} 
+                          alt={`${university.name} logo`}
+                          className="w-full h-full object-cover rounded-2xl"
+                        />
+                      ) : (
+                        <Building className="h-8 w-8 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-bold mb-2">
+                        {!university ? 'Welcome to Matrícula USA!' : 'Complete Your Profile'}
+                      </h2>
+                      <p className="text-blue-100 text-lg">
+                        {!university 
+                          ? 'Set up your university and start attracting international students'
+                          : 'Finish your profile to unlock all features'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+                      <Edit className="h-8 w-8 text-white mb-4" />
+                      <h3 className="font-bold text-white mb-2">1. Complete Profile</h3>
+                      <p className="text-blue-100 text-sm">Add university information and documentation</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+                      <Award className="h-8 w-8 text-yellow-400 mb-4" />
+                      <h3 className="font-bold text-white mb-2">2. Create Scholarships</h3>
+                      <p className="text-blue-100 text-sm">Offer exclusive opportunities to students</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+                      <Users className="h-8 w-8 text-green-400 mb-4" />
+                      <h3 className="font-bold text-white mb-2">3. Connect Students</h3>
+                      <p className="text-blue-100 text-sm">Receive applications from qualified students</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Link
+                      to="/school/setup-profile"
+                      className="bg-white text-[#05294E] px-8 py-3 rounded-xl hover:bg-slate-100 transition-all duration-300 font-bold text-center flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <Settings className="h-5 w-5 mr-2" />
+                      {!university ? 'Set Up University Profile' : 'Complete Profile'}
+                    </Link>
+                    {!university && (
+                      <Link
+                        to="/school/termsandconditions"
+                        className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-8 py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-bold text-center flex items-center justify-center"
+                      >
+                        <Shield className="h-5 w-5 mr-2" />
+                        Review Terms & Conditions
+                      </Link>
                     )}
                   </div>
-                  <div>
-                    <h2 className="text-3xl font-bold mb-2">
-                      {!university ? 'Welcome to Matrícula USA!' : 'Complete Your Profile'}
-                    </h2>
-                    <p className="text-blue-100 text-lg">
-                      {!university 
-                        ? 'Set up your university and start attracting international students'
-                        : 'Finish your profile to unlock all features'
-                      }
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-                    <Edit className="h-8 w-8 text-white mb-4" />
-                    <h3 className="font-bold text-white mb-2">1. Complete Profile</h3>
-                    <p className="text-blue-100 text-sm">Add university information and documentation</p>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-                    <Award className="h-8 w-8 text-yellow-400 mb-4" />
-                    <h3 className="font-bold text-white mb-2">2. Create Scholarships</h3>
-                    <p className="text-blue-100 text-sm">Offer exclusive opportunities to students</p>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
-                    <Users className="h-8 w-8 text-green-400 mb-4" />
-                    <h3 className="font-bold text-white mb-2">3. Connect Students</h3>
-                    <p className="text-blue-100 text-sm">Receive applications from qualified students</p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link
-                    to="/school/setup-profile"
-                    className="bg-white text-[#05294E] px-8 py-3 rounded-xl hover:bg-slate-100 transition-all duration-300 font-bold text-center flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    <Settings className="h-5 w-5 mr-2" />
-                    {!university ? 'Set Up University Profile' : 'Complete Profile'}
-                  </Link>
-                  {!university && (
-                    <Link
-                      to="/school/termsandconditions"
-                      className="bg-white/20 backdrop-blur-sm border border-white/30 text-white px-8 py-3 rounded-xl hover:bg-white/30 transition-all duration-300 font-bold text-center flex items-center justify-center"
-                    >
-                      <Shield className="h-5 w-5 mr-2" />
-                      Review Terms & Conditions
-                    </Link>
-                  )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {children}
+            {children}
+          </div>
         </main>
       </div>
 

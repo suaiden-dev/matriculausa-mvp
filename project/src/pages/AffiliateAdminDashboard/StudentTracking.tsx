@@ -13,6 +13,7 @@ interface Student {
   status: string;
   created_at: string;
   referral_code_used: string;
+  application_status?: string;
 }
 
 interface Seller {
@@ -62,7 +63,7 @@ const StudentTracking: React.FC<StudentTrackingProps> = ({
         
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Carregando dados...</p>
+          <p className="text-slate-600">Loading data...</p>
         </div>
       </div>
     );
@@ -230,7 +231,7 @@ const StudentTracking: React.FC<StudentTrackingProps> = ({
       {isLoading && (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Carregando dados...</p>
+          <p className="text-slate-600">Loading data...</p>
         </div>
       )}
 
@@ -268,6 +269,9 @@ const StudentTracking: React.FC<StudentTrackingProps> = ({
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    Application Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Cadastrado em
@@ -321,6 +325,21 @@ const StudentTracking: React.FC<StudentTrackingProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(student.status)}`}>
                         {getStatusText(student.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        student.application_status === 'approved' ? 'bg-green-100 text-green-800' :
+                        student.application_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        student.application_status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        student.application_status === 'No application' ? 'bg-gray-100 text-gray-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {student.application_status === 'approved' ? 'Approved' :
+                         student.application_status === 'pending' ? 'Pending' :
+                         student.application_status === 'rejected' ? 'Rejected' :
+                         student.application_status === 'No application' ? 'No Application' :
+                         student.application_status || 'Not specified'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">

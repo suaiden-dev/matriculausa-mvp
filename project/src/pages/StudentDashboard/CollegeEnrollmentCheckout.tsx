@@ -47,13 +47,13 @@ const CollegeEnrollmentCheckout: React.FC = () => {
         <div className="mb-8">
           <p className="text-slate-700 text-center mb-2 font-semibold">To complete your enrollment, please pay the following fees:</p>
           <ul className="text-slate-700 text-center mb-4">
-            <li>• <span className="font-bold">Application Fee:</span> $350</li>
-            <li>• <span className="font-bold">Scholarship Fee:</span> $850</li>
+            <li>• <span className="font-bold">Application Fee:</span> As per university</li>
+            <li>• <span className="font-bold">Scholarship Fee:</span> $400</li>
           </ul>
         </div>
         <StripeCheckout
           productId="applicationFee"
-          buttonText="Pay Now ($900)"
+          buttonText="Pay Now ($999)"
           className="w-full py-4"
           paymentType="enrollment_and_scholarship"
           feeType="enrollment_fee"

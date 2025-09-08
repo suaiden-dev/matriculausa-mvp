@@ -79,6 +79,153 @@
     "learnHowItWorks": "Aprender Cómo Funciona",
     "contentLockedMessage": "Este contenido está bloqueado hasta que se complete el pago"
   },
+  "zelleCheckout": {
+    "title": "Checkout de Pago Zelle",
+    "subtitle": "Completa tu pago vía transferencia Zelle",
+    "backToPaymentSelection": "Volver a la Selección de Pago",
+    "paymentSummary": "Resumen del Pago",
+    "paymentMethod": "Método de Pago",
+    "amount": "Cantidad",
+    "instructions": "Instrucciones de Pago",
+    "step1": "Paso 1: Abre tu aplicación Zelle",
+    "step2": "Paso 2: Envía el pago a",
+    "step3": "Paso 3: Usa la cantidad exacta mostrada arriba",
+    "step4": "Paso 4: Agrega una nota de referencia",
+    "uploadReceipt": "Subir Recibo",
+    "uploadReceiptDescription": "Sube tu recibo de pago de Zelle",
+    "dragAndDrop": "Arrastra y suelta tu archivo aquí, o haz clic para seleccionar",
+    "supportedFormats": "Formatos soportados: JPG, PNG, PDF (máx. 10MB)",
+    "removeFile": "Eliminar archivo",
+    "paymentDetails": "Detalles del Pago",
+    "confirmationCode": "Código de Confirmación",
+    "confirmationCodePlaceholder": "Ingresa el código de confirmación de Zelle",
+    "paymentDate": "Fecha del Pago",
+    "recipientEmail": "Email del Destinatario",
+    "recipientEmailPlaceholder": "Email usado en Zelle",
+    "recipientName": "Nombre del Destinatario",
+    "recipientNamePlaceholder": "Nombre usado en Zelle",
+    "submitPayment": "Enviar Pago",
+    "processing": "Procesando...",
+    "activeDiscount": "Descuento Activo",
+    "discountApplied": "Descuento aplicado",
+    "originalAmount": "Cantidad original",
+    "discountedAmount": "Cantidad con descuento",
+    "savings": "Ahorraste",
+    "error": {
+      "fileRequired": "Por favor, selecciona un archivo de recibo",
+      "detailsRequired": "Por favor, completa todos los detalles del pago",
+      "uploadFailed": "Error al subir el recibo",
+      "paymentFailed": "Error al procesar el pago"
+    },
+    "importantInfo": {
+      "title": "Información Importante",
+      "securePayment": "Pago Seguro",
+      "securePaymentDesc": "Tu información de pago está encriptada y es segura",
+      "verificationRequired": "Verificación Requerida",
+      "verificationRequiredDesc": "El pago será verificado automáticamente en 24 horas",
+      "zelleTransfer": "Transferencia Zelle",
+      "zelleTransferDesc": "Completa la transferencia y sube tu confirmación",
+      "paymentInstructions": "Instrucciones de Pago",
+      "step1": "Completa la transferencia Zelle al destinatario proporcionado",
+      "step2": "Guarda la captura de pantalla de confirmación",
+      "step3": "Sube tu captura de pantalla de confirmación",
+      "step4": "Envía para verificación automática"
+    },
+    "requirements": {
+      "title": "Importante: Tu confirmación de pago DEBE incluir:",
+      "confirmationCode": "Código de Confirmación",
+      "confirmationCodeDesc": "El código único de transacción de Zelle",
+      "paymentDate": "Fecha del Pago",
+      "paymentDateDesc": "Cuándo se completó la transferencia",
+      "paymentAmount": "Cantidad del Pago",
+      "paymentAmountDesc": "La cantidad exacta transferida",
+      "recipient": "Destinatario",
+      "recipientDesc": "Quién recibió el pago"
+    },
+    "steps": {
+      "title": "Completa estos pasos:",
+      "step1": "Completa tu transferencia Zelle de",
+      "step2": "Guarda la captura de pantalla de confirmación de pago que muestre toda la información requerida",
+      "step3": "Sube tu captura de pantalla de confirmación abajo",
+      "step4": "Envía para verificación automática (completada en 24 horas)"
+    },
+    "reviewDetails": "Revisa los detalles de tu pago"
+  },
+  "zelleWaiting": {
+    "title": "Esperando Verificación",
+    "subtitle": "Estamos analizando tu recibo de pago",
+    "analyzingPayment": "Analizando tu recibo de pago...",
+    "waitTime": "Tiempo de espera",
+    "status": {
+      "pending": "Pendiente",
+      "approved": "Aprobado",
+      "rejected": "Rechazado",
+      "error": "Error"
+    },
+    "messages": {
+      "analyzing": "Analizando tu recibo de pago...",
+      "approved": "¡Pago aprobado! 🎉",
+      "rejected": "Pago rechazado ❌",
+      "error": "Error al verificar el pago"
+    },
+    "details": {
+      "analyzing": "Nuestro equipo está verificando tu recibo. Esto puede tomar unos minutos.",
+      "approved": "Tu pago ha sido verificado y aprobado exitosamente.",
+      "rejected": "Tu recibo no fue aprobado. Verifica que toda la información sea visible.",
+      "error": "Ocurrió un error al verificar tu pago. Inténtalo de nuevo."
+    },
+    "actions": {
+      "tryAgain": "Intentar de Nuevo",
+      "contactSupport": "Contactar Soporte",
+      "backToCheckout": "Volver al Panel"
+    },
+    "redirecting": "Redirigiendo a la página de éxito...",
+    "analysisTime": "Tiempo de análisis: ~40 segundos",
+    "paymentInfo": {
+      "title": "Información del Pago",
+      "feeType": "Tipo de Tarifa:",
+      "amount": "Cantidad:",
+      "paymentId": "ID del Pago:"
+    },
+    "helpText": {
+      "default": "Si el proceso toma más de 2 minutos, por favor contacta al soporte.",
+      "underReview": "Tu pago está en revisión. Espera la verificación."
+    }
+  },
+  "zelleSuccess": {
+    "title": "¡Pago Zelle Exitoso!",
+    "subtitle": "¡Gracias por tu pago! Tu pago Zelle ha sido verificado y aprobado.",
+    "invalidStatus": {
+      "title": "Estado de Pago Inválido",
+      "message": "Esta página es solo para pagos Zelle exitosos.",
+      "returnHome": "Volver al Inicio"
+    },
+    "paymentDetails": {
+      "title": "Detalles del Pago",
+      "subtitle": "Pago Zelle verificado",
+      "feeType": "Tipo de Tarifa:",
+      "amount": "Cantidad:",
+      "status": "Estado:",
+      "approved": "Aprobado"
+    },
+    "whatsNext": {
+      "title": "¿Qué Sigue?",
+      "step1": "Tu pago Zelle ha sido verificado y aprobado",
+      "step2": "Ahora puedes acceder a todas las funciones del proceso de aplicación",
+      "step3": "Nuestro equipo te contactará pronto con los próximos pasos"
+    },
+    "actions": {
+      "goToDashboard": "Ir al Panel",
+      "returnHome": "Volver al Inicio"
+    },
+    "feeTypes": {
+      "i-20_control_fee": "Tarifa de Control I-20",
+      "application_fee": "Tarifa de Aplicación",
+      "scholarship_fee": "Tarifa de Beca",
+      "selection_process": "Tarifa de Proceso de Selección",
+      "default": "Pago"
+    }
+  },
   "home": {
     "hero": {
       "title": "Tu Puerta de Entrada a las Universidades Americanas",
@@ -137,19 +284,19 @@
         },
         "q2": {
           "question": "¿Qué es la Tarifa de Proceso de Selección?",
-          "answer": "La Tarifa de Proceso de Selección (US$600) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+          "answer": "La Tarifa de Proceso de Selección (US$999) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         "q3": {
           "question": "¿Qué es la Tarifa de Beca?",
-          "answer": "La Tarifa de Beca (US$350) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca."
+          "answer": "La Tarifa de Beca (US$400) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca."
         },
         "q4": {
           "question": "¿Qué es la Tarifa de Solicitud?",
-          "answer": "La Tarifa de Solicitud (US$850) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma."
+          "answer": "La Tarifa de Solicitud varía según la universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma."
         },
         "q5": {
           "question": "¿Qué es la Tarifa de Control de I-20?",
-          "answer": "La Tarifa de Control I-20 (US$1,250) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa."
+          "answer": "La Tarifa de Control I-20 (US$999) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa."
         },
         "q6": {
           "question": "¿Hay otras tarifas que deba conocer?",
@@ -239,7 +386,7 @@
         "items": ["Historial académico y logros", "Objetivos profesionales y preferencias", "Requisitos financieros"]
       },
       "selectionFee": {
-        "title": "Paga Tarifa de Selección ($600)",
+        "title": "Paga Tarifa de Selección ($999)",
         "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable.",
         "items": ["Acceso para explorar becas", "Iniciar proceso de solicitud", "Tarifa única"]
       },
@@ -249,17 +396,17 @@
         "items": ["Selecciona múltiples becas", "Subida segura de documentos", "Análisis inicial automatizado"]
       },
       "applicationFee": {
-        "title": "Paga Tarifa de Solicitud ($350)",
+        "title": "Paga Tarifa de Solicitud (Según la universidad)",
         "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable.",
         "items": ["Ve becas aprobadas", "Confirma elección de universidad", "Asegura tu lugar"]
       },
       "scholarshipFee": {
-        "title": "Paga Tarifa de Beca ($850)",
+        "title": "Paga Tarifa de Beca ($400)",
         "description": "Obtén chat directo con tu universidad. Esta tarifa es final y no reembolsable.",
         "items": ["Chat directo con universidad", "Envía documentos adicionales", "Compromiso final con beca"]
       },
       "i20Fee": {
-        "title": "Paga Tarifa de Control I-20 ($1,250)",
+        "title": "Paga Tarifa de Control I-20 ($999)",
         "description": "Necesario para tu visa F-1. Esta tarifa es final y no reembolsable.",
         "items": ["Esencial para visa de estudiante F-1", "Cubre procesamiento I-20", "Ventana de pago de 10 días"]
       }
@@ -291,19 +438,19 @@
       },
       "q2": {
         "question": "¿Qué es la Tarifa de Proceso de Selección?",
-        "answer": "La Tarifa de Proceso de Selección (US$600) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Proceso de Selección (US$999) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       },
       "q3": {
         "question": "¿Qué es la Tarifa de Beca?",
-        "answer": "La Tarifa de Beca (US$350) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Beca (US$400) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y apoyo personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
       },
       "q4": {
         "question": "¿Qué es la Tarifa de Solicitud?",
-        "answer": "La Tarifa de Solicitud (US$850) es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Solicitud varía según la universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de matricularte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
       },
       "q5": {
         "question": "¿Qué es la Tarifa de Control I-20?",
-        "answer": "La Tarifa de Control I-20 (US$1,250) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa. Esta tarifa es final y no reembolsable."
+        "answer": "La Tarifa de Control I-20 (US$999) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura procesamiento rápido y preciso de tus documentos de visa. Esta tarifa es final y no reembolsable."
       }
     }
   },
@@ -349,7 +496,7 @@
       "engineering": "Ingeniería",
       "anyField": "Cualquier Campo",
       "online": "En Línea",
-      "onCampus": "En el Campus",
+      "inPerson": "Presencial",
       "hybrid": "Híbrido",
       "opt": "OPT",
       "cpt": "CPT",
@@ -362,16 +509,16 @@
         "doctorate": "Doctorado",
         "undergraduate": "Pregrado"
       },
-      "deliveryModes": {
+      "courseModalities": {
         "online": "En Línea",
-        "onCampus": "En el Campus",
+        "inPerson": "Presencial",
         "hybrid": "Híbrido",
         "mixed": "Mixto"
       }
     },
     "scholarshipCard": {
       "university": "Universidad:",
-      "studyMode": "Modo de Estudio",
+      "studyMode": "Modalidad del Curso",
       "workAuthorization": "Autorización de Trabajo",
       "financialOverview": "Resumen Financiero",
       "originalPrice": "Precio Original",
@@ -420,9 +567,9 @@
       "programInformation": "Información del Programa",
       "academicLevel": "Nivel Académico",
       "notSpecified": "No especificado",
-      "studyMode": "Modo de Estudio",
+      "studyMode": "Modalidad del Curso",
       "onlineLearning": "Aprendizaje en Línea",
-      "onCampus": "En el Campus",
+      "inPerson": "Presencial",
       "hybridMode": "Modo Híbrido",
       "programDuration": "Duración del Programa",
       "language": "Idioma",
@@ -619,7 +766,11 @@
       "createAccount": "Crear Cuenta",
       "creatingAccount": "Creando Cuenta...",
       "createStudentAccount": "Crear Cuenta de Estudiante",
-      "createUniversityAccount": "Crear Cuenta de Universidad"
+      "createUniversityAccount": "Crear Cuenta de Universidad",
+      "termsNotice": "Al hacer clic en Crear Cuenta, aceptas nuestros ",
+      "terms": "Términos de Uso",
+      "and": " y ",
+      "privacyPolicy": "Política de Privacidad"
     },
     "modals": {
       "verification": {
@@ -1339,7 +1490,7 @@
         "active": "activo",
         "academicLevel": "Nivel Académico",
         "fieldOfStudy": "Campo de Estudio",
-        "studyMode": "Modo de Estudio",
+        "studyMode": "Modalidad del Curso",
         "workAuthorization": "Autorización de Trabajo",
         "minValue": "Valor Mín",
         "maxValue": "Valor Máx",
@@ -1381,7 +1532,7 @@
         "featured": "Destacada",
         "exclusive": "Exclusiva",
         "university": "Universidad:",
-        "studyMode": "Modo de Estudio",
+        "studyMode": "Modalidad del Curso",
         "workAuthorization": "Autorización de Trabajo",
         "financialOverview": "Resumen Financiero",
         "originalPrice": "Precio Original:",
@@ -1398,7 +1549,7 @@
         "deselect": "Deseleccionar",
         "selectScholarship": "Seleccionar Beca",
         "checking": "Verificando...",
-        "onCampus": "En el Campus",
+        "inPerson": "Presencial",
         "mixed": "Mixto",
         "more": "más"
       },
@@ -1565,9 +1716,14 @@
       "statusChangeDescription": "Ya estoy en los EE.UU. con otra visa (ej: turista) y quiero cambiar mi estado a estudiante.",
       "continueToDocuments": "Continuar a Documentos",
       "saving": "Guardando...",
-      "step2Title": "Subir Documentos Requeridos",
-      "step2Description": "Por favor, sube los siguientes documentos para proceder con tu proceso de aplicación.",
-      "step2Note": "Todos los archivos deben estar claros y legibles. Cada campo acepta solo un archivo.",
+      "step2Title": "Subir Documentos",
+      "step2Description": "Sube los documentos necesarios para tu aplicación.",
+      "step2Important": "IMPORTANTE: Todos los documentos deben estar en inglés. Si tus documentos están en otro idioma, puedes solicitar traducción certificada a través de nuestro socio Lush America.",
+      "step2PartnerUrl": "www.lushamerica.com",
+      "languageError": "Este documento no está en inglés. Proporciona una versión en inglés o traducción certificada.",
+      "accessError": "No se pudo acceder a los datos del {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Intenta subir un nuevo archivo.",
+      "fundsDataError": "Los datos del extracto bancario no están disponibles en {{documentType}}. El documento puede no contener información suficiente sobre fondos o estar en un formato no legible. Intenta subir un documento más claro.",
+      "currencyFieldError": "Error interno del sistema al procesar datos de moneda en {{documentType}}. El documento puede no contener información de moneda válida o estar en un formato no compatible. Intenta subir un documento más claro.",
       "passport": "Pasaporte",
       "passportDescription": "Documento de pasaporte válido",
       "diploma": "Diploma de Secundaria",
@@ -1988,6 +2144,7 @@
         "downloadTransferForm": "Descargar Formulario de Transferencia",
         "view": "Ver",
         "enrolledMessage": "¡Has sido matriculado! Verifica tu panel para los próximos pasos.",
+        "noFilesUploadedYet": "No se han subido archivos aún.",
         "documentRequestsDescription": "Ahora que has llegado a esta etapa, debes revisar y subir los documentos solicitados por tu universidad para continuar tu proceso. Después de esto, la escuela podrá analizar tu aplicación y enviar tu carta de aceptación.",
         "acceptanceLetterInstructions": "La universidad enviará tu carta de aceptación aquí cuando esté lista. Una vez subida, serás automáticamente matriculado."
       },
@@ -2154,7 +2311,9 @@
     "closeModal": "Cerrar modal",
     "securePaymentViaStripe": "Pago seguro vía Stripe",
     "referralCode": "Código de Referencia",
+    "yourReferralCode": "Tu Código de Referencia",
     "enterReferralCode": "Ingresa tu código de referencia para obtener descuento",
+    "usingYourReferralCode": "Usando el código de referencia que usaste durante el registro",
     "placeholder": "Ingresa el código",
     "validate": "Validar",
     "validating": "Validando...",

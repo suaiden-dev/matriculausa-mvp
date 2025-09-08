@@ -50,12 +50,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       view: 'students'
     },
     {
-      title: 'Referral Tools',
+      title: 'Affiliate Tools',
       description: 'Access tools to increase sales',
       icon: Target,
       color: 'bg-blue-600',
       count: `${stats.conversionRate}%`,
-      view: 'referral-tools'
+      view: 'affiliate-tools'
     },
     {
       title: 'Performance',
@@ -183,43 +183,107 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         })}
       </div>
 
-      {/* Recent Students */}
-      {recentStudents.length > 0 && (
+      {/* Top Sales Performance */}
+      {students.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
           <div className="p-6 border-b border-slate-200">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-slate-900">Recent Students</h2>
-              <button className="text-blue-600 hover:text-blue-700 font-medium text-sm hover:bg-blue-50 px-3 py-1 rounded-lg transition-colors" onClick={() => onNavigate && onNavigate('students')}>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Top Sales Performance</h2>
+                <p className="text-slate-500 text-sm">
+                  Ranking of your top performing students by revenue
+                </p>
+              </div>
+              <div className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center cursor-pointer">
                 View All
-              </button>
+                <ArrowUpRight className="h-4 w-4 ml-1" />
+              </div>
             </div>
           </div>
+          
           <div className="p-6">
             <div className="space-y-4">
-              {recentStudents.map((student, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-blue-50/50 rounded-xl hover:bg-blue-100/70 transition-all duration-300 border border-blue-100 hover:border-blue-200">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shadow-sm">
-                      <GraduationCap className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-slate-900">{student.full_name}</h3>
-                      <p className="text-sm text-slate-500">{student.email}</p>
+              {/* Top 3 Students by Revenue */}
+              {students
+                .sort((a, b) => (b.total_paid || 0) - (a.total_paid || 0))
+                .slice(0, 3)
+                .map((student, index) => (
+                  <div 
+                    key={student.id || index} 
+                    className="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:bg-slate-100 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        {/* Ranking Number */}
+                        <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-700">
+                          {index + 1}
+                        </div>
+                        
+                        {/* Student Info */}
+                        <div>
+                          <p className="font-semibold text-slate-900 text-lg">{student.full_name}</p>
+                          <p className="text-sm text-slate-600">{student.email}</p>
+                          
+                        </div>
+                      </div>
+                      
+                      {/* Revenue Metrics */}
+                      <div className="text-right">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-end space-x-2">
+                            <span className="text-2xl font-bold text-slate-900">
+                              {formatCurrency(student.total_paid || 0)}
+                            </span>
+                            <span className="text-sm text-slate-500">revenue</span>
+                          </div>
+                          <div className="text-sm font-medium text-slate-700">
+                            {formatDate(student.created_at)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-slate-900">
-                        {formatCurrency(student.total_paid || 0)}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {formatDate(student.created_at)}
-                      </p>
-                    </div>
-                    <div className="w-3 h-3 bg-blue-500 rounded-full shadow-sm"></div>
+                ))}
+              
+              {/* Additional Top Students (4th to 6th place) */}
+              {students.length > 3 && (
+                <div className="pt-4 border-t border-slate-200">
+                  <h4 className="text-sm font-medium text-slate-600 mb-3">Other Top Performers</h4>
+                  <div className="space-y-3">
+                    {students
+                      .sort((a, b) => (b.total_paid || 0) - (a.total_paid || 0))
+                      .slice(3, 6)
+                      .map((student, index) => (
+                        <div 
+                          key={student.id || index + 3} 
+                          className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:bg-slate-100 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-slate-300 rounded-lg flex items-center justify-center text-white text-xs font-medium">
+                                {index + 4}
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{student.full_name}</p>
+                                <p className="text-xs text-slate-500">{student.email}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="flex items-center space-x-4">
+                                <span className="text-sm text-slate-700 font-medium">
+                                  {formatCurrency(student.total_paid || 0)}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  {formatDate(student.created_at)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

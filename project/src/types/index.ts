@@ -44,7 +44,7 @@ export interface Scholarship {
   requirements: string[];
   field_of_study: string;
   level: 'undergraduate' | 'graduate' | 'doctorate' | string;
-  delivery_mode?: 'in_person' | 'hybrid' | 'online' | string;
+  delivery_mode?: 'in_person' | 'hybrid' | 'online' | string; // Course Modality
   eligibility: string[];
   benefits: string[];
   is_exclusive: boolean;
@@ -65,11 +65,13 @@ export interface Scholarship {
   work_permissions?: string[];
   // Novos campos para taxas dinâmicas
   application_fee_amount?: number;
+  scholarship_fee_amount?: number;
   is_stripe_connect_enabled?: boolean;
   university_stripe_account_id?: string;
   // Algumas consultas retornam também um campo denormalizado com o nome da universidade
   // Usado como fallback quando o relacionamento "universities" não está carregado
   university_name?: string;
+  application_count?: number; // Número de aplicações para esta bolsa
   universities: {
     id: string;
     name: string;
@@ -153,6 +155,7 @@ export interface UserProfile {
   is_scholarship_fee_paid: boolean;
   enrollment_status?: 'pending' | 'enrolled' | 'rejected' | 'waitlisted';
   avatar_url?: string | null;
+
 }
 
 export interface EmailAttachment {

@@ -67,11 +67,24 @@ Deno.serve(async (req) => {
       if (!selectedScholarshipId) {
         return corsResponse({ error: 'selected_scholarship_id é obrigatório para application_fee e scholarship_fee' }, 400);
       }
+      
+      // Buscar o perfil do usuário para obter o user_profiles.id correto
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, user_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError || !userProfile) {
+        console.error('User profile not found:', profileError);
+        return corsResponse({ error: 'User profile not found' }, 404);
+      }
+
       // Verifica se já existe uma aplicação para este usuário e bolsa
       const { data: existingApp, error: findError } = await supabase
         .from('scholarship_applications')
         .select('id, student_process_type')
-        .eq('student_id', user.id)
+        .eq('student_id', userProfile.id) // Usar userProfile.id em vez de user.id
         .eq('scholarship_id', selectedScholarshipId)
         .maybeSingle();
       if (findError) {
@@ -84,7 +97,7 @@ Deno.serve(async (req) => {
           .from('scholarship_applications')
           .insert([
             {
-              student_id: user.id,
+              student_id: userProfile.id, // Usar userProfile.id em vez de user.id
               scholarship_id: selectedScholarshipId,
               status: 'pending',
               student_process_type: studentProcessType || null,

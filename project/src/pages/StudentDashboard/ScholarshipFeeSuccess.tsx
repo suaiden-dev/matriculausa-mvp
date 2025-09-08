@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import StudentDashboardLayout from './StudentDashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import CustomLoading from '../../components/CustomLoading';
 import { CheckCircle } from 'lucide-react';
@@ -101,19 +100,16 @@ const ScholarshipFeeSuccess: React.FC = () => {
 
   if (loading) {
     return (
-      <StudentDashboardLayout user={user} profile={userProfile} loading={authLoading}>
         <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
           <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
             <CustomLoading color="green" title="Verifying Payment..." message="Please wait while we confirm your payment." />
           </div>
         </div>
-      </StudentDashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <StudentDashboardLayout user={user} profile={userProfile} loading={authLoading}>
         <div className="min-h-[60vh] flex flex-col items-center justify-center bg-red-50 px-4">
           <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
             <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,18 +120,16 @@ const ScholarshipFeeSuccess: React.FC = () => {
             <button onClick={handleGoToChat} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300">Go to View Details</button>
           </div>
         </div>
-      </StudentDashboardLayout>
     );
   }
 
   return (
-    <StudentDashboardLayout user={user} profile={userProfile} loading={authLoading}>
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
           <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
           <h1 className="text-3xl font-bold text-green-700 mb-2">Scholarship Fee Payment Successful!</h1>
           <p className="text-slate-700 mb-6 text-center">
-            Your payment of <span className="font-bold">$550</span> was processed successfully.<br/>
+            Your payment of <span className="font-bold">$400</span> was processed successfully.<br/>
             Your application will now proceed to the next step.
           </p>
           <button
@@ -149,7 +143,6 @@ const ScholarshipFeeSuccess: React.FC = () => {
           </button>
         </div>
       </div>
-    </StudentDashboardLayout>
   );
 };
 
