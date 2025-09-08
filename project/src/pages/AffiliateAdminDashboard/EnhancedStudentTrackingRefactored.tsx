@@ -137,6 +137,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               studentDocuments={studentDocuments}
               documentRequests={documentRequests}
               scholarshipApplication={scholarshipApplication}
+              studentId={selectedStudent}
               onViewDocument={handleViewDocument}
               onDownloadDocument={handleDownloadDocument}
             />

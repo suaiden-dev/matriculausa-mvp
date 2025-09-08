@@ -179,7 +179,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         .insert({
           user_id: user?.id,
           amount: currentFee.amount,
-          currency: 'USD',
           fee_type: normalizedFeeType,
           status: 'pending_verification',
           screenshot_url: uploadData.path, // Salvar o path relativo
