@@ -411,7 +411,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900">Acceptance Letter</p>
+                    <p className="font-medium text-slate-900">
+                      {(() => {
+                        const url = getAcceptanceLetterUrl(currentApplication);
+                        return url ? (url.split('/').pop() || 'Acceptance Letter') : 'Acceptance Letter';
+                      })()}
+                    </p>
                     <p className="text-sm text-slate-500">
                       Sent on {formatDate(currentApplication.acceptance_letter_sent_at)}
                     </p>
@@ -429,7 +434,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   <button
                     onClick={() => onViewDocument({
                       file_url: getAcceptanceLetterUrl(currentApplication),
-                      filename: 'Acceptance Letter'
+                      filename: (getAcceptanceLetterUrl(currentApplication)?.split('/').pop() || 'Acceptance Letter')
                     })}
                     className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
@@ -439,7 +444,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   <button
                     onClick={() => onDownloadDocument({
                       file_url: getAcceptanceLetterUrl(currentApplication),
-                      filename: 'Acceptance Letter'
+                      filename: (getAcceptanceLetterUrl(currentApplication)?.split('/').pop() || 'Acceptance Letter')
                     })}
                     className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >

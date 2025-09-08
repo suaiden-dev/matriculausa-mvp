@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, User, FileText, CheckCircle2 } from 'lucide-react';
+import { User, FileText } from 'lucide-react';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import { StudentInfo, ScholarshipApplication } from './types';
 
@@ -18,7 +18,6 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   studentDetails,
   scholarshipApplication,
   studentDocuments,
-  onBack,
   activeTab,
   onTabChange,
   onViewDocument,
@@ -137,7 +136,65 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
                               {(() => {
-                                const statusDisplay = getDocumentStatusDisplay(studentDetails.documents_status || '');
+                                // Calcular status baseado nos documentos disponíveis (prioriza props recentes)
+                                const requiredDocs = ['passport', 'diploma', 'funds_proof'];
+                                const appDocuments = (studentDetails as any)?.documents || [];
+                                const docsFromProps = Array.isArray(studentDocuments) ? studentDocuments : [];
+                                
+                                let documentsStatus: string | undefined = undefined;
+                                
+                                // Preferir documentos vindos por props (estão mais atualizados)
+                                if (Array.isArray(docsFromProps) && docsFromProps.length > 0) {
+                                  const allApproved = requiredDocs.every((t) => {
+                                    const d = docsFromProps.find((x: any) => x.type === t);
+                                    return d && (d.status || '').toLowerCase() === 'approved';
+                                  });
+                                  if (allApproved) {
+                                    documentsStatus = 'approved';
+                                  } else {
+                                    const hasChanges = requiredDocs.some((t) => {
+                                      const d = docsFromProps.find((x: any) => x.type === t);
+                                      return d && (d.status || '').toLowerCase() === 'changes_requested';
+                                    });
+                                    if (hasChanges) {
+                                      documentsStatus = 'changes_requested';
+                                    } else {
+                                      const anySubmitted = requiredDocs.some((t) => {
+                                        const d = docsFromProps.find((x: any) => x.type === t);
+                                        return !!d && !!(d.file_url || d.url);
+                                      });
+                                      documentsStatus = anySubmitted ? 'under_review' : 'pending';
+                                    }
+                                  }
+                                } else if (Array.isArray(appDocuments) && appDocuments.length > 0) {
+                                  // Fallback para documentos do studentDetails
+                                  const allApproved = requiredDocs.every((t) => {
+                                    const d = appDocuments.find((x: any) => x.type === t);
+                                    return d && (d.status || '').toLowerCase() === 'approved';
+                                  });
+                                  if (allApproved) {
+                                    documentsStatus = 'approved';
+                                  } else {
+                                    const hasChanges = requiredDocs.some((t) => {
+                                      const d = appDocuments.find((x: any) => x.type === t);
+                                      return d && (d.status || '').toLowerCase() === 'changes_requested';
+                                    });
+                                    if (hasChanges) {
+                                      documentsStatus = 'changes_requested';
+                                    } else {
+                                      const anySubmitted = requiredDocs.some((t) => {
+                                        const d = appDocuments.find((x: any) => x.type === t);
+                                        return !!d && !!(d.file_url || d.url);
+                                      });
+                                      documentsStatus = anySubmitted ? 'under_review' : 'pending';
+                                    }
+                                  }
+                                } else {
+                                  // Último recurso: usar documents_status vindo do perfil
+                                  documentsStatus = studentDetails?.documents_status || 'pending';
+                                }
+                                
+                                const statusDisplay = getDocumentStatusDisplay(documentsStatus);
                                 return (
                                   <>
                                     <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
@@ -153,17 +210,43 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Enrollment Status</dt>
                           <dd className="mt-1">
-                            {scholarshipApplication?.status === 'enrolled' ? (
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-sm font-medium text-green-700">Enrolled</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                <span className="text-sm font-medium text-yellow-700">Pending Acceptance</span>
-                              </div>
-                            )}
+                            {(() => {
+                              const acceptanceStatus = (studentDetails as any)?.acceptance_letter_status as string | undefined;
+                              const appStatus = (scholarshipApplication?.status || (studentDetails as any)?.application_status) as string | undefined;
+                              
+                              let label = 'Pending Acceptance';
+                              let color = 'text-yellow-700';
+                              let dot = 'bg-yellow-500';
+                              
+                              if ((appStatus && ['enrolled'].includes(appStatus)) || acceptanceStatus === 'approved') {
+                                label = 'Enrolled';
+                                color = 'text-green-700';
+                                dot = 'bg-green-500';
+                              } else if (appStatus && ['approved', 'accepted'].includes(appStatus)) {
+                                label = 'Approved';
+                                color = 'text-green-700';
+                                dot = 'bg-green-500';
+                              } else if (acceptanceStatus === 'signed') {
+                                label = 'Letter Signed';
+                                color = 'text-purple-700';
+                                dot = 'bg-purple-500';
+                              } else if (acceptanceStatus === 'sent') {
+                                label = 'Letter Sent';
+                                color = 'text-blue-700';
+                                dot = 'bg-blue-500';
+                              } else if (acceptanceStatus === 'pending') {
+                                label = 'Pending';
+                                color = 'text-yellow-700';
+                                dot = 'bg-yellow-500';
+                              }
+                              
+                              return (
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-2 h-2 rounded-full ${dot}`}></div>
+                                  <span className={`text-sm font-medium ${color}`}>{label}</span>
+                                </div>
+                              );
+                            })()}
                           </dd>
                         </div>
                       </div>
