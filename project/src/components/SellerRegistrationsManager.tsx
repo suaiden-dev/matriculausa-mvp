@@ -31,9 +31,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
   // Load registrations apenas uma vez
   useEffect(() => {
-    console.log('🔄 SellerRegistrationsManager useEffect triggered', { user: user?.id, hasLoaded });
     if (user && !hasLoaded) {
-      console.log('🔄 Loading registrations for user:', user.id);
       loadRegistrations();
     }
   }, [user?.id, hasLoaded]); // Depender apenas do ID do usuário e da flag de carregamento
@@ -43,6 +41,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
     setLoading(true);
     try {
+      
       // Load registrations that used codes created by this admin
       // First get the codes created by this admin
       const { data: adminCodes, error: codesError } = await supabase
@@ -50,6 +49,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         .select('code')
         .eq('admin_id', user.id)
         .eq('is_active', true);
+
 
       if (codesError) {
         console.error('Error loading admin codes:', codesError);
@@ -81,6 +81,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
+
       if (usersError) {
         console.error('Error loading users:', usersError);
         setError('Error loading users');
@@ -88,20 +89,39 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
       }
 
       // Get approved sellers for this admin
-      const { data: sellers, error: sellersError } = await supabase
-        .from('sellers')
-        .select(`
-          user_id,
-          name,
-          email,
-          created_at
-        `)
-        .eq('affiliate_admin_id', user.id)
-        .order('created_at', { ascending: false });
+      // First get the affiliate_admin record for this user
+      const { data: affiliateAdmin, error: adminError } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-      if (sellersError) {
-        console.error('Error loading sellers:', sellersError);
+
+      if (adminError) {
+        console.error('Error fetching affiliate admin:', adminError);
         // Don't fail completely, just log the error
+      }
+
+      let sellers = [];
+      if (affiliateAdmin) {
+        const { data: sellersData, error: sellersError } = await supabase
+          .from('sellers')
+          .select(`
+            user_id,
+            name,
+            email,
+            created_at
+          `)
+          .eq('affiliate_admin_id', affiliateAdmin.id)
+          .order('created_at', { ascending: false });
+
+
+        if (sellersError) {
+          console.error('Error loading sellers:', sellersError);
+          // Don't fail completely, just log the error
+        } else {
+          sellers = sellersData || [];
+        }
       }
 
       // Get registration history for this admin
@@ -116,6 +136,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         `)
         .eq('admin_id', user.id)
         .order('action_taken_at', { ascending: false });
+
 
       if (historyError) {
         console.error('Error loading registration history:', historyError);
@@ -171,6 +192,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         const isApproved = approvedSellers.has(user.user_id);
         const status = isApproved ? 'approved' : 'pending';
         
+        
         return {
           id: user.user_id,
           user_id: user.user_id,
@@ -202,6 +224,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
       // Combine all registrations
       const registrations = [...currentRegistrations, ...rejectedRegistrations];
+
 
       setRegistrations(registrations);
       setHasLoaded(true);
@@ -452,39 +475,15 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         </div>
       )}
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+      {/* Statistics - Only Pending */}
+      <div className="mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 max-w-xs">
           <div className="flex items-center">
             <Clock className="w-5 h-5 text-gray-600 mr-2" />
             <div>
               <p className="text-sm font-medium text-gray-700">Pending</p>
               <p className="text-2xl font-bold text-gray-900">
                 {registrations.filter(r => r.status === 'pending').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <UserCheck className="w-5 h-5 text-gray-600 mr-2" />
-            <div>
-              <p className="text-sm font-medium text-gray-700">Approved</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {registrations.filter(r => r.status === 'approved').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <UserX className="w-5 h-5 text-gray-600 mr-2" />
-            <div>
-              <p className="text-sm font-medium text-gray-700">Rejected</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {registrations.filter(r => r.status === 'rejected').length}
               </p>
             </div>
           </div>

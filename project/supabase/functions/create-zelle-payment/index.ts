@@ -7,7 +7,7 @@ function corsResponse(body: string | object | null, status = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info, apikey',
     'Content-Type': 'application/json',
   };
 
@@ -31,6 +31,14 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Method not allowed' }, 405);
     }
 
+    const requestBody = await req.json();
+    
+    // Verificar se é uma atualização de resultado do n8n
+    if (requestBody.payment_id && requestBody.n8n_response) {
+      return await handleN8nResultUpdate(requestBody);
+    }
+
+    // Processo normal de criação de pagamento
     const {
       fee_type,
       amount,
@@ -42,7 +50,7 @@ Deno.serve(async (req) => {
       payment_date,
       scholarships_ids,
       metadata = {}
-    } = await req.json();
+    } = requestBody;
 
     // Validar parâmetros obrigatórios
     if (!fee_type || !amount || !recipient_email || !recipient_name || !comprovante_url || !confirmation_code || !payment_date) {
@@ -85,6 +93,7 @@ Deno.serve(async (req) => {
       p_currency: currency,
       p_recipient_email: recipient_email,
       p_recipient_name: recipient_name,
+      p_screenshot_url: comprovante_url,  // ✅ Mapear comprovante_url para screenshot_url
       p_metadata: {
         ...metadata,
         scholarships_ids: scholarships_ids,
@@ -182,3 +191,80 @@ Deno.serve(async (req) => {
     return corsResponse({ error: 'Internal server error' }, 500);
   }
 });
+
+// Função para lidar com atualização de resultado do n8n
+async function handleN8nResultUpdate(requestBody: any) {
+  try {
+    const {
+      payment_id,
+      image_url,
+      n8n_response,
+      status = 'pending_verification'
+    } = requestBody;
+
+    console.log('[create-zelle-payment] Updating payment with n8n result:', {
+      payment_id,
+      image_url,
+      n8n_response,
+      status
+    });
+
+    // Verificar se o pagamento existe
+    const { data: existingPayment, error: fetchError } = await supabase
+      .from('zelle_payments')
+      .select('id, user_id, status')
+      .eq('id', payment_id)
+      .single();
+
+    if (fetchError || !existingPayment) {
+      console.error('[create-zelle-payment] Payment not found:', payment_id);
+      return corsResponse({ error: 'Payment not found' }, 404);
+    }
+
+    // Determinar status baseado na resposta do n8n
+    let finalStatus = status;
+    let adminNotes = '';
+
+    if (n8n_response === 'valid') {
+      finalStatus = 'approved';
+      adminNotes = 'Payment automatically approved by n8n validation';
+    } else if (n8n_response === 'invalid') {
+      finalStatus = 'rejected';
+      adminNotes = 'Payment automatically rejected by n8n validation';
+    } else {
+      finalStatus = 'pending_verification';
+      adminNotes = `Payment requires manual review. n8n response: ${n8n_response}`;
+    }
+
+    // Atualizar o pagamento com screenshot_url e status
+    const { data: updatedPayment, error: updateError } = await supabase
+      .from('zelle_payments')
+      .update({
+        screenshot_url: image_url,
+        status: finalStatus,
+        admin_notes: adminNotes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', payment_id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[create-zelle-payment] Error updating payment:', updateError);
+      return corsResponse({ error: 'Failed to update payment' }, 500);
+    }
+
+    console.log('[create-zelle-payment] Payment updated successfully:', updatedPayment);
+
+    return corsResponse({ 
+      success: true,
+      payment_id: payment_id,
+      status: finalStatus,
+      message: 'Payment updated successfully with n8n result'
+    }, 200);
+
+  } catch (error) {
+    console.error('[create-zelle-payment] Error in handleN8nResultUpdate:', error);
+    return corsResponse({ error: 'Internal server error' }, 500);
+  }
+}
