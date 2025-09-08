@@ -182,26 +182,48 @@ const SellerDashboard: React.FC = () => {
         latest_activity: student.updated_at || student.created_at
       }));
 
-      // Calculate statistics
-      const totalStudents = processedStudents.length;
-      const totalRevenue = processedStudents.reduce((sum: number, s: any) => sum + (s.total_paid || 0), 0);
-      
-      // Current month students
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      const monthlyStudents = processedStudents.filter((s: any) => {
-        const studentDate = new Date(s.created_at);
-        return studentDate.getMonth() === currentMonth && studentDate.getFullYear() === currentYear;
-      }).length;
+      // Get real performance data using RPC function
+      const { data: performanceData, error: performanceError } = await supabase
+        .rpc('get_seller_individual_performance', {
+          seller_referral_code_param: seller.referral_code
+        });
+
+      console.log('🔍 Performance data:', { performanceData, performanceError });
+      console.log('🔍 Students data:', { studentsData: processedStudents });
+
+      if (performanceError) {
+        console.error('Error loading performance data:', performanceError);
+        // Fallback to calculated values if RPC fails
+        const totalStudents = processedStudents.length;
+        const totalRevenue = processedStudents.reduce((sum: number, s: any) => sum + (s.total_paid || 0), 0);
+        console.log('🔍 Fallback calculation:', { totalStudents, totalRevenue, studentsData: processedStudents });
+        
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const monthlyStudents = processedStudents.filter((s: any) => {
+          const studentDate = new Date(s.created_at);
+          return studentDate.getMonth() === currentMonth && studentDate.getFullYear() === currentYear;
+        }).length;
+
+        setStats({
+          totalStudents,
+          totalRevenue,
+          monthlyStudents,
+          conversionRate: 0 // Default when no data
+        });
+      } else {
+        // Use real data from RPC function
+        const performance = performanceData[0];
+        setStats({
+          totalStudents: Number(performance.total_students) || 0,
+          totalRevenue: Number(performance.total_revenue) || 0,
+          monthlyStudents: Number(performance.monthly_students) || 0,
+          conversionRate: Number(performance.conversion_rate) || 0
+        });
+      }
 
       setSellerProfile(processedSeller);
       setStudents(processedStudents);
-      setStats({
-        totalStudents,
-        totalRevenue,
-        monthlyStudents,
-        conversionRate: 85.5 // Placeholder
-      });
 
     } catch (error: any) {
       console.error('Error loading seller data:', error);

@@ -193,14 +193,14 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                 <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Seller Dashboard'}
                   {activeTab === 'students' && 'My Students'}
-                  {activeTab === 'referral-tools' && 'Referral Tools'}
+                  {activeTab === 'affiliate-tools' && 'Affiliate Tools'}
                   {activeTab === 'performance' && 'Performance & Metrics'}
                   {activeTab === 'profile' && 'Profile Settings'}
                 </h1>
                 <p className="text-slate-600">
                   {activeTab === 'overview' && 'Monitor your sales performance and activity'}
                   {activeTab === 'students' && 'Manage your referenced students and conversions'}
-                  {activeTab === 'referral-tools' && 'Access tools to increase your sales'}
+                  {activeTab === 'affiliate-tools' && 'Access tools to increase your sales'}
                   {activeTab === 'performance' && 'Analyze your performance and revenue'}
                   {activeTab === 'profile' && 'Manage your seller settings'}
                 </p>

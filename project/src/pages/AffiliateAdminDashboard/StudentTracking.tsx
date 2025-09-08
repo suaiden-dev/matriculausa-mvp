@@ -63,7 +63,7 @@ const StudentTracking: React.FC<StudentTrackingProps> = ({
         
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Carregando dados...</p>
+          <p className="text-slate-600">Loading data...</p>
         </div>
       </div>
     );
@@ -231,7 +231,7 @@ const StudentTracking: React.FC<StudentTrackingProps> = ({
       {isLoading && (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Carregando dados...</p>
+          <p className="text-slate-600">Loading data...</p>
         </div>
       )}
 
