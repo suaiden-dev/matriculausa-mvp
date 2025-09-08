@@ -45,6 +45,7 @@ const SelectionProcess: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('newest');
   
   // States para paginação
   const [currentPage, setCurrentPage] = useState(1);
@@ -692,11 +693,56 @@ const SelectionProcess: React.FC = () => {
     return filtered;
   }, [selectionProcessApplications, selectedScholarship, selectedCountry, searchTerm]);
 
+  // Ordenação aplicada antes da paginação
+  const sortedApplications = useMemo(() => {
+    const arr = [...filteredApplications];
+
+    const normalizeName = (app: any) => ((app as any).user_profiles?.full_name || (app as any).user_profiles?.name || '').toString().toLowerCase();
+    const createdAt = (app: any) => new Date((app as any).created_at || 0).getTime();
+    const statusRank = (status?: string) => {
+      const s = (status || '').toLowerCase();
+      if (s === 'enrolled') return 0;
+      if (s === 'approved') return 1;
+      if (s === 'under_review') return 2;
+      if (s === 'pending') return 3;
+      return 9;
+    };
+
+    const documentProgress = (app: any) => {
+      const { reviewed, total } = getDocumentProgress(app);
+      return reviewed / Math.max(total, 1);
+    };
+
+    switch (sortBy) {
+      case 'oldest':
+        arr.sort((a, b) => createdAt(a) - createdAt(b));
+        break;
+      case 'name_asc':
+        arr.sort((a, b) => normalizeName(a).localeCompare(normalizeName(b)));
+        break;
+      case 'name_desc':
+        arr.sort((a, b) => normalizeName(b).localeCompare(normalizeName(a)));
+        break;
+      case 'status':
+        arr.sort((a, b) => statusRank((a as any).status) - statusRank((b as any).status));
+        break;
+      case 'docs_progress':
+        arr.sort((a, b) => documentProgress(b) - documentProgress(a));
+        break;
+      case 'newest':
+      default:
+        arr.sort((a, b) => createdAt(b) - createdAt(a));
+        break;
+    }
+
+    return arr;
+  }, [filteredApplications, sortBy]);
+
   // Lógica de paginação
-  const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedApplications.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedApplications = filteredApplications.slice(startIndex, endIndex);
+  const paginatedApplications = sortedApplications.slice(startIndex, endIndex);
 
   // Reset para primeira página quando filtros mudarem
   useEffect(() => {
@@ -1644,7 +1690,7 @@ const SelectionProcess: React.FC = () => {
               {/* Separation and Filters row */}
               <div className="border-t border-slate-200 bg-white">
                 <div className="px-4 sm:px-6 lg:px-8 py-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     {/* Search Bar */}
                     <div className="lg:col-span-2">
                       <div className="relative">
@@ -1684,6 +1730,23 @@ const SelectionProcess: React.FC = () => {
                         {countries.map(country => (
                           <option key={country} value={country}>{country}</option>
                         ))}
+                      </select>
+                    </div>
+
+                    {/* Sort By */}
+                    <div>
+                      <select
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        aria-label="Sort By"
+                      >
+                        <option value="newest">Newest</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="name_asc">Name A–Z</option>
+                        <option value="name_desc">Name Z–A</option>
+                        <option value="status">Status</option>
+                        <option value="docs_progress">Documents Reviewed</option>
                       </select>
                     </div>
                   </div>
@@ -1862,14 +1925,14 @@ const SelectionProcess: React.FC = () => {
           </div>
 
           {/* Pagination Controls */}
-          {filteredApplications.length > itemsPerPage && (
+          {sortedApplications.length > itemsPerPage && (
             <div className="bg-white mt-4 rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 {/* Results Info */}
                 <div className="text-sm text-slate-600">
                   Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                  <span className="font-medium">{Math.min(endIndex, filteredApplications.length)}</span> of{' '}
-                  <span className="font-medium">{filteredApplications.length}</span> students
+                  <span className="font-medium">{Math.min(endIndex, sortedApplications.length)}</span> of{' '}
+                  <span className="font-medium">{sortedApplications.length}</span> students
                 </div>
 
                 {/* Pagination Controls */}
