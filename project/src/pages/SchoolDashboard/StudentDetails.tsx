@@ -1639,7 +1639,7 @@ const StudentDetails: React.FC = () => {
                                     console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
                                       hasScholarship: !!application?.scholarships,
                                       applicationFeeAmount: application?.scholarships?.application_fee_amount,
-                                      studentInfoApplicationFee: studentInfo?.application_fee_amount,
+                                      studentInfoApplicationFee: application?.application_fee_amount,
                                       isApplicationFeePaid: application?.is_application_fee_paid,
                                       defaultFee: getFeeAmount('application_fee')
                                     });
@@ -1653,10 +1653,6 @@ const StudentDetails: React.FC = () => {
                                     if (scholarship?.application_fee_amount) {
                                       const amount = Number(scholarship.application_fee_amount);
                                       console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from scholarship (already in dollars):', amount);
-                                      return formatFeeAmount(amount);
-                                    } else if (studentInfo?.application_fee_amount) {
-                                      const amount = Number(studentInfo.application_fee_amount);
-                                      console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from studentInfo (already in dollars):', amount);
                                       return formatFeeAmount(amount);
                                     } else if (application?.application_fee_amount) {
                                       const amount = Number(application.application_fee_amount);
