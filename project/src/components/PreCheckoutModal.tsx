@@ -499,8 +499,17 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     console.log('🔍 [PreCheckoutModal] codeApplied:', codeApplied);
     console.log('🔍 [PreCheckoutModal] hasAffiliateCode:', hasAffiliateCode);
     console.log('🔍 [PreCheckoutModal] userAffiliateCode:', userProfile?.affiliate_code);
+    console.log('🔍 [PreCheckoutModal] hasSellerReferralCode:', hasSellerReferralCode);
     
-    // ✅ CORREÇÃO: Só permite prosseguir se tiver código válido aplicado
+    // ✅ CORREÇÃO: Para usuários com seller_referral_code, não precisa de código de desconto
+    if (hasSellerReferralCode) {
+      console.log('🔍 [PreCheckoutModal] ✅ Usuário com seller_referral_code - prosseguindo sem validação de código');
+      onProceedToCheckout();
+      onClose();
+      return;
+    }
+    
+    // ✅ Para usuários sem seller_referral_code: só permite prosseguir se tiver código válido aplicado
     if (validationResult?.isValid && discountCode.trim() && codeApplied) {
       console.log('🔍 [PreCheckoutModal] ✅ Aplicando código e continuando para checkout');
       onProceedToCheckout(discountCode.trim().toUpperCase());

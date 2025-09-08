@@ -2,6 +2,7 @@ import React from 'react';
 import { User, FileText } from 'lucide-react';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import { StudentInfo, ScholarshipApplication } from './types';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface StudentDetailsViewProps {
   studentDetails: StudentInfo;
@@ -23,6 +24,8 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   onViewDocument,
   onDownloadDocument
 }) => {
+  // Hook para configurações dinâmicas de taxas
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
@@ -450,7 +453,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                           </span>
                           {studentDetails?.has_paid_selection_process_fee && (
-                            <span className="text-xs text-slate-500">$999.00</span>
+                            <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
                           )}
                         </div>
                       </div>
@@ -468,9 +471,23 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         </span>
                         {studentDetails?.is_application_fee_paid && (
                           <span className="text-xs text-slate-500">
-                            ${studentDetails?.scholarship?.application_fee_amount ? 
-                              (Number(studentDetails.scholarship.application_fee_amount) / 100).toFixed(2) : 
-                              '350.00'}
+                            {(() => {
+                              console.log('🔍 [STUDENT_DETAILS_VIEW] Application Fee Debug:', {
+                                hasScholarship: !!studentDetails?.scholarship,
+                                applicationFeeAmount: studentDetails?.scholarship?.application_fee_amount,
+                                isApplicationFeePaid: studentDetails?.is_application_fee_paid,
+                                defaultFee: getFeeAmount('application_fee')
+                              });
+                              
+                              if (studentDetails?.scholarship?.application_fee_amount) {
+                                const amount = Number(studentDetails.scholarship.application_fee_amount);
+                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using dynamic amount (already in dollars):', amount);
+                                return formatFeeAmount(amount);
+                              } else {
+                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using default amount:', getFeeAmount('application_fee'));
+                                return formatFeeAmount(getFeeAmount('application_fee'));
+                              }
+                            })()}
                           </span>
                         )}
                       </div>
@@ -488,9 +505,19 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         </span>
                         {studentDetails?.is_scholarship_fee_paid && (
                           <span className="text-xs text-slate-500">
-                            ${studentDetails?.scholarship?.scholarship_fee_amount ? 
-                              (Number(studentDetails.scholarship.scholarship_fee_amount) / 100).toFixed(2) : 
-                              '850.00'}
+                            {(() => {
+                              console.log('🔍 [STUDENT_DETAILS_VIEW] Scholarship Fee Debug:', {
+                                hasScholarship: !!studentDetails?.scholarship,
+                                scholarshipFeeAmount: studentDetails?.scholarship?.scholarship_fee_amount,
+                                isScholarshipFeePaid: studentDetails?.is_scholarship_fee_paid,
+                                defaultFee: getFeeAmount('scholarship_fee')
+                              });
+                              
+                              // Scholarship Fee usa valor configurado no sistema (não valor do banco)
+                              const fixedAmount = getFeeAmount('scholarship_fee');
+                              console.log('🔍 [STUDENT_DETAILS_VIEW] Using system-configured scholarship amount:', fixedAmount);
+                              return formatFeeAmount(fixedAmount);
+                            })()}
                           </span>
                         )}
                       </div>
@@ -508,7 +535,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                           </span>
                           {studentDetails?.has_paid_i20_control_fee && (
-                            <span className="text-xs text-slate-500">$999.00</span>
+                            <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
                           )}
                         </div>
                       </div>

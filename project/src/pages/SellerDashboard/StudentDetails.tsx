@@ -1,33 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  GraduationCap, 
-  Search, 
-  Filter, 
-  Eye, 
-  DollarSign, 
-  Calendar, 
-  MapPin, 
   User, 
-  ChevronDown,
-  ChevronRight,
-  Users,
-  Phone,
-  Building,
-  Award,
   FileText,
   CheckCircle2,
   XCircle,
-  AlertCircle,
-  ArrowLeft,
-  Home,
-  BarChart3,
-  Settings,
-  Clock
+  ArrowLeft
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface StudentInfo {
   student_id: string;
@@ -61,17 +44,6 @@ interface StudentInfo {
   };
 }
 
-interface FeePayment {
-  payment_id: string;
-  fee_type: string;
-  fee_name: string;
-  amount_paid: number;
-  currency: string;
-  payment_status: string;
-  payment_date: string;
-  stripe_payment_intent: string;
-  notes: string;
-}
 
 interface ScholarshipApplication {
   id: string;
@@ -122,7 +94,6 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const navigate = useNavigate();
   
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
-  const [feeHistory, setFeeHistory] = useState<FeePayment[]>([]);
   const [scholarshipApplication, setScholarshipApplication] = useState<ScholarshipApplication | null>(null);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
@@ -133,6 +104,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [documentsLoaded, setDocumentsLoaded] = useState(false);
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
+  
+  // Hook para configurações dinâmicas de taxas
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   
   // Debug: verificar estado inicial
   console.log('🔍 [STUDENT_DETAILS] Estado inicial - documentsLoaded:', documentsLoaded);
@@ -191,19 +165,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
        }
 
       // Carregar histórico de taxas
-      const { data: feesData, error: feesError } = await supabase.rpc(
+      const { error: feesError } = await supabase.rpc(
         'get_student_fee_history',
         { target_student_id: studentId }
       );
 
       if (feesError) {
         console.warn('⚠️ [STUDENT_DETAILS] Could not load fee history:', feesError);
-      } else {
-        setFeeHistory(feesData || []);
       }
 
              // Verificando aplicação de bolsa
-       const { data: applicationsList, error: listError } = await supabase.rpc(
+       const { data: applicationsList } = await supabase.rpc(
          'get_student_detailed_info',
          { target_student_id: studentId }
        );
@@ -239,7 +211,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
            setScholarshipApplication(appData);
            
            // Atualizar studentInfo com os detalhes da bolsa
-           if (studentInfo && appData.scholarships) {
+           if (appData.scholarships) {
+             console.log('🔍 [STUDENT_DETAILS] Atualizando studentInfo com dados da scholarship:', appData.scholarships);
              setStudentInfo(prev => prev ? {
                ...prev,
                scholarship: {
@@ -247,6 +220,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                  scholarship_fee_amount: appData.scholarships.scholarship_fee_amount
                }
              } : null);
+           } else {
+             console.log('🔍 [STUDENT_DETAILS] Nenhum dado de scholarship encontrado em appData');
            }
          }
        }
@@ -678,37 +653,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   // Remover este useEffect duplicado - os documentos já são carregados em loadStudentDetails
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved': return <CheckCircle2 className="h-4 w-4" />;
-      case 'rejected': return <XCircle className="h-4 w-4" />;
-      case 'pending': return <Clock className="h-4 w-4" />;
-      default: return <AlertCircle className="h-4 w-4" />;
-    }
   };
 
   // Função para buscar o documento mais recente por tipo
@@ -1423,7 +1373,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentInfo?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">$999.00</span>
+                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
                            )}
                          </div>
                        </div>
@@ -1441,9 +1391,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          {studentInfo?.is_application_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             ${studentInfo?.scholarship?.application_fee_amount ? 
-                               (Number(studentInfo.scholarship.application_fee_amount) / 100).toFixed(2) : 
-                               '350.00'}
+                             {(() => {
+                               console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
+                                 hasScholarship: !!studentInfo?.scholarship,
+                                 applicationFeeAmount: studentInfo?.scholarship?.application_fee_amount,
+                                 isApplicationFeePaid: studentInfo?.is_application_fee_paid,
+                                 defaultFee: getFeeAmount('application_fee')
+                               });
+                               
+                               if (studentInfo?.scholarship?.application_fee_amount) {
+                                 const amount = Number(studentInfo.scholarship.application_fee_amount);
+                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount (already in dollars):', amount);
+                                 return formatFeeAmount(amount);
+                               } else {
+                                 console.log('🔍 [STUDENT_DETAILS] Using default amount:', getFeeAmount('application_fee'));
+                                 return formatFeeAmount(getFeeAmount('application_fee'));
+                               }
+                             })()}
                            </span>
                          )}
                        </div>
@@ -1461,9 +1425,19 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          {studentInfo?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             ${studentInfo?.scholarship?.scholarship_fee_amount ? 
-                               (Number(studentInfo.scholarship.scholarship_fee_amount) / 100).toFixed(2) : 
-                               '850.00'}
+                             {(() => {
+                               console.log('🔍 [STUDENT_DETAILS] Scholarship Fee Debug:', {
+                                 hasScholarship: !!studentInfo?.scholarship,
+                                 scholarshipFeeAmount: studentInfo?.scholarship?.scholarship_fee_amount,
+                                 isScholarshipFeePaid: studentInfo?.is_scholarship_fee_paid,
+                                 defaultFee: getFeeAmount('scholarship_fee')
+                               });
+                               
+                               // Scholarship Fee usa valor configurado no sistema (não valor do banco)
+                               const fixedAmount = getFeeAmount('scholarship_fee');
+                               console.log('🔍 [STUDENT_DETAILS] Using system-configured scholarship amount:', fixedAmount);
+                               return formatFeeAmount(fixedAmount);
+                             })()}
                            </span>
                          )}
                        </div>
@@ -1481,7 +1455,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentInfo?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">$999.00</span>
+                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
                            )}
                          </div>
                        </div>

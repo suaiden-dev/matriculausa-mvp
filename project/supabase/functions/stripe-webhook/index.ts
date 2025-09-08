@@ -653,6 +653,43 @@ async function handleCheckoutSessionCompleted(session: any) {
         } else {
           console.log('Scholarship fee payment processed successfully for user:', userId);
         }
+
+        // Registrar pagamento na tabela affiliate_referrals para faturamento
+        try {
+          // Buscar se o usuário usou algum código de referência
+          const { data: usedCode, error: codeError } = await supabase
+            .from('used_referral_codes')
+            .select('referrer_id, affiliate_code')
+            .eq('user_id', userId)
+            .single();
+
+          if (!codeError && usedCode) {
+            console.log('[FATURAMENTO] Registrando scholarship_fee para faturamento do seller:', usedCode.referrer_id);
+            
+            const { error: upsertRefError } = await supabase
+              .from('affiliate_referrals')
+              .upsert({
+                referrer_id: usedCode.referrer_id,
+                referred_id: userId,
+                affiliate_code: usedCode.affiliate_code,
+                payment_amount: Number(amount_total ? amount_total / 100 : 0),
+                credits_earned: 0, // Scholarship fee não gera créditos
+                status: 'completed',
+                payment_session_id: session.id,
+                completed_at: new Date().toISOString(),
+              }, { onConflict: 'referred_id' });
+
+            if (upsertRefError) {
+              console.error('[FATURAMENTO] Erro ao registrar scholarship_fee no faturamento:', upsertRefError);
+            } else {
+              console.log('[FATURAMENTO] Scholarship fee registrada no faturamento com sucesso');
+            }
+          } else {
+            console.log('[FATURAMENTO] Usuário não usou código de referência, não há faturamento para registrar');
+          }
+        } catch (billingError) {
+          console.error('[FATURAMENTO] Erro ao processar faturamento da scholarship_fee:', billingError);
+        }
         
         // Se houver bolsas no metadata, registrar na tabela de pagamentos de scholarship fee
         if (scholarshipsIds && paymentIntentId) {
@@ -839,6 +876,43 @@ async function handleCheckoutSessionCompleted(session: any) {
           console.error('Error updating i20 control fee status:', error);
         } else {
           console.log('I-20 control fee payment processed successfully for user:', userId);
+        }
+
+        // Registrar pagamento na tabela affiliate_referrals para faturamento
+        try {
+          // Buscar se o usuário usou algum código de referência
+          const { data: usedCode, error: codeError } = await supabase
+            .from('used_referral_codes')
+            .select('referrer_id, affiliate_code')
+            .eq('user_id', userId)
+            .single();
+
+          if (!codeError && usedCode) {
+            console.log('[FATURAMENTO] Registrando i20_control_fee para faturamento do seller:', usedCode.referrer_id);
+            
+            const { error: upsertRefError } = await supabase
+              .from('affiliate_referrals')
+              .upsert({
+                referrer_id: usedCode.referrer_id,
+                referred_id: userId,
+                affiliate_code: usedCode.affiliate_code,
+                payment_amount: Number(amount_total ? amount_total / 100 : 0),
+                credits_earned: 0, // I20 control fee não gera créditos
+                status: 'completed',
+                payment_session_id: session.id,
+                completed_at: new Date().toISOString(),
+              }, { onConflict: 'referred_id' });
+
+            if (upsertRefError) {
+              console.error('[FATURAMENTO] Erro ao registrar i20_control_fee no faturamento:', upsertRefError);
+            } else {
+              console.log('[FATURAMENTO] I20 control fee registrada no faturamento com sucesso');
+            }
+          } else {
+            console.log('[FATURAMENTO] Usuário não usou código de referência, não há faturamento para registrar');
+          }
+        } catch (billingError) {
+          console.error('[FATURAMENTO] Erro ao processar faturamento da i20_control_fee:', billingError);
         }
 
         // --- NOTIFICAÇÃO VIA WEBHOOK N8N ---

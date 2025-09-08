@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface StudentInfo {
   student_id: string;
@@ -172,6 +173,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [showStudentDetails, setShowStudentDetails] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Hook para configurações dinâmicas de taxas
+  const { feeConfig, getFeeAmount, formatFeeAmount } = useFeeConfig();
 
   useEffect(() => {
     console.log('🔍 studentDocuments:', studentDocuments);
@@ -535,6 +539,49 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         if (!sqlError && sqlData && sqlData.length > 0) {
           studentData = sqlData[0];
           console.log('🔍 SQL function returned data:', studentData);
+          
+          // ✅ REPLICAR LÓGICA DO SELLER: Carregar dados da scholarship mesmo quando SQL funciona
+          console.log('🔍 [ENHANCED_STUDENT_TRACKING] Carregando dados da scholarship como no SellerDashboard...');
+          
+          // Buscar aplicação de bolsa mais recente (mesma lógica do SellerDashboard)
+          const { data: appData, error: applicationError } = await supabase
+            .from('scholarship_applications')
+            .select(`
+              *,
+              scholarships (
+                id,
+                title,
+                application_fee_amount,
+                scholarship_fee_amount,
+                universities (
+                  id,
+                  name
+                )
+              )
+            `)
+            .eq('student_id', profile_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          console.log("🔍 [ENHANCED_STUDENT_TRACKING] appData (como no Seller):", appData);
+          
+          if (!applicationError && appData?.scholarships) {
+            console.log('🔍 [ENHANCED_STUDENT_TRACKING] Atualizando studentData com dados da scholarship:', appData.scholarships);
+            
+            // Atualizar studentData com os detalhes da bolsa (mesma lógica do SellerDashboard)
+            studentData = {
+              ...studentData,
+              scholarship: {
+                application_fee_amount: appData.scholarships.application_fee_amount,
+                scholarship_fee_amount: appData.scholarships.scholarship_fee_amount
+              }
+            };
+            
+            console.log('🔍 [ENHANCED_STUDENT_TRACKING] studentData atualizado com scholarship:', studentData);
+          } else {
+            console.log('🔍 [ENHANCED_STUDENT_TRACKING] Nenhum dado de scholarship encontrado em appData');
+          }
         } else {
           console.log('🔍 SQL function failed or returned no data, using fallback');
           studentError = sqlError;
@@ -582,7 +629,10 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           .limit(1)
           .single();
 
-        console.log('🔍 Application data 13:', applicationData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application data loaded:', applicationData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship data from application:', applicationData?.scholarships);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application fee from scholarship:', applicationData?.scholarships?.application_fee_amount);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship fee from scholarship:', applicationData?.scholarships?.scholarship_fee_amount);
 
 
         let sellerData = null;
@@ -607,7 +657,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           .eq('status', 'succeeded');
 
         // Extrair documentos da aplicação principal
-        let documentsData: any = applicationData[0].documents;
+        let documentsData: any = applicationData?.documents;
         // if (applicationsData && applicationsData.length > 0) {
         //   applicationsData.forEach((application: any) => {
         //     if (application.documents && Array.isArray(application.documents)) {
@@ -659,7 +709,10 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
         setStudentDocuments(applicationData?.documents);
 
-        console.log('🔍 Fallback data constructed:', studentData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Fallback data constructed:', studentData);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship data:', applicationData?.scholarships);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application fee amount:', applicationData?.scholarships?.[0]?.application_fee_amount);
+        console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship fee amount:', applicationData?.scholarships?.[0]?.scholarship_fee_amount);
       }
       
       console.log('🔍 Student Documents 1:', studentData);
@@ -843,6 +896,34 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       
       let totalRevenue = 0;
       
+      // Buscar pagamentos Zelle aprovados para este estudante
+      const { data: zellePayments, error: zelleError } = await supabase
+        .from('zelle_payments')
+        .select('fee_type, amount')
+        .eq('user_id', studentId)
+        .eq('status', 'approved');
+
+      if (!zelleError && zellePayments && zellePayments.length > 0) {
+        console.log('🔍 Zelle payments found:', zellePayments);
+        
+        // Se há pagamentos Zelle, usar apenas eles (não duplicar com outros métodos)
+        // EXCLUIR application_fee pois é da universidade, não do seller/admin
+        zellePayments.forEach(payment => {
+          if (payment.fee_type !== 'application_fee') {
+            totalRevenue += Number(payment.amount);
+            console.log(`🔍 Zelle payment added: ${payment.fee_type || 'selection_process_fee'} - $${payment.amount}`);
+          } else {
+            console.log(`🔍 Zelle payment EXCLUDED (university fee): ${payment.fee_type} - $${payment.amount}`);
+          }
+        });
+        
+        console.log(`🔍 Total revenue from Zelle payments (excluding application_fee): $${totalRevenue}`);
+        return totalRevenue; // Retornar apenas os pagamentos Zelle (sem application_fee)
+      }
+      
+      // Se não há pagamentos Zelle, usar o método tradicional
+      console.log('🔍 No Zelle payments found, using traditional calculation');
+      
       // Buscar aplicação de bolsa do estudante
       const { data: applicationData, error: applicationError } = await supabase
         .from('scholarship_applications')
@@ -865,17 +946,19 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         console.log('🔍 Application data found:', applicationData);
         
         // Application Fee (variável - definida pela universidade)
+        // EXCLUIR application_fee pois é da universidade, não do seller/admin
         if (applicationData.is_application_fee_paid) {
           const appFeeAmount = applicationData.scholarships?.[0]?.application_fee_amount || 35000; // Default $350.00
           const appFeeUSD = Number(appFeeAmount) / 100; // Converter de centavos para dólares
-          totalRevenue += appFeeUSD;
-          console.log(`🔍 Application fee added: $${appFeeUSD}`);
+          // totalRevenue += appFeeUSD; // EXCLUÍDO: Application fee é da universidade
+          console.log(`🔍 Application fee EXCLUDED (university fee): $${appFeeUSD}`);
         }
         
-        // Scholarship Fee (fixa - $850)
+        // Scholarship Fee (fixa - $400)
         if (applicationData.is_scholarship_fee_paid) {
-          totalRevenue += 850;
-          console.log('🔍 Scholarship fee added: $850');
+          const scholarshipFee = getFeeAmount('scholarship_fee');
+          totalRevenue += scholarshipFee;
+          console.log(`🔍 Scholarship fee added: $${scholarshipFee}`);
         }
       }
       
@@ -892,16 +975,18 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       if (!profileError && profileData) {
         console.log('🔍 Profile data found:', profileData);
         
-        // Selection Process Fee (fixa - $999)
+        // Selection Process Fee (dinâmica)
         if (profileData.has_paid_selection_process_fee) {
-          totalRevenue += 999;
-          console.log('🔍 Selection process fee added: $999');
+          const selectionFee = getFeeAmount('selection_process');
+          totalRevenue += selectionFee;
+          console.log(`🔍 Selection process fee added: $${selectionFee}`);
         }
         
-        // I-20 Control Fee (fixa - $999)
+        // I-20 Control Fee (dinâmica)
         if (profileData.has_paid_i20_control_fee) {
-          totalRevenue += 999;
-          console.log('🔍 I-20 control fee added: $999');
+          const i20Fee = getFeeAmount('i-20_control_fee');
+          totalRevenue += i20Fee;
+          console.log(`🔍 I-20 control fee added: $${i20Fee}`);
         }
       }
       
@@ -1456,7 +1541,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">$999.00</span>
+                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
                            )}
                          </div>
                        </div>
@@ -1474,9 +1559,23 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                          </span>
                          {studentDetails?.is_application_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             ${studentDetails?.scholarship?.application_fee_amount ? 
-                               (Number(studentDetails.scholarship.application_fee_amount) / 100).toFixed(2) : 
-                               '350.00'}
+                             {(() => {
+                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Application Fee Debug:', {
+                                 hasScholarship: !!studentDetails?.scholarship,
+                                 applicationFeeAmount: studentDetails?.scholarship?.application_fee_amount,
+                                 isApplicationFeePaid: studentDetails?.is_application_fee_paid,
+                                 defaultFee: getFeeAmount('application_fee')
+                               });
+                               
+                               if (studentDetails?.scholarship?.application_fee_amount) {
+                                 const amount = Number(studentDetails.scholarship.application_fee_amount);
+                                 console.log('🔍 [ENHANCED_STUDENT_TRACKING] Using dynamic amount (already in dollars):', amount);
+                                 return formatFeeAmount(amount);
+                               } else {
+                                 console.log('🔍 [ENHANCED_STUDENT_TRACKING] Using default amount:', getFeeAmount('application_fee'));
+                                 return formatFeeAmount(getFeeAmount('application_fee'));
+                               }
+                             })()}
                            </span>
                          )}
                        </div>
@@ -1494,9 +1593,19 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                          </span>
                          {studentDetails?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             ${studentDetails?.scholarship?.scholarship_fee_amount ? 
-                               (Number(studentDetails.scholarship.scholarship_fee_amount) / 100).toFixed(2) : 
-                               '850.00'}
+                             {(() => {
+                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship Fee Debug:', {
+                                 hasScholarship: !!studentDetails?.scholarship,
+                                 scholarshipFeeAmount: studentDetails?.scholarship?.scholarship_fee_amount,
+                                 isScholarshipFeePaid: studentDetails?.is_scholarship_fee_paid,
+                                 defaultFee: getFeeAmount('scholarship_fee')
+                               });
+                               
+                               // Scholarship Fee usa valor configurado no sistema (não valor do banco)
+                               const fixedAmount = getFeeAmount('scholarship_fee');
+                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Using system-configured scholarship amount:', fixedAmount);
+                               return formatFeeAmount(fixedAmount);
+                             })()}
                            </span>
                          )}
                        </div>
@@ -1514,7 +1623,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">$999.00</span>
+                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
                            )}
                          </div>
                        </div>
