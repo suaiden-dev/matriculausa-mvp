@@ -1125,10 +1125,27 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                           <dd className="mt-1">
                             {(() => {
                               const acceptanceStatus = (studentInfo as any)?.acceptance_letter_status as string | undefined;
-                              const isEnrolled = acceptanceStatus === 'approved';
+                              const appStatus = (studentInfo as any)?.status || (studentInfo as any)?.application_status as string | undefined;
+                              const documentsStatus = (studentInfo as any)?.documents_status as string | undefined;
+                              
+                              // Debug logs
+                              console.log('🔍 [ENROLLMENT_STATUS] Debug:', {
+                                acceptanceStatus,
+                                appStatus,
+                                documentsStatus,
+                                studentInfo: studentInfo
+                              });
+                              
+                              // Para usuários com aplicação de bolsa: verificar status da aplicação
+                              // Para usuários sem aplicação de bolsa: verificar documents_status
+                              const isEnrolled = appStatus === 'enrolled' || 
+                                                acceptanceStatus === 'approved' || 
+                                                (documentsStatus === 'approved' && !appStatus);
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
                               const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
+                              
+                              console.log('🔍 [ENROLLMENT_STATUS] Result:', { isEnrolled, label });
                               
                               return (
                               <div className="flex items-center space-x-2">
