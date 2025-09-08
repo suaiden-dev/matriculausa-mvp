@@ -71,6 +71,8 @@ BEGIN
     SELECT 
       s.title as scholarship_title,
       u.name as university_name,
+      s.application_fee_amount,
+      s.scholarship_fee_amount,
       sa.is_application_fee_paid,
       sa.is_scholarship_fee_paid,
       sa.status as application_status,
@@ -121,7 +123,9 @@ BEGIN
     sp.has_paid_selection_process_fee,
     sp.has_paid_i20_control_fee,
     COALESCE(schi.student_process_type, 'Not specified') as student_process_type,
-    COALESCE(schi.application_status, 'pending') as application_status
+    COALESCE(schi.application_status, 'pending') as application_status,
+    COALESCE(schi.application_fee_amount, 0) as application_fee_amount,
+    COALESCE(schi.scholarship_fee_amount, 0) as scholarship_fee_amount
   FROM student_profile sp
   LEFT JOIN seller_info si ON true
   LEFT JOIN payment_info pi ON true
