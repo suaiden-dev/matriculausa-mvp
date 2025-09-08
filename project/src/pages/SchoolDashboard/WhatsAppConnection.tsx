@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  MessageSquare, 
-  WifiOff, 
-  RotateCcw, 
-  Trash2, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  MessageSquare,
+  WifiOff,
+  RotateCcw,
+  Trash2,
+  CheckCircle,
+  AlertCircle,
   Loader2,
   Brain,
   X,
@@ -128,8 +128,8 @@ export default function WhatsAppConnection() {
   const [searchParams] = useSearchParams();
   const agentId = searchParams.get('agentId');
   const { getAllAgentTypes, addCustomAgentType, isAgentTypeExists } = useCustomAgentTypes();
-  
-  const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp' | 'knowledge'>('agents');
+
+  const [activeTab, setActiveTab] = useState<'agents' | 'whatsapp'>('agents');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const tabNavRef = useRef<HTMLElement>(null);
@@ -156,7 +156,7 @@ export default function WhatsAppConnection() {
     };
 
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
     };
@@ -209,11 +209,11 @@ export default function WhatsAppConnection() {
   const [testMessage, setTestMessage] = useState('');
   const [testLoading, setTestLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<Array<{type: 'user' | 'agent', message: string}>>([]);
-  
+
   const [connections, setConnections] = useState<WhatsAppConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  
+
   // Estados para o formulário de agente
   const [formData, setFormData] = useState({
     ai_name: "",
@@ -231,42 +231,42 @@ export default function WhatsAppConnection() {
   const [editingAgent, setEditingAgent] = useState<AIConfiguration | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const uploadRef = useRef<{ uploadPendingFiles: (aiConfigId: string) => Promise<any[]> } | null>(null);
-  
+
   // Estados para o modal de Custom Instructions
   const [showCustomInstructionsModal, setShowCustomInstructionsModal] = useState(false);
   const [customInstructionsExpanded, setCustomInstructionsExpanded] = useState(false);
-  
+
   // Estados para edição do Custom Instructions
   const [isEditingCustomPrompt, setIsEditingCustomPrompt] = useState(false);
   const [originalCustomPrompt, setOriginalCustomPrompt] = useState('');
   const [editingCustomPrompt, setEditingCustomPrompt] = useState('');
-  
+
   // Debug: Log quando o componente é montado
   useEffect(() => {
     // Componente montado
   }, []);
-  
+
   // Debug: Monitorar mudanças no uploadRef
   useEffect(() => {
     // uploadRef atualizado
   }, [uploadRef.current]);
-  
+
   // Estados para notificações
   const [notification, setNotification] = useState<{
     type: 'success' | 'error' | 'info';
     message: string;
     visible: boolean;
   } | null>(null);
-  
+
   // Estados para validação de agentes
   const [hasUserAgents, setHasUserAgents] = useState(false);
-  
+
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [currentInstanceName, setCurrentInstanceName] = useState<string | null>(null);
-  
+
   // Estados para o modal de embed
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [selectedEmbedAgent, setSelectedEmbedAgent] = useState<AIConfiguration | null>(null);
@@ -287,11 +287,13 @@ export default function WhatsAppConnection() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const validationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const [deleteConnectionId, setDeleteConnectionId] = useState<string | null>(null);
   const [deleteInstanceName, setDeleteInstanceName] = useState<string | null>(null);
   const [disconnectConnectionId, setDisconnectConnectionId] = useState<string | null>(null);
   const [disconnectInstanceName, setDisconnectInstanceName] = useState<string | null>(null);
+  const [deleteAgentId, setDeleteAgentId] = useState<string | null>(null);
+  const [deleteAgentName, setDeleteAgentName] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -299,7 +301,7 @@ export default function WhatsAppConnection() {
     if (!university?.id) {
       return;
     }
-    
+
     setLoading(true);
     try {
       const query = supabase
@@ -339,7 +341,7 @@ export default function WhatsAppConnection() {
     if (!university?.id || !user?.id) {
       return;
     }
-    
+
     setAgentsLoading(true);
     try {
       // Buscar agentes com informações de documentos
@@ -407,16 +409,16 @@ export default function WhatsAppConnection() {
 
   // Função helper para verificar se um agent tem conexão ativa
   const getAgentConnection = (agentId: string) => {
-    return connections.find(conn => 
-      conn.ai_configuration_id === agentId && 
+    return connections.find(conn =>
+      conn.ai_configuration_id === agentId &&
       conn.connection_status === 'connected'
     );
   };
 
   // Função helper para verificar se um agent tem conexão desconectada (instância existe)
   const getAgentDisconnectedConnection = (agentId: string) => {
-    return connections.find(conn => 
-      conn.ai_configuration_id === agentId && 
+    return connections.find(conn =>
+      conn.ai_configuration_id === agentId &&
       conn.connection_status === 'disconnected'
     );
   };
@@ -460,8 +462,8 @@ export default function WhatsAppConnection() {
         // Atualizar o status no banco de dados
         const { error } = await supabase
           .from('whatsapp_connections')
-          .update({ 
-            connection_status: 'disconnected', 
+          .update({
+            connection_status: 'disconnected',
             disconnected_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -486,7 +488,7 @@ export default function WhatsAppConnection() {
       setQrError(null);
       setShowQrModal(true);
       setCurrentInstanceName(connection.instance_name);
-      
+
       try {
         const webhookPayload = {
           instance_name: connection.instance_name,
@@ -513,7 +515,7 @@ export default function WhatsAppConnection() {
         // Verificar o content type da resposta
         const contentType = webhookResponse.headers.get('content-type');
         let qrCodeData;
-        
+
         if (contentType && contentType.includes('application/json')) {
           const result = await webhookResponse.json();
           console.log('✅ Webhook qrcode_atualizado chamado com sucesso');
@@ -524,16 +526,16 @@ export default function WhatsAppConnection() {
         }
         if (qrCodeData) {
           setQrCodeUrl(qrCodeData);
-          
+
           // Atualizar status para connecting
           await supabase
             .from('whatsapp_connections')
-            .update({ 
+            .update({
               connection_status: 'connecting',
               updated_at: new Date().toISOString()
             })
             .eq('id', connection.id);
-            
+
           fetchConnections();
         } else {
           throw new Error('QR Code não encontrado na resposta do webhook');
@@ -555,9 +557,117 @@ export default function WhatsAppConnection() {
       setActiveTab('agents');
       return;
     }
-    
-    // Se há um agentId específico, executa a funcionalidade completa
-    return handleCreateConnectionOld(selectedAgentId);
+
+    // Validação: verificar se há agentes do usuário
+    if (!hasUserAgents) {
+      showNotification('error', 'You need to create AI agents first before connecting WhatsApp');
+      setActiveTab('agents');
+      return;
+    }
+
+    if (!university || !user) {
+      console.error('University or user information not available');
+      return;
+    }
+
+    const instanceName = generateUniqueInstanceName(user?.email || 'user@example.com');
+
+    setQrLoading(true);
+    setQrError(null);
+    setShowQrModal(true);
+    setCurrentInstanceName(instanceName);
+
+    try {
+      // Payload para o webhook de geração de QR Code
+      const qrPayload = {
+        instance_name: instanceName,
+        university_id: university.id,
+        university_name: university.name,
+        user_email: user.email,
+        user_id: user.id,
+        agent_id: selectedAgentId,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('🚀 Chamando webhook gerar_qr_code_whastapp_matriculausa:', qrPayload);
+
+      const response = await fetch('https://nwh.suaiden.com/webhook/gerar_qr_code_whastapp_matriculausa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(qrPayload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Erro no webhook do QR:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+
+      const responseText = await response.text();
+      console.log('📥 Resposta do webhook gerar_qr_code_whastapp_matriculausa:', responseText);
+
+      let qrCodeData = null;
+      try {
+        const parsedResponse = JSON.parse(responseText);
+        console.log('📥 [WhatsAppConnection] QR response parsed as JSON:', parsedResponse);
+        qrCodeData = parsedResponse.qrCode || parsedResponse.base64 || parsedResponse.qr_code;
+      } catch (jsonError) {
+        if (responseText && /^[A-Za-z0-9+/=]+$/.test(responseText) && responseText.length > 100) {
+          qrCodeData = responseText;
+        }
+      }
+
+      if (qrCodeData && /^[A-Za-z0-9+/=]+$/.test(qrCodeData)) {
+        setQrCodeUrl(qrCodeData);
+        setConnectionStatus('connecting');
+
+        // Buscar final_prompt do agente
+        let agentFinalPrompt = null;
+        if (selectedAgentId) {
+          const { data: agentData, error: agentError } = await supabase
+            .from('ai_configurations')
+            .select('final_prompt')
+            .eq('id', selectedAgentId)
+            .single();
+
+          if (!agentError && agentData?.final_prompt) {
+            agentFinalPrompt = agentData.final_prompt;
+          }
+        }
+
+        // Criar nova conexão no banco
+        const newConnection = {
+          university_id: university.id,
+          user_id: user.id,
+          ai_configuration_id: selectedAgentId,
+          phone_number: 'Connecting...',
+          connection_status: 'connecting',
+          instance_name: instanceName,
+          final_prompt: agentFinalPrompt,
+        };
+
+        const { data: savedConnection, error: saveError } = await supabase
+          .from('whatsapp_connections')
+          .insert(newConnection)
+          .select()
+          .single();
+
+        if (saveError) {
+          console.error('Error saving new connection to db:', saveError);
+        } else {
+          console.log('✅ Conexão criada no banco:', savedConnection);
+        }
+      } else {
+        throw new Error('QR Code not found or invalid in response');
+      }
+
+    } catch (error) {
+      console.error('Error creating connection:', error);
+      setQrError(error instanceof Error ? error.message : 'Unknown error');
+      setShowQrModal(false);
+    } finally {
+      setQrLoading(false);
+    }
   };
 
   // Função auxiliar para quando realmente quiser criar conexão (mantida para referência)
@@ -566,27 +676,27 @@ export default function WhatsAppConnection() {
     if (selectedAgentId && typeof selectedAgentId !== 'string') {
       selectedAgentId = undefined;
     }
-    
+
     // Validação: verificar se há agentes do usuário
     if (!hasUserAgents) {
       showNotification('error', 'You need to create AI agents first before connecting WhatsApp');
       setActiveTab('agents');
       return;
     }
-    
-    
+
+
     if (!university || !user) {
       console.error('University or user information not available');
       return;
     }
 
     const instanceName = generateUniqueInstanceName(user?.email || 'user@example.com');
-    
+
     setQrLoading(true);
     setQrError(null);
     setShowQrModal(true);
     setCurrentInstanceName(instanceName);
-    
+
     try {
       // Verificar se já existe uma conta Chatwoot para o usuário
       const { data: existingChatwootAccount, error: fetchError } = await supabase
@@ -612,7 +722,7 @@ export default function WhatsAppConnection() {
         userName = existingChatwootAccount.chatwoot_user_name;
         accessToken = existingChatwootAccount.chatwoot_access_token;
         chatwootPassword = existingChatwootAccount.chatwoot_password;
-        
+
         // Enviar requisição para o webhook com dados existentes
         const chatwootPayload = {
           user_name: (user as any).user_metadata?.name || user.email,
@@ -640,7 +750,7 @@ export default function WhatsAppConnection() {
           }
 
           const chatwootResult = await chatwootResponse.json();
-          
+
           // Atualizar dados se necessário
           if (chatwootResult) {
             const updatedAccountId = chatwootResult.id_chatwoot || chatwootResult.account_id || chatwootResult.chatwoot_account_id || chatwootResult.id || accountId;
@@ -673,7 +783,7 @@ export default function WhatsAppConnection() {
       } else {
         // Se não existe, criar nova conta
         chatwootPassword = generateChatwootPassword(user.email, user.id);
-        
+
         const chatwootPayload = {
           user_name: (user as any).user_metadata?.name || user.email,
           user_id: user.id,
@@ -699,7 +809,7 @@ export default function WhatsAppConnection() {
           }
 
           const chatwootResult = await chatwootResponse.json();
-          
+
           accountId = chatwootResult.id_chatwoot || chatwootResult.account_id || chatwootResult.chatwoot_account_id || chatwootResult.id;
           userId = chatwootResult.user_id_chatwoot || chatwootResult.user_id || chatwootResult.chatwoot_user_id;
           userName = chatwootResult.chatwoot_user_name || chatwootResult.user_name;
@@ -728,7 +838,7 @@ export default function WhatsAppConnection() {
           accountId = `temp_${Date.now()}`;
           userId = `user_${Date.now()}`;
           userName = (user as any).user_metadata?.name || user.email;
-          
+
           const { error: chatwootError } = await supabase
             .from('chatwoot_accounts')
             .upsert({
@@ -747,7 +857,7 @@ export default function WhatsAppConnection() {
           }
         }
       }
-      
+
       const qrPayload = {
         instance_name: instanceName,
         university_id: university.id,
@@ -773,7 +883,7 @@ export default function WhatsAppConnection() {
       }
 
       const responseText = await response.text();
-      
+
       let qrCodeData = null;
       try {
         const parsedResponse = JSON.parse(responseText);
@@ -784,11 +894,11 @@ export default function WhatsAppConnection() {
           qrCodeData = responseText;
         }
       }
-      
+
       if (qrCodeData && /^[A-Za-z0-9+/=]+$/.test(qrCodeData)) {
         setQrCodeUrl(qrCodeData);
         setConnectionStatus('connecting');
-        
+
         // Buscar final_prompt do agente
         let agentFinalPrompt = null;
         const currentAgentId = selectedAgentId || agentId;
@@ -798,7 +908,7 @@ export default function WhatsAppConnection() {
             .select('final_prompt')
             .eq('id', currentAgentId)
             .single();
-          
+
           if (!agentError && agentData?.final_prompt) {
             agentFinalPrompt = agentData.final_prompt;
           }
@@ -826,7 +936,7 @@ export default function WhatsAppConnection() {
       } else {
         throw new Error('QR Code not found or invalid in response');
       }
-      
+
     } catch (error) {
       console.error('Error creating connection:', error);
       setQrError(error instanceof Error ? error.message : 'Unknown error');
@@ -842,7 +952,7 @@ export default function WhatsAppConnection() {
     setQrLoading(true);
     setQrError(null);
     try {
-      const response = await fetch('https://nwh.suaiden.com/webhook/gerar_qr_code_whastapp_matriculausa', {
+      const response = await fetch('https://nwh.suaiden.com/webhook/qrcode_atualizado', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instance_name: currentInstanceName }),
@@ -863,7 +973,7 @@ export default function WhatsAppConnection() {
           qrCodeData = responseText;
         }
       }
-      
+
       if (qrCodeData && /^[A-Za-z0-9+/=]+$/.test(qrCodeData)) {
         setQrCodeUrl(qrCodeData);
       } else {
@@ -884,7 +994,7 @@ export default function WhatsAppConnection() {
 
   const confirmDisconnect = async () => {
     if (!disconnectConnectionId || !disconnectInstanceName) return;
-    
+
     setActionLoading(disconnectConnectionId);
     try {
       // Primeiro, chamar o webhook de disconnect
@@ -917,8 +1027,8 @@ export default function WhatsAppConnection() {
       // Atualizar o status no banco de dados
       const { error } = await supabase
         .from('whatsapp_connections')
-        .update({ 
-          connection_status: 'disconnected', 
+        .update({
+          connection_status: 'disconnected',
           disconnected_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -942,7 +1052,7 @@ export default function WhatsAppConnection() {
 
   const confirmDelete = async () => {
     if (!deleteConnectionId || !deleteInstanceName) return;
-    
+
     setActionLoading(deleteConnectionId);
     try {
       // Primeiro, chamar o webhook de exclusão de instância
@@ -1000,7 +1110,7 @@ export default function WhatsAppConnection() {
     setQrLoading(true);
     setQrError(null);
     setShowQrModal(true);
-    
+
     try {
       // Verificar se já existe uma conta Chatwoot para o usuário
       const { data: chatwootAccount } = await supabase
@@ -1039,19 +1149,19 @@ export default function WhatsAppConnection() {
           qrCodeData = responseText;
         }
       }
-      
+
       if (qrCodeData && /^[A-Za-z0-9+/=]+$/.test(qrCodeData)) {
         setQrCodeUrl(qrCodeData);
-        
+
         await supabase
           .from('whatsapp_connections')
-          .update({ 
-            connection_status: 'connecting', 
+          .update({
+            connection_status: 'connecting',
             disconnected_at: null,
             updated_at: new Date().toISOString()
           })
           .eq('id', id);
-        
+
         fetchConnections();
         setConnectionStatus('connecting');
       } else {
@@ -1096,34 +1206,102 @@ export default function WhatsAppConnection() {
   };
 
   const handleCloseModal = useCallback(async (selectedConnection?: any) => {
+    // Verificar se deve chamar webhook de exclusão ANTES de resetar os estados
+    const shouldCallWebhook = currentInstanceName && connectionStatus === 'connecting';
+    console.log('🔍 [WhatsAppConnection] handleCloseModal - shouldCallWebhook:', shouldCallWebhook, {
+      currentInstanceName,
+      connectionStatus
+    });
+
+    // Capturar a conexão ANTES de resetar os estados
+    let connectionToUpdate = selectedConnection || connections?.find(c => c.connection_status === 'connecting');
+    
+    // Se não encontrou na lista local, buscar diretamente no banco usando currentInstanceName
+    if (!connectionToUpdate && currentInstanceName) {
+      try {
+        const { data: dbConnection, error } = await supabase
+          .from('whatsapp_connections')
+          .select('*')
+          .eq('instance_name', currentInstanceName)
+          .eq('connection_status', 'connecting')
+          .single();
+        
+        if (!error && dbConnection) {
+          connectionToUpdate = dbConnection;
+          console.log('🔍 [WhatsAppConnection] Conexão encontrada no banco:', connectionToUpdate);
+        }
+      } catch (dbError) {
+        console.error('❌ [WhatsAppConnection] Erro ao buscar conexão no banco:', dbError);
+      }
+    }
+    
+    console.log('🔍 [WhatsAppConnection] connectionToUpdate (capturado antes do reset):', connectionToUpdate);
+
     setShowQrModal(false);
     setQrCodeUrl(null);
     setConnectionStatus(null);
     setIsCheckingConnection(false);
-    
+
     if (countdownRef.current) clearInterval(countdownRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (validationIntervalRef.current) clearInterval(validationIntervalRef.current);
 
-    // Restaurar o status anterior no banco de dados se estiver em 'connecting'
-    const connectionToUpdate = selectedConnection || connections?.find(c => c.connection_status === 'connecting');
+    // Chamar webhook de exclusão da instância se o usuário não leu o QR Code
+    if (shouldCallWebhook) {
+      try {
+        const webhookPayload = {
+          instance_name: currentInstanceName,
+          connection_id: connectionToUpdate?.id || null,
+          university_id: university?.id,
+          user_id: user?.id,
+          timestamp: new Date().toISOString(),
+          reason: 'user_cancelled_qr_scan'
+        };
+
+        console.log('🚀 [WhatsAppConnection] Chamando webhook de exclusão:', webhookPayload);
+
+        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/Excluir-Instancia-Matricula', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(webhookPayload),
+        });
+
+        if (!webhookResponse.ok) {
+          console.error('❌ [WhatsAppConnection] Erro no webhook de exclusão:', webhookResponse.status);
+        } else {
+          console.log('✅ [WhatsAppConnection] Instância excluída via webhook:', currentInstanceName);
+        }
+      } catch (webhookError) {
+        console.error('❌ [WhatsAppConnection] Erro ao chamar webhook de exclusão:', webhookError);
+      }
+    }
+
+    // Excluir a conexão do banco de dados se estiver em 'connecting'
     if (connectionToUpdate) {
       try {
-        await supabase
+        // Excluir a linha da tabela whatsapp_connections
+        const { error: deleteError } = await supabase
           .from('whatsapp_connections')
-          .update({ 
-            connection_status: 'disconnected',
-            updated_at: new Date().toISOString()
-          })
+          .delete()
           .eq('id', connectionToUpdate.id);
-        
+
+        if (deleteError) {
+          console.error('❌ [WhatsAppConnection] Erro ao excluir conexão do banco:', deleteError);
+        } else {
+          console.log('✅ [WhatsAppConnection] Conexão excluída do banco de dados:', connectionToUpdate.id);
+        }
+
         // Atualizar a lista de conexões
         fetchConnections();
       } catch (error) {
-        console.error('Error restoring connection status:', error);
+        console.error('Error deleting connection from database:', error);
       }
+    } else {
+      console.log('⚠️ [WhatsAppConnection] Nenhuma conexão encontrada para excluir');
     }
-  }, [connections, fetchConnections]);
+  }, [connections, fetchConnections, currentInstanceName, connectionStatus, university?.id, user?.id]);
 
   const handleTestAgent = async (agentId: string) => {
     if (!testMessage.trim()) {
@@ -1134,7 +1312,7 @@ export default function WhatsAppConnection() {
     setTestLoading(true);
     // Adiciona a mensagem do usuário ao histórico imediatamente
     setChatHistory(prev => [...prev, { type: 'user', message: testMessage }]);
-    
+
     try {
       const { data: agent } = await supabase
         .from('ai_configurations')
@@ -1189,10 +1367,10 @@ export default function WhatsAppConnection() {
   const handleEditAgent = async (agent: AIConfiguration) => {
     // Definir o agente que está sendo editado
     setEditingAgent(agent);
-    
+
     // Se não tem custom_prompt, buscar o agente completo com final_prompt
     let customPrompt = agent.custom_prompt || '';
-    
+
     if (!customPrompt) {
       try {
         const { data: fullAgent, error } = await supabase
@@ -1200,10 +1378,10 @@ export default function WhatsAppConnection() {
           .select('final_prompt')
           .eq('id', agent.id)
           .single();
-        
+
         if (!error && fullAgent?.final_prompt) {
           customPrompt = getFinalPromptForEditing(fullAgent.final_prompt);
-          
+
           // Salvar o final_prompt original para reset
           await saveOriginalFinalPrompt(agent.id);
         }
@@ -1211,7 +1389,7 @@ export default function WhatsAppConnection() {
         console.error('Erro ao buscar final_prompt do agente:', error);
       }
     }
-    
+
     // Preencher o formulário com os dados do agente
     setFormData({
       ai_name: agent.ai_name,
@@ -1220,7 +1398,7 @@ export default function WhatsAppConnection() {
       personality: agent.personality || 'Professional',
       custom_prompt: customPrompt
     });
-    
+
     // Transição suave para o formulário
     handleSmoothTransition(true);
   };
@@ -1235,7 +1413,7 @@ export default function WhatsAppConnection() {
 
   const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
     setNotification({ type, message, visible: true });
-    
+
     // Auto-hide após 4 segundos
     setTimeout(() => {
       setNotification(null);
@@ -1246,11 +1424,11 @@ export default function WhatsAppConnection() {
   const createCompactKnowledge = (fullText: string): string => {
     // Extrair informações principais do texto real
     const lines = fullText.split('\n');
-    
+
     // Extrair título
     const titleMatch = fullText.match(/Title:\s*\n\n([^\n]+)/);
     const title = titleMatch ? titleMatch[1] : 'Documento';
-    
+
     // Detectar tipo de documento baseado no conteúdo
     let documentType = 'Documento';
     if (fullText.includes('MANUAL DE INSTRUÇÕES')) {
@@ -1264,12 +1442,12 @@ export default function WhatsAppConnection() {
     } else if (fullText.includes('The Future of English')) {
       documentType = 'Serviços The Future of English';
     }
-    
+
     // Retornar o conteúdo completo em vez de uma versão compacta
     const completeVersion = `${documentType}: ${title}
 
 ${fullText}`;
-    
+
     return completeVersion;
   };
 
@@ -1279,10 +1457,10 @@ ${fullText}`;
     file_name: string;
     file_type: string;
     file_url: string;
-  }) => {
+  }, showNotifications: boolean = true) => {
     try {
       console.log('[sendAgentWebhook] Iniciando webhook para:', payload);
-      
+
       // Configurar timeout de 30 segundos
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -1301,7 +1479,9 @@ ${fullText}`;
         console.error('[sendAgentWebhook] Webhook failed:', response.status, response.statusText);
         const errorText = await response.text().catch(() => 'No error details available');
         console.error('[sendAgentWebhook] Error response body:', errorText);
-        showNotification('error', `Erro ao enviar webhook: ${response.status} ${response.statusText}`);
+        if (showNotifications) {
+          showNotification('error', `Erro ao enviar webhook: ${response.status} ${response.statusText}`);
+        }
         return false;
       }
 
@@ -1309,7 +1489,7 @@ ${fullText}`;
       try {
         const responseText = await response.text();
         console.log('[sendAgentWebhook] Resposta do webhook:', responseText);
-        
+
         let webhookData;
         try {
           // Verificar se a resposta não está vazia antes de tentar fazer parse
@@ -1330,13 +1510,13 @@ ${fullText}`;
         const hasTranscription = webhookData?.transcription || webhookData?.text || webhookData?.content || webhookData?.merged_text;
         const hasStatus = webhookData?.status || webhookData?.processed || webhookData?.result;
         const hasCourses = webhookData?.courses && Array.isArray(webhookData.courses) && webhookData.courses.length > 0;
-        
+
         console.log('[sendAgentWebhook] Validação de dados:', { hasTranscription, hasStatus, hasCourses });
-        
+
         if (hasTranscription || hasStatus || hasCourses) {
           // Determinar qual campo usar para transcrição
           let transcription = '';
-          
+
           if (hasTranscription) {
             transcription = webhookData.transcription || webhookData.text || webhookData.content || webhookData.merged_text || '';
           } else if (hasCourses) {
@@ -1346,9 +1526,9 @@ ${fullText}`;
             // Se não há transcrição nem courses, tentar usar outros campos
             transcription = webhookData.position || webhookData.title || webhookData.date || JSON.stringify(webhookData);
           }
-          
+
           console.log('[sendAgentWebhook] Transcrição extraída:', transcription);
-          
+
           // Buscar o documento específico baseado no file_url que foi enviado no payload
           const { data: knowledgeDocs, error: docsError } = await supabase
             .from('ai_agent_knowledge_documents')
@@ -1374,9 +1554,9 @@ ${fullText}`;
               webhook_result: webhookData, // Salvar o resultado completo do webhook
               updated_at: new Date().toISOString()
             };
-            
+
             console.log('[sendAgentWebhook] Dados para update:', updateData);
-            
+
             // Verificar se webhookData é válido
             if (webhookData && typeof webhookData === 'object') {
               // Verificar se webhookData pode ser serializado para JSON
@@ -1401,7 +1581,7 @@ ${fullText}`;
                 timestamp: new Date().toISOString()
               };
             }
-            
+
             // Salvar a transcrição na tabela ai_agent_knowledge_documents
             const { error: updateError } = await supabase
               .from('ai_agent_knowledge_documents')
@@ -1410,16 +1590,20 @@ ${fullText}`;
 
             if (updateError) {
               console.error('[sendAgentWebhook] Error saving transcription:', updateError);
-              showNotification('error', `Erro ao salvar transcrição: ${updateError.message}`);
+              if (showNotifications) {
+                showNotification('error', `Erro ao salvar transcrição: ${updateError.message}`);
+              }
             } else {
               console.log('[sendAgentWebhook] Transcrição salva com sucesso');
-              showNotification('success', `Agente processado com sucesso!`);
+              if (showNotifications) {
+                showNotification('success', `Agente processado com sucesso!`);
+              }
             }
           } else {
             // Busca alternativa: buscar pelo nome do arquivo
             const fileName = payload.file_name;
             console.log('[sendAgentWebhook] Buscando documento alternativo por nome:', fileName);
-            
+
             const { data: altDocs, error: altError } = await supabase
               .from('ai_agent_knowledge_documents')
               .select('id, document_name, file_url, created_at')
@@ -1443,9 +1627,9 @@ ${fullText}`;
                 webhook_result: webhookData,
                 updated_at: new Date().toISOString()
               };
-              
+
               console.log('[sendAgentWebhook] Dados para update (alternativo):', updateData);
-              
+
               // Verificar se webhookData é válido para o caso alternativo também
               if (webhookData && typeof webhookData === 'object') {
                 try {
@@ -1466,7 +1650,7 @@ ${fullText}`;
                   timestamp: new Date().toISOString()
                 };
               }
-              
+
               const { error: updateError } = await supabase
                 .from('ai_agent_knowledge_documents')
                 .update(updateData)
@@ -1474,14 +1658,20 @@ ${fullText}`;
 
               if (updateError) {
                 console.error('[sendAgentWebhook] Error saving webhook_result (alternative):', updateError);
-                showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
+                if (showNotifications) {
+                  showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
+                }
               } else {
                 console.log('[sendAgentWebhook] webhook_result salvo com sucesso (alternativo)');
+                if (showNotifications) {
                 showNotification('success', `Agente processado com sucesso!`);
+              }
               }
             } else {
               console.log('[sendAgentWebhook] Documento não encontrado');
+              if (showNotifications) {
               showNotification('info', `Agente processado, mas documento não encontrado`);
+            }
             }
           }
 
@@ -1492,9 +1682,9 @@ ${fullText}`;
             webhook_processed_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
-          
+
           console.log('[sendAgentWebhook] Atualizando configuração:', configUpdateData);
-          
+
           // Verificar se webhookData é válido para a configuração também
           if (webhookData && typeof webhookData === 'object') {
             try {
@@ -1515,7 +1705,7 @@ ${fullText}`;
               timestamp: new Date().toISOString()
             };
           }
-          
+
           const { error: configError } = await supabase
             .from('ai_configurations')
             .update(configUpdateData)
@@ -1530,7 +1720,7 @@ ${fullText}`;
           // Mesmo sem dados de processamento, salvar o webhook_result se houver dados
           if (webhookData && Object.keys(webhookData).length > 0) {
             console.log('[sendAgentWebhook] Salvando webhook_result sem dados de processamento');
-            
+
             // Buscar o documento específico baseado no file_url que foi enviado no payload
             const { data: knowledgeDocs, error: docsError } = await supabase
               .from('ai_agent_knowledge_documents')
@@ -1553,9 +1743,9 @@ ${fullText}`;
                 webhook_result: webhookData, // Salvar o resultado completo do webhook
                 updated_at: new Date().toISOString()
               };
-              
+
               console.log('[sendAgentWebhook] Dados para update (sem processamento):', updateData);
-              
+
               // Verificar se webhookData é válido para o caso sem processamento também
               if (webhookData && typeof webhookData === 'object') {
                 try {
@@ -1576,7 +1766,7 @@ ${fullText}`;
                   timestamp: new Date().toISOString()
                 };
               }
-              
+
               const { error: updateError } = await supabase
                 .from('ai_agent_knowledge_documents')
                 .update(updateData)
@@ -1584,60 +1774,82 @@ ${fullText}`;
 
               if (updateError) {
                 console.error('[sendAgentWebhook] Error saving webhook_result:', updateError);
-                showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
+                if (showNotifications) {
+                  showNotification('error', `Erro ao salvar resultado do webhook: ${updateError.message}`);
+                }
               } else {
                 console.log('[sendAgentWebhook] webhook_result salvo com sucesso (sem processamento)');
+                if (showNotifications) {
                 showNotification('success', `Agente processado com sucesso!`);
               }
+              }
             } else {
+              if (showNotifications) {
               showNotification('info', `Agente processado, mas documento não encontrado`);
             }
+            }
           } else {
+            if (showNotifications) {
             showNotification('info', `Agente enviado, aguardando processamento...`);
+          }
           }
         }
 
         return true;
       } catch (parseError) {
         console.error('[sendAgentWebhook] Error parsing webhook response:', parseError);
-        showNotification('error', `Erro ao processar resposta do webhook`);
+        if (showNotifications) {
+          showNotification('error', `Erro ao processar resposta do webhook`);
+        }
         return false;
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         console.error('[sendAgentWebhook] Webhook timeout after 30 seconds');
-        showNotification('error', `Timeout ao processar agente (30s)`);
+        if (showNotifications) {
+          showNotification('error', `Timeout ao processar agente (30s)`);
+        }
       } else {
         console.error('[sendAgentWebhook] Error sending webhook:', error);
-        showNotification('error', `Erro ao enviar webhook: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        if (showNotifications) {
+          showNotification('error', `Erro ao enviar webhook: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
       return false;
     }
   };
 
-  const handleDeleteAgent = async (agentId: string) => {
-    if (!confirm('Are you sure you want to delete this AI agent? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteAgent = async (agentId: string, agentName: string) => {
+    setDeleteAgentId(agentId);
+    setDeleteAgentName(agentName);
+  };
 
+  const confirmDeleteAgent = async () => {
+    if (!deleteAgentId) return;
+
+    setActionLoading(deleteAgentId);
     try {
       const { error } = await supabase
         .from('ai_configurations')
         .delete()
-        .eq('id', agentId);
+        .eq('id', deleteAgentId);
 
       if (error) {
         throw error;
       }
 
       // Atualizar a lista de agentes
-      setAgents(prev => prev.filter(agent => agent.id !== agentId));
-      
+      setAgents(prev => prev.filter(agent => agent.id !== deleteAgentId));
+
       // Mostrar mensagem de sucesso
       showNotification('success', 'AI agent deleted successfully!');
     } catch (error) {
       console.error('Error deleting agent:', error);
       showNotification('error', 'Failed to delete AI agent. Please try again.');
+    } finally {
+      setActionLoading(null);
+      setDeleteAgentId(null);
+      setDeleteAgentName(null);
     }
   };
 
@@ -1663,10 +1875,10 @@ ${fullText}`;
 
   const generateEmbedCode = () => {
     if (!selectedEmbedAgent) return '';
-    
+
     const config = embedConfig;
     const agent = selectedEmbedAgent;
-    
+
     return `<!-- Amatricula USA Chat Widget -->
 <script>
 (function() {
@@ -1703,7 +1915,7 @@ ${fullText}`;
 
   const saveEmbedConfiguration = async () => {
     if (!selectedEmbedAgent) return;
-    
+
     try {
       // Salvar configuração no banco de dados
       const { error } = await supabase
@@ -1715,7 +1927,7 @@ ${fullText}`;
         .eq('id', selectedEmbedAgent.id);
 
       if (error) throw error;
-      
+
       showNotification('success', 'Embed configuration saved successfully!');
     } catch (error) {
       console.error('Error saving embed configuration:', error);
@@ -1725,7 +1937,7 @@ ${fullText}`;
 
   const loadEmbedConfiguration = async () => {
     if (!selectedEmbedAgent) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('ai_configurations')
@@ -1734,7 +1946,7 @@ ${fullText}`;
         .single();
 
       if (error) throw error;
-      
+
       if (data?.embed_config) {
         setEmbedConfig(data.embed_config);
         showNotification('success', 'Embed configuration loaded successfully!');
@@ -1785,7 +1997,7 @@ ${fullText}`;
       // Resetar o custom_prompt para vazio
       const { error: updateError } = await supabase
         .from('ai_configurations')
-        .update({ 
+        .update({
           custom_prompt: null,
           updated_at: new Date().toISOString()
         })
@@ -1794,9 +2006,9 @@ ${fullText}`;
       if (updateError) {
         throw new Error(`Failed to reset custom prompt: ${updateError.message}`);
       }
-      
+
       showNotification('success', 'Custom instructions reset successfully!');
-      
+
       // Atualizar estado local
       setFormData(prev => ({
         ...prev,
@@ -1814,7 +2026,7 @@ ${fullText}`;
         // Atualizar o custom_prompt diretamente
         const { error: updateError } = await supabase
           .from('ai_configurations')
-          .update({ 
+          .update({
             custom_prompt: editingCustomPrompt,
             updated_at: new Date().toISOString()
           })
@@ -1823,7 +2035,7 @@ ${fullText}`;
         if (updateError) {
           throw new Error(`Failed to update custom prompt: ${updateError.message}`);
         }
-        
+
         showNotification('success', 'Custom instructions updated successfully!');
       } else {
         // Se está criando um novo agente, apenas atualizar o estado local
@@ -1853,10 +2065,10 @@ ${fullText}`;
     custom_prompt?: string;
   }): string => {
     // Se há instruções customizadas, usar apenas elas. Caso contrário, usar o prompt base
-    const mainObjective = config.custom_prompt 
+    const mainObjective = config.custom_prompt
       ? config.custom_prompt
       : getAgentTypeBasePrompt(config.agent_type, config.ai_name, config.university_name);
-      
+
     return `<overview>
 Você se chama ${config.ai_name} e atua como agente virtual da empresa ${config.university_name}, representando-a em todas as interações com excelência e profissionalismo.
 </overview>
@@ -1966,7 +2178,7 @@ Mantenha sempre o seguinte tom nas interações:
       // Atualizar o final_prompt diretamente
       const { error: updateError } = await supabase
         .from('ai_configurations')
-        .update({ 
+        .update({
           final_prompt: newFinalPrompt,
           updated_at: new Date().toISOString()
         })
@@ -2020,7 +2232,7 @@ Mantenha sempre o seguinte tom nas interações:
     try {
       // Buscar o final_prompt original salvo
       const originalFinalPrompt = localStorage.getItem(`original_final_prompt_${agentId}`);
-      
+
       if (!originalFinalPrompt) {
         showNotification('error', 'No original version found to reset to');
         return false;
@@ -2029,7 +2241,7 @@ Mantenha sempre o seguinte tom nas interações:
       // Atualizar o final_prompt para a versão original
       const { error: updateError } = await supabase
         .from('ai_configurations')
-        .update({ 
+        .update({
           final_prompt: originalFinalPrompt,
           updated_at: new Date().toISOString()
         })
@@ -2055,7 +2267,7 @@ Mantenha sempre o seguinte tom nas interações:
 
   const handleSubmitAgent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user || !university) {
       alert("You must be logged in to create an agent.");
       return;
@@ -2179,14 +2391,14 @@ Mantenha sempre o seguinte tom nas interações:
           console.error('❌ DEBUG: Error fetching knowledge documents:', docsError);
         }
 
-        // Enviar webhook para notificar sobre a criação do agente
+        // Enviar webhook para notificar sobre a criação do agente (sem notificações visuais)
         await sendAgentWebhook({
           user_id: user.id,
           agent_id: agent.id,
           file_name: knowledgeDocs && knowledgeDocs.length > 0 ? knowledgeDocs[0].document_name : 'no_files',
           file_type: knowledgeDocs && knowledgeDocs.length > 0 ? knowledgeDocs[0].mime_type : 'none',
           file_url: knowledgeDocs && knowledgeDocs.length > 0 ? knowledgeDocs[0].file_url : ''
-        });
+        }, false); // Não mostrar notificações pois o modal de sucesso já está sendo exibido
 
         setLastCreatedAgent(agent);
         setShowSuccessModal(true);
@@ -2215,50 +2427,45 @@ Mantenha sempre o seguinte tom nas interações:
     if (!university || !user) return null;
 
     try {
-      // Verificar se já existe uma conta Chatwoot para o usuário
-      const { data: chatwootAccount } = await supabase
-        .from('chatwoot_accounts')
-        .select('chatwoot_account_id, chatwoot_user_id, chatwoot_password')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
+      // Payload simplificado para o webhook qr_validado
       const payload = {
-        user_name: (user as any).user_metadata?.name || user.email,
-        user_id: user.id,
         instance_name: instanceName,
-        email: user.email,
-        password: chatwootAccount?.chatwoot_password || generateChatwootPassword(user.email, user.id),
-        id_chatwoot: chatwootAccount?.chatwoot_account_id || null,
-        user_id_chatwoot: chatwootAccount?.chatwoot_user_id || null,
-        // Incluir account_id se existir
-        ...(chatwootAccount?.chatwoot_account_id && { account_id: chatwootAccount.chatwoot_account_id })
+        university_id: university.id,
+        user_id: user.id,
+        agent_id: null, // Será preenchido se necessário
+        timestamp: new Date().toISOString()
       };
-      
+
+      console.log('🔍 Chamando webhook qr_validado:', payload);
+
       const response = await fetch('https://nwh.suaiden.com/webhook/qr_validado', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.error('❌ Erro na resposta do webhook qr_validado:', response.status, response.statusText);
+        return null;
+      }
 
       const responseText = await response.text();
-      let state: string | null = null;
+      console.log('📥 Resposta do webhook qr_validado:', responseText);
       
+      let state: string | null = null;
+
       try {
-        console.log('Raw response text:', responseText); // Debug log para ver a resposta exata
-        
         const json = JSON.parse(responseText);
-        console.log('Webhook response (raw):', json);
-        
+        console.log('📥 [WhatsAppConnection] qr_validado response parsed as JSON:', json);
+
         // Se for um array, pega o primeiro item
         const data = Array.isArray(json) ? json[0] : json;
-        console.log('Webhook response (parsed):', data);
-        
+        console.log('📥 [WhatsAppConnection] qr_validado data (parsed):', data);
+
         state = data?.state;
         const phone_number = data?.phone_number;
-        
-        console.log('Extracted data:', { state, phone_number });
+
+        console.log('✅ Dados extraídos do qr_validado:', { state, phone_number });
         return { state, phone_number };
       } catch (e) {
         console.error('Error parsing webhook response:', e);
@@ -2284,19 +2491,22 @@ Mantenha sempre o seguinte tom nas interações:
 
   useEffect(() => {
     if (showQrModal && qrCodeUrl && !qrLoading && connectionStatus !== 'connected') {
-      const checkIntervalMs = 30000;
+      const checkIntervalMs = 15000; // Alterado para 15 segundos conforme solicitado
       setIsCheckingConnection(true);
+
+      console.log('🔄 Iniciando polling de validação a cada 15 segundos para:', currentInstanceName);
 
       const intervalId = setInterval(async () => {
         if (!currentInstanceName) return;
 
+        console.log('🔍 Verificando status da conexão via webhook qr_validado...');
         const validationResult = await validateWhatsAppConnection(currentInstanceName);
-        
+
         if (validationResult?.state === 'open') {
           setConnectionStatus('connected');
-          
+
           console.log('Full validation result:', validationResult); // Debug log mais detalhado
-          
+
           const updateData: {
             connection_status: string;
             connected_at: string;
@@ -2322,7 +2532,7 @@ Mantenha sempre o seguinte tom nas interações:
             .from('whatsapp_connections')
             .update(updateData)
             .eq('instance_name', currentInstanceName);
-            
+
           if (error) {
             console.error('Error updating connection:', error); // Debug log do erro
           } else {
@@ -2338,15 +2548,15 @@ Mantenha sempre o seguinte tom nas interações:
           setQrCodeUrl(null);
           setConnectionStatus(null);
           setIsCheckingConnection(false);
-          
+
           if (countdownRef.current) clearInterval(countdownRef.current);
           if (intervalRef.current) clearInterval(intervalRef.current);
           if (validationIntervalRef.current) clearInterval(validationIntervalRef.current);
-          
+
           fetchConnections();
         }
       }, checkIntervalMs);
-      
+
       validationIntervalRef.current = intervalId;
     }
 
@@ -2377,7 +2587,7 @@ Mantenha sempre o seguinte tom nas interações:
     };
 
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
     };
@@ -2387,7 +2597,7 @@ Mantenha sempre o seguinte tom nas interações:
   useEffect(() => {
     const handleActionScroll = (el: HTMLElement) => {
       const isOverflowing = el.scrollWidth > el.clientWidth;
-      
+
       if (!isOverflowing) {
         // Se não há overflow, esconder ambas as sombras
         el.classList.remove('is-scrolled-from-start', 'is-scrolled-to-end');
@@ -2408,11 +2618,11 @@ Mantenha sempre o seguinte tom nas interações:
     actionContainers.forEach((container) => {
       const el = container as HTMLElement;
       const handler = () => handleActionScroll(el);
-      
+
       // Adicionar listener de scroll
       el.addEventListener('scroll', handler);
       scrollHandlers.push({ element: el, handler });
-      
+
       // Verificar estado inicial
       handleActionScroll(el);
     });
@@ -2440,7 +2650,7 @@ Mantenha sempre o seguinte tom nas interações:
   // Verificar se o perfil está completo ANTES de qualquer outra verificação
   if (university?.profile_completed !== true) {
     return (
-      <ProfileCompletionGuard 
+      <ProfileCompletionGuard
         isProfileCompleted={university?.profile_completed}
         title="Profile setup required"
         description="Complete your university profile to access WhatsApp connections and AI features"
@@ -2460,8 +2670,8 @@ Mantenha sempre o seguinte tom nas interações:
             notification.visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
           }`}>
             <div className={`rounded-2xl shadow-2xl border p-6 ${
-              notification.type === 'success' 
-                ? 'bg-white border-[#05294E]/20 text-gray-900' 
+              notification.type === 'success'
+                ? 'bg-white border-[#05294E]/20 text-gray-900'
                 : notification.type === 'error'
                 ? 'bg-white border-red-200 text-gray-900'
                 : 'bg-white border-[#05294E]/20 text-gray-900'
@@ -2484,7 +2694,7 @@ Mantenha sempre o seguinte tom nas interações:
                 </div>
                 <div className="ml-4 flex-1">
                   <h3 className="text-lg font-semibold mb-2 text-gray-900">
-                    {notification.type === 'success' ? 'Success!' : 
+                    {notification.type === 'success' ? 'Success!' :
                      notification.type === 'error' ? 'Error!' : 'Information'}
                   </h3>
                   <p className="text-gray-700">{notification.message}</p>
@@ -2500,7 +2710,7 @@ Mantenha sempre o seguinte tom nas interações:
                   </button>
                 </div>
               </div>
-              
+
               {/* Action Button for Success */}
               {notification.type === 'success' && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
@@ -2540,7 +2750,7 @@ Mantenha sempre o seguinte tom nas interações:
               <div className="flex items-center space-x-3">
                 <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium border shadow-sm ${
                   connections.some(conn => conn.connection_status === 'connected')
-                    ? 'bg-green-50 text-green-700 border-green-200' 
+                    ? 'bg-green-50 text-green-700 border-green-200'
                     : 'bg-red-50 text-red-700 border-red-200'
                 }`}>
                   <div className={`w-2 h-2 rounded-full mr-2 ${connections.some(conn => conn.connection_status === 'connected') ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -2561,7 +2771,7 @@ Mantenha sempre o seguinte tom nas interações:
                     onClick={() => setActiveTab('agents')}
                     className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
                       activeTab === 'agents'
-                        ? 'border-[#05294E] text-[#05294E]' 
+                        ? 'border-[#05294E] text-[#05294E]'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                     }`}
                     type="button"
@@ -2577,7 +2787,7 @@ Mantenha sempre o seguinte tom nas interações:
                     onClick={() => setActiveTab('whatsapp')}
                     className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
                       activeTab === 'whatsapp'
-                        ? 'border-[#05294E] text-[#05294E]' 
+                        ? 'border-[#05294E] text-[#05294E]'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                     }`}
                     type="button"
@@ -2596,6 +2806,7 @@ Mantenha sempre o seguinte tom nas interações:
         </div>
       </div>
 
+      {/* [CORREÇÃO] A lógica das abas foi reestruturada para garantir que cada uma renderize seu próprio conteúdo sem duplicação. */}
       {activeTab === 'agents' ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
@@ -2645,375 +2856,375 @@ Mantenha sempre o seguinte tom nas interações:
               <div className={`p-6 border-b border-slate-200 transition-all duration-300 ease-in-out transform ${
                 isTransitioning ? 'opacity-0 translate-x-4' : 'opacity-100 translate-x-0'
               }`}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Existing Agents</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    viewMode === 'grid' 
-                      ? 'bg-[#05294E] text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                  title="Grid view"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-[#05294E] text-white' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                  title="List view"
-                >
-                  <List className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            
-            {agentsLoading ? (
-              <div className="text-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
-                <p className="text-slate-600 mt-2">Loading agents...</p>
-              </div>
-            ) : agents.length === 0 ? (
-              <div className="text-center py-12">
-                <Bot className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">No agents created yet</h3>
-                <p className="text-slate-600">Create your first AI agent to get started.</p>
-              </div>
-            ) : viewMode === 'grid' ? (
-              // Grid View
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-                {agents.map((agent) => (
-                  <div key={agent.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 hover:border-slate-300 hover:-translate-y-1">
-                    {/* Header com gradiente */}
-                    <div className="relative bg-gradient-to-br from-slate-50 to-white p-4 sm:p-6">
-                      {/* Avatar do agente */}
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="relative">
-                          {getAgentConnection(agent.id) && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Existing Agents</h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`p-2 rounded-lg transition-colors ${
+                        viewMode === 'grid'
+                          ? 'bg-[#05294E] text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      title="Grid view"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`p-2 rounded-lg transition-colors ${
+                        viewMode === 'list'
+                          ? 'bg-[#05294E] text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      title="List view"
+                    >
+                      <List className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {agentsLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
+                    <p className="text-slate-600 mt-2">Loading agents...</p>
+                  </div>
+                ) : agents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Bot className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">No agents created yet</h3>
+                    <p className="text-slate-600">Create your first AI agent to get started.</p>
+                  </div>
+                ) : viewMode === 'grid' ? (
+                  // Grid View
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+                    {agents.map((agent) => (
+                      <div key={agent.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 hover:border-slate-300 hover:-translate-y-1">
+                        {/* Header com gradiente */}
+                        <div className="relative bg-gradient-to-br from-slate-50 to-white p-4 sm:p-6">
+                          {/* Avatar do agente */}
+                          <div className="flex items-start gap-4 mb-4">
+                            <div className="relative">
+                              {getAgentConnection(agent.id) && (
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                      {/* Nome do agente - maior destaque */}
-                          <h4 className="font-bold text-lg sm:text-xl text-slate-900 mb-1 group-hover:text-[#05294E] transition-colors truncate">
-                        {agent.ai_name}
-                      </h4>
-                      
-                      {/* Nome da universidade - texto secundário */}
-                          <p className="text-sm text-slate-500 mb-2 truncate">{agent.company_name}</p>
-                          
-                          {/* Status de conexão */}
-                          <div className="flex items-center gap-2">
-                            {getAgentConnection(agent.id) ? (
-                              <div className="flex items-center gap-1 text-green-600">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <span className="text-xs font-medium">Connected</span>
+                            <div className="flex-1 min-w-0">
+                          {/* Nome do agente - maior destaque */}
+                              <h4 className="font-bold text-lg sm:text-xl text-slate-900 mb-1 group-hover:text-[#05294E] transition-colors truncate">
+                            {agent.ai_name}
+                          </h4>
+
+                          {/* Nome da universidade - texto secundário */}
+                              <p className="text-sm text-slate-500 mb-2 truncate">{agent.company_name}</p>
+
+                              {/* Status de conexão */}
+                              <div className="flex items-center gap-2">
+                                {getAgentConnection(agent.id) ? (
+                                  <div className="flex items-center gap-1 text-green-600">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span className="text-xs font-medium">Connected</span>
+                                  </div>
+                                ) : getAgentDisconnectedConnection(agent.id) ? (
+                                  <div className="flex items-center gap-1 text-orange-600">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                    <span className="text-xs font-medium">Disconnected</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 text-slate-400">
+                                    <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                                    <span className="text-xs font-medium">Not Connected</span>
+                                  </div>
+                                )}
                               </div>
-                            ) : getAgentDisconnectedConnection(agent.id) ? (
-                              <div className="flex items-center gap-1 text-orange-600">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                <span className="text-xs font-medium">Disconnected</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1 text-slate-400">
-                                <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
-                                <span className="text-xs font-medium">Not Connected</span>
+                            </div>
+                          </div>
+
+                          {/* Personalidade e Badges */}
+                          <div className="flex flex-wrap items-center gap-2 mb-4">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
+                              {agent.agent_type}
+                            </span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 shadow-sm">
+                              {agent.personality}
+                            </span>
+                            {agent.has_documents && (
+                              <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
+                                <FileText className="h-3 w-3" />
+                                <span>Knowledge base</span>
                               </div>
                             )}
                           </div>
                         </div>
-                      </div>
-                      
-                      {/* Personalidade e Badges */}
-                      <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
-                          {agent.agent_type}
-                        </span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 shadow-sm">
-                          {agent.personality}
-                        </span>
-                        {agent.has_documents && (
-                          <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
-                            <FileText className="h-3 w-3" />
-                            <span>Knowledge base</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Barra de Ações Horizontal e Rolável */}
-                    <div className="px-4 sm:px-6 pb-4 sm:pb-6 bg-slate-50/30">
-                      <div className="space-y-3">
-                        {/* Ações principais */}
-                        <div className="flex gap-2">
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            setSelectedTestAgent(agent);
-                            setShowTestModal(true);
-                            setChatHistory([]);
-                            setCurrentTestConversationId(`conv_${Date.now()}`);
-                          }}
-                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <Bot className="h-4 w-4" />
-                            <span>Test</span>
-                        </button>
-                          
-                        {getAgentConnection(agent.id) ? (
-                          <button
-                            onClick={(e: React.MouseEvent) => {
-                              e.preventDefault();
-                              handleAgentDisconnect(agent.id);
-                            }}
-                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                          >
-                            <WifiOff className="h-4 w-4" />
-                              <span>Disconnect</span>
-                          </button>
-                        ) : getAgentDisconnectedConnection(agent.id) ? (
-                          <button
-                            onClick={(e: React.MouseEvent) => {
-                              e.preventDefault();
-                              handleAgentReconnect(agent.id);
-                            }}
-                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                              <span>Reconnect</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={(e: React.MouseEvent) => {
-                              e.preventDefault();
-                              setActiveTab('whatsapp');
-                              handleCreateConnection(agent.id);
-                            }}
-                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                          >
-                            <FaWhatsapp className="h-4 w-4" />
-                              <span>Connect</span>
-                          </button>
-                        )}
-                        </div>
-                        
-                        {/* Ações secundárias */}
-                        <div className="flex gap-2">
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            handleEmbedAgent(agent);
-                          }}
-                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                            <span>Embed</span>
-                        </button>
-                          
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            handleEditAgent(agent);
-                          }}
-                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <Edit className="h-4 w-4" />
-                            <span>Edit</span>
-                        </button>
+                        {/* Barra de Ações Horizontal e Rolável */}
+                        <div className="px-4 sm:px-6 pb-4 sm:pb-6 bg-slate-50/30">
+                          <div className="space-y-3">
+                            {/* Ações principais */}
+                            <div className="flex gap-2">
+                            <button
+                              onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                setSelectedTestAgent(agent);
+                                setShowTestModal(true);
+                                setChatHistory([]);
+                                setCurrentTestConversationId(`conv_${Date.now()}`);
+                              }}
+                                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <Bot className="h-4 w-4" />
+                                <span>Test</span>
+                            </button>
+
+                            {getAgentConnection(agent.id) ? (
+                              <button
+                                onClick={(e: React.MouseEvent) => {
+                                  e.preventDefault();
+                                  handleAgentDisconnect(agent.id);
+                                }}
+                                  className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                              >
+                                <WifiOff className="h-4 w-4" />
+                                  <span>Disconnect</span>
+                              </button>
+                            ) : getAgentDisconnectedConnection(agent.id) ? (
+                              <button
+                                onClick={(e: React.MouseEvent) => {
+                                  e.preventDefault();
+                                  handleAgentReconnect(agent.id);
+                                }}
+                                  className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                                  <span>Reconnect</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e: React.MouseEvent) => {
+                                  e.preventDefault();
+                                  setActiveTab('whatsapp');
+                                  handleCreateConnection(agent.id);
+                                }}
+                                  className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                              >
+                                <FaWhatsapp className="h-4 w-4" />
+                                  <span>Connect</span>
+                              </button>
+                            )}
+                            </div>
+
+                            {/* Ações secundárias */}
+                            <div className="flex gap-2">
+                            <button
+                              onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                handleEmbedAgent(agent);
+                              }}
+                                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                                <span>Embed</span>
+                            </button>
+
+                            <button
+                              onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                handleEditAgent(agent);
+                              }}
+                                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <Edit className="h-4 w-4" />
+                                <span>Edit</span>
+                            </button>
+                            </div>
+                          </div>
+
+                          {/* Botão de delete separado */}
+                          <div className="mt-3 pt-3 border-t border-slate-200">
+                            <button
+                              onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                handleDeleteAgent(agent.id, agent.ai_name);
+                              }}
+                              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span>Delete Agent</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      
-                      {/* Botão de delete separado */}
-                      <div className="mt-3 pt-3 border-t border-slate-200">
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            handleDeleteAgent(agent.id);
-                          }}
-                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span>Delete Agent</span>
-                        </button>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              // List View
-              <div className="space-y-4">
-                {agents.map((agent) => (
-                  <div key={agent.id} className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 hover:shadow-md transition-all duration-200 hover:border-slate-300">
-                    <div className="flex items-start gap-4">
-                      {/* Avatar do agente */}
-                      <div className="relative flex-shrink-0">
+                ) : (
+                  // List View
+                  <div className="space-y-4">
+                    {agents.map((agent) => (
+                      <div key={agent.id} className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 hover:shadow-md transition-all duration-200 hover:border-slate-300">
+                        <div className="flex items-start gap-4">
+                          {/* Avatar do agente */}
+                          <div className="relative flex-shrink-0">
 
-                        {getAgentConnection(agent.id) && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                            {getAgentConnection(agent.id) && (
+                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      
-                      {/* Conteúdo principal */}
-                      <div className="flex-1 min-w-0">
-                    {/* Nome do agente - maior destaque */}
-                        <h4 className="font-bold text-lg sm:text-xl text-slate-900 mb-1 group-hover:text-[#05294E] transition-colors">
-                      {agent.ai_name}
-                    </h4>
-                    
-                    {/* Nome da universidade - texto secundário */}
-                        <p className="text-sm text-slate-500 mb-2">{agent.company_name}</p>
-                        
-                        {/* Status de conexão */}
-                        <div className="flex items-center gap-2 mb-3">
-                          {getAgentConnection(agent.id) ? (
-                            <div className="flex items-center gap-1 text-green-600">
-                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                              <span className="text-xs font-medium">Connected</span>
+
+                          {/* Conteúdo principal */}
+                          <div className="flex-1 min-w-0">
+                        {/* Nome do agente - maior destaque */}
+                            <h4 className="font-bold text-lg sm:text-xl text-slate-900 mb-1 group-hover:text-[#05294E] transition-colors">
+                          {agent.ai_name}
+                        </h4>
+
+                        {/* Nome da universidade - texto secundário */}
+                            <p className="text-sm text-slate-500 mb-2">{agent.company_name}</p>
+
+                            {/* Status de conexão */}
+                            <div className="flex items-center gap-2 mb-3">
+                              {getAgentConnection(agent.id) ? (
+                                <div className="flex items-center gap-1 text-green-600">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                  <span className="text-xs font-medium">Connected</span>
+                                </div>
+                              ) : getAgentDisconnectedConnection(agent.id) ? (
+                                <div className="flex items-center gap-1 text-orange-600">
+                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                  <span className="text-xs font-medium">Disconnected</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-slate-400">
+                                  <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                                  <span className="text-xs font-medium">Not Connected</span>
+                                </div>
+                              )}
                             </div>
-                          ) : getAgentDisconnectedConnection(agent.id) ? (
-                            <div className="flex items-center gap-1 text-orange-600">
-                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                              <span className="text-xs font-medium">Disconnected</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 text-slate-400">
-                              <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
-                              <span className="text-xs font-medium">Not Connected</span>
+
+                        {/* Personalidade e Badges */}
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
+                              <Bot className="h-3 w-3 mr-1" />
+                            {agent.agent_type}
+                          </span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 shadow-sm">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                            {agent.personality}
+                          </span>
+                          {agent.has_documents && (
+                              <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
+                                <FileText className="h-3 w-3" />
+                                <span>Knowledge base</span>
                             </div>
                           )}
+                          </div>
+                          </div>
                         </div>
-                    
-                    {/* Personalidade e Badges */}
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
-                          <Bot className="h-3 w-3 mr-1" />
-                        {agent.agent_type}
-                      </span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 shadow-sm">
-                          <Sparkles className="h-3 w-3 mr-1" />
-                        {agent.personality}
-                      </span>
-                      {agent.has_documents && (
-                          <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shadow-sm">
-                            <FileText className="h-3 w-3" />
-                            <span>Knowledge base</span>
-                        </div>
-                      )}
-                      </div>
-                      </div>
-                    </div>
 
-                    {/* Barra de Ações Horizontal e Rolável */}
-                    <div className="mt-4 pt-4 border-t border-slate-100">
-                      <div className="space-y-3">
-                        {/* Ações principais */}
-                        <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          setSelectedTestAgent(agent);
-                          setShowTestModal(true);
-                          setChatHistory([]);
-                          setCurrentTestConversationId(`conv_${Date.now()}`);
-                        }}
-                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                      >
-                        <Bot className="h-4 w-4" />
-                            <span>Test</span>
-                      </button>
-                          
-                      {getAgentConnection(agent.id) ? (
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            handleAgentDisconnect(agent.id);
-                          }}
-                              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <WifiOff className="h-4 w-4" />
-                              <span>Disconnect</span>
-                        </button>
-                      ) : getAgentDisconnectedConnection(agent.id) ? (
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            handleAgentReconnect(agent.id);
-                          }}
-                              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                              <span>Reconnect</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={(e: React.MouseEvent) => {
-                            e.preventDefault();
-                            setActiveTab('whatsapp');
-                            handleCreateConnection(agent.id);
-                          }}
-                              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          <FaWhatsapp className="h-4 w-4" />
-                              <span>Connect</span>
-                        </button>
-                      )}
-                        </div>
-                        
-                        {/* Ações secundárias */}
-                        <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          handleEmbedAgent(agent);
-                        }}
-                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                            <span>Embed</span>
-                      </button>
-                          
-                      <button
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          handleEditAgent(agent);
-                        }}
-                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                      >
-                        <Edit className="h-4 w-4" />
-                            <span>Edit</span>
-                      </button>
-                        </div>
-                        
-                        {/* Botão de delete separado */}
-                        <div className="pt-2 border-t border-slate-100">
-                      <button
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          handleDeleteAgent(agent.id);
-                        }}
-                            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                            <span>Delete</span>
-                      </button>
+                        {/* Barra de Ações Horizontal e Rolável */}
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <div className="space-y-3">
+                            {/* Ações principais */}
+                            <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              setSelectedTestAgent(agent);
+                              setShowTestModal(true);
+                              setChatHistory([]);
+                              setCurrentTestConversationId(`conv_${Date.now()}`);
+                            }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          >
+                            <Bot className="h-4 w-4" />
+                                <span>Test</span>
+                          </button>
+
+                          {getAgentConnection(agent.id) ? (
+                            <button
+                              onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                handleAgentDisconnect(agent.id);
+                              }}
+                                  className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <WifiOff className="h-4 w-4" />
+                                  <span>Disconnect</span>
+                            </button>
+                          ) : getAgentDisconnectedConnection(agent.id) ? (
+                            <button
+                              onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                handleAgentReconnect(agent.id);
+                              }}
+                                  className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                                  <span>Reconnect</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                setActiveTab('whatsapp');
+                                handleCreateConnection(agent.id);
+                              }}
+                                  className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <FaWhatsapp className="h-4 w-4" />
+                                  <span>Connect</span>
+                            </button>
+                          )}
+                            </div>
+
+                            {/* Ações secundárias */}
+                            <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              handleEmbedAgent(agent);
+                            }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                                <span>Embed</span>
+                          </button>
+
+                          <button
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              handleEditAgent(agent);
+                            }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          >
+                            <Edit className="h-4 w-4" />
+                                <span>Edit</span>
+                          </button>
+                            </div>
+
+                            {/* Botão de delete separado */}
+                            <div className="pt-2 border-t border-slate-100">
+                          <button
+                            onClick={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                              handleDeleteAgent(agent.id, agent.ai_name);
+                            }}
+                                className="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                                <span>Delete</span>
+                          </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
             ) : (
               /* Formulário de Criação/Edição */
               <div className={`p-4 sm:p-6 bg-gray-50 rounded-xl transition-all duration-300 ease-in-out transform ${
@@ -3026,7 +3237,7 @@ Mantenha sempre o seguinte tom nas interações:
                     {editingAgent ? 'Edit AI Agent' : 'Create New Agent'}
                   </h3>
                   <p className="text-gray-600 mt-1">
-                    {editingAgent 
+                    {editingAgent
                       ? 'Update your AI agent configuration and settings'
                       : 'Configure your AI agent with custom instructions and knowledge base'
                     }
@@ -3192,7 +3403,7 @@ Mantenha sempre o seguinte tom nas interações:
                       </button>
                     </div>
                   </div>
-                  
+
                   {customInstructionsExpanded && (
                     <div className="space-y-3">
                       <textarea
@@ -3241,8 +3452,8 @@ Mantenha sempre o seguinte tom nas interações:
 
                 {/* Submit Button */}
                 <div className="pt-4">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={formLoading}
                     className="w-full bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold flex items-center justify-center gap-3 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl text-base"
                   >
@@ -3264,287 +3475,7 @@ Mantenha sempre o seguinte tom nas interações:
             )}
           </div>
         </div>
-      ) : activeTab === 'whatsapp' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-[#05294E]" />
-                  {editingAgent ? 'Edit AI Agent' : 'Create New Agent'}
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  {editingAgent 
-                    ? 'Update your AI agent configuration and settings'
-                    : 'Configure your AI agent with custom instructions and knowledge base'
-                  }
-                </p>
-              </div>
-              {editingAgent && (
-                <button
-                  onClick={() => {
-                    setEditingAgent(null);
-                    setFormData({
-                      ai_name: "",
-                      university_name: university?.name || "",
-                      agent_type: "",
-                      personality: "",
-                      custom_prompt: ""
-                    });
-                    setActiveTab('agents');
-                  }}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm flex items-center gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel Edit
-                </button>
-              )}
-
-            </div>
-          </div>
-
-          {/* Formulário de Criação */}
-          <div className="p-4 sm:p-6 bg-gray-50 rounded-xl" id="agent-form">
-            <form onSubmit={handleSubmitAgent} className="space-y-4 sm:space-y-6">
-              {/* Grid responsivo para campos principais */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* Agent Name */}
-                <div className="w-full">
-                  <label htmlFor="ai_name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Agent Name *
-                  </label>
-                  <input
-                    id="ai_name"
-                    type="text"
-                    value={formData.ai_name}
-                    onChange={(e) => handleInputChange("ai_name", e.target.value)}
-                    placeholder="e.g. Maria Assistant"
-                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
-                    required
-                  />
-                </div>
-
-                {/* Agent Type */}
-                <div className="w-full">
-                  <label htmlFor="agent_type" className="block text-sm font-medium text-gray-700 mb-2">
-                    Agent Type *
-                  </label>
-                  <select
-                    id="agent_type"
-                    value={formData.agent_type}
-                    onChange={(e) => handleInputChange("agent_type", e.target.value)}
-                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
-                    required
-                  >
-                    <option value="">Select agent type</option>
-                    {getAllAgentTypes().map((option: string) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                    <option value="custom">Custom...</option>
-                  </select>
-                </div>
-
-                {/* Custom Agent Type Input - Only show when "custom" is selected */}
-                {formData.agent_type === 'custom' && (
-                  <div className="w-full">
-                    <label htmlFor="custom_agent_type_input" className="block text-sm font-medium text-gray-700 mb-2">
-                      Custom Agent Type *
-                    </label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <input
-                        type="text"
-                        id="custom_agent_type_input"
-                        placeholder="Enter custom agent type..."
-                        className="flex-1 px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const customType = e.currentTarget.value.trim();
-                            if (customType && !isAgentTypeExists(customType)) {
-                              addCustomAgentType(customType);
-                              handleInputChange("agent_type", customType);
-                              e.currentTarget.value = '';
-                            }
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const customType = e.target.value.trim();
-                          if (customType && !isAgentTypeExists(customType)) {
-                            addCustomAgentType(customType);
-                            handleInputChange("agent_type", customType);
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Press Enter or click outside to add the custom agent type
-                    </p>
-                  </div>
-                )}
-
-                {/* University/Department */}
-                <div className="w-full">
-                  <label htmlFor="university_name" className="block text-sm font-medium text-gray-700 mb-2">
-                    University/Department *
-                  </label>
-                  <input
-                    id="university_name"
-                    type="text"
-                    value={formData.university_name}
-                    onChange={(e) => handleInputChange("university_name", e.target.value)}
-                    placeholder="e.g. Anderson University Admissions"
-                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed text-base"
-                    required
-                    disabled
-                  />
-                </div>
-
-                {/* Personality */}
-                <div className="w-full">
-                  <label htmlFor="personality" className="block text-sm font-medium text-gray-700 mb-2">
-                    Personality *
-                  </label>
-                  <select
-                    id="personality"
-                    value={formData.personality}
-                    onChange={(e) => handleInputChange("personality", e.target.value)}
-                    className="w-full px-3 sm:px-4 py-3 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors text-base"
-                    required
-                  >
-                    <option value="">Select personality</option>
-                    {personalityOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Custom Instructions - Collapsible */}
-              <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 mb-3">
-                  <label className="text-sm font-medium text-gray-700">
-                    Custom Instructions (Optional)
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCustomInstructionsExpanded(!customInstructionsExpanded)}
-                      className="flex items-center gap-1 px-3 py-2 sm:py-1 text-sm bg-[#05294E]/10 text-[#05294E] rounded-lg hover:bg-[#05294E]/20 transition-colors"
-                    >
-                      {customInstructionsExpanded ? (
-                        <>
-                          <X className="w-3 h-3" />
-                          Collapse
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-3 h-3" />
-                          Expand
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-                
-                {customInstructionsExpanded && (
-                  <div className="space-y-3">
-                    <textarea
-                      id="custom_prompt"
-                      value={formData.custom_prompt}
-                      onChange={(e) => handleInputChange("custom_prompt", e.target.value)}
-                      placeholder="e.g. Always respond succinctly and politely. Be proactive in offering help..."
-                      className="w-full px-3 sm:px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-colors resize-none text-base"
-                      rows={4}
-                    />
-                    <p className="text-xs text-gray-500">
-                      Add specific instructions for how this agent should behave and respond to students.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Knowledge Base Documents */}
-              <div className="bg-white p-4 sm:p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText className="w-4 h-4 text-[#05294E]" />
-                  <label className="text-sm font-medium text-gray-700">
-                    Knowledge Base Documents (Optional)
-                  </label>
-                </div>
-                <AIAgentKnowledgeUpload
-                  ref={uploadRef}
-                  aiConfigurationId={editingAgent?.id || ""}
-                  onDocumentsChange={(documents: any[]) => {
-                    if (editingAgent?.id) {
-                      console.log('Documents uploaded:', documents);
-                    } else {
-                      console.log('Documents managed by component');
-                    }
-                  }}
-                  onPendingFilesChange={(files: File[]) => {
-                    setPendingFiles(files);
-                  }}
-                  existingDocuments={editingAgent?.id ? [] : []}
-                  isCreating={!editingAgent?.id}
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Upload documents that will be used as knowledge base for your AI agent.
-                </p>
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={formLoading}
-                  className="w-full bg-[#05294E] hover:bg-[#05294E]/90 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-lg font-semibold flex items-center justify-center gap-3 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl text-base"
-                >
-                  {formLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                      {editingAgent ? 'Updating Agent...' : 'Creating Agent...'}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      {editingAgent ? 'Update Agent' : 'Create Agent'}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Agent Capabilities Preview */}
-          <div className="p-4 sm:p-6 bg-gray-50 rounded-xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-[#05294E] rounded-lg flex items-center justify-center">
-                <BookOpen className="h-4 w-4 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Agent Capabilities
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {agentCapabilities.map((capability, index) => {
-                const Icon = capability.icon;
-                return (
-                  <div key={index} className="bg-white p-4 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-[#05294E]/10 rounded-lg flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-[#05294E]" />
-                      </div>
-                      <h5 className="font-semibold text-sm text-gray-800">{capability.title}</h5>
-                    </div>
-                    <p className="text-xs text-gray-600 leading-relaxed">{capability.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      ) : activeTab === 'whatsapp' ? (
+      ) : ( // [CORREÇÃO] Esta é a renderização correta para activeTab === 'whatsapp'
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {/* Header com gradiente sutil */}
           <div className="relative bg-gradient-to-r from-slate-50 to-white p-4 sm:p-5 lg:p-6 border-b border-slate-200">
@@ -3558,7 +3489,7 @@ Mantenha sempre o seguinte tom nas interações:
                 </p>
               </div>
             </div>
-            
+
             {/* Mensagem explicativa quando não há agentes */}
             {!hasUserAgents && (
               <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
@@ -3588,16 +3519,68 @@ Mantenha sempre o seguinte tom nas interações:
               <p className="text-slate-600 text-sm">Loading connections...</p>
             </div>
           ) : connections.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-2xl mb-6">
-                <MessageSquare className="h-8 w-8 text-slate-400" />
+            hasUserAgents ? (
+              // Mostrar agents disponíveis para conexão
+              <div className="p-4 sm:p-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">Available AI Agents</h3>
+                  <p className="text-slate-600 text-sm">
+                    Select an AI agent to connect to WhatsApp
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                  {agents.map((agent) => (
+                    <div key={agent.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-slate-200 hover:border-slate-300 hover:-translate-y-1">
+                      {/* Header com gradiente */}
+                      <div className="relative bg-gradient-to-br from-slate-50 to-white p-4 sm:p-6">
+                        {/* Avatar do agente */}
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="relative">
+                            <div className="w-12 h-12 bg-gradient-to-br from-[#05294E] to-[#05294E]/80 rounded-xl flex items-center justify-center text-white font-semibold text-lg">
+                              {agent.ai_name.charAt(0).toUpperCase()}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-slate-900 text-sm sm:text-base truncate">
+                              {agent.ai_name}
+                            </h4>
+                            <p className="text-slate-600 text-xs sm:text-sm truncate">
+                              {agent.agent_type}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Status e ações */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                            <span className="text-xs text-slate-500 font-medium">Not Connected</span>
+                          </div>
+                          <button
+                            onClick={() => handleCreateConnection(agent.id)}
+                            className="px-3 py-1.5 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-xs font-medium rounded-lg transition-all duration-200 hover:shadow-md"
+                          >
+                            Connect
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No WhatsApp Connections</h3>
-              <p className="text-slate-600 text-sm max-w-md mx-auto">
-                Connect your first WhatsApp number to get started with automated student conversations.
-              </p>
-            </div>
-          ) : (
+            ) : (
+              <div className="p-8 sm:p-12 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-2xl mb-6">
+                  <MessageSquare className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">No WhatsApp Connections</h3>
+                <p className="text-slate-600 text-sm max-w-md mx-auto">
+                  Connect your first WhatsApp number to get started with automated student conversations.
+                </p>
+              </div>
+            )
+          ) : ( // [CORREÇÃO] Lógica para renderizar a lista de conexões foi restaurada aqui.
             connections.map((connection) => (
               <div key={connection.id} className="group p-4 sm:p-6 border-b border-slate-200 last:border-b-0 hover:bg-slate-50/50 transition-colors duration-200">
                 {/* Header com Status e Ações */}
@@ -3610,7 +3593,7 @@ Mantenha sempre o seguinte tom nas interações:
                       {connection.instance_name}
                     </span>
                   </div>
-                  
+
                   {/* Botões de Ação */}
                   <div className="flex gap-2">
                     {connection.connection_status === 'connected' && (
@@ -3640,7 +3623,7 @@ Mantenha sempre o seguinte tom nas interações:
                     </button>
                   </div>
                 </div>
-                
+
                 {/* Informações em Grid Responsivo */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Phone Number */}
@@ -3650,18 +3633,18 @@ Mantenha sempre o seguinte tom nas interações:
                       {connection.phone_number || <span className="text-slate-400 italic">Not provided</span>}
                     </div>
                   </div>
-                  
+
                   {/* Connected At */}
                   <div className="space-y-1">
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Connected At</span>
                     <div className="text-slate-900 text-sm font-medium">
-                      {connection.connected_at 
+                      {connection.connected_at
                         ? new Date(connection.connected_at).toLocaleString()
                         : <span className="text-slate-400 italic">-</span>
                       }
                     </div>
                   </div>
-                  
+
                   {/* AI Agent - Full Width */}
                   <div className="sm:col-span-2 space-y-1">
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">AI Agent</span>
@@ -3684,17 +3667,17 @@ Mantenha sempre o seguinte tom nas interações:
               </div>
             ))
           )}
-        
         </div>
-      ) : null}
+      )}
 
+      {/* [CORREÇÃO] Os Modais foram movidos para o final para garantir que estejam no topo da árvore de componentes e não sejam afetados pela lógica das abas. */}
       {showQrModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900">Connect WhatsApp</h3>
-              <button 
-                onClick={() => handleCloseModal(connections?.find(c => c.instance_name === currentInstanceName))} 
+              <button
+                onClick={() => handleCloseModal(connections?.find(c => c.instance_name === currentInstanceName))}
                 className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Close modal"
               >
@@ -3705,7 +3688,7 @@ Mantenha sempre o seguinte tom nas interações:
             <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
               Scan the QR Code with your phone to connect your WhatsApp account.
             </p>
-            
+
             <div className="space-y-4 sm:space-y-6">
               <div className="flex justify-center">
                 {getStatusBadgeForModal()}
@@ -3740,8 +3723,8 @@ Mantenha sempre o seguinte tom nas interações:
                   <RotateCcw className="h-4 w-4" />
                   {qrLoading ? "Generating..." : "Refresh QR Code"}
                 </button>
-                <button 
-                  onClick={() => handleCloseModal(connections?.find(c => c.instance_name === currentInstanceName))} 
+                <button
+                  onClick={() => handleCloseModal(connections?.find(c => c.instance_name === currentInstanceName))}
                   className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
                 >
                   Cancel
@@ -3812,6 +3795,48 @@ Mantenha sempre o seguinte tom nas interações:
         </div>
       )}
 
+      {/* Modal de Delete do Agente */}
+      {deleteAgentId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-md w-full mx-4">
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-6 w-6 text-red-500" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Delete AI Agent</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
+                Are you sure you want to delete the AI agent <strong className="font-mono">{deleteAgentName}</strong>? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setDeleteAgentId(null);
+                  setDeleteAgentName(null);
+                }}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium transition-colors text-sm sm:text-base"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteAgent}
+                disabled={actionLoading === deleteAgentId}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading === deleteAgentId ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Deleting...</span>
+                  </div>
+                ) : (
+                  'Delete Agent'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Teste do Agente */}
       {showTestModal && selectedTestAgent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -3826,14 +3851,14 @@ Mantenha sempre o seguinte tom nas interações:
                   Testing: {selectedTestAgent.ai_name} ({selectedTestAgent.agent_type})
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setShowTestModal(false);
                   setSelectedTestAgent(null);
                   setChatHistory([]);
                   setTestMessage('');
                   setCurrentTestConversationId(null);
-                }} 
+                }}
                 className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Close modal"
               >
@@ -3844,7 +3869,7 @@ Mantenha sempre o seguinte tom nas interações:
 
             <div className="space-y-6">
               {/* Chat History */}
-              <div 
+              <div
                 ref={chatContainerRef}
                 className="bg-gray-50 rounded-xl p-4 border border-gray-200 h-[400px] overflow-y-auto"
               >
@@ -3939,8 +3964,8 @@ Mantenha sempre o seguinte tom nas interações:
                   Write detailed instructions for how your AI agent should behave and respond to students.
                 </p>
               </div>
-              <button 
-                onClick={() => setShowCustomInstructionsModal(false)} 
+              <button
+                onClick={() => setShowCustomInstructionsModal(false)}
                 className="text-gray-400 hover:text-gray-600"
                 title="Close modal"
               >
@@ -4077,7 +4102,7 @@ Mantenha sempre o seguinte tom nas interações:
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Embed Chatbot</h3>
                   <p className="text-sm text-gray-600 mb-6">
-                    Embed this chatbot on your website to provide instant customer support. 
+                    Embed this chatbot on your website to provide instant customer support.
                     The widget will appear as a floating chat button that users can click to start a conversation.
                   </p>
 
@@ -4232,7 +4257,7 @@ Mantenha sempre o seguinte tom nas interações:
                     <span className="text-lg">&lt;/&gt;</span>
                     Embed Code
                   </h3>
-                  
+
                   <div className="bg-gray-900 rounded-lg p-4 relative">
                     <button
                       onClick={copyEmbedCode}
@@ -4260,7 +4285,7 @@ Mantenha sempre o seguinte tom nas interações:
                     <MessageCircle className="h-5 w-5 text-red-500" />
                     Preview
                   </h3>
-                  
+
                   <div className="bg-gray-50 rounded-lg p-6 text-center">
                     <p className="text-sm text-gray-600 mb-4">Widget Preview (simplified):</p>
                     <div className="flex justify-center">
