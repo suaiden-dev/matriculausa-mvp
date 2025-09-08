@@ -8,6 +8,7 @@ import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { useAuth } from '../../hooks/useAuth';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { MessageCircle, FileText, UserCircle, Eye, Download, CheckCircle2, XCircle } from 'lucide-react';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 
@@ -48,6 +49,7 @@ const StudentDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const chat = useApplicationChat(applicationId);
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents'>('details');
 
@@ -155,9 +157,16 @@ const StudentDetails: React.FC = () => {
         console.log('Acceptance letter URL:', data.acceptance_letter_url);
         console.log('Acceptance letter status:', data.acceptance_letter_status);
         console.log('Acceptance letter sent at:', data.acceptance_letter_sent_at);
+        console.log('🔍 [STUDENT_DETAILS] Scholarship data:', data.scholarships);
+        console.log('🔍 [STUDENT_DETAILS] Application fee amount from scholarship:', data.scholarships?.application_fee_amount);
+        console.log('🔍 [STUDENT_DETAILS] Scholarship fee amount from scholarship:', data.scholarships?.scholarship_fee_amount);
         
         setApplication(data as ApplicationDetails);
         console.log('=== Estado application atualizado ===');
+        console.log('🔍 [STUDENT_DETAILS] Full application object:', data);
+        console.log('🔍 [STUDENT_DETAILS] Application scholarships:', data.scholarships);
+        console.log('🔍 [STUDENT_DETAILS] Application scholarships type:', typeof data.scholarships);
+        console.log('🔍 [STUDENT_DETAILS] Application scholarships keys:', data.scholarships ? Object.keys(data.scholarships) : 'null');
         // Mantemos uma cópia simplificada para compatibilidade antiga
         const appDocs = (data as any).documents;
         if (Array.isArray(appDocs) && appDocs.length > 0) {
@@ -1609,18 +1618,57 @@ const StudentDetails: React.FC = () => {
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
                           <dd className="mt-1">
-                            <div className="flex items-center space-x-2">
-                              {(() => {
-                                const paid = (application as any)?.is_application_fee_paid ?? application?.user_profiles?.is_application_fee_paid;
-                                return (
-                                  <>
-                                    <div className={`w-2 h-2 rounded-full ${paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                    <span className={`text-sm font-medium ${paid ? 'text-green-700' : 'text-red-700'}`}>
-                                      {paid ? 'Paid' : 'Pending'}
-                                    </span>
-                                  </>
-                                );
-                              })()}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                {(() => {
+                                  const paid = (application as any)?.is_application_fee_paid ?? application?.user_profiles?.is_application_fee_paid;
+                                  return (
+                                    <>
+                                      <div className={`w-2 h-2 rounded-full ${paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                      <span className={`text-sm font-medium ${paid ? 'text-green-700' : 'text-red-700'}`}>
+                                        {paid ? 'Paid' : 'Pending'}
+                                      </span>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                              <div className="text-right">
+                                <span className="text-lg font-bold text-slate-900">
+                                  {(() => {
+                                    console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
+                                      hasScholarship: !!application?.scholarships,
+                                      applicationFeeAmount: application?.scholarships?.application_fee_amount,
+                                      studentInfoApplicationFee: studentInfo?.application_fee_amount,
+                                      isApplicationFeePaid: application?.is_application_fee_paid,
+                                      defaultFee: getFeeAmount('application_fee')
+                                    });
+                                    
+                                    // Usar valor dinâmico da bolsa se disponível, senão usar valor padrão do sistema
+                                    // Verificar se scholarships é array ou objeto
+                                    const scholarship = Array.isArray(application?.scholarships) 
+                                      ? application.scholarships[0] 
+                                      : application?.scholarships;
+                                    
+                                    if (scholarship?.application_fee_amount) {
+                                      const amount = Number(scholarship.application_fee_amount);
+                                      console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from scholarship (already in dollars):', amount);
+                                      return formatFeeAmount(amount);
+                                    } else if (studentInfo?.application_fee_amount) {
+                                      const amount = Number(studentInfo.application_fee_amount);
+                                      console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from studentInfo (already in dollars):', amount);
+                                      return formatFeeAmount(amount);
+                                    } else if (application?.application_fee_amount) {
+                                      const amount = Number(application.application_fee_amount);
+                                      console.log('🔍 [STUDENT_DETAILS] Using application application_fee_amount:', amount);
+                                      return formatFeeAmount(amount);
+                                    } else {
+                                      console.log('🔍 [STUDENT_DETAILS] Using default amount:', getFeeAmount('application_fee'));
+                                      return formatFeeAmount(getFeeAmount('application_fee'));
+                                    }
+                                  })()}
+                                </span>
+                                <div className="text-xs text-slate-500">USD</div>
+                              </div>
                             </div>
                           </dd>
                         </div>

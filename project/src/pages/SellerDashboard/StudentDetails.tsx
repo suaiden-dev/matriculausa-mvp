@@ -38,6 +38,8 @@ interface StudentInfo {
   has_paid_i20_control_fee?: boolean;
   student_process_type?: string;
   application_status?: string;
+  application_fee_amount?: number;
+  scholarship_fee_amount?: number;
   scholarship?: {
     application_fee_amount?: number;
     scholarship_fee_amount?: number;
@@ -1412,13 +1414,18 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
                                  hasScholarship: !!studentInfo?.scholarship,
                                  applicationFeeAmount: studentInfo?.scholarship?.application_fee_amount,
+                                 studentInfoApplicationFee: (studentInfo as any)?.application_fee_amount,
                                  isApplicationFeePaid: studentInfo?.is_application_fee_paid,
                                  defaultFee: getFeeAmount('application_fee')
                                });
                                
                                if (studentInfo?.scholarship?.application_fee_amount) {
                                  const amount = Number(studentInfo.scholarship.application_fee_amount);
-                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount (already in dollars):', amount);
+                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from scholarship (already in dollars):', amount);
+                                 return formatFeeAmount(amount);
+                               } else if ((studentInfo as any)?.application_fee_amount) {
+                                 const amount = Number((studentInfo as any).application_fee_amount);
+                                 console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from studentInfo (already in dollars):', amount);
                                  return formatFeeAmount(amount);
                                } else {
                                  console.log('🔍 [STUDENT_DETAILS] Using default amount:', getFeeAmount('application_fee'));
