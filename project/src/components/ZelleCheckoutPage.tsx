@@ -465,7 +465,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     .eq('status', 'pending_verification')
                     .order('created_at', { ascending: false })
                     .limit(1)
-                    .single();
+                    .maybeSingle();
 
                   if (findError || !recentPayment) {
                     console.error('❌ [ZelleCheckout] Pagamento não encontrado:', findError);
