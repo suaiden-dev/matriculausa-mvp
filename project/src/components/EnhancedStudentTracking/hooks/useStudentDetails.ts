@@ -13,9 +13,6 @@ export const useStudentDetails = () => {
   const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    console.log('Document requests: useStudentDetails', documentRequests);
-  }, [documentRequests]);
 
   // Usar o contexto de autenticação
   const { user, supabaseUser, isAuthenticated } = useAuth();
@@ -23,17 +20,12 @@ export const useStudentDetails = () => {
   // Carregar detalhes de um estudante específico
   const loadStudentDetails = useCallback(async (studentId: string, profile_id: string) => {
     try {
-      console.log('🔍 Loading details for student:', studentId);
-      console.log('🔍 [AUTH] User authenticated:', isAuthenticated);
-      console.log('🔍 [AUTH] Current user:', user);
-      console.log('🔍 [AUTH] Supabase user ID:', supabaseUser?.id);
       
       setLoadingStudentDetails(true);
       setSelectedStudent(studentId);
 
       // Verificar se o usuário está autenticado
       if (!isAuthenticated || !supabaseUser) {
-        console.error('❌ [AUTH] User not authenticated');
         setError('User not authenticated');
         return;
       }
@@ -50,6 +42,16 @@ export const useStudentDetails = () => {
 
         if (!sqlError && sqlData && sqlData.length > 0) {
           studentData = sqlData[0];
+          
+          // Adicionar dados do scholarship se disponíveis
+          if (studentData.application_fee_amount || studentData.scholarship_fee_amount) {
+            studentData.scholarship = {
+              application_fee_amount: studentData.application_fee_amount,
+              scholarship_fee_amount: studentData.scholarship_fee_amount
+            };
+          }
+          
+          console.log('🔍 [USE_STUDENT_DETAILS] SQL data loaded with scholarship:', studentData.scholarship);
         } else {
           studentError = sqlError;
         }
@@ -67,7 +69,6 @@ export const useStudentDetails = () => {
           .single();
 
         if (profileError) {
-          console.error('Error loading user profile:', profileError);
           setError('Failed to load student profile');
           return;
         }
@@ -145,15 +146,20 @@ export const useStudentDetails = () => {
           application_status: applicationData?.status || 'Pending',
           documents: documentsData || [],
           scholarship: applicationData?.scholarships ? {
-            application_fee_amount: applicationData.scholarships[0]?.application_fee_amount,
-            scholarship_fee_amount: applicationData.scholarships[0]?.scholarship_fee_amount
+            application_fee_amount: applicationData.scholarships?.application_fee_amount,
+            scholarship_fee_amount: applicationData.scholarships?.scholarship_fee_amount
           } : undefined
         };
 
         setStudentDocuments(applicationData?.documents);
+        
+        console.log('🔍 [USE_STUDENT_DETAILS] Scholarship data loaded:', applicationData?.scholarships);
+        console.log('🔍 [USE_STUDENT_DETAILS] Application fee amount:', applicationData?.scholarships?.application_fee_amount);
+        console.log('🔍 [USE_STUDENT_DETAILS] Scholarship fee amount:', applicationData?.scholarships?.scholarship_fee_amount);
       }
       
       if (studentData) {
+        console.log('🔍 [AFFILIATE_DEBUG] Searching scholarship application for profile_id:', profile_id);
         const { data: applicationData, error: applicationError } = await supabase
           .from('scholarship_applications')
           .select(`
@@ -173,6 +179,14 @@ export const useStudentDetails = () => {
           .order('created_at', { ascending: false })
           .limit(1)
           .single();
+
+        console.log('🔍 [AFFILIATE_DEBUG] Scholarship application query result:', {
+          data: applicationData,
+          error: applicationError,
+          hasData: !!applicationData,
+          applicationId: applicationData?.id,
+          documents: applicationData?.documents
+        });
 
         studentData.documents = applicationData?.documents;
         setStudentDocuments(applicationData?.documents);
@@ -218,14 +232,50 @@ export const useStudentDetails = () => {
             
             // ✅ CORREÇÃO: Se não encontrou nada pelos requests, tentar buscar por uploaded_by
             if (uploads.length === 0) {
-              console.log('🔄 [DOCUMENT REQUEST] No uploads found for requests, trying uploaded_by =', studentId);
+              console.log('🔄 [AFFILIATE_DEBUG] No uploads found for requests, trying uploaded_by =', studentId);
+              console.log('🔍 [AFFILIATE_DEBUG] studentData available:', !!studentData);
+              console.log('🔍 [AFFILIATE_DEBUG] studentData.email:', studentData?.email);
+              
+              // ✅ CORREÇÃO: Buscar pelo email para encontrar o ID correto na auth.users
+              let authUserId = null;
+              if (studentData?.email) {
+                console.log('🔍 [AFFILIATE_DEBUG] Searching for auth user ID by email:', studentData.email);
+                const { data: authUser, error: authError } = await supabase
+                  .from('auth.users')
+                  .select('id')
+                  .eq('email', studentData.email)
+                  .single();
+                
+                console.log('🔍 [AFFILIATE_DEBUG] Auth user query result:', {
+                  data: authUser,
+                  error: authError,
+                  found: !!authUser
+                });
+                
+                if (!authError && authUser) {
+                  authUserId = authUser.id;
+                  console.log('✅ [AFFILIATE_DEBUG] Found auth user ID:', authUserId);
+                } else {
+                  console.log('⚠️ [AFFILIATE_DEBUG] Could not find auth user:', authError);
+                }
+              }
+              
+              // Buscar uploads usando ambos os IDs possíveis
+              const searchIds = [studentId];
+              if (authUserId && authUserId !== studentId) {
+                searchIds.push(authUserId);
+              }
+              
+              console.log('🔍 [AFFILIATE_DEBUG] Searching uploads with IDs:', searchIds);
+              console.log('🔍 [AFFILIATE_DEBUG] searchIds type:', typeof searchIds);
+              console.log('🔍 [AFFILIATE_DEBUG] searchIds length:', searchIds.length);
               
               // Teste 1: Buscar apenas document_request_uploads
               console.log('🔍 [DOCUMENT REQUEST] Test 1: Simple query on document_request_uploads');
               let { data: simpleUploads, error: simpleError } = await supabase
                 .from('document_request_uploads')
                 .select('*')
-                .eq('uploaded_by', studentId);
+                .in('uploaded_by', searchIds);
               
               console.log('🔍 [DOCUMENT REQUEST] Simple query result:', {
                 data: simpleUploads,
@@ -251,7 +301,7 @@ export const useStudentDetails = () => {
                     due_date
                   )
                 `)
-                .eq('uploaded_by', studentId);
+                .in('uploaded_by', searchIds);
               
               console.log('🔍 [DOCUMENT REQUEST] Join query result:', {
                 data: uploadsByUser,
@@ -259,29 +309,6 @@ export const useStudentDetails = () => {
                 count: uploadsByUser?.length || 0
               });
 
-              setDocumentRequests(uploadsByUser || []);
-              
-              let { data: allUploadsDebug, error: allError } = await supabase
-                .from('document_request')
-                .select('*')
-                .eq('scholarship_application_id', applicationData.id);
-              
-              console.log('🔍 [DOCUMENT REQUEST] All uploads debug:', {
-                data: allUploadsDebug,
-                error: allError
-              });
-              
-              // Teste 4: Verificar se o studentId existe na tabela
-              console.log('🔍 [DOCUMENT REQUEST] Test 4: Check if studentId exists in any upload');
-              if (allUploadsDebug && allUploadsDebug.length > 0) {
-                const foundStudent = allUploadsDebug.find(upload => upload.uploaded_by === studentId);
-                console.log('🔍 [DOCUMENT REQUEST] Student found in debug data:', foundStudent);
-                
-                // Verificar todos os uploaded_by únicos
-                const uniqueUploadedBy = [...new Set(allUploadsDebug.map(u => u.uploaded_by))];
-                console.log('🔍 [DOCUMENT REQUEST] Unique uploaded_by values in debug:', uniqueUploadedBy);
-              }
-              
               if (error1) {
                 console.log('❌ [DOCUMENT REQUEST] Error fetching by uploaded_by:', error1);
               } else if (uploadsByUser && uploadsByUser.length > 0) {
@@ -298,23 +325,6 @@ export const useStudentDetails = () => {
               }
             }
             
-            // Se ainda não encontrou nada, tentar buscar todos os uploads
-            if (uploads.length === 0) {
-              console.log('🔄 [DOCUMENT REQUEST] Trying to fetch all uploads for debug');
-              
-              let { data: allUploads, error: error2 } = await supabase
-                .from('document_request_uploads')
-                .select('*');
-              
-              if (error2) {
-                console.log('❌ [DOCUMENT REQUEST] Error fetching all uploads:', error2);
-              } else if (allUploads && allUploads.length > 0) {
-                console.log('📊 [DOCUMENT REQUEST] Total uploads in table:', allUploads.length);
-                console.log('📄 [DOCUMENT REQUEST] First 3 uploads:', allUploads.slice(0, 3));
-                uploads = allUploads;
-              }
-            }
-
             console.log('📋 [DOCUMENT REQUEST] Final uploads count:', uploads.length);
 
             // Buscar também a carta de aceite da aplicação
@@ -371,22 +381,8 @@ export const useStudentDetails = () => {
                 });
               }
               
-              // Depois, adicionar a carta de aceite se existir
-              if (acceptanceLetterDoc) {
-                if (!documentRequestsMap.has('acceptance_letter')) {
-                  documentRequestsMap.set('acceptance_letter', {
-                    id: 'acceptance_letter',
-                    title: 'Acceptance Letter',
-                    description: 'Official acceptance letter from the university',
-                    is_global: false,
-                    status: 'open',
-                    attachment_url: null,
-                    due_date: null,
-                    document_request_uploads: []
-                  });
-                }
-                documentRequestsMap.get('acceptance_letter').document_request_uploads.push(acceptanceLetterDoc);
-              }
+              // ✅ CORREÇÃO: NÃO adicionar acceptance letter aos document requests
+              // O acceptance letter tem sua própria seção
               
               // Por fim, distribuir os uploads pelos requests correspondentes
               uploads.forEach(upload => {
@@ -418,8 +414,15 @@ export const useStudentDetails = () => {
               });
               
               const finalDocumentRequests = Array.from(documentRequestsMap.values());
-              console.log('🎯 [DOCUMENT REQUEST] Final document requests:', finalDocumentRequests);
-            //   setDocumentRequests(finalDocumentRequests);
+              console.log('🎯 [AFFILIATE_DEBUG] Final document requests:', finalDocumentRequests);
+              console.log('🔍 [AFFILIATE_DEBUG] Final document requests count:', finalDocumentRequests.length);
+              console.log('🔍 [AFFILIATE_DEBUG] Final document requests structure:', finalDocumentRequests.map(req => ({
+                id: req.id,
+                title: req.title,
+                uploadsCount: req.document_request_uploads?.length || 0,
+                uploads: req.document_request_uploads
+              })));
+              setDocumentRequests(finalDocumentRequests);
             }
             
           } catch (error) {
@@ -523,6 +526,7 @@ export const useStudentDetails = () => {
           }
         }
 
+        console.log('🔍 [AFFILIATE_DEBUG] Setting student details:', studentData);
         setStudentDetails(studentData);
 
         // Definir aplicação de bolsa
@@ -567,9 +571,15 @@ export const useStudentDetails = () => {
       }
 
     } catch (error: any) {
-      console.error('Error loading student details:', error);
+      console.error('❌ [AFFILIATE_DEBUG] Error loading student details:', error);
       setError('Failed to load student details');
     } finally {
+      console.log('🔍 [AFFILIATE_DEBUG] ===== LOADING COMPLETED =====');
+      console.log('🔍 [AFFILIATE_DEBUG] Final states:');
+      console.log('🔍 [AFFILIATE_DEBUG] - studentDetails:', !!studentDetails);
+      console.log('🔍 [AFFILIATE_DEBUG] - scholarshipApplication:', !!scholarshipApplication);
+      console.log('🔍 [AFFILIATE_DEBUG] - studentDocuments:', studentDocuments?.length || 0);
+      console.log('🔍 [AFFILIATE_DEBUG] - documentRequests:', documentRequests?.length || 0);
       setLoadingStudentDetails(false);
     }
   }, [isAuthenticated, supabaseUser]);

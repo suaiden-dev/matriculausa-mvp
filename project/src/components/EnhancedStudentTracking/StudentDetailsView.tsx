@@ -1,7 +1,8 @@
 import React from 'react';
-import { ArrowLeft, User, FileText, CheckCircle2 } from 'lucide-react';
+import { User, FileText } from 'lucide-react';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import { StudentInfo, ScholarshipApplication } from './types';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface StudentDetailsViewProps {
   studentDetails: StudentInfo;
@@ -18,12 +19,13 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   studentDetails,
   scholarshipApplication,
   studentDocuments,
-  onBack,
   activeTab,
   onTabChange,
   onViewDocument,
   onDownloadDocument
 }) => {
+  // Hook para configurações dinâmicas de taxas
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
@@ -137,7 +139,65 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
                               {(() => {
-                                const statusDisplay = getDocumentStatusDisplay(studentDetails.documents_status || '');
+                                // Calcular status baseado nos documentos disponíveis (prioriza props recentes)
+                                const requiredDocs = ['passport', 'diploma', 'funds_proof'];
+                                const appDocuments = (studentDetails as any)?.documents || [];
+                                const docsFromProps = Array.isArray(studentDocuments) ? studentDocuments : [];
+                                
+                                let documentsStatus: string | undefined = undefined;
+                                
+                                // Preferir documentos vindos por props (estão mais atualizados)
+                                if (Array.isArray(docsFromProps) && docsFromProps.length > 0) {
+                                  const allApproved = requiredDocs.every((t) => {
+                                    const d = docsFromProps.find((x: any) => x.type === t);
+                                    return d && (d.status || '').toLowerCase() === 'approved';
+                                  });
+                                  if (allApproved) {
+                                    documentsStatus = 'approved';
+                                  } else {
+                                    const hasChanges = requiredDocs.some((t) => {
+                                      const d = docsFromProps.find((x: any) => x.type === t);
+                                      return d && (d.status || '').toLowerCase() === 'changes_requested';
+                                    });
+                                    if (hasChanges) {
+                                      documentsStatus = 'changes_requested';
+                                    } else {
+                                      const anySubmitted = requiredDocs.some((t) => {
+                                        const d = docsFromProps.find((x: any) => x.type === t);
+                                        return !!d && !!(d.file_url || d.url);
+                                      });
+                                      documentsStatus = anySubmitted ? 'under_review' : 'pending';
+                                    }
+                                  }
+                                } else if (Array.isArray(appDocuments) && appDocuments.length > 0) {
+                                  // Fallback para documentos do studentDetails
+                                  const allApproved = requiredDocs.every((t) => {
+                                    const d = appDocuments.find((x: any) => x.type === t);
+                                    return d && (d.status || '').toLowerCase() === 'approved';
+                                  });
+                                  if (allApproved) {
+                                    documentsStatus = 'approved';
+                                  } else {
+                                    const hasChanges = requiredDocs.some((t) => {
+                                      const d = appDocuments.find((x: any) => x.type === t);
+                                      return d && (d.status || '').toLowerCase() === 'changes_requested';
+                                    });
+                                    if (hasChanges) {
+                                      documentsStatus = 'changes_requested';
+                                    } else {
+                                      const anySubmitted = requiredDocs.some((t) => {
+                                        const d = appDocuments.find((x: any) => x.type === t);
+                                        return !!d && !!(d.file_url || d.url);
+                                      });
+                                      documentsStatus = anySubmitted ? 'under_review' : 'pending';
+                                    }
+                                  }
+                                } else {
+                                  // Último recurso: usar documents_status vindo do perfil
+                                  documentsStatus = studentDetails?.documents_status || 'pending';
+                                }
+                                
+                                const statusDisplay = getDocumentStatusDisplay(documentsStatus);
                                 return (
                                   <>
                                     <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
@@ -153,17 +213,37 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         <div>
                           <dt className="text-sm font-medium text-slate-600">Enrollment Status</dt>
                           <dd className="mt-1">
-                            {scholarshipApplication?.status === 'enrolled' ? (
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-sm font-medium text-green-700">Enrolled</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                <span className="text-sm font-medium text-yellow-700">Pending Acceptance</span>
-                              </div>
-                            )}
+                            {(() => {
+                              const acceptanceStatus = (studentDetails as any)?.acceptance_letter_status as string | undefined;
+                              const appStatus = (studentDetails as any)?.status || (studentDetails as any)?.application_status as string | undefined;
+                              const documentsStatus = (studentDetails as any)?.documents_status as string | undefined;
+                              
+                              // Debug logs
+                              console.log('🔍 [ENROLLMENT_STATUS] Debug:', {
+                                acceptanceStatus,
+                                appStatus,
+                                documentsStatus,
+                                studentDetails: studentDetails
+                              });
+                              
+                              // Para usuários com aplicação de bolsa: verificar status da aplicação
+                              // Para usuários sem aplicação de bolsa: verificar documents_status
+                              const isEnrolled = appStatus === 'enrolled' || 
+                                                acceptanceStatus === 'approved' || 
+                                                (documentsStatus === 'approved' && !appStatus);
+                              const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
+                              const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
+                              const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
+                              
+                              console.log('🔍 [ENROLLMENT_STATUS] Result:', { isEnrolled, label });
+                              
+                              return (
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-2 h-2 rounded-full ${dot}`}></div>
+                                  <span className={`text-sm font-medium ${color}`}>{label}</span>
+                                </div>
+                              );
+                            })()}
                           </dd>
                         </div>
                       </div>
@@ -389,7 +469,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                           </span>
                           {studentDetails?.has_paid_selection_process_fee && (
-                            <span className="text-xs text-slate-500">$999.00</span>
+                            <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
                           )}
                         </div>
                       </div>
@@ -407,9 +487,23 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         </span>
                         {studentDetails?.is_application_fee_paid && (
                           <span className="text-xs text-slate-500">
-                            ${studentDetails?.scholarship?.application_fee_amount ? 
-                              (Number(studentDetails.scholarship.application_fee_amount) / 100).toFixed(2) : 
-                              '350.00'}
+                            {(() => {
+                              console.log('🔍 [STUDENT_DETAILS_VIEW] Application Fee Debug:', {
+                                hasScholarship: !!studentDetails?.scholarship,
+                                applicationFeeAmount: studentDetails?.scholarship?.application_fee_amount,
+                                isApplicationFeePaid: studentDetails?.is_application_fee_paid,
+                                defaultFee: getFeeAmount('application_fee')
+                              });
+                              
+                              if (studentDetails?.scholarship?.application_fee_amount) {
+                                const amount = Number(studentDetails.scholarship.application_fee_amount);
+                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using dynamic amount (already in dollars):', amount);
+                                return formatFeeAmount(amount);
+                              } else {
+                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using default amount:', getFeeAmount('application_fee'));
+                                return formatFeeAmount(getFeeAmount('application_fee'));
+                              }
+                            })()}
                           </span>
                         )}
                       </div>
@@ -427,9 +521,19 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         </span>
                         {studentDetails?.is_scholarship_fee_paid && (
                           <span className="text-xs text-slate-500">
-                            ${studentDetails?.scholarship?.scholarship_fee_amount ? 
-                              (Number(studentDetails.scholarship.scholarship_fee_amount) / 100).toFixed(2) : 
-                              '850.00'}
+                            {(() => {
+                              console.log('🔍 [STUDENT_DETAILS_VIEW] Scholarship Fee Debug:', {
+                                hasScholarship: !!studentDetails?.scholarship,
+                                scholarshipFeeAmount: studentDetails?.scholarship?.scholarship_fee_amount,
+                                isScholarshipFeePaid: studentDetails?.is_scholarship_fee_paid,
+                                defaultFee: getFeeAmount('scholarship_fee')
+                              });
+                              
+                              // Scholarship Fee usa valor configurado no sistema (não valor do banco)
+                              const fixedAmount = getFeeAmount('scholarship_fee');
+                              console.log('🔍 [STUDENT_DETAILS_VIEW] Using system-configured scholarship amount:', fixedAmount);
+                              return formatFeeAmount(fixedAmount);
+                            })()}
                           </span>
                         )}
                       </div>
@@ -447,7 +551,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                           </span>
                           {studentDetails?.has_paid_i20_control_fee && (
-                            <span className="text-xs text-slate-500">$999.00</span>
+                            <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
                           )}
                         </div>
                       </div>

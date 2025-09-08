@@ -9,6 +9,9 @@ CREATE OR REPLACE FUNCTION get_admin_analytics_fixed(admin_user_id uuid)
 RETURNS TABLE (
   total_sellers bigint,
   active_sellers bigint,
+  pending_sellers bigint,
+  approved_sellers bigint,
+  rejected_sellers bigint,
   total_students bigint,
   total_revenue numeric,
   monthly_growth numeric,
@@ -31,6 +34,13 @@ BEGIN
     FROM sellers s
     JOIN affiliate_admins aa ON s.affiliate_admin_id = aa.id
     WHERE aa.user_id = admin_user_id
+  ),
+  seller_status_stats AS (
+    SELECT 
+      pending_sellers,
+      approved_sellers,
+      rejected_sellers
+    FROM get_admin_seller_status_stats(admin_user_id)
   ),
   student_stats AS (
     SELECT 
@@ -89,6 +99,9 @@ BEGIN
   SELECT 
     ss.total_sellers,
     ss.active_sellers,
+    sss.pending_sellers,
+    sss.approved_sellers,
+    sss.rejected_sellers,
     st.total_students,
     st.total_revenue,
     gs.monthly_growth,
@@ -103,6 +116,7 @@ BEGIN
       ELSE 0 
     END as avg_revenue_per_student
   FROM seller_stats ss
+  CROSS JOIN seller_status_stats sss
   CROSS JOIN student_stats st
   CROSS JOIN growth_stats gs;
 END;

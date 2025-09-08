@@ -15,6 +15,9 @@ interface AffiliateAdminStats {
   totalRevenue: number;
   totalSellers: number;
   activeSellers: number;
+  pendingSellers: number;
+  approvedSellers: number;
+  rejectedSellers: number;
 }
 
 
@@ -55,7 +58,10 @@ const AffiliateAdminDashboard: React.FC = () => {
     totalStudents: 0,
     totalRevenue: 0,
     totalSellers: 0,
-    activeSellers: 0
+    activeSellers: 0,
+    pendingSellers: 0,
+    approvedSellers: 0,
+    rejectedSellers: 0
   });
 
   const loadAffiliateAdminData = useCallback(async (forceRefresh = false) => {
@@ -72,7 +78,10 @@ const AffiliateAdminDashboard: React.FC = () => {
           totalStudents: 0,
           totalRevenue: 0,
           totalSellers: 0,
-          activeSellers: 0
+          activeSellers: 0,
+          pendingSellers: 0,
+          approvedSellers: 0,
+          rejectedSellers: 0
         });
       }
 
@@ -115,6 +124,9 @@ const AffiliateAdminDashboard: React.FC = () => {
       const analytics = analyticsData?.[0] || {
         total_sellers: 0,
         active_sellers: 0,
+        pending_sellers: 0,
+        approved_sellers: 0,
+        rejected_sellers: 0,
         total_students: 0,
         total_revenue: 0,
         monthly_growth: 0,
@@ -158,7 +170,10 @@ const AffiliateAdminDashboard: React.FC = () => {
         totalStudents: analytics.total_students || 0,
         totalRevenue: analytics.total_revenue || 0,
         totalSellers: analytics.total_sellers || 0,
-        activeSellers: analytics.active_sellers || 0
+        activeSellers: analytics.active_sellers || 0,
+        pendingSellers: analytics.pending_sellers || 0,
+        approvedSellers: analytics.approved_sellers || 0,
+        rejectedSellers: analytics.rejected_sellers || 0
       };
 
       setStats(finalStats);
