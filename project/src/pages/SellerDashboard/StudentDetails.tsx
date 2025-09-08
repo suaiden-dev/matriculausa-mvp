@@ -204,7 +204,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 )
               )
             `)
-            .eq('student_id', (studentProfile as any).user_id)
+            .eq('student_id', (studentProfile as any).profile_id)
             .order('created_at', { ascending: false })
             .limit(1)
             .single();

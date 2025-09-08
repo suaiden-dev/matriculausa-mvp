@@ -387,9 +387,10 @@ const StudentDetails: React.FC = () => {
       console.log('application.acceptance_letter_sent_at:', application.acceptance_letter_sent_at);
       
       // Verificar se há carta de aceite
-      // Aceitar se tiver URL e status não for 'pending'
-      // Aceitar também se tiver URL mesmo sem status definido
-      if (application.acceptance_letter_url && application.acceptance_letter_url.trim() !== '') {
+      // Só aceitar se tiver URL E status não for 'pending' (ou se não tiver status definido)
+      if (application.acceptance_letter_url && 
+          application.acceptance_letter_url.trim() !== '' && 
+          application.acceptance_letter_status !== 'pending') {
         acceptanceLetterDoc = {
           id: `acceptance_letter_${application.id}`,
           filename: application.acceptance_letter_url?.split('/').pop() || 'Acceptance Letter',
