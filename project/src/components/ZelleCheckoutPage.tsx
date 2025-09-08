@@ -30,7 +30,7 @@ interface WebhookPayload {
   fee_type: string;
   timestamp: string;
   scholarship_application_id?: string;
-  temp_payment_id?: string;
+  payment_id?: string;
 }
 
 export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
@@ -171,14 +171,35 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       if (uploadError) throw uploadError;
 
-      // Não criar registro do pagamento aqui - deixar apenas o n8n gerenciar
-      console.log('📤 [ZelleCheckout] Enviando apenas para n8n - sem INSERT direto no banco');
+      // Criar registro do pagamento no banco ANTES de enviar para n8n
+      console.log('💾 [ZelleCheckout] Criando registro de pagamento no banco...');
+      
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('zelle_payments')
+        .insert({
+          user_id: user?.id,
+          amount: currentFee.amount,
+          currency: 'USD',
+          fee_type: normalizedFeeType,
+          status: 'pending_verification',
+          screenshot_url: uploadData.path, // Salvar o path relativo
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+
+      if (paymentError) {
+        console.error('❌ [ZelleCheckout] Erro ao criar pagamento no banco:', paymentError);
+        throw new Error('Failed to create payment record');
+      }
+
+      const realPaymentId = paymentData.id;
+      console.log('✅ [ZelleCheckout] Pagamento criado com ID real:', realPaymentId);
 
       // Enviar webhook para n8n
       const imageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
       
       // Payload padronizado para o webhook
-      const tempPaymentId = `temp_${Date.now()}_${user?.id}`;
       const webhookPayload: WebhookPayload = {
         user_id: user?.id,
         image_url: imageUrl,
@@ -186,7 +207,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         currency: 'USD',
         fee_type: normalizedFeeType,
         timestamp: new Date().toISOString(),
-        temp_payment_id: tempPaymentId // ID temporário para o n8n usar
+        payment_id: realPaymentId // ID real do pagamento
       };
 
       // Adicionar scholarship_application_id se for taxa de bolsa
@@ -245,7 +266,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         nome_aluno: userName,
         email_universidade: 'newvicturibdev@gmail.com', // Admin específico
         o_que_enviar: `Novo pagamento Zelle de ${currentFee.amount} USD foi enviado para avaliação.`,
-        temp_payment_id: tempPaymentId,
+        temp_payment_id: realPaymentId,
         fee_type: normalizedFeeType,
         amount: currentFee.amount,
         uploaded_at: new Date().toISOString()
@@ -370,7 +391,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       nome_aluno: userName,
                       email_universidade: user?.email, // Para o aluno, usar o próprio email
                       o_que_enviar: `Seu pagamento Zelle de ${currentFee.amount} USD para ${currentFee.description.split(' - ')[1]} está sendo processado. Você será notificado assim que o processamento for concluído.`,
-                      temp_payment_id: tempPaymentId,
+                      temp_payment_id: realPaymentId,
                       fee_type: normalizedFeeType,
                       amount: currentFee.amount,
                       uploaded_at: new Date().toISOString(),
@@ -400,51 +421,14 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 }
                 
                 // Armazenar a resposta do n8n no localStorage para a página de waiting
-                localStorage.setItem(`n8n_response_${tempPaymentId}`, JSON.stringify(responseJson));
+                localStorage.setItem(`n8n_response_${realPaymentId}`, JSON.stringify(responseJson));
                 localStorage.setItem('latest_n8n_response', JSON.stringify(responseJson));
                 console.log('💾 [ZelleCheckout] Resposta do n8n armazenada no localStorage');
-                console.log('💾 [ZelleCheckout] Chave:', `n8n_response_${tempPaymentId}`);
+                console.log('💾 [ZelleCheckout] Chave:', `n8n_response_${realPaymentId}`);
                 console.log('💾 [ZelleCheckout] Valor:', JSON.stringify(responseJson));
 
-                // Atualizar o screenshot_url na tabela zelle_payments (salvar apenas o path relativo)
-                try {
-                  console.log('🔄 [ZelleCheckout] Atualizando screenshot_url na tabela zelle_payments...');
-                  // Extrair apenas o path relativo da URL completa
-                  const relativePath = uploadData.path; // Já é o path relativo: zelle-payments/user_id/filename
-                  console.log('📁 [ZelleCheckout] Path relativo a ser salvo:', relativePath);
-                  
-                  // Primeiro, buscar o registro mais recente do usuário com status pending_verification
-                  const { data: existingPayments, error: selectError } = await supabase
-                    .from('zelle_payments')
-                    .select('id, amount, fee_type, created_at')
-                    .eq('user_id', user?.id)
-                    .eq('status', 'pending_verification')
-                    .order('created_at', { ascending: false })
-                    .limit(1);
-
-                  if (selectError) {
-                    console.error('❌ [ZelleCheckout] Erro ao buscar pagamentos existentes:', selectError);
-                  } else if (existingPayments && existingPayments.length > 0) {
-                    const paymentToUpdate = existingPayments[0];
-                    console.log('🔍 [ZelleCheckout] Pagamento encontrado para atualizar:', paymentToUpdate);
-                    
-                    // Atualizar o screenshot_url usando o ID específico
-                    const { error: updateError } = await supabase
-                      .from('zelle_payments')
-                      .update({ screenshot_url: relativePath })
-                      .eq('id', paymentToUpdate.id);
-
-                    if (updateError) {
-                      console.error('❌ [ZelleCheckout] Erro ao atualizar screenshot_url:', updateError);
-                    } else {
-                      console.log('✅ [ZelleCheckout] screenshot_url atualizado com sucesso!');
-                    }
-                  } else {
-                    console.log('⚠️ [ZelleCheckout] Nenhum pagamento pendente encontrado para atualizar');
-                  }
-                } catch (error) {
-                  console.error('❌ [ZelleCheckout] Erro ao atualizar screenshot_url:', error);
-                }
+                // Screenshot URL já foi salvo na criação do pagamento
+                console.log('✅ [ZelleCheckout] Screenshot URL já salvo na criação do pagamento');
               }
               
               // Verificar outros campos possíveis
@@ -470,8 +454,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       onSuccess?.();
       // Redirecionar para página de aguardo
-      console.log('🔄 [ZelleCheckout] Redirecionando para waiting page com temp_payment_id:', tempPaymentId);
-      navigate(`/checkout/zelle/waiting?temp_payment_id=${tempPaymentId}&fee_type=${normalizedFeeType}&amount=${currentFee.amount}&scholarshipsIds=${scholarshipsIds}`);
+      console.log('🔄 [ZelleCheckout] Redirecionando para waiting page com payment_id:', realPaymentId);
+      navigate(`/checkout/zelle/waiting?payment_id=${realPaymentId}&fee_type=${normalizedFeeType}&amount=${currentFee.amount}&scholarshipsIds=${scholarshipsIds}`);
     } catch (error) {
       console.error('Error processing Zelle payment:', error);
       onError?.(error instanceof Error ? error.message : 'Error processing payment');

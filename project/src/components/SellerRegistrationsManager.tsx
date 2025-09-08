@@ -15,7 +15,11 @@ interface SellerRegistration {
   approved_by?: string;
 }
 
-const SellerRegistrationsManager: React.FC = () => {
+interface SellerRegistrationsManagerProps {
+  onRefresh?: () => void;
+}
+
+const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({ onRefresh }) => {
   const { user } = useAuth();
   const [registrations, setRegistrations] = useState<SellerRegistration[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,20 +43,168 @@ const SellerRegistrationsManager: React.FC = () => {
 
     setLoading(true);
     try {
-      // For affiliate admins, load all pending registrations
-      // regardless of the code used
-      const { data, error } = await supabase
-        .from('seller_registrations')
-        .select('*')
+      // Load registrations that used codes created by this admin
+      // First get the codes created by this admin
+      const { data: adminCodes, error: codesError } = await supabase
+        .from('seller_registration_codes')
+        .select('code')
+        .eq('admin_id', user.id)
+        .eq('is_active', true);
+
+      if (codesError) {
+        console.error('Error loading admin codes:', codesError);
+        setError('Error loading admin codes');
+        return;
+      }
+
+      if (!adminCodes || adminCodes.length === 0) {
+        setRegistrations([]);
+        setHasLoaded(true);
+        return;
+      }
+
+      const codes = adminCodes.map(c => c.code);
+      
+      // Get all users who have used these codes (including those who were rejected)
+      const { data: users, error: usersError } = await supabase
+        .from('user_profiles')
+        .select(`
+          user_id,
+          full_name,
+          email,
+          phone,
+          created_at,
+          role,
+          seller_referral_code
+        `)
+        .in('seller_referral_code', codes)
+        .eq('role', 'student')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading registrations:', error);
-        setError('Error loading registrations');
-      } else {
-        setRegistrations(data || []);
-        setHasLoaded(true); // Marcar que os dados foram carregados
+      if (usersError) {
+        console.error('Error loading users:', usersError);
+        setError('Error loading users');
+        return;
       }
+
+      // Get approved sellers for this admin
+      const { data: sellers, error: sellersError } = await supabase
+        .from('sellers')
+        .select(`
+          user_id,
+          name,
+          email,
+          created_at
+        `)
+        .eq('affiliate_admin_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (sellersError) {
+        console.error('Error loading sellers:', sellersError);
+        // Don't fail completely, just log the error
+      }
+
+      // Get registration history for this admin
+      const { data: history, error: historyError } = await supabase
+        .from('seller_registration_history')
+        .select(`
+          user_id,
+          status,
+          action_taken_at,
+          notes,
+          registration_code
+        `)
+        .eq('admin_id', user.id)
+        .order('action_taken_at', { ascending: false });
+
+      if (historyError) {
+        console.error('Error loading registration history:', historyError);
+        // Don't fail completely, just log the error
+      }
+
+      // Create maps for approved sellers and history
+      const approvedSellers = new Map();
+      (sellers || []).forEach(seller => {
+        approvedSellers.set(seller.user_id, seller);
+      });
+
+      const registrationHistory = new Map();
+      (history || []).forEach(record => {
+        // Only keep the most recent record for each user
+        if (!registrationHistory.has(record.user_id)) {
+          registrationHistory.set(record.user_id, record);
+        }
+      });
+
+      // Get user profiles for rejected users from history
+      // Only show rejected users who are NOT currently using any registration code
+      const rejectedUserIds = (history || [])
+        .filter(record => record.status === 'rejected')
+        .map(record => record.user_id);
+
+      let rejectedUsers = [];
+      if (rejectedUserIds.length > 0) {
+        const { data: rejectedUsersData, error: rejectedError } = await supabase
+          .from('user_profiles')
+          .select(`
+            user_id,
+            full_name,
+            email,
+            phone,
+            created_at,
+            role,
+            seller_referral_code
+          `)
+          .in('user_id', rejectedUserIds);
+
+        if (rejectedError) {
+          console.error('Error loading rejected users:', rejectedError);
+        } else {
+          // Only show users who are NOT currently using a registration code
+          // (i.e., their seller_referral_code is null)
+          rejectedUsers = (rejectedUsersData || []).filter(user => !user.seller_referral_code);
+        }
+      }
+
+      // Transform current pending users into registration format
+      const currentRegistrations = (users || []).map(user => {
+        const isApproved = approvedSellers.has(user.user_id);
+        const status = isApproved ? 'approved' : 'pending';
+        
+        return {
+          id: user.user_id,
+          user_id: user.user_id,
+          email: user.email,
+          full_name: user.full_name,
+          phone: user.phone,
+          status: status,
+          created_at: user.created_at,
+          registration_code: user.seller_referral_code || 'Unknown',
+          approved_at: isApproved ? approvedSellers.get(user.user_id)?.created_at : null
+        };
+      });
+
+      // Transform rejected users into registration format
+      const rejectedRegistrations = rejectedUsers.map(user => {
+        const historyRecord = registrationHistory.get(user.user_id);
+        return {
+          id: user.user_id,
+          user_id: user.user_id,
+          email: user.email,
+          full_name: user.full_name,
+          phone: user.phone,
+          status: 'rejected',
+          created_at: user.created_at,
+          registration_code: historyRecord?.registration_code || 'Unknown',
+          approved_at: historyRecord?.action_taken_at || null
+        };
+      });
+
+      // Combine all registrations
+      const registrations = [...currentRegistrations, ...rejectedRegistrations];
+
+      setRegistrations(registrations);
+      setHasLoaded(true);
     } catch (err) {
       console.error('Error loading registrations:', err);
       setError('Error loading registrations');
@@ -61,45 +213,112 @@ const SellerRegistrationsManager: React.FC = () => {
     }
   };
 
-  const approveRegistration = async (registrationId: string) => {
+  const approveRegistration = async (userId: string) => {
     try {
-      // 1. Update status to approved
-      const { error: updateError } = await supabase
-        .from('seller_registrations')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: user?.id
-        })
-        .eq('id', registrationId);
-
-      if (updateError) {
-        console.error('Error approving registration:', updateError);
-        throw updateError;
-      }
-
-      // 2. Get the registration to obtain email and user_id
-      const { data: registration } = await supabase
-        .from('seller_registrations')
-        .select('email, full_name, user_id')
-        .eq('id', registrationId)
+      // 1. Get the user profile to obtain details
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', userId)
         .single();
 
-      if (registration && registration.user_id) {
-        // 3. Update the user's role in the user_profiles table
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .update({ role: 'seller' })
-          .eq('user_id', registration.user_id);
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        throw profileError;
+      }
 
-        if (profileError) {
-          console.error('Error updating user role:', profileError);
-          // We won't fail here since the registration was already approved
+      if (!userProfile) {
+        throw new Error('User profile not found');
+      }
+
+      // 2. Update the user's role from student to seller
+      // Update user role to 'seller' using RPC function to avoid RLS recursion
+      const { data: roleUpdateResult, error: roleUpdateError } = await supabase
+        .rpc('update_user_role_safe', {
+          target_user_id: userId,
+          new_role: 'seller'
+        });
+
+      if (roleUpdateError) {
+        console.error('Error updating user role:', roleUpdateError);
+        throw roleUpdateError;
+      }
+
+      if (!roleUpdateResult) {
+        throw new Error('Failed to update user role - insufficient permissions');
+      }
+
+      // 3. Get affiliate_admin_id from affiliate_admins table
+      const { data: affiliateAdmin, error: adminError } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (adminError) {
+        console.error('Error fetching affiliate admin:', adminError);
+        throw adminError;
+      }
+
+      if (!affiliateAdmin) {
+        throw new Error('Affiliate admin not found');
+      }
+
+      // 4. Check if seller already exists (ignore 406 errors)
+      const { data: existingSeller, error: checkError } = await supabase
+        .from('sellers')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 errors
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 = no rows returned, which is expected if seller doesn't exist
+        console.warn('Error checking existing seller:', checkError);
+      }
+
+      if (!existingSeller) {
+        // 5. Create seller record in sellers table
+        const { error: sellerError } = await supabase
+          .from('sellers')
+          .insert({
+            user_id: userId,
+            affiliate_admin_id: affiliateAdmin.id,
+            name: userProfile.full_name,
+            email: userProfile.email,
+            phone: userProfile.phone,
+            territory: 'General',
+            referral_code: `SELL${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            is_active: true,
+            notes: 'Approved from registration'
+          });
+
+        if (sellerError) {
+          console.error('Error creating seller record:', sellerError);
+          throw sellerError;
         }
       }
 
-      // 4. Reload registrations
+      // 6. Record the approval in history
+      const { error: historyError } = await supabase
+        .from('seller_registration_history')
+        .insert({
+          user_id: userId,
+          admin_id: user?.id,
+          registration_code: userProfile.seller_referral_code || 'Unknown',
+          status: 'approved',
+          notes: 'Registration approved by admin'
+        });
+
+      if (historyError) {
+        console.error('Error recording approval history:', historyError);
+        // Don't fail completely, just log the error
+      }
+
+      // 7. Reload registrations and refresh parent component
       await loadRegistrations();
+      if (onRefresh) {
+        onRefresh(); // Refresh the parent component (SellerManagement)
+      }
       setSuccess('Registration approved successfully!');
       setTimeout(() => setSuccess(''), 3000);
 
@@ -110,43 +329,50 @@ const SellerRegistrationsManager: React.FC = () => {
     }
   };
 
-  const rejectRegistration = async (registrationId: string) => {
+  const rejectRegistration = async (userId: string) => {
     try {
-      // 1. Get the registration to obtain user_id before updating
-      const { data: registration } = await supabase
-        .from('seller_registrations')
-        .select('user_id')
-        .eq('id', registrationId)
+      // 1. Get the user's registration code before removing it
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('seller_referral_code')
+        .eq('user_id', userId)
         .single();
 
-      if (!registration) {
-        throw new Error('Registration not found');
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        throw profileError;
       }
 
-      // 2. Update status to rejected
+      const registrationCode = userProfile?.seller_referral_code || 'Unknown';
+
+      // 2. Record the rejection in history
+      const { error: historyError } = await supabase
+        .from('seller_registration_history')
+        .insert({
+          user_id: userId,
+          admin_id: user?.id,
+          registration_code: registrationCode,
+          status: 'rejected',
+          notes: 'Registration rejected by admin'
+        });
+
+      if (historyError) {
+        console.error('Error recording rejection history:', historyError);
+        // Don't fail completely, just log the error
+      }
+
+      // 3. Remove the seller_referral_code to remove from pending list
       const { error: updateError } = await supabase
-        .from('seller_registrations')
-        .update({
-          status: 'rejected'
+        .from('user_profiles')
+        .update({ 
+          seller_referral_code: null,
+          updated_at: new Date().toISOString()
         })
-        .eq('id', registrationId);
+        .eq('user_id', userId);
 
       if (updateError) {
         console.error('Error rejecting registration:', updateError);
         throw updateError;
-      }
-
-              // 3. If the user exists, revert the role to 'student'
-      if (registration.user_id) {
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .update({ role: 'student' })
-          .eq('user_id', registration.user_id);
-
-        if (profileError) {
-          console.error('Error reverting user role:', profileError);
-          // We won't fail here since the registration was already rejected
-        }
       }
 
       // 4. Reload registrations

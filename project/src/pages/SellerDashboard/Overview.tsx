@@ -50,12 +50,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       view: 'students'
     },
     {
-      title: 'Referral Tools',
+      title: 'Affiliate Tools',
       description: 'Access tools to increase sales',
       icon: Target,
       color: 'bg-blue-600',
       count: `${stats.conversionRate}%`,
-      view: 'referral-tools'
+      view: 'affiliate-tools'
     },
     {
       title: 'Performance',

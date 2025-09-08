@@ -491,6 +491,58 @@ const UniversityManagement: React.FC<UniversityManagementProps> = ({
                 </div>
               </div>
 
+              {/* Contact Information */}
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-3">Contact Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Phone</label>
+                    <p className="text-slate-900">{selectedUniversity.contact?.phone || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Email</label>
+                    <p className="text-slate-900">{selectedUniversity.contact?.email || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Admissions Email</label>
+                    <p className="text-slate-900">{selectedUniversity.contact?.admissionsEmail || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Fax</label>
+                    <p className="text-slate-900">{selectedUniversity.contact?.fax || 'Not provided'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Responsible Person Information */}
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-3">Account Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Responsible Person</label>
+                    <p className="text-slate-900">{selectedUniversity.responsible_name || selectedUniversity.user_profile?.full_name || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Account Email</label>
+                    <p className="text-slate-900">{selectedUniversity.user_email || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Account Phone</label>
+                    <p className="text-slate-900">{selectedUniversity.user_profile?.phone || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-500">Account Status</label>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedUniversity.user_profile?.status === 'active'
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedUniversity.user_profile?.status || 'Unknown'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {selectedUniversity.description && (
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-3">Description</h4>

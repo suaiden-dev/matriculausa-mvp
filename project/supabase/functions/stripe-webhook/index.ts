@@ -334,6 +334,34 @@ async function handleCheckoutSessionCompleted(session: any) {
           console.log('User profile updated - application fee paid');
         }
 
+        // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
+        try {
+          console.log('[NOTIFICAÇÃO] Enviando notificação de Application Fee para universidade...');
+          
+          const notificationResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/notify-university-application-fee-paid`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({
+              application_id: applicationId,
+              user_id: userId,
+              scholarship_id: metadata.scholarship_id || metadata.selected_scholarship_id
+            }),
+          });
+
+          if (notificationResponse.ok) {
+            const notificationResult = await notificationResponse.json();
+            console.log('[NOTIFICAÇÃO] Notificação de Application Fee enviada com sucesso:', notificationResult);
+          } else {
+            const errorData = await notificationResponse.json();
+            console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de Application Fee:', errorData);
+          }
+        } catch (notificationError) {
+          console.error('[NOTIFICAÇÃO] Erro ao notificar universidade sobre Application Fee:', notificationError);
+        }
+
         // Log dos valores processados
         console.log('Application fee payment processed:', {
           userId,
@@ -641,6 +669,61 @@ async function handleCheckoutSessionCompleted(session: any) {
           } else {
             console.log('Scholarship fee payment record inserted for user:', userId);
           }
+        }
+
+        // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
+        try {
+          console.log('[NOTIFICAÇÃO] Enviando notificação de Scholarship Fee para universidade...');
+          
+          // Buscar application_id baseado no scholarship_id
+          let applicationId = null;
+          if (scholarshipsIds && scholarshipsIds.length > 0) {
+            const { data: userProfile } = await supabase
+              .from('user_profiles')
+              .select('id')
+              .eq('user_id', userId)
+              .single();
+            
+            if (userProfile) {
+              const { data: application } = await supabase
+                .from('scholarship_applications')
+                .select('id')
+                .eq('student_id', userProfile.id)
+                .eq('scholarship_id', scholarshipsIds[0])
+                .single();
+              
+              if (application) {
+                applicationId = application.id;
+              }
+            }
+          }
+          
+          if (applicationId) {
+            const notificationResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/notify-university-scholarship-fee-paid`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+              },
+              body: JSON.stringify({
+                application_id: applicationId,
+                user_id: userId,
+                scholarship_id: scholarshipsIds[0]
+              }),
+            });
+
+            if (notificationResponse.ok) {
+              const notificationResult = await notificationResponse.json();
+              console.log('[NOTIFICAÇÃO] Notificação de Scholarship Fee enviada com sucesso:', notificationResult);
+            } else {
+              const errorData = await notificationResponse.json();
+              console.error('[NOTIFICAÇÃO] Erro ao enviar notificação de Scholarship Fee:', errorData);
+            }
+          } else {
+            console.warn('[NOTIFICAÇÃO] Application ID não encontrado para notificação de Scholarship Fee');
+          }
+        } catch (notificationError) {
+          console.error('[NOTIFICAÇÃO] Erro ao notificar universidade sobre Scholarship Fee:', notificationError);
         }
 
         // --- NOTIFICAÇÃO VIA WEBHOOK N8N ---

@@ -341,12 +341,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       // Fallback para método antigo se userId não estiver disponível ou se as funções SQL falharem
       console.log('🔍 Using fallback method to load data directly from tables');
 
-      // Buscar sellers ativos
+      // Buscar sellers ativos usando função RPC
       const { data: sellersData, error: sellersError } = await supabase
-        .from('sellers')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .rpc('get_admin_sellers_analytics_fixed', { 
+          admin_user_id: currentUser?.id 
+        });
 
       console.log('🔍 Fallback sellers response:', { data: sellersData, error: sellersError });
 
@@ -355,20 +354,15 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         throw new Error(`Failed to load sellers: ${sellersError.message}`);
       }
 
-      // Buscar estudantes que têm seller_referral_code preenchido
+      // Buscar estudantes usando função RPC
       const { data: studentsData, error: studentsError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .not('seller_referral_code', 'is', null)
-        .neq('seller_referral_code', '')
-        .order('created_at', { ascending: false });
+        .rpc('get_admin_students_analytics', { 
+          admin_user_id: currentUser?.id 
+        });
 
-      // Buscar vendedores ativos para filtrar estudantes
-      console.log('🔍 About to query sellers table with select: referral_code, id, name');
-      const { data: activeSellersData, error: activeSellersError } = await supabase
-        .from('sellers')
-        .select('referral_code, id, name')
-        .eq('is_active', true);
+      // Usar os dados de sellers já carregados pela função RPC
+      const activeSellersData = sellersData || [];
+      const activeSellersError = null;
 
       console.log('🔍 Query completed. Data:', activeSellersData?.length, 'Error:', activeSellersError);
       
@@ -593,14 +587,15 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
         let sellerData = null;
         if (profileData.seller_referral_code) {
-          const { data: sellerResult } = await supabase
-            .from('sellers')
-            .select('name')
-            .eq('referral_code', profileData.seller_referral_code)
-            .single();
+          // Buscar seller usando função RPC
+          const { data: sellersResult } = await supabase
+            .rpc('get_admin_sellers_analytics_fixed', { 
+              admin_user_id: currentUser?.id 
+            });
+          const sellerResult = sellersResult?.find((s: any) => s.referral_code === profileData.seller_referral_code);
           
           if (sellerResult) {
-            sellerData = sellerResult;
+            sellerData = { name: sellerResult.seller_name };
           }
         }
 
