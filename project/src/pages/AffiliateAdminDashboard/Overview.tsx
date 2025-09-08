@@ -5,13 +5,19 @@ import {
   UserPlus, 
   DollarSign, 
   TrendingUp, 
-  ArrowUpRight
+  ArrowUpRight,
+  Clock,
+  UserCheck,
+  UserX
 } from 'lucide-react';
 
 interface OverviewProps {
   stats: {
     totalSellers?: number;
     activeSellers?: number;
+    pendingSellers?: number;
+    approvedSellers?: number;
+    rejectedSellers?: number;
     totalStudents?: number;
     totalRevenue?: number;
   };
@@ -28,6 +34,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
   const safeStats = {
     totalSellers: stats?.totalSellers || 0,
     activeSellers: stats?.activeSellers || 0,
+    pendingSellers: stats?.pendingSellers || 0,
+    approvedSellers: stats?.approvedSellers || 0,
+    rejectedSellers: stats?.rejectedSellers || 0,
     totalStudents: stats?.totalStudents || 0,
     totalRevenue: stats?.totalRevenue || 0
   };
@@ -157,6 +166,56 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
           </div>
         </div>
 
+      {/* Seller Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500 mb-1">Pending Sellers</p>
+              <p className="text-3xl font-bold text-slate-900">{safeStats.pendingSellers}</p>
+              <div className="flex items-center mt-2">
+                <Clock className="h-4 w-4 text-yellow-500 mr-1" />
+                <span className="text-sm font-medium text-yellow-600">Awaiting approval</span>
+              </div>
+            </div>
+            <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Clock className="h-7 w-7 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500 mb-1">Approved Sellers</p>
+              <p className="text-3xl font-bold text-slate-900">{safeStats.approvedSellers}</p>
+              <div className="flex items-center mt-2">
+                <UserCheck className="h-4 w-4 text-green-500 mr-1" />
+                <span className="text-sm font-medium text-green-600">Active sellers</span>
+              </div>
+            </div>
+            <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <UserCheck className="h-7 w-7 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500 mb-1">Rejected Sellers</p>
+              <p className="text-3xl font-bold text-slate-900">{safeStats.rejectedSellers}</p>
+              <div className="flex items-center mt-2">
+                <UserX className="h-4 w-4 text-red-500 mr-1" />
+                <span className="text-sm font-medium text-red-600">Not approved</span>
+              </div>
+            </div>
+            <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <UserX className="h-7 w-7 text-white" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Quick Actions */}
       <div>

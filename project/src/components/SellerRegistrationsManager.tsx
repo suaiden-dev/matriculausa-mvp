@@ -31,9 +31,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
   // Load registrations apenas uma vez
   useEffect(() => {
-    console.log('🔄 SellerRegistrationsManager useEffect triggered', { user: user?.id, hasLoaded });
     if (user && !hasLoaded) {
-      console.log('🔄 Loading registrations for user:', user.id);
       loadRegistrations();
     }
   }, [user?.id, hasLoaded]); // Depender apenas do ID do usuário e da flag de carregamento
@@ -43,6 +41,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
     setLoading(true);
     try {
+      
       // Load registrations that used codes created by this admin
       // First get the codes created by this admin
       const { data: adminCodes, error: codesError } = await supabase
@@ -50,6 +49,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         .select('code')
         .eq('admin_id', user.id)
         .eq('is_active', true);
+
 
       if (codesError) {
         console.error('Error loading admin codes:', codesError);
@@ -63,11 +63,9 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         return;
       }
 
-      // Get all users who used these codes (from user_profiles)
       const codes = adminCodes.map(c => c.code);
       
-      // Get all users who have used these codes
-      // We'll check the seller_referral_code field in user_profiles
+      // Get all users who have used these codes (including those who were rejected)
       const { data: users, error: usersError } = await supabase
         .from('user_profiles')
         .select(`
@@ -80,8 +78,9 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
           seller_referral_code
         `)
         .in('seller_referral_code', codes)
-        .eq('role', 'student') // Only students who used the code
+        .eq('role', 'student')
         .order('created_at', { ascending: false });
+
 
       if (usersError) {
         console.error('Error loading users:', usersError);
@@ -89,17 +88,143 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         return;
       }
 
-      // Transform users into registration format
-      const registrations = (users || []).map(user => ({
-        id: user.user_id,
-        user_id: user.user_id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-        status: 'pending',
-        created_at: user.created_at,
-        registration_code: user.seller_referral_code || 'Unknown'
-      }));
+      // Get approved sellers for this admin
+      // First get the affiliate_admin record for this user
+      const { data: affiliateAdmin, error: adminError } = await supabase
+        .from('affiliate_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+
+      if (adminError) {
+        console.error('Error fetching affiliate admin:', adminError);
+        // Don't fail completely, just log the error
+      }
+
+      let sellers = [];
+      if (affiliateAdmin) {
+        const { data: sellersData, error: sellersError } = await supabase
+          .from('sellers')
+          .select(`
+            user_id,
+            name,
+            email,
+            created_at
+          `)
+          .eq('affiliate_admin_id', affiliateAdmin.id)
+          .order('created_at', { ascending: false });
+
+
+        if (sellersError) {
+          console.error('Error loading sellers:', sellersError);
+          // Don't fail completely, just log the error
+        } else {
+          sellers = sellersData || [];
+        }
+      }
+
+      // Get registration history for this admin
+      const { data: history, error: historyError } = await supabase
+        .from('seller_registration_history')
+        .select(`
+          user_id,
+          status,
+          action_taken_at,
+          notes,
+          registration_code
+        `)
+        .eq('admin_id', user.id)
+        .order('action_taken_at', { ascending: false });
+
+
+      if (historyError) {
+        console.error('Error loading registration history:', historyError);
+        // Don't fail completely, just log the error
+      }
+
+      // Create maps for approved sellers and history
+      const approvedSellers = new Map();
+      (sellers || []).forEach(seller => {
+        approvedSellers.set(seller.user_id, seller);
+      });
+
+      const registrationHistory = new Map();
+      (history || []).forEach(record => {
+        // Only keep the most recent record for each user
+        if (!registrationHistory.has(record.user_id)) {
+          registrationHistory.set(record.user_id, record);
+        }
+      });
+
+      // Get user profiles for rejected users from history
+      // Only show rejected users who are NOT currently using any registration code
+      const rejectedUserIds = (history || [])
+        .filter(record => record.status === 'rejected')
+        .map(record => record.user_id);
+
+      let rejectedUsers = [];
+      if (rejectedUserIds.length > 0) {
+        const { data: rejectedUsersData, error: rejectedError } = await supabase
+          .from('user_profiles')
+          .select(`
+            user_id,
+            full_name,
+            email,
+            phone,
+            created_at,
+            role,
+            seller_referral_code
+          `)
+          .in('user_id', rejectedUserIds);
+
+        if (rejectedError) {
+          console.error('Error loading rejected users:', rejectedError);
+        } else {
+          // Only show users who are NOT currently using a registration code
+          // (i.e., their seller_referral_code is null)
+          rejectedUsers = (rejectedUsersData || []).filter(user => !user.seller_referral_code);
+        }
+      }
+
+      // Transform current pending users into registration format
+      const currentRegistrations = (users || []).map(user => {
+        const isApproved = approvedSellers.has(user.user_id);
+        const status = isApproved ? 'approved' : 'pending';
+        
+        
+        return {
+          id: user.user_id,
+          user_id: user.user_id,
+          email: user.email,
+          full_name: user.full_name,
+          phone: user.phone,
+          status: status,
+          created_at: user.created_at,
+          registration_code: user.seller_referral_code || 'Unknown',
+          approved_at: isApproved ? approvedSellers.get(user.user_id)?.created_at : null
+        };
+      });
+
+      // Transform rejected users into registration format
+      const rejectedRegistrations = rejectedUsers.map(user => {
+        const historyRecord = registrationHistory.get(user.user_id);
+        return {
+          id: user.user_id,
+          user_id: user.user_id,
+          email: user.email,
+          full_name: user.full_name,
+          phone: user.phone,
+          status: 'rejected',
+          created_at: user.created_at,
+          registration_code: historyRecord?.registration_code || 'Unknown',
+          approved_at: historyRecord?.action_taken_at || null
+        };
+      });
+
+      // Combine all registrations
+      const registrations = [...currentRegistrations, ...rejectedRegistrations];
+
 
       setRegistrations(registrations);
       setHasLoaded(true);
@@ -196,7 +321,23 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         }
       }
 
-      // 6. Reload registrations and refresh parent component
+      // 6. Record the approval in history
+      const { error: historyError } = await supabase
+        .from('seller_registration_history')
+        .insert({
+          user_id: userId,
+          admin_id: user?.id,
+          registration_code: userProfile.seller_referral_code || 'Unknown',
+          status: 'approved',
+          notes: 'Registration approved by admin'
+        });
+
+      if (historyError) {
+        console.error('Error recording approval history:', historyError);
+        // Don't fail completely, just log the error
+      }
+
+      // 7. Reload registrations and refresh parent component
       await loadRegistrations();
       if (onRefresh) {
         onRefresh(); // Refresh the parent component (SellerManagement)
@@ -213,7 +354,37 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
 
   const rejectRegistration = async (userId: string) => {
     try {
-      // 1. Remove the seller_referral_code to remove from pending list
+      // 1. Get the user's registration code before removing it
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('seller_referral_code')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        throw profileError;
+      }
+
+      const registrationCode = userProfile?.seller_referral_code || 'Unknown';
+
+      // 2. Record the rejection in history
+      const { error: historyError } = await supabase
+        .from('seller_registration_history')
+        .insert({
+          user_id: userId,
+          admin_id: user?.id,
+          registration_code: registrationCode,
+          status: 'rejected',
+          notes: 'Registration rejected by admin'
+        });
+
+      if (historyError) {
+        console.error('Error recording rejection history:', historyError);
+        // Don't fail completely, just log the error
+      }
+
+      // 3. Remove the seller_referral_code to remove from pending list
       const { error: updateError } = await supabase
         .from('user_profiles')
         .update({ 
@@ -227,7 +398,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         throw updateError;
       }
 
-      // 2. Reload registrations
+      // 4. Reload registrations
       await loadRegistrations();
       setSuccess('Registration rejected successfully!');
       setTimeout(() => setSuccess(''), 3000);
@@ -304,39 +475,15 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         </div>
       )}
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+      {/* Statistics - Only Pending */}
+      <div className="mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 max-w-xs">
           <div className="flex items-center">
             <Clock className="w-5 h-5 text-gray-600 mr-2" />
             <div>
               <p className="text-sm font-medium text-gray-700">Pending</p>
               <p className="text-2xl font-bold text-gray-900">
                 {registrations.filter(r => r.status === 'pending').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <UserCheck className="w-5 h-5 text-gray-600 mr-2" />
-            <div>
-              <p className="text-sm font-medium text-gray-700">Approved</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {registrations.filter(r => r.status === 'approved').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <UserX className="w-5 h-5 text-gray-600 mr-2" />
-            <div>
-              <p className="text-sm font-medium text-gray-700">Rejected</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {registrations.filter(r => r.status === 'rejected').length}
               </p>
             </div>
           </div>

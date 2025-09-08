@@ -81,10 +81,10 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const applicationFeeAmount = searchParams.get('applicationFeeAmount') ? parseFloat(searchParams.get('applicationFeeAmount')!) : undefined;
   
   // Normalizar feeType para lidar com inconsistências (i20_control_fee vs i-20_control_fee)
-  const normalizedFeeType = feeType === 'i20_control_fee' ? 'i-20_control_fee' : feeType;
+  const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
 
   // Debug logs
-  console.log('🔍 [ZelleCheckoutPage] Componente renderizando');
+  console.log('🔍 [ZelleCheckoutPage] Componente renderizando - ID:', Math.random().toString(36).substr(2, 9));
   console.log('🔍 [ZelleCheckoutPage] feeType:', feeType);
   console.log('🔍 [ZelleCheckoutPage] normalizedFeeType:', normalizedFeeType);
   console.log('🔍 [ZelleCheckoutPage] amount:', amount);
@@ -112,7 +112,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       icon: <CreditCard className="w-6 h-6" />
     },
     {
-      type: 'i-20_control_fee',
+      type: 'i20_control',
       amount: 999,
       description: 'I-20 Control Fee - Document processing and validation',
       icon: <CreditCard className="w-6 h-6" />
@@ -142,6 +142,15 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     console.log('📁 [ZelleCheckout] Arquivo selecionado:', selectedFile);
     console.log('💰 [ZelleCheckout] Tipo de taxa:', feeType);
     console.log('💵 [ZelleCheckout] Valor:', amount);
+    console.log('🔄 [ZelleCheckout] Estado de loading atual:', loading);
+    
+    // Proteção contra duplo clique
+    if (loading) {
+      console.log('⚠️ [ZelleCheckout] Já está processando, ignorando duplo clique');
+      return;
+    }
+    
+    console.log('✅ [ZelleCheckout] Iniciando processamento...');
     
     if (!selectedFile) {
       console.log('❌ [ZelleCheckout] Nenhum arquivo selecionado');
@@ -155,8 +164,11 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       return;
     }
 
-    console.log('🚀 [ZelleCheckout] Iniciando upload do arquivo:', selectedFile.name);
+    // Definir loading como true IMEDIATAMENTE para evitar duplicação
+    console.log('🔄 [ZelleCheckout] Definindo loading como true');
     setLoading(true);
+    
+    console.log('🚀 [ZelleCheckout] Iniciando upload do arquivo:', selectedFile.name);
     try {
       // Upload do arquivo para Supabase Storage
       const fileName = `zelle-payment-${Date.now()}.${selectedFile.name.split('.').pop()}`;
@@ -171,34 +183,48 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       if (uploadError) throw uploadError;
 
-      // Criar registro do pagamento no banco ANTES de enviar para n8n
-      console.log('💾 [ZelleCheckout] Criando registro de pagamento no banco...');
+      // Verificar se já existe um pagamento similar recente (últimos 30 segundos) para evitar duplicação
+      console.log('🔍 [ZelleCheckout] Verificando pagamentos duplicados...');
+      const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
       
-      const { data: paymentData, error: paymentError } = await supabase
+      // Verificar duplicação mais abrangente - qualquer pagamento do mesmo usuário com mesmo valor e tipo
+      const { data: existingPayment, error: checkError } = await supabase
         .from('zelle_payments')
-        .insert({
-          user_id: user?.id,
-          amount: currentFee.amount,
-          fee_type: normalizedFeeType,
-          status: 'pending_verification',
-          screenshot_url: uploadData.path, // Salvar o path relativo
-          created_at: new Date().toISOString()
-        })
-        .select('id')
-        .single();
+        .select('id, fee_type, created_at')
+        .eq('user_id', user?.id)
+        .eq('amount', currentFee.amount)
+        .eq('fee_type', normalizedFeeType) // ✅ Adicionar verificação por tipo de taxa
+        .gte('created_at', thirtySecondsAgo)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (paymentError) {
-        console.error('❌ [ZelleCheckout] Erro ao criar pagamento no banco:', paymentError);
-        throw new Error('Failed to create payment record');
+      console.log('🔍 [ZelleCheckout] Verificação de duplicação:', { 
+        existingPayment, 
+        checkError, 
+        userId: user?.id, 
+        amount: currentFee.amount,
+        feeType: normalizedFeeType, // ✅ Adicionar tipo de taxa nos logs
+        thirtySecondsAgo 
+      });
+
+      if (existingPayment && existingPayment.length > 0) {
+        console.log('⚠️ [ZelleCheckout] Pagamento duplicado detectado!', existingPayment[0]);
+        console.log('⚠️ [ZelleCheckout] Cancelando criação para evitar duplicação.');
+        throw new Error('Duplicate payment detected. Please wait a moment before trying again.');
       }
 
-      const realPaymentId = paymentData.id;
-      console.log('✅ [ZelleCheckout] Pagamento criado com ID real:', realPaymentId);
+      // Gerar ID único para o pagamento (será usado pelo n8n para criar o registro)
+      console.log('💾 [ZelleCheckout] Gerando ID único para o pagamento...');
+      const realPaymentId = crypto.randomUUID();
+      console.log('✅ [ZelleCheckout] ID gerado:', realPaymentId);
 
       // Enviar webhook para n8n
       const imageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
       
       // Payload padronizado para o webhook
+      const webhookId = Math.random().toString(36).substr(2, 9);
+      console.log('📤 [ZelleCheckout] Criando webhook payload - ID:', webhookId);
+      
       const webhookPayload: WebhookPayload = {
         user_id: user?.id,
         image_url: imageUrl,
@@ -426,8 +452,47 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 console.log('💾 [ZelleCheckout] Chave:', `n8n_response_${realPaymentId}`);
                 console.log('💾 [ZelleCheckout] Valor:', JSON.stringify(responseJson));
 
-                // Screenshot URL já foi salvo na criação do pagamento
-                console.log('✅ [ZelleCheckout] Screenshot URL já salvo na criação do pagamento');
+                // Atualizar pagamento no banco com resultado do n8n
+                console.log('💾 [ZelleCheckout] Atualizando pagamento no banco com resultado do n8n...');
+                
+                try {
+                  // Buscar o pagamento mais recente do usuário para este tipo de taxa
+                  const { data: recentPayment, error: findError } = await supabase
+                    .from('zelle_payments')
+                    .select('id')
+                    .eq('user_id', user?.id)
+                    .eq('fee_type', normalizedFeeType)
+                    .eq('status', 'pending_verification')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                  if (findError || !recentPayment) {
+                    console.error('❌ [ZelleCheckout] Pagamento não encontrado:', findError);
+                    return;
+                  }
+
+                  console.log('🔍 [ZelleCheckout] Pagamento encontrado para atualização:', recentPayment.id);
+
+                  // Atualizar o registro encontrado
+                  const { data: updateData, error: updateError } = await supabase
+                    .from('zelle_payments')
+                    .update({
+                      screenshot_url: imageUrl,
+                      admin_notes: `n8n response: ${responseJson.response || responseText}`,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', recentPayment.id)
+                    .select();
+
+                  if (updateError) {
+                    console.error('❌ [ZelleCheckout] Erro ao atualizar pagamento:', updateError);
+                  } else {
+                    console.log('✅ [ZelleCheckout] Pagamento atualizado com sucesso:', updateData);
+                  }
+                } catch (updateError) {
+                  console.error('❌ [ZelleCheckout] Erro ao chamar Edge Function:', updateError);
+                }
               }
               
               // Verificar outros campos possíveis

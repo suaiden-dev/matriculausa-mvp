@@ -191,12 +191,30 @@ const SellerDashboard: React.FC = () => {
       console.log('🔍 Performance data:', { performanceData, performanceError });
       console.log('🔍 Students data:', { studentsData: processedStudents });
 
-      if (performanceError) {
+      // Always use RPC data if available, fallback to calculated values only if no data
+      if (performanceData && performanceData.length > 0) {
+        // Use real data from RPC function
+        const performance = performanceData[0];
+        console.log('🔍 Using RPC data:', { performance, performanceData });
+        setStats({
+          totalStudents: Number(performance.total_students) || 0,
+          totalRevenue: Number(performance.total_revenue) || 0,
+          monthlyStudents: Number(performance.monthly_students) || 0,
+          conversionRate: Number(performance.conversion_rate) || 0
+        });
+        console.log('🔍 Stats set from RPC:', {
+          totalStudents: Number(performance.total_students) || 0,
+          totalRevenue: Number(performance.total_revenue) || 0,
+          monthlyStudents: Number(performance.monthly_students) || 0,
+          conversionRate: Number(performance.conversion_rate) || 0
+        });
+      } else {
         console.error('Error loading performance data:', performanceError);
         // Fallback to calculated values if RPC fails
         const totalStudents = processedStudents.length;
         const totalRevenue = processedStudents.reduce((sum: number, s: any) => sum + (s.total_paid || 0), 0);
         console.log('🔍 Fallback calculation:', { totalStudents, totalRevenue, studentsData: processedStudents });
+        console.log('🔍 Individual student totals:', processedStudents.map((s: any) => ({ name: s.full_name, total_paid: s.total_paid })));
         
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
@@ -210,15 +228,6 @@ const SellerDashboard: React.FC = () => {
           totalRevenue,
           monthlyStudents,
           conversionRate: 0 // Default when no data
-        });
-      } else {
-        // Use real data from RPC function
-        const performance = performanceData[0];
-        setStats({
-          totalStudents: Number(performance.total_students) || 0,
-          totalRevenue: Number(performance.total_revenue) || 0,
-          monthlyStudents: Number(performance.monthly_students) || 0,
-          conversionRate: Number(performance.conversion_rate) || 0
         });
       }
 
