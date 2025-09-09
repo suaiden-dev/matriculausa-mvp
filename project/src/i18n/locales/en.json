@@ -2241,6 +2241,7 @@
     "students": {
       "title": "For Students",
       "scholarships": "Scholarships",
+      "matriculaRewards": "Matricula Rewards",
       "universities": "Universities",
       "howItWorks": "How It Works",
       "support": "Support",
@@ -2279,5 +2280,183 @@
       "subscribed": "Thank you for subscribing!"
     },
     "copyright": "© 2024 Matrícula USA. All rights reserved."
+  },
+  "matriculaRewardsLanding": {
+    "badge": "New Rewards Program",
+    "hero": {
+      "title": "Turn Your",
+      "titleHighlight": "Referrals into Discounts",
+      "subtitle": "on Your Tuition",
+      "description": "Earn <strong>Matricula Coins</strong> for every friend you refer and use them to <strong>reduce your tuition</strong> - 1 coin = $1 off your monthly payment",
+      "valueCards": {
+        "referFriends": {
+          "title": "Share & Earn",
+          "description": "Get your unique code and share with friends who want to study in the USA"
+        },
+        "accumulateCoins": {
+          "title": "Earn Rewards",
+          "description": "180 coins per successful referral - that's $180 off your tuition"
+        },
+        "payLess": {
+          "title": "Save Money",
+          "description": "Use your coins to reduce your monthly university payments"
+        }
+      },
+      "cta": {
+        "getStarted": "Start Now",
+        "learnMore": "See How It Works"
+      },
+      "demo": {
+        "title": "Live Demo",
+        "subtitle": "Your Rewards Dashboard",
+        "description": "See what your account would look like with some referrals",
+        "referralCode": {
+          "title": "Your Referral Code",
+          "code": "MTR2024",
+          "copy": "Copy Code",
+          "copied": "Copied!",
+          "loginToGetCode": "Login to get your referral code"
+        },
+        "balance": {
+          "title": "Current Balance",
+          "coins": "Matricula Coins",
+          "discount": "in discounts"
+        },
+        "discount": {
+          "title": "Available Discount",
+          "forTuition": "For Tuition",
+          "applicableTo": "Applicable to {count} universities"
+        },
+        "stats": {
+          "referred": "Friends Referred",
+          "signedUp": "Signed Up",
+          "conversion": "Conversion Rate",
+          "monthsSaving": "Months Saving"
+        }
+      }
+    },
+    "stats": {
+      "activeStudents": "Active Students",
+      "partnerUniversities": "Partner Universities", 
+      "discountsGiven": "In Discounts Given",
+      "satisfactionRate": "Satisfaction Rate"
+    },
+    "howItWorks": {
+      "title": "How Matricula Rewards Works",
+      "subtitle": "A simple and transparent system for you to save on your education while helping your friends achieve the American dream",
+      "steps": {
+        "step1": {
+          "title": "Share Your Code",
+          "description": "Get your unique code and share with friends who want to study in the USA",
+          "details": "Each code automatically tracks your referrals"
+        },
+        "step2": {
+          "title": "Friends Sign Up",
+          "description": "When your friends register using your code, you both earn Matricula Coins",
+          "details": "180 coins for each successful referral"
+        },
+        "step3": {
+          "title": "Redeem Tuition Discount",
+          "description": "Use your coins to redeem tuition discounts from the Rewards Store",
+          "details": "Select your university and redeem the discount"
+        },
+        "step4": {
+          "title": "Contact Your University",
+          "description": "Contact your university's admissions office to apply the redeemed discount",
+          "details": "Present your discount code to get the reduction on your tuition"
+        }
+      },
+      "calculator": {
+        "title": "Tuition Reduction Calculator",
+        "description": "See how much you can reduce your monthly tuition by referring friends",
+        "label": "How many friends can you refer?",
+        "friends": "friends",
+        "coinsEarned": "Coins Earned",
+        "totalSavings": "Monthly Tuition Reduction",
+        "cta": "Start Saving Now"
+      },
+      "actions": {
+        "shareNow": "Share now",
+        "inviteFriends": "Invite friends",
+        "seeEarnings": "See earnings",
+        "useDiscount": "Use discount"
+      },
+      "journey": {
+        "startMessage": "Start your savings journey now!"
+      }
+    },
+    "testimonials": {
+      "title": "Success Stories",
+      "subtitle": "Join thousands of students who are already saving on their education and achieving the American dream",
+      "stories": [
+        {
+          "name": "Maria Santos",
+          "university": "University of California",
+          "text": "I saved $800 on tuition just by sharing Matricula with my friends. Amazing!",
+          "savings": "Saved $800"
+        },
+        {
+          "name": "João Silva",
+          "university": "Arizona State University", 
+          "text": "The program helped me significantly reduce education costs. Highly recommend!",
+          "savings": "Saved $1,200"
+        },
+        {
+          "name": "Ana Rodriguez",
+          "university": "University of Miami",
+          "text": "Easy to use and really pays off. I got a discount for an entire semester!",
+          "savings": "Saved $1,500"
+        }
+      ],
+      "stats": {
+        "activeStudents": "Active Students",
+        "totalSavings": "Total Savings",
+        "averageRating": "Average Rating",
+        "universities": "Universities"
+      }
+    },
+    "benefits": {
+      "title": "Why Choose Matricula Rewards?",
+      "subtitle": "More than a referral program, it's a smart way to make your education more accessible",
+      "items": [
+        {
+          "title": "Real Savings",
+          "description": "Direct discounts on your university tuition",
+          "highlight": "Up to $2,000/semester"
+        },
+        {
+          "title": "Super Easy",
+          "description": "Simple system to share and earn",
+          "highlight": "3 clicks to start"
+        },
+        {
+          "title": "Instant",
+          "description": "Coins credited immediately after referral",
+          "highlight": "100 coins/referral"
+        }
+      ]
+    },
+    "finalCta": {
+      "title": "Ready to",
+      "titleHighlight": "Save?",
+      "description": "Join thousands of students who are already saving on education. Your journey to accessible education starts with one click.",
+      "cards": {
+        "startNow": {
+          "title": "Start Now",
+          "description": "Get your referral code and start accumulating coins today",
+          "cta": "Get Code"
+        },
+        "learnMore": {
+          "title": "Learn More",
+          "description": "Discover how the system works and see real savings examples",
+          "cta": "View Details"
+        }
+      },
+      "trust": {
+        "free": "Free",
+        "quickStart": "To start",
+        "support": "Support"
+      }
+    }
   }
 }
