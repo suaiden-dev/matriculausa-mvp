@@ -191,6 +191,7 @@ const Universities: React.FC = () => {
   // Skeleton loader
   const skeletonArray = Array.from({ length: PAGE_SIZE });
 
+
   return (
     <>
       <Header />
@@ -294,23 +295,23 @@ const Universities: React.FC = () => {
               {filteredFeaturedUniversities.map((school) => (
                 <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
                   {/* Overlay de blur quando não autenticado */}
-                  {shouldApplyBlur && (
-                    <div className="absolute inset-0 bg-white/90 backdrop-blur-lg z-10 flex items-center justify-center rounded-3xl">
+                  {!isAuthenticated && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
                       <div className="text-center p-6">
                         <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                           <Lock className="h-8 w-8 text-[#05294E]" />
                         </div>
                         <h4 className="text-lg font-bold text-slate-900 mb-2">
-                          {t('universitiesPage.loginRequired.title')}
+                          {t('home.featuredUniversities.lockedTitle')}
                         </h4>
                         <p className="text-sm text-slate-600 mb-4">
-                          {t('universitiesPage.loginRequired.message')}
+                          {t('home.featuredUniversities.lockedDescription')}
                         </p>
                         <button
                           onClick={() => navigate('/login')}
                           className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
                         >
-                          {t('universitiesPage.loginRequired.title')}
+                          {t('home.featuredUniversities.loginToView')}
                         </button>
                       </div>
                     </div>
@@ -329,7 +330,9 @@ const Universities: React.FC = () => {
                       <img
                         src={school.image_url || school.logo_url}
                         alt={`${school.name} campus`}
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ${
+                          !isAuthenticated ? 'blur-lg' : ''
+                        }`}
                         onError={(e) => {
                           // Fallback para div com ícone se a imagem falhar
                           const target = e.target as HTMLImageElement;
@@ -362,19 +365,25 @@ const Universities: React.FC = () => {
 
                   {/* University Info */}
                   <div className="flex flex-col flex-1 p-6">
-                    <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                    <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors ${
+                      !isAuthenticated ? 'blur-sm' : ''
+                    }`}>
                       {school.name}
                     </h3>
                     
                     {/* Location */}
-                    <div className="flex items-center text-slate-600 mb-4">
+                    <div className={`flex items-center text-slate-600 mb-4 ${
+                      !isAuthenticated ? 'blur-sm' : ''
+                    }`}>
                       <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
                       <span className="text-sm">{school.location}</span>
                     </div>
 
                     {/* Programs Preview */}
                     <div className="mb-6 flex-1">
-                      <div className="flex flex-wrap gap-2">
+                      <div className={`flex flex-wrap gap-2 ${
+                        !isAuthenticated ? 'blur-sm' : ''
+                      }`}>
                         {school.programs?.slice(0, 3).map((program: string, index: number) => (
                           <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
                             {program}
@@ -414,23 +423,23 @@ const Universities: React.FC = () => {
           ) : filteredSchools.map((school) => (
             <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
               {/* Overlay de blur quando não autenticado */}
-              {shouldApplyBlur && (
-                <div className="absolute inset-0 bg-white/90 backdrop-blur-lg z-10 flex items-center justify-center rounded-3xl">
+              {!isAuthenticated && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
                   <div className="text-center p-6">
                     <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <Lock className="h-8 w-8 text-[#05294E]" />
                     </div>
                     <h4 className="text-lg font-bold text-slate-900 mb-2">
-                      {t('universitiesPage.loginRequired.title')}
+                      {t('home.featuredUniversities.lockedTitle')}
                     </h4>
                     <p className="text-sm text-slate-600 mb-4">
-                      {t('universitiesPage.loginRequired.message')}
+                      {t('home.featuredUniversities.lockedDescription')}
                     </p>
                     <button
                       onClick={() => navigate('/login')}
                       className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
                     >
-                      {t('universitiesPage.loginRequired.title')}
+                      {t('home.featuredUniversities.loginToView')}
                     </button>
                   </div>
                 </div>
@@ -441,7 +450,9 @@ const Universities: React.FC = () => {
                   <img
                     src={school.image_url || school.logo_url}
                     alt={`${school.name} campus`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+                      !isAuthenticated ? 'blur-lg' : ''
+                    }`}
                     onError={(e) => {
                       // Fallback para div com ícone se a imagem falhar
                       const target = e.target as HTMLImageElement;
@@ -472,19 +483,25 @@ const Universities: React.FC = () => {
 
               {/* University Info */}
               <div className="flex flex-col flex-1 p-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors ${
+                  !isAuthenticated ? 'blur-sm' : ''
+                }`}>
                   {school.name}
                 </h3>
                 
                 {/* Location */}
-                <div className="flex items-center text-slate-600 mb-4">
+                <div className={`flex items-center text-slate-600 mb-4 ${
+                  !isAuthenticated ? 'blur-sm' : ''
+                }`}>
                   <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
                   <span className="text-sm">{school.location}</span>
                 </div>
 
                 {/* Programs Preview */}
                 <div className="mb-6 flex-1">
-                  <div className="flex flex-wrap gap-2">
+                  <div className={`flex flex-wrap gap-2 ${
+                    !isAuthenticated ? 'blur-sm' : ''
+                  }`}>
                     {school.programs?.slice(0, 3).map((program: string, index: number) => (
                       <span key={index} className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
                         {program}
