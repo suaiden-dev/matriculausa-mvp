@@ -443,6 +443,160 @@ async function handleCheckoutSessionCompleted(session: any) {
         }
         // --- FIM DA NOTIFICAÇÃO ---
 
+        // --- NOTIFICAÇÕES PARA ADMIN, AFFILIATE ADMIN E SELLER ---
+        try {
+          console.log(`📤 [stripe-webhook] Buscando informações do seller e affiliate admin...`)
+          
+          // Buscar informações do seller relacionado ao pagamento
+          const { data: sellerData, error: sellerError } = await supabase
+            .from('sellers')
+            .select(`
+              id,
+              user_id,
+              name,
+              email,
+              referral_code,
+              commission_rate,
+              affiliate_admin_id,
+              affiliate_admin:affiliate_admins!sellers_affiliate_admin_id_fkey(
+                user_id,
+                user_profiles!affiliate_admins_user_id_fkey(full_name, email)
+              )
+            `)
+            .eq('user_id', customer_id)
+            .single()
+
+          if (sellerData && !sellerError) {
+            console.log(`📤 [stripe-webhook] Seller encontrado:`, sellerData)
+
+            // NOTIFICAÇÃO PARA ADMIN
+            try {
+              const adminNotificationPayload = {
+                tipo_notf: "Pagamento Stripe de aluno aprovado",
+                email_admin: "admin@matriculausa.com",
+                nome_admin: "Admin MatriculaUSA",
+                email_aluno: customer_email || "",
+                nome_aluno: alunoData?.full_name || "Aluno",
+                email_seller: sellerData.email,
+                nome_seller: sellerData.name,
+                email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
+                nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
+                o_que_enviar: `Pagamento Stripe de ${feeType} no valor de $${(amount_total / 100).toFixed(2)} do aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+                payment_id: session_id,
+                fee_type: feeType,
+                amount: amount_total / 100,
+                seller_id: sellerData.user_id,
+                referral_code: sellerData.referral_code,
+                commission_rate: sellerData.commission_rate,
+                payment_method: "stripe"
+              }
+
+              console.log('📧 [stripe-webhook] Enviando notificação para admin:', adminNotificationPayload)
+
+              const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(adminNotificationPayload),
+              })
+
+              if (adminNotificationResponse.ok) {
+                console.log('✅ [stripe-webhook] Notificação para admin enviada com sucesso!')
+              } else {
+                console.warn('⚠️ [stripe-webhook] Erro ao enviar notificação para admin:', adminNotificationResponse.status)
+              }
+            } catch (adminNotificationError) {
+              console.error('❌ [stripe-webhook] Erro ao enviar notificação para admin:', adminNotificationError)
+            }
+
+            // NOTIFICAÇÃO PARA AFFILIATE ADMIN
+            if (sellerData.affiliate_admin?.user_profiles?.email) {
+              try {
+                const affiliateAdminNotificationPayload = {
+                  tipo_notf: "Pagamento Stripe de aluno do seu seller aprovado",
+                  email_affiliate_admin: sellerData.affiliate_admin.user_profiles.email,
+                  nome_affiliate_admin: sellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
+                  email_aluno: customer_email || "",
+                  nome_aluno: alunoData?.full_name || "Aluno",
+                  email_seller: sellerData.email,
+                  nome_seller: sellerData.name,
+                  o_que_enviar: `Pagamento Stripe de ${feeType} no valor de $${(amount_total / 100).toFixed(2)} do aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+                  payment_id: session_id,
+                  fee_type: feeType,
+                  amount: amount_total / 100,
+                  seller_id: sellerData.user_id,
+                  referral_code: sellerData.referral_code,
+                  commission_rate: sellerData.commission_rate,
+                  payment_method: "stripe"
+                }
+
+                console.log('📧 [stripe-webhook] Enviando notificação para affiliate admin:', affiliateAdminNotificationPayload)
+
+                const affiliateAdminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(affiliateAdminNotificationPayload),
+                })
+
+                if (affiliateAdminNotificationResponse.ok) {
+                  console.log('✅ [stripe-webhook] Notificação para affiliate admin enviada com sucesso!')
+                } else {
+                  console.warn('⚠️ [stripe-webhook] Erro ao enviar notificação para affiliate admin:', affiliateAdminNotificationResponse.status)
+                }
+              } catch (affiliateAdminNotificationError) {
+                console.error('❌ [stripe-webhook] Erro ao enviar notificação para affiliate admin:', affiliateAdminNotificationError)
+              }
+            }
+
+            // NOTIFICAÇÃO PARA SELLER
+            try {
+              const sellerNotificationPayload = {
+                tipo_notf: "Pagamento Stripe do seu aluno aprovado",
+                email_seller: sellerData.email,
+                nome_seller: sellerData.name,
+                email_aluno: customer_email || "",
+                nome_aluno: alunoData?.full_name || "Aluno",
+                o_que_enviar: `Parabéns! O pagamento Stripe de ${feeType} no valor de $${(amount_total / 100).toFixed(2)} do seu aluno ${alunoData?.full_name || "Aluno"} foi processado com sucesso. Você ganhará comissão sobre este pagamento!`,
+                payment_id: session_id,
+                fee_type: feeType,
+                amount: amount_total / 100,
+                seller_id: sellerData.user_id,
+                referral_code: sellerData.referral_code,
+                commission_rate: sellerData.commission_rate,
+                estimated_commission: (amount_total / 100) * sellerData.commission_rate,
+                payment_method: "stripe"
+              }
+
+              console.log('📧 [stripe-webhook] Enviando notificação para seller:', sellerNotificationPayload)
+
+              const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(sellerNotificationPayload),
+              })
+
+              if (sellerNotificationResponse.ok) {
+                console.log('✅ [stripe-webhook] Notificação para seller enviada com sucesso!')
+              } else {
+                console.warn('⚠️ [stripe-webhook] Erro ao enviar notificação para seller:', sellerNotificationResponse.status)
+              }
+            } catch (sellerNotificationError) {
+              console.error('❌ [stripe-webhook] Erro ao enviar notificação para seller:', sellerNotificationError)
+            }
+
+          } else {
+            console.log(`ℹ️ [stripe-webhook] Nenhum seller encontrado para o usuário ${customer_id}`)
+          }
+        } catch (sellerLookupError) {
+          console.error('❌ [stripe-webhook] Erro ao buscar informações do seller:', sellerLookupError)
+          // Não falhar o processo se a busca do seller falhar
+        }
+
         // Processar transferência via Stripe Connect se aplicável (100% para universidade)
         const requiresTransfer = metadata.requires_transfer === 'true';
         const stripeConnectAccountId = metadata.stripe_connect_account_id;

@@ -709,6 +709,157 @@ const PaymentManagement = (): React.JSX.Element => {
         // Não falhar o processo se a notificação falhar
       }
 
+      // --- NOTIFICAÇÕES PARA ADMIN, AFFILIATE ADMIN E SELLER ---
+      try {
+        console.log(`📤 [approveZellePayment] Buscando informações do seller e affiliate admin...`);
+        
+        // Buscar informações do seller relacionado ao pagamento
+        const { data: sellerData, error: sellerError } = await supabase
+          .from('sellers')
+          .select(`
+            id,
+            user_id,
+            name,
+            email,
+            referral_code,
+            commission_rate,
+            affiliate_admin_id,
+            affiliate_admin:affiliate_admins!sellers_affiliate_admin_id_fkey(
+              user_id,
+              user_profiles!affiliate_admins_user_id_fkey(full_name, email)
+            )
+          `)
+          .eq('user_id', payment.user_id)
+          .single();
+
+        if (sellerData && !sellerError) {
+          console.log(`📤 [approveZellePayment] Seller encontrado:`, sellerData);
+
+          // NOTIFICAÇÃO PARA ADMIN
+          try {
+            const adminNotificationPayload = {
+              tipo_notf: "Pagamento de aluno aprovado",
+              email_admin: "admin@matriculausa.com",
+              nome_admin: "Admin MatriculaUSA",
+              email_aluno: payment.student_email,
+              nome_aluno: payment.student_name,
+              email_seller: sellerData.email,
+              nome_seller: sellerData.name,
+              email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
+              nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
+              o_que_enviar: `Pagamento de ${payment.fee_type} no valor de $${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              payment_id: paymentId,
+              fee_type: payment.fee_type,
+              amount: payment.amount,
+              seller_id: sellerData.user_id,
+              referral_code: sellerData.referral_code,
+              commission_rate: sellerData.commission_rate
+            };
+
+            console.log('📧 [approveZellePayment] Enviando notificação para admin:', adminNotificationPayload);
+
+            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(adminNotificationPayload),
+            });
+
+            if (adminNotificationResponse.ok) {
+              console.log('✅ [approveZellePayment] Notificação para admin enviada com sucesso!');
+            } else {
+              console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação para admin:', adminNotificationResponse.status);
+            }
+          } catch (adminNotificationError) {
+            console.error('❌ [approveZellePayment] Erro ao enviar notificação para admin:', adminNotificationError);
+          }
+
+          // NOTIFICAÇÃO PARA AFFILIATE ADMIN
+          if (sellerData.affiliate_admin?.user_profiles?.email) {
+            try {
+              const affiliateAdminNotificationPayload = {
+                tipo_notf: "Pagamento de aluno do seu seller aprovado",
+                email_affiliate_admin: sellerData.affiliate_admin.user_profiles.email,
+                nome_affiliate_admin: sellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
+                email_aluno: payment.student_email,
+                nome_aluno: payment.student_name,
+                email_seller: sellerData.email,
+                nome_seller: sellerData.name,
+                o_que_enviar: `Pagamento de ${payment.fee_type} no valor de $${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+                payment_id: paymentId,
+                fee_type: payment.fee_type,
+                amount: payment.amount,
+                seller_id: sellerData.user_id,
+                referral_code: sellerData.referral_code,
+                commission_rate: sellerData.commission_rate
+              };
+
+              console.log('📧 [approveZellePayment] Enviando notificação para affiliate admin:', affiliateAdminNotificationPayload);
+
+              const affiliateAdminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(affiliateAdminNotificationPayload),
+              });
+
+              if (affiliateAdminNotificationResponse.ok) {
+                console.log('✅ [approveZellePayment] Notificação para affiliate admin enviada com sucesso!');
+              } else {
+                console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação para affiliate admin:', affiliateAdminNotificationResponse.status);
+              }
+            } catch (affiliateAdminNotificationError) {
+              console.error('❌ [approveZellePayment] Erro ao enviar notificação para affiliate admin:', affiliateAdminNotificationError);
+            }
+          }
+
+          // NOTIFICAÇÃO PARA SELLER
+          try {
+            const sellerNotificationPayload = {
+              tipo_notf: "Pagamento do seu aluno aprovado",
+              email_seller: sellerData.email,
+              nome_seller: sellerData.name,
+              email_aluno: payment.student_email,
+              nome_aluno: payment.student_name,
+              o_que_enviar: `Parabéns! O pagamento de ${payment.fee_type} no valor de $${payment.amount} do seu aluno ${payment.student_name} foi aprovado. Você ganhará comissão sobre este pagamento!`,
+              payment_id: paymentId,
+              fee_type: payment.fee_type,
+              amount: payment.amount,
+              seller_id: sellerData.user_id,
+              referral_code: sellerData.referral_code,
+              commission_rate: sellerData.commission_rate,
+              estimated_commission: payment.amount * sellerData.commission_rate
+            };
+
+            console.log('📧 [approveZellePayment] Enviando notificação para seller:', sellerNotificationPayload);
+
+            const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(sellerNotificationPayload),
+            });
+
+            if (sellerNotificationResponse.ok) {
+              console.log('✅ [approveZellePayment] Notificação para seller enviada com sucesso!');
+            } else {
+              console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação para seller:', sellerNotificationResponse.status);
+            }
+          } catch (sellerNotificationError) {
+            console.error('❌ [approveZellePayment] Erro ao enviar notificação para seller:', sellerNotificationError);
+          }
+
+        } else {
+          console.log(`ℹ️ [approveZellePayment] Nenhum seller encontrado para o usuário ${payment.user_id}`);
+        }
+      } catch (sellerLookupError) {
+        console.error('❌ [approveZellePayment] Erro ao buscar informações do seller:', sellerLookupError);
+        // Não falhar o processo se a busca do seller falhar
+      }
+
       // Recarregar pagamentos Zelle
       await loadZellePayments();
       setShowZelleReviewModal(false);
