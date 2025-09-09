@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
         recipient_name: recipient_name,
         comprovante_url: comprovante_url,
         comprovante_uploaded_at: new Date().toISOString(),
-        status: 'pending' // Aguardando validação automática
+        status: 'pending_verification' // Aguardando validação automática
       })
       .eq('id', paymentId);
 
