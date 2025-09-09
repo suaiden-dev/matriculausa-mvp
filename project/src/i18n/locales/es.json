@@ -475,6 +475,10 @@
     "resultsFound": "becas encontradas"
   },
   "scholarshipsPage": {
+    "loginRequired": {
+      "title": "Inicio de Sesión Requerido",
+      "message": "Inicia sesión para ver los detalles de las becas de estudio y acceder a todas las funciones"
+    },
     "featuredSection": {
       "title": "Becas Destacadas",
       "subtitle": "Destacados Semanales",
@@ -591,6 +595,10 @@
       "partnerUniversities": "Universidades Socias",
       "title": "Universidades Americanas",
       "subtitle": "Descubre instituciones de clase mundial que ofrecen educación excepcional y oportunidades de beca."
+    },
+    "loginRequired": {
+      "title": "Inicio de Sesión Requerido",
+      "message": "Inicia sesión para ver los detalles de las universidades y acceder a todas las funciones"
     },
     "search": {
       "placeholder": "Buscar universidades...",

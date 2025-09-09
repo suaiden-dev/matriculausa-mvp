@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye } from 'lucide-react';
+import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -220,6 +220,9 @@ const Scholarships: React.FC = () => {
   };
 
   const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
+
+  // Verificar se deve aplicar blur (usuário não logado)
+  const shouldApplyBlur = !isAuthenticated;
 
   // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
   useEffect(() => {
@@ -522,6 +525,7 @@ const Scholarships: React.FC = () => {
           </div>
         </div>
 
+
         {/* Featured Scholarships Section */}
   {filteredFeaturedScholarships.length > 0 && (
           <div className="mb-12">
@@ -549,6 +553,28 @@ const Scholarships: React.FC = () => {
                 
                 return (
                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
+                    {/* Overlay de blur quando não autenticado */}
+                    {shouldApplyBlur && (
+                      <div className="absolute inset-0 bg-white/90 backdrop-blur-lg z-10 flex items-center justify-center rounded-3xl">
+                        <div className="text-center p-6">
+                          <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Lock className="h-8 w-8 text-[#05294E]" />
+                          </div>
+                          <h4 className="text-lg font-bold text-slate-900 mb-2">
+                            {t('scholarshipsPage.loginRequired.title')}
+                          </h4>
+                          <p className="text-sm text-slate-600 mb-4">
+                            {t('scholarshipsPage.loginRequired.message')}
+                          </p>
+                          <button
+                            onClick={() => navigate('/login')}
+                            className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                          >
+                            {t('scholarshipsPage.loginRequired.title')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {/* Featured Badge - Top Right */}
                     <div className="absolute top-4 right-4 z-10">
                       <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
@@ -837,6 +863,28 @@ const Scholarships: React.FC = () => {
                  
                  return (
                    <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
+                     {/* Overlay de blur quando não autenticado */}
+                     {shouldApplyBlur && (
+                       <div className="absolute inset-0 bg-white/90 backdrop-blur-lg z-10 flex items-center justify-center rounded-3xl">
+                         <div className="text-center p-6">
+                           <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                             <Lock className="h-8 w-8 text-[#05294E]" />
+                           </div>
+                           <h4 className="text-lg font-bold text-slate-900 mb-2">
+                             {t('scholarshipsPage.loginRequired.title')}
+                           </h4>
+                           <p className="text-sm text-slate-600 mb-4">
+                             {t('scholarshipsPage.loginRequired.message')}
+                           </p>
+                           <button
+                             onClick={() => navigate('/login')}
+                             className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                           >
+                             {t('scholarshipsPage.loginRequired.title')}
+                           </button>
+                         </div>
+                       </div>
+                     )}
                      {/* Deadline Urgency Indicator */}
                      {daysLeft <= 7 && daysLeft > 0 && (
                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>

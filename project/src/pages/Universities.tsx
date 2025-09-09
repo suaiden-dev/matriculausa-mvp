@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Filter, MapPin, Sparkles, Building, GraduationCap, ChevronRight, Globe, ArrowRight, Star } from 'lucide-react';
+import { Search, MapPin, Sparkles, Building, GraduationCap, ArrowRight, Star, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -14,6 +14,7 @@ const PAGE_SIZE = 20;
 
 const Universities: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isAuthenticated, user, userProfile, loading } = useAuth();
   
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
@@ -25,7 +26,6 @@ const Universities: React.FC = () => {
   const [hasLoadedData, setHasLoadedData] = useState(false);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [searching, setSearching] = useState(false);
   const [allUniversities, setAllUniversities] = useState<any[]>([]);
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
   
@@ -37,7 +37,6 @@ const Universities: React.FC = () => {
       }
       // Se estiver pesquisando, buscar todas as universidades que correspondem ao termo
       if (searchTerm.trim() !== '') {
-        setSearching(true);
         let query = supabase
           .from('universities')
           .select('id, name, location, logo_url, image_url, programs, description, website, address, is_featured')
@@ -57,11 +56,9 @@ const Universities: React.FC = () => {
           setTotalCount(0);
         }
         setIsLoadingUniversities(false);
-        setSearching(false);
         return;
       }
       // Caso contrário, busca paginada normal ou filtrada por estado
-      setSearching(false);
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       let query = supabase
@@ -182,6 +179,9 @@ const Universities: React.FC = () => {
     });
   };
 
+  // Verificar se deve aplicar blur (usuário não logado)
+  const shouldApplyBlur = !isAuthenticated;
+
   const filteredSchools = filterUniversities(realUniversities);
   const filteredFeaturedUniversities = filterUniversities(featuredUniversities);
 
@@ -190,11 +190,6 @@ const Universities: React.FC = () => {
 
   // Skeleton loader
   const skeletonArray = Array.from({ length: PAGE_SIZE });
-
-  const handleAccept = async () => {
-    // ... update terms_accepted to true ...
-    window.location.href = '/school/dashboard';
-  };
 
   return (
     <>
@@ -278,6 +273,7 @@ const Universities: React.FC = () => {
           </div>
         </div>
 
+
         {/* Featured Universities Section */}
         {filteredFeaturedUniversities.length > 0 && (
           <div className="mb-12">
@@ -297,6 +293,28 @@ const Universities: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 mb-8">
               {filteredFeaturedUniversities.map((school) => (
                 <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
+                  {/* Overlay de blur quando não autenticado */}
+                  {shouldApplyBlur && (
+                    <div className="absolute inset-0 bg-white/90 backdrop-blur-lg z-10 flex items-center justify-center rounded-3xl">
+                      <div className="text-center p-6">
+                        <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <Lock className="h-8 w-8 text-[#05294E]" />
+                        </div>
+                        <h4 className="text-lg font-bold text-slate-900 mb-2">
+                          {t('universitiesPage.loginRequired.title')}
+                        </h4>
+                        <p className="text-sm text-slate-600 mb-4">
+                          {t('universitiesPage.loginRequired.message')}
+                        </p>
+                        <button
+                          onClick={() => navigate('/login')}
+                          className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                        >
+                          {t('universitiesPage.loginRequired.title')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {/* Featured Badge */}
                   <div className="absolute top-4 right-4 z-10">
                     <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center">
@@ -394,7 +412,29 @@ const Universities: React.FC = () => {
               <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-80" />
             ))
           ) : filteredSchools.map((school) => (
-            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px]">
+            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
+              {/* Overlay de blur quando não autenticado */}
+              {shouldApplyBlur && (
+                <div className="absolute inset-0 bg-white/90 backdrop-blur-lg z-10 flex items-center justify-center rounded-3xl">
+                  <div className="text-center p-6">
+                    <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Lock className="h-8 w-8 text-[#05294E]" />
+                    </div>
+                    <h4 className="text-lg font-bold text-slate-900 mb-2">
+                      {t('universitiesPage.loginRequired.title')}
+                    </h4>
+                    <p className="text-sm text-slate-600 mb-4">
+                      {t('universitiesPage.loginRequired.message')}
+                    </p>
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                    >
+                      {t('universitiesPage.loginRequired.title')}
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* University Image */}
               <div className="relative h-48 overflow-hidden flex-shrink-0">
                 {(school.image_url || school.logo_url) ? (

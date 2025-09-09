@@ -475,6 +475,10 @@
     "resultsFound": "bolsas encontradas"
   },
   "scholarshipsPage": {
+    "loginRequired": {
+      "title": "Login Necessário",
+      "message": "Faça login para visualizar os detalhes das bolsas de estudo e acessar todos os recursos"
+    },
     "featuredSection": {
       "title": "Bolsas em Destaque",
       "subtitle": "Destaques Semanais",
@@ -591,6 +595,10 @@
       "partnerUniversities": "Universidades Parceiras",
       "title": "Universidades Americanas",
       "subtitle": "Descubra instituições de classe mundial oferecendo educação excepcional e oportunidades de bolsa."
+    },
+    "loginRequired": {
+      "title": "Login Necessário",
+      "message": "Faça login para visualizar os detalhes das universidades e acessar todos os recursos"
     },
     "search": {
       "placeholder": "Buscar universidades...",

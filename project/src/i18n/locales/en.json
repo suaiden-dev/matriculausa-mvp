@@ -475,6 +475,10 @@
     "resultsFound": "scholarships found"
   },
   "scholarshipsPage": {
+    "loginRequired": {
+      "title": "Login Required",
+      "message": "Please log in to view scholarship details and access all features"
+    },
     "featuredSection": {
       "title": "Featured Scholarships",
       "subtitle": "Weekly Highlights",
@@ -591,6 +595,10 @@
       "partnerUniversities": "Partner Universities",
       "title": "American Universities",
       "subtitle": "Discover world-class institutions offering exceptional education and scholarship opportunities."
+    },
+    "loginRequired": {
+      "title": "Login Required",
+      "message": "Please log in to view university details and access all features"
     },
     "search": {
       "placeholder": "Search universities...",
