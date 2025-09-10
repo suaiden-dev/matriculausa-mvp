@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
             referred_id: userId,
             affiliate_code: usedCode.affiliate_code,
             payment_amount: Number(session.amount_total ? session.amount_total / 100 : 0),
-            credits_earned: 200,
+            credits_earned: 180,
             status: 'completed',
             payment_session_id: sessionId,
             completed_at: new Date().toISOString(),
@@ -136,12 +136,12 @@ Deno.serve(async (req) => {
         }
 
         if (!existingTx) {
-          console.log('[Referral Reward] Crediting 200 MatriculaCoins to referrer...');
+          console.log('[Referral Reward] Crediting 180 MatriculaCoins to referrer...');
           const description = `Referral reward: Selection Process Fee paid by ${referredDisplayName}`;
 
           const { error: rewardError } = await supabase.rpc('add_credits_to_user', {
             user_id_param: referrerId,
-            amount_param: 200,
+            amount_param: 180,
             reference_id_param: usedCode.id,
             reference_type_param: 'selection_process_referral',
             description_param: description,
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
           if (rewardError) {
             console.error('[Referral Reward] Failed to add credits:', rewardError);
           } else {
-            console.log('[Referral Reward] 200 MatriculaCoins credited successfully');
+            console.log('[Referral Reward] 180 MatriculaCoins credited successfully');
           }
         } else {
           console.log('[Referral Reward] Transaction already exists. Skipping duplicate credit.');
@@ -171,4 +171,4 @@ Deno.serve(async (req) => {
     console.error(`--- CRITICAL ERROR in verify-stripe-session-selection-process-fee ---:`, error.message);
     return corsResponse({ error: 'An unexpected error occurred.', details: error.message }, 500);
   }
-}); 
+});

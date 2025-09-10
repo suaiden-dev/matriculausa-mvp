@@ -2235,6 +2235,7 @@
     "students": {
       "title": "Para Estudantes",
       "scholarships": "Bolsas",
+      "matriculaRewards": "Matricula Rewards",
       "universities": "Universidades",
       "howItWorks": "Como Funciona",
       "support": "Suporte",
@@ -2273,5 +2274,183 @@
       "subscribed": "Obrigado por se inscrever!"
     },
     "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
+  },
+  "matriculaRewardsLanding": {
+    "badge": "Novo Programa de Recompensas",
+    "hero": {
+      "title": "Transforme Suas",
+      "titleHighlight": "Indicações em Descontos",
+      "subtitle": "na Sua Mensalidade",
+      "description": "Ganhe <strong>Matricula Coins</strong> a cada amigo que indicar e use para <strong>reduzir sua mensalidade</strong> - 1 coin = R$ 1 de desconto no pagamento mensal",
+      "valueCards": {
+        "referFriends": {
+          "title": "Compartilhe & Ganhe",
+          "description": "Receba seu código único e compartilhe com amigos que querem estudar nos EUA"
+        },
+        "accumulateCoins": {
+          "title": "Ganhe Recompensas",
+          "description": "180 coins por indicação bem-sucedida - isso é R$ 180 de desconto na sua mensalidade"
+        },
+        "payLess": {
+          "title": "Economize Dinheiro",
+          "description": "Use seus coins para reduzir seus pagamentos mensais da universidade"
+        }
+      },
+      "cta": {
+        "getStarted": "Começar Agora",
+        "learnMore": "Ver Como Funciona"
+      },
+      "demo": {
+        "title": "Demonstração ao vivo",
+        "subtitle": "Seu Painel de Recompensas",
+        "description": "Veja como seria sua conta com algumas indicações",
+        "referralCode": {
+          "title": "Seu Código de Referência",
+          "code": "MTR2024",
+          "copy": "Copiar Código",
+          "copied": "Copiado!",
+          "loginToGetCode": "Faça login para obter seu código de referência"
+        },
+        "balance": {
+          "title": "Saldo Atual",
+          "coins": "Matricula Coins",
+          "discount": "em descontos"
+        },
+        "discount": {
+          "title": "Desconto Disponível",
+          "forTuition": "Para Mensalidade",
+          "applicableTo": "Aplicável a {count} universidades"
+        },
+        "stats": {
+          "referred": "Amigos Indicados",
+          "signedUp": "Se Inscreveram",
+          "conversion": "Taxa Conversão",
+          "monthsSaving": "Meses Economizando"
+        }
+      }
+    },
+    "stats": {
+      "activeStudents": "Estudantes Ativos",
+      "partnerUniversities": "Universidades Parceiras",
+      "discountsGiven": "Em Descontos Dados",
+      "satisfactionRate": "Taxa de Satisfação"
+    },
+    "howItWorks": {
+      "title": "Como Funciona o Matricula Rewards",
+      "subtitle": "Um sistema simples e transparente para você economizar na sua educação enquanto ajuda seus amigos a realizarem o sonho americano",
+      "steps": {
+        "step1": {
+          "title": "Compartilhe Seu Código",
+          "description": "Receba seu código único e compartilhe com amigos que querem estudar nos EUA",
+          "details": "Cada código rastreia automaticamente suas indicações"
+        },
+        "step2": {
+          "title": "Amigos Se Inscrevem",
+          "description": "Quando seus amigos se cadastram usando seu código, vocês ganham Matricula Coins",
+          "details": "180 coins por cada indicação bem-sucedida"
+        },
+        "step3": {
+          "title": "Resgate Desconto de Mensalidade",
+          "description": "Use seus coins para resgatar descontos de mensalidade na Loja de Recompensas",
+          "details": "Selecione sua universidade e resgate o desconto"
+        },
+        "step4": {
+          "title": "Entre em Contato com Sua Universidade",
+          "description": "Entre em contato com a secretaria de sua universidade para aplicar o desconto resgatado",
+          "details": "Apresente seu código de desconto para obter a redução na sua mensalidade"
+        }
+      },
+      "calculator": {
+        "title": "Calculadora de Redução de Mensalidade",
+        "description": "Veja quanto você pode reduzir sua mensalidade indicando amigos",
+        "label": "Quantos amigos você pode indicar?",
+        "friends": "amigos",
+        "coinsEarned": "Coins Ganhos",
+        "totalSavings": "Redução Mensal na Mensalidade",
+        "cta": "Começar a Economizar Agora"
+      },
+      "actions": {
+        "shareNow": "Compartilhe agora",
+        "inviteFriends": "Convide amigos",
+        "seeEarnings": "Veja ganhos",
+        "useDiscount": "Use desconto"
+      },
+      "journey": {
+        "startMessage": "Comece sua jornada de economia agora!"
+      }
+    },
+    "testimonials": {
+      "title": "Histórias de Sucesso",
+      "subtitle": "Junte-se a milhares de estudantes que já estão economizando na sua educação e realizando o sonho americano",
+      "stories": [
+        {
+          "name": "Maria Santos",
+          "university": "University of California",
+          "text": "Economizei $800 na mensalidade só compartilhando o Matricula com meus amigos. Incrível!",
+          "savings": "Economizou $800"
+        },
+        {
+          "name": "João Silva",
+          "university": "Arizona State University",
+          "text": "O programa me ajudou a reduzir significativamente os custos da educação. Super recomendo!",
+          "savings": "Economizou $1,200"
+        },
+        {
+          "name": "Ana Rodriguez",
+          "university": "University of Miami",
+          "text": "Fácil de usar e realmente compensa. Consegui desconto para um semestre inteiro!",
+          "savings": "Economizou $1,500"
+        }
+      ],
+      "stats": {
+        "activeStudents": "Estudantes Ativos",
+        "totalSavings": "Economia Total",
+        "averageRating": "Avaliação Média",
+        "universities": "Universidades"
+      }
+    },
+    "benefits": {
+      "title": "Por Que Escolher o Matricula Rewards?",
+      "subtitle": "Mais do que um programa de referência, é uma forma inteligente de tornar sua educação mais acessível",
+      "items": [
+        {
+          "title": "Economia Real",
+          "description": "Descontos diretos na sua mensalidade universitária",
+          "highlight": "Até $2.000/semestre"
+        },
+        {
+          "title": "Super Fácil",
+          "description": "Sistema simples para compartilhar e ganhar",
+          "highlight": "3 cliques para começar"
+        },
+        {
+          "title": "Instantâneo",
+          "description": "Coins creditados imediatamente após referência",
+          "highlight": "100 coins/referência"
+        }
+      ]
+    },
+    "finalCta": {
+      "title": "Pronto para",
+      "titleHighlight": "Economizar?",
+      "description": "Junte-se a milhares de estudantes que já estão economizando na educação. Sua jornada para uma educação acessível começa com um clique.",
+      "cards": {
+        "startNow": {
+          "title": "Comece Agora",
+          "description": "Receba seu código de indicação e comece a acumular coins hoje mesmo",
+          "cta": "Obter Código"
+        },
+        "learnMore": {
+          "title": "Saiba Mais",
+          "description": "Descubra como funciona o sistema e veja exemplos de economia real",
+          "cta": "Ver Detalhes"
+        }
+      },
+      "trust": {
+        "free": "Gratuito",
+        "quickStart": "Para começar",
+        "support": "Suporte"
+      }
+    }
   }
 }

@@ -138,17 +138,54 @@ Deno.serve(async (req) => {
       console.log('[stripe-checkout-selection-process-fee] Coupon ID:', activeDiscount.stripe_coupon_id);
       console.log('[stripe-checkout-selection-process-fee] Discount Amount:', activeDiscount.discount_amount);
       
-      sessionConfig.discounts = [{ coupon: activeDiscount.stripe_coupon_id }];
-      // Remove allow_promotion_codes quando há desconto aplicado
-      delete sessionConfig.allow_promotion_codes;
+      // Verificar se o cupom existe no Stripe antes de usar
+      let couponExists = false;
+      try {
+        await stripe.coupons.retrieve(activeDiscount.stripe_coupon_id);
+        couponExists = true;
+        console.log('[stripe-checkout-selection-process-fee] ✅ Cupom existe no Stripe');
+      } catch (couponError: any) {
+        console.log('[stripe-checkout-selection-process-fee] ⚠️ Cupom não existe no Stripe:', couponError.message);
+        
+        // Se o cupom não existe, criar um novo
+        try {
+          console.log('[stripe-checkout-selection-process-fee] 🔧 Criando novo cupom no Stripe...');
+          const newCoupon = await stripe.coupons.create({
+            id: activeDiscount.stripe_coupon_id,
+            amount_off: activeDiscount.discount_amount * 100,
+            currency: 'usd',
+            duration: 'once',
+            name: `Matricula Rewards - ${activeDiscount.affiliate_code}`,
+            metadata: { 
+              affiliate_code: activeDiscount.affiliate_code, 
+              user_id: user.id, 
+              referrer_id: activeDiscount.referrer_id 
+            }
+          });
+          
+          console.log('[stripe-checkout-selection-process-fee] ✅ Novo cupom criado:', newCoupon.id);
+          couponExists = true;
+        } catch (createError: any) {
+          console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao criar cupom:', createError.message);
+          // Se não conseguir criar o cupom, continua sem desconto
+        }
+      }
       
-      sessionMetadata.referral_discount = true;
-      sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
-      sessionMetadata.referrer_id = activeDiscount.referrer_id;
-      sessionMetadata.discount_amount = activeDiscount.discount_amount;
-      
-      console.log('[stripe-checkout-selection-process-fee] ✅ Desconto aplicado na sessão!');
-      console.log('[stripe-checkout-selection-process-fee] 📋 Metadata atualizada:', sessionMetadata);
+      if (couponExists) {
+        sessionConfig.discounts = [{ coupon: activeDiscount.stripe_coupon_id }];
+        // Remove allow_promotion_codes quando há desconto aplicado
+        delete sessionConfig.allow_promotion_codes;
+        
+        sessionMetadata.referral_discount = true;
+        sessionMetadata.affiliate_code = activeDiscount.affiliate_code;
+        sessionMetadata.referrer_id = activeDiscount.referrer_id;
+        sessionMetadata.discount_amount = activeDiscount.discount_amount;
+        
+        console.log('[stripe-checkout-selection-process-fee] ✅ Desconto aplicado na sessão!');
+        console.log('[stripe-checkout-selection-process-fee] 📋 Metadata atualizada:', sessionMetadata);
+      } else {
+        console.log('[stripe-checkout-selection-process-fee] ⚠️ Não foi possível aplicar desconto - cupom não disponível');
+      }
     } else {
       console.log('[stripe-checkout-selection-process-fee] ⚠️ Nenhum desconto para aplicar');
       // Códigos promocionais removidos - não permitir entrada manual de cupons

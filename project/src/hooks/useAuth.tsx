@@ -348,7 +348,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                           referred_id: session.user.id,
                           affiliate_code: pendingAffiliateCode,
                           status: 'pending',
-                          credits_earned: 200 // 200 Matricula Coins
+                          credits_earned: 180 // 180 Matricula Coins
                         });
                       
                       if (referralError) {
