@@ -395,6 +395,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         return;
       }
       const file_url = data?.path;
+      
+      // Verificar se é um reenvio (já existe upload rejeitado para este request)
+      const { data: existingUploads } = await supabase
+        .from('document_request_uploads')
+        .select('id, status')
+        .eq('document_request_id', requestId)
+        .eq('uploaded_by', currentUserId);
+      
+      const hasRejectedUpload = existingUploads?.some(upload => upload.status === 'rejected');
+      const isResubmission = hasRejectedUpload;
+      
       const insertResult = await supabase.from('document_request_uploads').insert({
         document_request_id: requestId,
         uploaded_by: currentUserId,
@@ -402,21 +413,283 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         status: 'under_review',
       });
 
-      // Notificar universidade via Edge Function
+      // Notificar universidade - diferenciando entre novo upload e reenvio
       try {
-        // console.log('[NOTIFICAÇÃO] Chamando Edge Function para notificar universidade', {
-        //   user_id: currentUserId,
-        //   tipos_documentos: [requestId],
-        // });
-        const notifResult = await supabase.functions.invoke('notify-university-document-upload', {
-          body: JSON.stringify({
-            user_id: currentUserId,
-            tipos_documentos: [requestId], // ou tipo do documento, se disponível
-          }),
-        });
-        // console.log('[NOTIFICAÇÃO] Resultado da chamada da Edge Function:', notifResult);
+        if (isResubmission) {
+          // Notificação específica para reenvio de documento rejeitado
+          console.log('[REENVIO] Enviando notificação de reenvio de documento rejeitado');
+          
+          // Buscar dados da aplicação e universidade para notificação
+          const { data: requestData, error: requestError } = await supabase
+            .from('document_requests')
+            .select(`
+              title,
+              scholarship_application_id
+            `)
+            .eq('id', requestId)
+            .single();
+
+          if (requestError) {
+            console.error('[REENVIO] Erro ao buscar dados do request:', requestError);
+            return;
+          }
+
+          // Buscar dados do aluno através do contexto de autenticação
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (!user) {
+            console.error('[REENVIO] Usuário não autenticado');
+            return;
+          }
+
+          // Usar dados do usuário autenticado
+          const studentData = {
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Usuário',
+            email: user.email || 'email@exemplo.com'
+          };
+
+          // Verificar se é um documento global (sem scholarship_application_id)
+          if (!requestData.scholarship_application_id) {
+            console.log('[REENVIO] Documento global - usando dados da universidade diretamente');
+            
+            // Buscar dados da universidade diretamente do document_request
+            const { data: globalRequestData, error: globalError } = await supabase
+              .from('document_requests')
+              .select(`
+                title,
+                university_id,
+                universities!inner(
+                  name,
+                  contact
+                )
+              `)
+              .eq('id', requestId)
+              .single();
+
+            if (globalError) {
+              console.error('[REENVIO] Erro ao buscar dados globais:', globalError);
+              return;
+            }
+
+            if (globalRequestData?.universities) {
+              const university = globalRequestData.universities;
+              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
+              
+              if (emailUniversidade) {
+                const payload = {
+                  tipo_notf: 'Documento reenviado após rejeição',
+                  email_aluno: studentData.email,
+                  nome_aluno: studentData.full_name,
+                  nome_bolsa: 'Documento Global',
+                  nome_universidade: university.name,
+                  email_universidade: emailUniversidade,
+                  o_que_enviar: `O aluno ${studentData.full_name} reenviou o documento "${requestData.title}" (documento global) que foi previamente rejeitado. Acesse o painel para revisar a nova versão.`,
+                  notification_target: 'university'
+                };
+
+                console.log('[REENVIO] Payload para n8n (global):', payload);
+                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3',
+                  },
+                  body: JSON.stringify(payload),
+                });
+                const n8nText = await n8nRes.text();
+                console.log('[REENVIO] Resposta do n8n (global):', n8nRes.status, n8nText);
+              }
+            }
+          } else {
+            // Buscar dados da aplicação separadamente
+            const { data: applicationData, error: appError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                id,
+                scholarship_id,
+                scholarships!inner(
+                  title,
+                  universities!inner(
+                    name,
+                    contact
+                  )
+                )
+              `)
+              .eq('id', requestData.scholarship_application_id)
+              .single();
+
+            if (appError) {
+              console.error('[REENVIO] Erro ao buscar dados da aplicação:', appError);
+              return;
+            }
+
+            if (applicationData?.scholarships?.universities) {
+              const university = (applicationData.scholarships as any).universities;
+              const scholarship = applicationData.scholarships;
+              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
+              
+              // Buscar dados do aluno
+              const { data: studentData } = await supabase
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('id', currentUserId)
+                .single();
+
+              if (studentData && emailUniversidade) {
+                const payload = {
+                  tipo_notf: 'Documento reenviado após rejeição',
+                  email_aluno: studentData.email,
+                  nome_aluno: studentData.full_name,
+                  nome_bolsa: scholarship.title,
+                  nome_universidade: university.name,
+                  email_universidade: emailUniversidade,
+                  o_que_enviar: `O aluno ${studentData.full_name} reenviou o documento "${requestData.title}" que foi previamente rejeitado para a bolsa "${scholarship.title}". Acesse o painel para revisar a nova versão.`,
+                  notification_target: 'university'
+                };
+
+                console.log('[REENVIO] Payload para n8n:', payload);
+                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3',
+                  },
+                  body: JSON.stringify(payload),
+                });
+                const n8nText = await n8nRes.text();
+                console.log('[REENVIO] Resposta do n8n:', n8nRes.status, n8nText);
+              }
+            }
+          }
+        } else {
+          // Notificação padrão para novo upload - DIRETO VIA WEBHOOK
+          console.log('[NOVO UPLOAD] Enviando notificação de novo documento via webhook direto');
+          
+          // Buscar dados básicos do document_request
+          const { data: requestData, error: requestError } = await supabase
+            .from('document_requests')
+            .select(`
+              title,
+              description,
+              scholarship_application_id,
+              university_id,
+              universities!inner(
+                name,
+                contact
+              )
+            `)
+            .eq('id', requestId)
+            .single();
+
+          if (requestError) {
+            console.error('[NOVO UPLOAD] Erro ao buscar dados do request:', requestError);
+            return;
+          }
+
+          // Buscar dados do aluno através do contexto de autenticação
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (!user) {
+            console.error('[NOVO UPLOAD] Usuário não autenticado');
+            return;
+          }
+
+          // Usar dados do usuário autenticado
+          const studentData = {
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Usuário',
+            email: user.email || 'email@exemplo.com'
+          };
+
+          // Verificar se é um documento global (sem scholarship_application_id)
+          if (!requestData.scholarship_application_id) {
+            console.log('[NOVO UPLOAD] Documento global - usando dados da universidade diretamente');
+            
+            if (requestData?.universities) {
+              const university = requestData.universities;
+              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
+              
+              if (emailUniversidade) {
+                const payload = {
+                  tipo_notf: 'Novo documento enviado para análise',
+                  email_aluno: studentData.email,
+                  nome_aluno: studentData.full_name,
+                  nome_bolsa: 'Documento Global',
+                  nome_universidade: university.name,
+                  email_universidade: emailUniversidade,
+                  o_que_enviar: `O aluno ${studentData.full_name} enviou o documento "${requestData.title}" (documento global). Acesse o painel para revisar e analisar o documento.`,
+                  notification_target: 'university'
+                };
+
+                console.log('[NOVO UPLOAD] Payload para n8n (global):', payload);
+                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3',
+                  },
+                  body: JSON.stringify(payload),
+                });
+                const n8nText = await n8nRes.text();
+                console.log('[NOVO UPLOAD] Resposta do n8n (global):', n8nRes.status, n8nText);
+              }
+            }
+          } else {
+            // Buscar dados da aplicação separadamente
+            const { data: applicationData, error: appError } = await supabase
+              .from('scholarship_applications')
+              .select(`
+                id,
+                scholarship_id,
+                scholarships!inner(
+                  title,
+                  universities!inner(
+                    name,
+                    contact
+                  )
+                )
+              `)
+              .eq('id', requestData.scholarship_application_id)
+              .single();
+
+            if (appError) {
+              console.error('[NOVO UPLOAD] Erro ao buscar dados da aplicação:', appError);
+              return;
+            }
+
+            if (applicationData?.scholarships?.universities) {
+              const university = (applicationData.scholarships as any).universities;
+              const scholarship = applicationData.scholarships;
+              const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
+              
+              if (emailUniversidade) {
+                const payload = {
+                  tipo_notf: 'Novo documento enviado para análise',
+                  email_aluno: studentData.email,
+                  nome_aluno: studentData.full_name,
+                  nome_bolsa: scholarship.title,
+                  nome_universidade: university.name,
+                  email_universidade: emailUniversidade,
+                  o_que_enviar: `O aluno ${studentData.full_name} enviou o documento "${requestData.title}" para a bolsa "${scholarship.title}". Acesse o painel para revisar e analisar o documento.`,
+                  notification_target: 'university'
+                };
+
+                console.log('[NOVO UPLOAD] Payload para n8n:', payload);
+                const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3',
+                  },
+                  body: JSON.stringify(payload),
+                });
+                const n8nText = await n8nRes.text();
+                console.log('[NOVO UPLOAD] Resposta do n8n:', n8nRes.status, n8nText);
+              }
+            }
+          }
+        }
       } catch (e) {
-        // console.error('Erro ao notificar universidade:', e);
+        console.error('Erro ao notificar universidade:', e);
       }
 
       setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: null }));

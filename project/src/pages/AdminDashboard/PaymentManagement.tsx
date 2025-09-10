@@ -683,17 +683,21 @@ const PaymentManagement = (): React.JSX.Element => {
           : null;
         
         if (notificationEndpoint) {
+          const payload = {
+            application_id: payment.scholarship_id || payment.student_id, // Usando scholarship_id se disponível, senão student_id
+            user_id: payment.user_id,
+            scholarship_id: payment.scholarship_id || null
+          };
+          
+          console.log(`📤 [approveZellePayment] Payload para universidade:`, payload);
+          
           const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
             },
-            body: JSON.stringify({
-              application_id: payment.scholarship_id || payment.student_id, // Usando scholarship_id se disponível, senão student_id
-              user_id: payment.user_id,
-              scholarship_id: payment.scholarship_id || null
-            }),
+            body: JSON.stringify(payload),
           });
 
           if (notificationResponse.ok) {
@@ -714,7 +718,8 @@ const PaymentManagement = (): React.JSX.Element => {
         console.log(`📤 [approveZellePayment] Buscando informações do seller e affiliate admin...`);
         
         // Buscar informações do seller relacionado ao pagamento
-        const { data: sellerData, error: sellerError } = await supabase
+        // Primeiro tentar buscar pelo user_id diretamente
+        let { data: sellerData, error: sellerError } = await supabase
           .from('sellers')
           .select(`
             id,
@@ -722,15 +727,86 @@ const PaymentManagement = (): React.JSX.Element => {
             name,
             email,
             referral_code,
-            commission_rate,
-            affiliate_admin_id,
-            affiliate_admin:affiliate_admins!sellers_affiliate_admin_id_fkey(
-              user_id,
-              user_profiles!affiliate_admins_user_id_fkey(full_name, email)
-            )
+            affiliate_admin_id
           `)
           .eq('user_id', payment.user_id)
           .single();
+
+        // Se não encontrar pelo user_id, buscar pelo seller_referral_code do usuário
+        if (sellerError && sellerError.code === 'PGRST116') {
+          console.log('🔍 [approveZellePayment] Seller não encontrado pelo user_id, buscando pelo seller_referral_code...');
+          
+          // Buscar o seller_referral_code do usuário
+          const { data: userProfile, error: userError } = await supabase
+            .from('user_profiles')
+            .select('seller_referral_code')
+            .eq('user_id', payment.user_id)
+            .single();
+
+          if (!userError && userProfile?.seller_referral_code) {
+            console.log('🔍 [approveZellePayment] seller_referral_code encontrado:', userProfile.seller_referral_code);
+            
+            // Buscar o seller pelo referral_code
+            const { data: sellerByCode, error: sellerByCodeError } = await supabase
+              .from('sellers')
+              .select(`
+                id,
+                user_id,
+                name,
+                email,
+                referral_code,
+                affiliate_admin_id
+              `)
+              .eq('referral_code', userProfile.seller_referral_code)
+              .single();
+
+            if (!sellerByCodeError && sellerByCode) {
+              sellerData = sellerByCode;
+              sellerError = null;
+              console.log('✅ [approveZellePayment] Seller encontrado pelo referral_code:', sellerData);
+            } else {
+              console.log('❌ [approveZellePayment] Seller não encontrado pelo referral_code:', sellerByCodeError);
+            }
+          } else {
+            console.log('❌ [approveZellePayment] seller_referral_code não encontrado no perfil do usuário:', userError);
+          }
+        }
+
+        // Buscar informações do affiliate admin separadamente se existir
+        let affiliateAdminData = null;
+        if (sellerData && sellerData.affiliate_admin_id) {
+          console.log('🔍 [approveZellePayment] Buscando affiliate admin com ID:', sellerData.affiliate_admin_id);
+          
+          // Primeiro buscar o affiliate_admin
+          const { data: affiliateData, error: affiliateError } = await supabase
+            .from('affiliate_admins')
+            .select('user_id')
+            .eq('id', sellerData.affiliate_admin_id)
+            .single();
+          
+          if (!affiliateError && affiliateData) {
+            console.log('✅ [approveZellePayment] Affiliate admin encontrado:', affiliateData);
+            
+            // Depois buscar as informações do user_profiles
+            const { data: userProfileData, error: userProfileError } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', affiliateData.user_id)
+              .single();
+            
+            if (!userProfileError && userProfileData) {
+              affiliateAdminData = {
+                user_id: affiliateData.user_id,
+                user_profiles: userProfileData
+              };
+              console.log('✅ [approveZellePayment] Dados do affiliate admin carregados:', affiliateAdminData);
+            } else {
+              console.log('❌ [approveZellePayment] Erro ao buscar user_profiles do affiliate admin:', userProfileError);
+            }
+          } else {
+            console.log('❌ [approveZellePayment] Erro ao buscar affiliate admin:', affiliateError);
+          }
+        }
 
         if (sellerData && !sellerError) {
           console.log(`📤 [approveZellePayment] Seller encontrado:`, sellerData);
@@ -745,15 +821,14 @@ const PaymentManagement = (): React.JSX.Element => {
               nome_aluno: payment.student_name,
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
-              email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
-              nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
+              email_affiliate_admin: affiliateAdminData?.user_profiles?.email || "",
+              nome_affiliate_admin: affiliateAdminData?.user_profiles?.full_name || "Affiliate Admin",
               o_que_enviar: `Pagamento de ${payment.fee_type} no valor de $${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: payment.fee_type,
               amount: payment.amount,
               seller_id: sellerData.user_id,
               referral_code: sellerData.referral_code,
-              commission_rate: sellerData.commission_rate
             };
 
             console.log('📧 [approveZellePayment] Enviando notificação para admin:', adminNotificationPayload);
@@ -776,12 +851,12 @@ const PaymentManagement = (): React.JSX.Element => {
           }
 
           // NOTIFICAÇÃO PARA AFFILIATE ADMIN
-          if (sellerData.affiliate_admin?.user_profiles?.email) {
+          if (affiliateAdminData?.user_profiles?.email) {
             try {
               const affiliateAdminNotificationPayload = {
                 tipo_notf: "Pagamento de aluno do seu seller aprovado",
-                email_affiliate_admin: sellerData.affiliate_admin.user_profiles.email,
-                nome_affiliate_admin: sellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
+                email_affiliate_admin: affiliateAdminData.user_profiles.email,
+                nome_affiliate_admin: affiliateAdminData.user_profiles.full_name || "Affiliate Admin",
                 email_aluno: payment.student_email,
                 nome_aluno: payment.student_name,
                 email_seller: sellerData.email,
@@ -792,7 +867,6 @@ const PaymentManagement = (): React.JSX.Element => {
                 amount: payment.amount,
                 seller_id: sellerData.user_id,
                 referral_code: sellerData.referral_code,
-                commission_rate: sellerData.commission_rate
               };
 
               console.log('📧 [approveZellePayment] Enviando notificação para affiliate admin:', affiliateAdminNotificationPayload);
@@ -828,9 +902,7 @@ const PaymentManagement = (): React.JSX.Element => {
               fee_type: payment.fee_type,
               amount: payment.amount,
               seller_id: sellerData.user_id,
-              referral_code: sellerData.referral_code,
-              commission_rate: sellerData.commission_rate,
-              estimated_commission: payment.amount * sellerData.commission_rate
+              referral_code: sellerData.referral_code
             };
 
             console.log('📧 [approveZellePayment] Enviando notificação para seller:', sellerNotificationPayload);
