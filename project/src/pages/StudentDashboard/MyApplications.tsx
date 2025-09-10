@@ -1189,7 +1189,7 @@ const getLevelColor = (level: any) => {
               const selectedApp = approvedList.find(a => (a as any).is_scholarship_fee_paid);
               const hasSelectedScholarship = !!selectedApp;
               return (
-                <section>
+                <section >
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.approvedByUniversity')}</h3>
                     <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} {t('studentDashboard.myApplications.sections.approved')}</span>
@@ -1202,7 +1202,7 @@ const getLevelColor = (level: any) => {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:flex md:justify-start md:gap-6 md:overflow-x-auto md:pb-4 md:items-start" style={{ 
+                  <div className="grid grid-cols-1 md:flex md:justify-start md:gap-6 md:overflow-x-auto md:pb-4 md:items-start gap-6" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
