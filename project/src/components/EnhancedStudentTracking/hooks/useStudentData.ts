@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { StudentInfo, Seller, Student, University } from '../types';
+import { Seller, Student, University } from '../types';
 
 export const useStudentData = (userId?: string) => {
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -19,76 +19,13 @@ export const useStudentData = (userId?: string) => {
         .order('name');
 
       if (!universitiesError && universitiesData) {
-        setUniversities(universitiesData);
+        setUniversities(universitiesData as University[]);
       }
     } catch (error) {
       console.warn('Could not load universities:', error);
     }
   }, []);
 
-  // Função para calcular a receita real baseada nas taxas pagas (SEM Application Fee)
-  const calculateStudentRevenue = async (studentId: string, profileId: string) => {
-    try {
-      console.log('🔍 Calculating revenue for student:', studentId, 'profile:', profileId);
-      
-      let totalRevenue = 0;
-      
-      // Buscar aplicação de bolsa do estudante
-      const { data: applicationData, error: applicationError } = await supabase
-        .from('scholarship_applications')
-        .select(`
-          id,
-          is_scholarship_fee_paid
-        `)
-        .eq('student_id', profileId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!applicationError && applicationData) {
-        console.log('🔍 Application data found:', applicationData);
-        
-        // Scholarship Fee (fixa - $400) - APENAS esta taxa do sistema
-        if (applicationData.is_scholarship_fee_paid) {
-          totalRevenue += 400;
-          console.log('🔍 Scholarship fee added: $400');
-        }
-      }
-      
-      // Buscar perfil do usuário para taxas fixas
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select(`
-          has_paid_selection_process_fee,
-          has_paid_i20_control_fee
-        `)
-        .eq('id', profileId)
-        .single();
-
-      if (!profileError && profileData) {
-        console.log('🔍 Profile data found:', profileData);
-        
-        // Selection Process Fee (fixa - $999)
-        if (profileData.has_paid_selection_process_fee) {
-          totalRevenue += 999;
-          console.log('🔍 Selection process fee added: $999');
-        }
-        
-        // I-20 Control Fee (fixa - $999)
-        if (profileData.has_paid_i20_control_fee) {
-          totalRevenue += 999;
-          console.log('🔍 I-20 control fee added: $999');
-        }
-      }
-      
-      console.log(`🔍 Total revenue calculated for student ${studentId}: $${totalRevenue}`);
-      return totalRevenue;
-      
-    } catch (error) {
-      console.error('🔍 Error calculating student revenue:', error);
-      return 0;
-    }
-  };
 
   // Carregar dados iniciais
   const loadData = useCallback(async () => {
@@ -129,9 +66,9 @@ export const useStudentData = (userId?: string) => {
             console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
-          // Buscar dados reais dos estudantes (com todas as aplicações para Seller Tracking)
+          // Buscar dados reais dos estudantes usando a função existente
           const { data: realStudentsData, error: realStudentsError } = await supabase
-            .rpc('get_admin_students_tracking', { admin_user_id: userId });
+            .rpc('get_admin_students_analytics', { admin_user_id: userId });
 
           console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
 
@@ -154,7 +91,12 @@ export const useStudentData = (userId?: string) => {
                 status: student.status,
                 application_status: student.application_status,
                 scholarship_title: student.scholarship_title,
-                university_name: student.university_name
+                university_name: student.university_name,
+                // Flags de pagamento necessários para a visualização das taxas faltantes
+                has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+                has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+                is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                is_application_fee_paid: student.is_application_fee_paid
               };
             });
             

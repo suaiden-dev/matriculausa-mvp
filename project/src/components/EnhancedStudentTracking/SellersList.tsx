@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ChevronDown, ChevronRight, Eye, MapPin, DollarSign } from 'lucide-react';
+import { User, ChevronDown, ChevronRight, Eye, MapPin, DollarSign, CheckCircle2 } from 'lucide-react';
 
 interface SellersListProps {
   filteredSellers: any[];
@@ -34,6 +34,50 @@ const SellersList: React.FC<SellersListProps> = ({
       case 'suspended': return 'bg-red-100 text-red-800';
       default: return 'bg-blue-100 text-blue-800';
     }
+  };
+
+  // Função para determinar quais taxas estão faltando para um aluno
+  const getMissingFees = (student: any) => {
+    const missingFees = [];
+    
+    // Debug: Log dos dados do estudante para verificar os flags
+    if (student.email === 'kassandra969@uorak.com') {
+      console.log('🔍 [DEBUG] Kassandra payment flags:', {
+        email: student.email,
+        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+        is_application_fee_paid: student.is_application_fee_paid,
+        total_paid: student.total_paid
+      });
+    }
+    
+    // Verificar Selection Process Fee ($999) - usar apenas o flag booleano
+    if (!student.has_paid_selection_process_fee) {
+      missingFees.push({ name: 'Selection Process', amount: 999, color: 'red' });
+    }
+    
+    // Verificar I20 Control Fee ($999) - usar apenas o flag booleano
+    if (!student.has_paid_i20_control_fee) {
+      missingFees.push({ name: 'I20 Control', amount: 999, color: 'orange' });
+    }
+    
+    // Verificar Scholarship Fee ($400) - usar apenas o flag booleano
+    if (!student.is_scholarship_fee_paid) {
+      missingFees.push({ name: 'Scholarship', amount: 400, color: 'blue' });
+    }
+    
+    // Verificar Application Fee ($50) - usar apenas o flag booleano
+    if (!student.is_application_fee_paid) {
+      missingFees.push({ name: 'Application', amount: 50, color: 'gray' });
+    }
+    
+    // Debug: Log do resultado final
+    if (student.email === 'kassandra969@uorak.com') {
+      console.log('🔍 [DEBUG] Kassandra missing fees result:', missingFees);
+    }
+    
+    return missingFees;
   };
 
   if (filteredSellers.length === 0) {
@@ -116,6 +160,9 @@ const SellersList: React.FC<SellersListProps> = ({
                             Revenue
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Missing Fees
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                             Status
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -159,6 +206,34 @@ const SellersList: React.FC<SellersListProps> = ({
                                 <span className="text-sm font-medium text-slate-900">
                                   {formatCurrency(student.total_paid)}
                                 </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-wrap gap-1">
+                                {(() => {
+                                  const missingFees = getMissingFees(student);
+                                  if (missingFees.length === 0) {
+                                    return (
+                                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        All Paid
+                                      </span>
+                                    );
+                                  }
+                                  return missingFees.map((fee, index) => (
+                                    <span
+                                      key={index}
+                                      className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                        fee.color === 'red' ? 'text-red-700 bg-red-100' :
+                                        fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
+                                        fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
+                                        'text-gray-700 bg-gray-100'
+                                      }`}
+                                    >
+                                      {fee.name}
+                                    </span>
+                                  ));
+                                })()}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">

@@ -221,6 +221,9 @@ const Scholarships: React.FC = () => {
 
   const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
 
+  // Verificar se deve aplicar blur (usuário não logado)
+  const shouldApplyBlur = !isAuthenticated;
+
   // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -521,6 +524,7 @@ const Scholarships: React.FC = () => {
             </span>
           </div>
         </div>
+
 
         {/* Featured Scholarships Section */}
   {filteredFeaturedScholarships.length > 0 && (

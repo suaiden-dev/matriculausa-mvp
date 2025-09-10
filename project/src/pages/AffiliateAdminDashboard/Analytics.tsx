@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Users, DollarSign, Calendar, Award } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface AnalyticsProps {
@@ -21,7 +21,7 @@ interface MonthlyPerformance {
   active_sellers: number;
 }
 
-const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], students = [], userId }) => {
+const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) => {
   const [monthlyData, setMonthlyData] = useState<MonthlyPerformance[]>([]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
 
@@ -99,8 +99,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], students = [
 
   return (
     <div className="space-y-8">
-
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -198,7 +196,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], students = [
                 <p className="text-slate-500 text-sm">Loading monthly data...</p>
               </div>
             ) : monthlyData.length > 0 ? (
-              monthlyData.map((data, index) => (
+              monthlyData.map((data) => (
                 <div key={data.month_year} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-20 text-sm text-slate-600 font-medium">{data.month_year}</div>
@@ -233,16 +231,16 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], students = [
           
           <div className="space-y-4">
             {topSellers.length > 0 ? (
-              topSellers.map((seller, index) => (
+              topSellers.map((seller, idx) => (
                 <div key={seller.id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium ${
-                      index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                      index === 1 ? 'bg-slate-100 text-slate-800' :
-                      index === 2 ? 'bg-orange-100 text-orange-800' :
+                      idx === 0 ? 'bg-yellow-100 text-yellow-800' :
+                      idx === 1 ? 'bg-slate-100 text-slate-800' :
+                      idx === 2 ? 'bg-orange-100 text-orange-800' :
                       'bg-slate-50 text-slate-600'
                     }`}>
-                      {index + 1}
+                      {idx + 1}
                     </div>
                     <div>
                       <div className="text-sm font-medium text-slate-900">{seller.name}</div>

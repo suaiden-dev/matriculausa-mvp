@@ -179,6 +179,9 @@ const Universities: React.FC = () => {
     });
   };
 
+  // Verificar se deve aplicar blur (usuário não logado)
+  const shouldApplyBlur = !isAuthenticated;
+
   const filteredSchools = filterUniversities(realUniversities);
   const filteredFeaturedUniversities = filterUniversities(featuredUniversities);
 
@@ -270,6 +273,7 @@ const Universities: React.FC = () => {
             </div>
           </div>
         </div>
+
 
         {/* Featured Universities Section */}
         {filteredFeaturedUniversities.length > 0 && (

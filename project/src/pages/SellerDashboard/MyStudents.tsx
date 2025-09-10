@@ -13,7 +13,8 @@ import {
   TrendingDown,
   Building,
   Clock,
-  Award
+  Award,
+  CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -31,6 +32,11 @@ interface Student {
   scholarship_title?: string;
   university_name?: string;
   university_id?: string;
+  // Flags de pagamento necessários para a visualização das taxas faltantes
+  has_paid_selection_process_fee?: boolean;
+  has_paid_i20_control_fee?: boolean;
+  is_scholarship_fee_paid?: boolean;
+  is_application_fee_paid?: boolean;
 }
 
 interface University {
@@ -253,6 +259,33 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
+  };
+
+  // Função para determinar quais taxas estão faltando para um aluno
+  const getMissingFees = (student: Student) => {
+    const missingFees = [];
+    
+    // Verificar Selection Process Fee ($999) - usar apenas o flag booleano
+    if (!student.has_paid_selection_process_fee) {
+      missingFees.push({ name: 'Selection Process', amount: 999, color: 'red' });
+    }
+    
+    // Verificar I20 Control Fee ($999) - usar apenas o flag booleano
+    if (!student.has_paid_i20_control_fee) {
+      missingFees.push({ name: 'I20 Control', amount: 999, color: 'orange' });
+    }
+    
+    // Verificar Scholarship Fee ($400) - usar apenas o flag booleano
+    if (!student.is_scholarship_fee_paid) {
+      missingFees.push({ name: 'Scholarship', amount: 400, color: 'blue' });
+    }
+    
+    // Verificar Application Fee ($50) - usar apenas o flag booleano
+    if (!student.is_application_fee_paid) {
+      missingFees.push({ name: 'Application', amount: 50, color: 'gray' });
+    }
+    
+    return missingFees;
   };
 
   // Estatísticas calculadas dinamicamente
@@ -602,6 +635,39 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <DollarSign className="h-4 w-4 mr-1" />
                       {formatCurrency(student.total_paid)}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Taxas Faltantes */}
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-600">Payment Missing Fees:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {(() => {
+                        const missingFees = getMissingFees(student);
+                        if (missingFees.length === 0) {
+                          return (
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              All Paid
+                            </span>
+                          );
+                        }
+                        return missingFees.map((fee, index) => (
+                          <span
+                            key={index}
+                            className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                              fee.color === 'red' ? 'text-red-700 bg-red-100' :
+                              fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
+                              fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
+                              'text-gray-700 bg-gray-100'
+                            }`}
+                          >
+                            {fee.name}
+                          </span>
+                        ));
+                      })()}
                     </div>
                   </div>
                 </div>

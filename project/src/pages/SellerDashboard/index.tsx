@@ -167,7 +167,12 @@ const SellerDashboard: React.FC = () => {
         fees_count: referral.fees_count || 0,
         latest_activity: referral.registration_date,
         scholarship_title: referral.scholarship_title || 'No scholarship selected',
-        university_name: referral.university_name || 'No university selected'
+        university_name: referral.university_name || 'No university selected',
+        // Adicionar flags de pagamento individuais
+        has_paid_selection_process_fee: referral.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: referral.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: referral.is_scholarship_fee_paid,
+        is_application_fee_paid: referral.is_application_fee_paid
       }));
 
       // Process seller data

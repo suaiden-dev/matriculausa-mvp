@@ -14,7 +14,8 @@ import {
   CheckCircle,
   User,
   ChevronDown,
-  Activity
+  Activity,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -38,6 +39,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/users')) return 'users';
+    if (path.includes('/payments')) return 'payments';
     if (path.includes('/students')) return 'students';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/profile')) return 'profile';
@@ -49,6 +51,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, path: '/affiliate-admin/dashboard', badge: null },
     { id: 'users', label: 'Seller Management', icon: Users, path: '/affiliate-admin/dashboard/users', badge: null },
+    { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/affiliate-admin/dashboard/payments', badge: null },
     { id: 'students', label: 'Seller Tracking', icon: GraduationCap, path: '/affiliate-admin/dashboard/students', badge: null },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/affiliate-admin/dashboard/analytics', badge: null },
     { id: 'profile', label: 'Profile Settings', icon: Settings, path: '/affiliate-admin/dashboard/profile', badge: null }
@@ -183,6 +186,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                 <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Affiliate Admin Overview'}
                   {activeTab === 'users' && 'Seller Management'}
+                  {activeTab === 'payments' && 'Payment Management'}
                   {activeTab === 'students' && 'Seller Tracking'}
                   {activeTab === 'analytics' && 'Analytics & Reports'}
                   {activeTab === 'profile' && 'Profile Settings'}
@@ -190,6 +194,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                 <p className="text-slate-600">
                   {activeTab === 'overview' && 'Monitor your affiliate network performance and activity'}
                   {activeTab === 'users' && 'Promote existing users to sellers and manage your network'}
+                  {activeTab === 'payments' && 'Manage commission earnings and payment requests'}
                   {activeTab === 'students' && 'Track student referrals and conversions'}
                   {activeTab === 'analytics' && 'Analyze affiliate performance and revenue metrics'}
                   {activeTab === 'profile' && 'Manage your affiliate admin settings'}
