@@ -129,9 +129,9 @@ export const useStudentData = (userId?: string) => {
             console.log('🔍 SQL sellers function failed or returned no data, will use fallback');
           }
 
-          // Buscar dados reais dos estudantes (com todas as aplicações para Seller Tracking)
+          // Buscar dados reais dos estudantes usando a função existente
           const { data: realStudentsData, error: realStudentsError } = await supabase
-            .rpc('get_admin_students_tracking', { admin_user_id: userId });
+            .rpc('get_admin_students_analytics', { admin_user_id: userId });
 
           console.log('🔍 SQL students response:', { data: realStudentsData, error: realStudentsError });
 
@@ -154,7 +154,12 @@ export const useStudentData = (userId?: string) => {
                 status: student.status,
                 application_status: student.application_status,
                 scholarship_title: student.scholarship_title,
-                university_name: student.university_name
+                university_name: student.university_name,
+                // Flags de pagamento necessários para a visualização das taxas faltantes
+                has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+                has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+                is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                is_application_fee_paid: student.is_application_fee_paid
               };
             });
             

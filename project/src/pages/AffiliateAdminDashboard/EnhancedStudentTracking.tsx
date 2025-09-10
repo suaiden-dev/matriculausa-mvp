@@ -121,6 +121,13 @@ interface FilterState {
   paymentStatusFilter: string;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
+  // Filtros de taxas
+  feeFilters: {
+    selectionProcessFee: 'all' | 'paid' | 'pending';
+    i20ControlFee: 'all' | 'paid' | 'pending';
+    scholarshipFee: 'all' | 'paid' | 'pending';
+    applicationFee: 'all' | 'paid' | 'pending';
+  };
 }
 
 const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
@@ -137,7 +144,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Hook para configurações dinâmicas de taxas
-  const { feeConfig, getFeeAmount, formatFeeAmount } = useFeeConfig();
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
 
   useEffect(() => {
     console.log('🔍 studentDocuments:', studentDocuments);
@@ -155,7 +162,13 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     statusFilter: 'all',
     paymentStatusFilter: 'all',
     sortBy: 'revenue',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    feeFilters: {
+      selectionProcessFee: 'all',
+      i20ControlFee: 'all',
+      scholarshipFee: 'all',
+      applicationFee: 'all'
+    }
   });
 
   // Carregar universidades para filtros
@@ -518,7 +531,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                 )
               )
             `)
-            .eq('student_id', profile_id)
+            .eq('student_id', studentId)
             .order('created_at', { ascending: false })
             .limit(1)
             .single();
@@ -799,9 +812,99 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     }
   }, []);
 
+  // Função para verificar se um estudante atende aos filtros de taxas
+  const matchesFeeFilters = (student: any) => {
+    const { feeFilters } = filters;
+    
+    // Verificar Selection Process Fee
+    if (feeFilters.selectionProcessFee !== 'all') {
+      const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= 999;
+      if (feeFilters.selectionProcessFee === 'paid' && !hasPaidSelection) return false;
+      if (feeFilters.selectionProcessFee === 'pending' && hasPaidSelection) return false;
+    }
+    
+    // Verificar I20 Control Fee
+    if (feeFilters.i20ControlFee !== 'all') {
+      const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= 1998;
+      if (feeFilters.i20ControlFee === 'paid' && !hasPaidI20) return false;
+      if (feeFilters.i20ControlFee === 'pending' && hasPaidI20) return false;
+    }
+    
+    // Verificar Scholarship Fee
+    if (feeFilters.scholarshipFee !== 'all') {
+      const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= 2398;
+      if (feeFilters.scholarshipFee === 'paid' && !hasPaidScholarship) return false;
+      if (feeFilters.scholarshipFee === 'pending' && hasPaidScholarship) return false;
+    }
+    
+    // Verificar Application Fee
+    if (feeFilters.applicationFee !== 'all') {
+      const hasPaidApplication = student.is_application_fee_paid || false;
+      if (feeFilters.applicationFee === 'paid' && !hasPaidApplication) return false;
+      if (feeFilters.applicationFee === 'pending' && hasPaidApplication) return false;
+    }
+    
+    return true;
+  };
+
   // Aplicar filtros e ordenação
-  const filteredSellers = sellers;
-  const filteredStudents = students;
+  const filteredStudents = students.filter(student => {
+    // Filtro de busca
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      const matchesSearch = 
+        student.full_name?.toLowerCase().includes(searchLower) ||
+        student.email?.toLowerCase().includes(searchLower) ||
+        student.seller_name?.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+    
+    // Filtro por vendedor
+    if (filters.sellerFilter !== 'all') {
+      if (student.referred_by_seller_id !== filters.sellerFilter) return false;
+    }
+    
+    // Filtro por universidade
+    if (filters.universityFilter !== 'all') {
+      if (student.university_id !== filters.universityFilter) return false;
+    }
+    
+    // Filtro por status
+    if (filters.statusFilter !== 'all') {
+      if (student.status !== filters.statusFilter) return false;
+    }
+    
+    // Filtro por status de pagamento
+    if (filters.paymentStatusFilter !== 'all') {
+      const hasAnyPayment = (student.total_paid || 0) > 0;
+      if (filters.paymentStatusFilter === 'paid' && !hasAnyPayment) return false;
+      if (filters.paymentStatusFilter === 'pending' && hasAnyPayment) return false;
+    }
+    
+    // Filtro por data
+    if (filters.dateRange.start || filters.dateRange.end) {
+      const studentDate = new Date(student.created_at);
+      if (filters.dateRange.start) {
+        const startDate = new Date(filters.dateRange.start);
+        if (studentDate < startDate) return false;
+      }
+      if (filters.dateRange.end) {
+        const endDate = new Date(filters.dateRange.end);
+        if (studentDate > endDate) return false;
+      }
+    }
+    
+    // Filtros de taxas
+    return matchesFeeFilters(student);
+  });
+
+  const filteredSellers = sellers.filter(seller => {
+    // Se há filtros de vendedor específicos, aplicar aqui
+    if (filters.sellerFilter !== 'all') {
+      return seller.id === filters.sellerFilter;
+    }
+    return true;
+  });
   
   // Debug: verificar estado dos dados
   console.log('🔍 Data state check:', {
@@ -843,7 +946,13 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       statusFilter: 'all',
       paymentStatusFilter: 'all',
       sortBy: 'revenue',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      feeFilters: {
+        selectionProcessFee: 'all',
+        i20ControlFee: 'all',
+        scholarshipFee: 'all',
+        applicationFee: 'all'
+      }
     });
   };
 
@@ -874,6 +983,37 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       style: 'currency',
       currency: 'USD'
     }).format(amount || 0);
+  };
+
+  // Função para determinar quais taxas estão faltando para um aluno
+  const getMissingFees = (student: any) => {
+    const missingFees = [];
+    
+    // Verificar Selection Process Fee ($999)
+    const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= 999;
+    if (!hasPaidSelection) {
+      missingFees.push({ name: 'Selection Process', amount: 999, color: 'red' });
+    }
+    
+    // Verificar I20 Control Fee ($999)
+    const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= 1998;
+    if (!hasPaidI20) {
+      missingFees.push({ name: 'I20 Control', amount: 999, color: 'orange' });
+    }
+    
+    // Verificar Scholarship Fee ($400)
+    const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= 2398;
+    if (!hasPaidScholarship) {
+      missingFees.push({ name: 'Scholarship', amount: 400, color: 'blue' });
+    }
+    
+    // Verificar Application Fee ($50) - apenas para referência, não conta na receita
+    const hasPaidApplication = student.is_application_fee_paid || false;
+    if (!hasPaidApplication) {
+      missingFees.push({ name: 'Application', amount: 50, color: 'gray' });
+    }
+    
+    return missingFees;
   };
 
   // Função para calcular a receita real baseada nas taxas pagas
@@ -1994,21 +2134,17 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
                   {/* Filtro por Status */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Application Status</label>
                     <select
                       value={filters.statusFilter}
                       onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
                     >
                       <option value="all">All Statuses</option>
-                      <option value="active">Active</option>
-                      <option value="registered">Registered</option>
-                      <option value="enrolled">Enrolled</option>
-                      <option value="completed">Completed</option>
                       <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="dropped">Dropped</option>
-                      <option value="cancelled">Cancelled</option>
+                      <option value="approved">Approved</option>
+                      <option value="enrolled">Enrolled</option>
+                      <option value="under_review">Under Review</option>
                     </select>
                   </div>
                 </div>
@@ -2062,6 +2198,100 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                     >
                       Reset Filters
                     </button>
+                  </div>
+                </div>
+
+                {/* Filtros de Taxas */}
+                <div className="border-t border-slate-200 pt-4">
+                  <h3 className="text-lg font-medium text-slate-900 mb-4">Fee Status Filters</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Selection Process Fee Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Selection Process Fee ($999)
+                      </label>
+                      <select
+                        value={filters.feeFilters.selectionProcessFee}
+                        onChange={(e) => setFilters(prev => ({ 
+                          ...prev, 
+                          feeFilters: { 
+                            ...prev.feeFilters, 
+                            selectionProcessFee: e.target.value as 'all' | 'paid' | 'pending'
+                          }
+                        }))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                      >
+                        <option value="all">All</option>
+                        <option value="paid">Paid</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+
+                    {/* I20 Control Fee Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        I20 Control Fee ($999)
+                      </label>
+                      <select
+                        value={filters.feeFilters.i20ControlFee}
+                        onChange={(e) => setFilters(prev => ({ 
+                          ...prev, 
+                          feeFilters: { 
+                            ...prev.feeFilters, 
+                            i20ControlFee: e.target.value as 'all' | 'paid' | 'pending'
+                          }
+                        }))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                      >
+                        <option value="all">All</option>
+                        <option value="paid">Paid</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+
+                    {/* Scholarship Fee Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Scholarship Fee ($400)
+                      </label>
+                      <select
+                        value={filters.feeFilters.scholarshipFee}
+                        onChange={(e) => setFilters(prev => ({ 
+                          ...prev, 
+                          feeFilters: { 
+                            ...prev.feeFilters, 
+                            scholarshipFee: e.target.value as 'all' | 'paid' | 'pending'
+                          }
+                        }))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                      >
+                        <option value="all">All</option>
+                        <option value="paid">Paid</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+
+                    {/* Application Fee Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Application Fee ($10)
+                      </label>
+                      <select
+                        value={filters.feeFilters.applicationFee}
+                        onChange={(e) => setFilters(prev => ({ 
+                          ...prev, 
+                          feeFilters: { 
+                            ...prev.feeFilters, 
+                            applicationFee: e.target.value as 'all' | 'paid' | 'pending'
+                          }
+                        }))}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                      >
+                        <option value="all">All</option>
+                        <option value="paid">Paid</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2170,6 +2400,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                   Revenue
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                  Missing Fees
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                                   Status
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -2213,6 +2446,34 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                       <span className="text-sm font-medium text-slate-900">
                                         {formatCurrency(student.total_paid)}
                                       </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex flex-wrap gap-1">
+                                      {(() => {
+                                        const missingFees = getMissingFees(student);
+                                        if (missingFees.length === 0) {
+                                          return (
+                                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                                              All Paid
+                                            </span>
+                                          );
+                                        }
+                                        return missingFees.map((fee, index) => (
+                                          <span
+                                            key={index}
+                                            className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                              fee.color === 'red' ? 'text-red-700 bg-red-100' :
+                                              fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
+                                              fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
+                                              'text-gray-700 bg-gray-100'
+                                            }`}
+                                          >
+                                            {fee.name} (${fee.amount})
+                                          </span>
+                                        ));
+                                      })()}
                                     </div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
