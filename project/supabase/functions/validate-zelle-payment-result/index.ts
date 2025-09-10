@@ -210,6 +210,82 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Enviar notificação para universidade se for application_fee
+        if (payment.fee_type === 'application_fee' && payment.metadata?.scholarships_ids) {
+          try {
+            console.log('[validate-zelle-payment-result] Sending notification to university for application fee payment...');
+            
+            // Buscar dados do aluno
+            const { data: alunoData, error: alunoError } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', payment.user_id)
+              .single();
+            
+            if (alunoError || !alunoData) {
+              console.warn('[validate-zelle-payment-result] Student not found for notification:', alunoError);
+            } else {
+              const scholarshipsIds = payment.metadata.scholarships_ids;
+              const scholarshipId = Array.isArray(scholarshipsIds) ? scholarshipsIds[0] : scholarshipsIds;
+              
+              // Buscar dados da bolsa
+              const { data: scholarship, error: scholarshipError } = await supabase
+                .from('scholarships')
+                .select('title, university_id')
+                .eq('id', scholarshipId)
+                .single();
+              
+              if (!scholarshipError && scholarship) {
+                // Buscar dados da universidade
+                const { data: universidade, error: univError } = await supabase
+                  .from('universities')
+                  .select('name, contact')
+                  .eq('id', scholarship.university_id)
+                  .single();
+                
+                if (!univError && universidade) {
+                  const contact = universidade.contact || {};
+                  const emailUniversidade = contact.admissionsEmail || contact.email || '';
+                  
+                  // Montar mensagem para n8n
+                  const mensagem = `O aluno ${alunoData.full_name} pagou a taxa de aplicação de $${payment.amount} via Zelle para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Acesse o painel para revisar a candidatura.`;
+                  const payload = {
+                    tipo_notf: 'Novo pagamento de application fee',
+                    email_aluno: alunoData.email,
+                    nome_aluno: alunoData.full_name,
+                    nome_bolsa: scholarship.title,
+                    nome_universidade: universidade.name,
+                    email_universidade: emailUniversidade,
+                    o_que_enviar: mensagem,
+                  };
+                  
+                  console.log('[validate-zelle-payment-result] Sending webhook to n8n:', payload);
+                  
+                  // Enviar para o n8n
+                  const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'User-Agent': 'PostmanRuntime/7.36.3',
+                    },
+                    body: JSON.stringify(payload),
+                  });
+                  
+                  const n8nText = await n8nRes.text();
+                  console.log('[validate-zelle-payment-result] N8n response:', n8nRes.status, n8nText);
+                } else {
+                  console.warn('[validate-zelle-payment-result] University not found for notification:', univError);
+                }
+              } else {
+                console.warn('[validate-zelle-payment-result] Scholarship not found for notification:', scholarshipError);
+              }
+            }
+          } catch (notifError) {
+            console.error('[validate-zelle-payment-result] Error sending notification to university:', notifError);
+            // Não falhar o processo se a notificação falhar
+          }
+        }
+
         console.log('[validate-zelle-payment-result] System updated successfully for validated payment');
       } catch (error) {
         console.error('[validate-zelle-payment-result] Error updating system:', error);

@@ -84,11 +84,11 @@ Deno.serve(async (req) => {
 
       // Preparar dados para atualização
       const updateData: any = { 
-        status: 'pending_scholarship_fee',
+        status: 'under_review',
         payment_status: 'paid',
         paid_at: new Date().toISOString()
       };
-      console.log(`[verify-stripe-session-application-fee] Application status set to 'pending_scholarship_fee' for user ${userId}, application ${applicationId}.`);
+      console.log(`[verify-stripe-session-application-fee] Application status set to 'under_review' for user ${userId}, application ${applicationId}.`);
 
       // Se student_process_type não existe na aplicação, tentar obter dos metadados da sessão
       if (!application.student_process_type && session.metadata?.student_process_type) {
@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
         // Buscar dados da bolsa
         const { data: scholarship, error: scholarshipError } = await supabase
           .from('scholarships')
-          .select('id, name, university_id')
+          .select('id, title, university_id')
           .eq('id', scholarshipId)
           .single();
         if (scholarshipError || !scholarship) throw new Error('Bolsa não encontrada para notificação');
@@ -203,12 +203,12 @@ Deno.serve(async (req) => {
         const emailUniversidade = contact.admissionsEmail || contact.email || '';
 
         // Montar mensagem
-        const mensagem = `O aluno ${alunoData.full_name} selecionou a bolsa "${scholarship.name}" da universidade ${universidade.name} e pagou a taxa de aplicação. Acesse o painel para revisar a candidatura.`;
+        const mensagem = `O aluno ${alunoData.full_name} selecionou a bolsa "${scholarship.title}" da universidade ${universidade.name} e pagou a taxa de aplicação. Acesse o painel para revisar a candidatura.`;
         const payload = {
           tipo_notf: 'Novo pagamento de application fee',
           email_aluno: alunoData.email,
           nome_aluno: alunoData.full_name,
-          nome_bolsa: scholarship.name,
+          nome_bolsa: scholarship.title,
           nome_universidade: universidade.name,
           email_universidade: emailUniversidade,
           o_que_enviar: mensagem,

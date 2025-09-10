@@ -30,6 +30,7 @@ function corsResponse(body: string | object | null, status = 200) {
   });
 }
 
+
 Deno.serve(async (req) => {
   try {
     if (req.method === 'OPTIONS') {
