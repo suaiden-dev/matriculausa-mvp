@@ -3,21 +3,17 @@ import {
   DollarSign, 
   TrendingUp, 
   Clock, 
-  CheckCircle, 
-  AlertCircle, 
   Loader2,
   BarChart3,
   PieChart,
-  Calendar,
   Users,
-  Target,
   ArrowUpRight,
   ArrowDownRight,
-  CreditCard,
   Award,
   Activity
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 
 // Declare Chart.js types
 declare global {
@@ -175,8 +171,21 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const rows = studentsAnalytics || [];
       const totalRevenue = rows.reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0);
       const totalReferrals = rows.length || 0;
-      const completedReferrals = rows.filter((r: any) => (r.status || '').toLowerCase() === 'completed').length || 0;
-      const activeReferrals = rows.filter((r: any) => (r.status || '').toLowerCase() === 'pending').length || 0;
+      // Derivar status a partir de pagamentos reais (considerando as 3 taxas: selection, i20_control, scholarship)
+      const getPaidFlags = (r: any) => ({
+        paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= 999,
+        paidI20Control: !!r.has_paid_i20_control_fee || (Number(r.total_paid) || 0) >= 1998, // 999 + 999
+        paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= 2398 // 999 + 999 + 400
+      });
+      let derivedCompleted = 0;
+      let derivedPending = 0;
+      rows.forEach((r: any) => {
+        const { paidSelection, paidI20Control, paidScholarship } = getPaidFlags(r);
+        const hasAnyPayment = paidSelection || paidI20Control || paidScholarship || (Number(r.total_paid) || 0) > 0;
+        if (hasAnyPayment) derivedCompleted += 1; else derivedPending += 1;
+      });
+      const completedReferrals = derivedCompleted;
+      const activeReferrals = derivedPending;
 
       // Receita últimos 7 dias baseada na data do registro
       const sevenDaysAgo = new Date();
@@ -187,10 +196,29 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
       const averageCommissionPerReferral = totalReferrals > 0 ? totalRevenue / totalReferrals : 0;
 
+      // Carregar payment requests do afiliado para calcular saldo (excluir rejeitados)
+      let availableBalance = totalRevenue;
+      try {
+        const affiliateRequests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(userId);
+        const totalPaidOut = affiliateRequests
+          .filter((r: any) => r.status === 'paid')
+          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
+        const totalApproved = affiliateRequests
+          .filter((r: any) => r.status === 'approved')
+          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
+        const totalPending = affiliateRequests
+          .filter((r: any) => r.status === 'pending')
+          .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
+
+        availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved - totalPending);
+      } catch (err) {
+        console.error('Error loading affiliate payment requests for balance:', err);
+      }
+
       // No cartão principal, exibiremos Total Revenue usando o campo totalCredits para manter layout
       setFinancialStats({
         totalCredits: totalRevenue,
-        totalEarned: totalRevenue,
+        totalEarned: availableBalance,
         totalReferrals,
         activeReferrals,
         completedReferrals,
@@ -246,36 +274,89 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       monthlyRevenue.push({ month: monthStr, amount: monthRevenue });
     }
 
-    // Calcular tendências de referência
+    // Calcular tendências de referência (baseado em pagamentos, não no campo status genérico)
     const totalReferrals = referralsData?.length || 0;
-    const completedReferrals = referralsData?.filter((r: any) => (r.status || '').toLowerCase() === 'completed').length || 0;
+    const getPaidFlags = (r: any) => ({
+      paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= 999,
+      paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= 1400
+    });
+    const completedReferrals = referralsData?.filter((r: any) => {
+      const { paidSelection, paidScholarship } = getPaidFlags(r);
+      return paidSelection || paidScholarship || (Number(r.total_paid) || 0) > 0;
+    }).length || 0;
     const conversionRate = totalReferrals > 0 ? (completedReferrals / totalReferrals) * 100 : 0;
     const averageCommission = totalReferrals > 0 ? 
       referralsData?.reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0) / totalReferrals : 0;
 
-    // Calcular breakdown por status
+    // Calcular breakdown por status derivado dos pagamentos
     const totalRequests = referralsData?.length || 0;
-    const completedCount = referralsData?.filter((r: any) => (r.status || '').toLowerCase() === 'completed').length || 0;
-    const pendingCount = referralsData?.filter((r: any) => (r.status || '').toLowerCase() === 'pending').length || 0;
-    const cancelledCount = referralsData?.filter((r: any) => (r.status || '').toLowerCase() === 'cancelled').length || 0;
-    
+    let derivedCompleted = 0;
+    let derivedPending = 0;
+    referralsData?.forEach((r: any) => {
+      const { paidSelection, paidScholarship } = getPaidFlags(r);
+      const hasAnyPayment = paidSelection || paidScholarship || (Number(r.total_paid) || 0) > 0;
+      if (hasAnyPayment) derivedCompleted += 1; else derivedPending += 1;
+    });
     const paymentMethodBreakdown = {
-      completed: totalRequests > 0 ? Math.round((completedCount / totalRequests) * 100) : 0,
-      pending: totalRequests > 0 ? Math.round((pendingCount / totalRequests) * 100) : 0,
-      credits: totalRequests > 0 ? Math.round((cancelledCount / totalRequests) * 100) : 0
+      completed: totalRequests > 0 ? Math.round((derivedCompleted / totalRequests) * 100) : 0,
+      pending: totalRequests > 0 ? Math.round((derivedPending / totalRequests) * 100) : 0,
+      credits: 0
     };
 
     // Criar atividade recente (últimos 10 eventos)
     const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
-    
-    // Adicionar referências recentes
-    referralsData?.slice(0, 5).forEach((row: any) => {
-      recentActivity.push({
-        date: row.created_at,
-        type: (row.status || '').toLowerCase() === 'completed' ? 'commission' : 'pending',
-        amount: Number(row.total_paid) || 0,
-        description: (row.status || '').toLowerCase() === 'completed' ? 'Student fees paid (non-application)' : 'Pending student fees'
-      });
+
+    // Montar eventos por taxa paga (evitar "pending" quando já há pagamento confirmado)
+    const SELECTION_FEE_AMOUNT = 999;
+    const I20_CONTROL_FEE_AMOUNT = 999;
+    const SCHOLARSHIP_FEE_AMOUNT = 400;
+
+    referralsData?.slice(0, 10).forEach((row: any) => {
+      const totalPaid = Number(row.total_paid) || 0;
+      const paidSelection: boolean = !!row.has_paid_selection_process_fee || totalPaid >= SELECTION_FEE_AMOUNT;
+      const paidI20Control: boolean = !!row.has_paid_i20_control_fee || totalPaid >= (SELECTION_FEE_AMOUNT + I20_CONTROL_FEE_AMOUNT);
+      const paidScholarship: boolean = !!row.is_scholarship_fee_paid || totalPaid >= (SELECTION_FEE_AMOUNT + I20_CONTROL_FEE_AMOUNT + SCHOLARSHIP_FEE_AMOUNT);
+
+      // Se pagou selection, registrar evento específico
+      if (paidSelection) {
+        recentActivity.push({
+          date: row.created_at,
+          type: 'commission',
+          amount: SELECTION_FEE_AMOUNT,
+          description: 'Selection Process Fee paid'
+        });
+      }
+
+      // Se pagou I20 Control, registrar evento específico
+      if (paidI20Control) {
+        recentActivity.push({
+          date: row.created_at,
+          type: 'commission',
+          amount: I20_CONTROL_FEE_AMOUNT,
+          description: 'I20 Control Fee paid'
+        });
+      }
+
+      // Se pagou scholarship, registrar evento específico
+      if (paidScholarship) {
+        recentActivity.push({
+          date: row.created_at,
+          type: 'commission',
+          amount: SCHOLARSHIP_FEE_AMOUNT,
+          description: 'Scholarship Fee paid'
+        });
+      }
+
+      // Se nenhum fee pago ainda, manter como pendente
+      if (!paidSelection && !paidI20Control && !paidScholarship) {
+        const totalPotential = totalPaid;
+        recentActivity.push({
+          date: row.created_at,
+          type: 'pending',
+          amount: totalPotential,
+          description: 'Pending student fees'
+        });
+      }
     });
 
     // Adicionar transações recentes de créditos
@@ -329,7 +410,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             : (item as any).month
         ),
         datasets: [{
-          label: 'Credits Earned',
+          label: 'Revenue',
           data: data.map(item => item.amount),
           borderColor: '#05294E',
           backgroundColor: 'rgba(5, 41, 78, 0.1)',
@@ -359,9 +440,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             cornerRadius: 8,
             displayColors: false,
             callbacks: {
-              label: function(context: any) {
-                return `Credits: ${context.parsed.y.toFixed(0)}`;
-              }
+              label: (context: any) => `Revenue: ${formatCurrency(Number(context.parsed.y) || 0)}`
             }
           }
         },
@@ -372,9 +451,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
               color: 'rgba(0, 0, 0, 0.05)'
             },
             ticks: {
-              callback: function(value: any) {
-                return value.toFixed(0) + ' credits';
-              }
+              callback: (value: any) => formatCurrency(Number(value) || 0)
             }
           },
           x: {
@@ -478,7 +555,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       data: {
         labels: data.map(item => (item as any).month),
         datasets: [{
-          label: 'Credits Earned',
+          label: 'Revenue',
           data: data.map(item => item.amount),
           backgroundColor: 'rgba(5, 41, 78, 0.8)',
           borderColor: '#05294E',
@@ -503,9 +580,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             cornerRadius: 8,
             displayColors: false,
             callbacks: {
-              label: function(context: any) {
-                return `Credits: ${context.parsed.y.toFixed(0)}`;
-              }
+              label: (context: any) => `Revenue: ${formatCurrency(Number(context.parsed.y) || 0)}`
             }
           }
         },
@@ -516,9 +591,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
               color: 'rgba(0, 0, 0, 0.05)'
             },
             ticks: {
-              callback: function(value: any) {
-                return value.toFixed(0) + ' credits';
-              }
+              callback: (value: any) => formatCurrency(Number(value) || 0)
             }
           },
           x: {
@@ -613,9 +686,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     }).format(amount);
   };
 
-  const formatCredits = (amount: number) => {
-    return `${amount.toFixed(0)} credits`;
-  };
+  // const formatCredits = (amount: number) => {
+  //   return `${amount.toFixed(0)} credits`;
+  // };
 
   if (loading) {
     return (
@@ -647,11 +720,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Total Credits</p>
+            <p className="text-sm font-medium text-slate-600 mb-1">Total Revenue</p>
             <p className="text-3xl font-bold text-slate-900 mb-1">
               {formatCurrency(financialStats.totalCredits)}
             </p>
-            <p className="text-xs text-slate-500">Available balance</p>
           </div>
         </div>
 
@@ -671,7 +743,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           </div>
         </div>
 
-        {/* Total Earned Card */}
+        {/* Available Balance Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
@@ -679,11 +751,11 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-600 mb-1">Total Earned</p>
+            <p className="text-sm font-medium text-slate-600 mb-1">Available Balance</p>
             <p className="text-3xl font-bold text-slate-900 mb-1">
               {formatCurrency(financialStats.totalEarned)}
             </p>
-            <p className="text-xs text-slate-500">Lifetime earnings</p>
+            <p className="text-xs text-slate-500">Ready for withdrawal</p>
           </div>
         </div>
 
@@ -715,8 +787,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
           <div>
-            <h3 className="text-xl font-semibold text-slate-900">Commission Trend</h3>
-            <p className="text-sm text-slate-600">Credits earned from referrals over time</p>
+            <h3 className="text-xl font-semibold text-slate-900">Revenue Trend</h3>
+            <p className="text-sm text-slate-600">Earnings from referrals over time</p>
           </div>
           
           {/* Time Period Filters */}

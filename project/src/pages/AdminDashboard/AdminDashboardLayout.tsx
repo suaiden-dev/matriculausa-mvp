@@ -103,7 +103,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
-    { id: 'affiliate-payment-requests', label: 'Affiliate Payment Requests', icon: CreditCard, path: '/admin/dashboard/affiliate-payment-requests', badge: null },
     { id: 'transfer-reports', label: 'Transfer Reports', icon: FileText, path: '/admin/dashboard/transfer-reports', badge: null },
 
 

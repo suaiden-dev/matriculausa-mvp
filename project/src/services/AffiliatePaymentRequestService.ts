@@ -27,8 +27,8 @@ export interface AffiliatePaymentRequest {
 }
 
 export class AffiliatePaymentRequestService {
-  static async createPaymentRequest(params: CreateAffiliatePaymentRequestParams): Promise<void> {
-    const { error } = await supabase
+  static async createPaymentRequest(params: CreateAffiliatePaymentRequestParams): Promise<AffiliatePaymentRequest> {
+    const { data, error } = await supabase
       .from('affiliate_payment_requests')
       .insert({
         referrer_user_id: params.referrerUserId,
@@ -36,25 +36,32 @@ export class AffiliatePaymentRequestService {
         payout_method: params.payoutMethod,
         payout_details: params.payoutDetails,
         status: 'pending'
-      });
+      })
+      .select('*')
+      .single();
 
     if (error) {
       throw new Error(error.message);
     }
+
+    return data as unknown as AffiliatePaymentRequest;
   }
 
   static async listAffiliatePaymentRequests(referrerUserId: string): Promise<AffiliatePaymentRequest[]> {
-    const { data, error } = await supabase
+    const { data, error, status } = await supabase
       .from('affiliate_payment_requests')
-      .select(`
-        *,
-        user:auth_users!affiliate_payment_requests_referrer_user_id_fkey(email)
-      ` as any)
+      .select('*')
       .eq('referrer_user_id', referrerUserId)
       .order('created_at', { ascending: false });
 
     if (error) {
-      throw new Error(error.message);
+      const msg = (error as any)?.message || String(error);
+      // Graceful fallback when table is not present yet in the environment
+      if (status === 404 || /does not exist/i.test(msg)) {
+        console.warn('affiliate_payment_requests table not found. Returning empty list for now.');
+        return [];
+      }
+      throw new Error(msg);
     }
 
     return (data as unknown as AffiliatePaymentRequest[]) || [];
@@ -74,55 +81,26 @@ export class AffiliatePaymentRequestService {
 
   // Admin functions
   static async listAllPaymentRequests(): Promise<AffiliatePaymentRequest[]> {
-    const { data, error } = await supabase
-      .from('affiliate_payment_requests')
-      .select(`
-        *,
-        user_profiles!affiliate_payment_requests_referrer_user_id_fkey(full_name, email)
-      `)
-      .order('created_at', { ascending: false });
-
+    const { data, error } = await supabase.rpc('get_all_affiliate_payment_requests');
     if (error) {
       throw new Error(error.message);
     }
-
     return (data as unknown as AffiliatePaymentRequest[]) || [];
   }
 
   static async adminApprove(id: string, adminUserId: string): Promise<void> {
-    const { error } = await supabase
-      .from('affiliate_payment_requests')
-      .update({ status: 'approved', approved_by: adminUserId, approved_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('status', 'pending');
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    const { error } = await supabase.rpc('admin_approve_affiliate_payment_request', { p_id: id, p_admin: adminUserId });
+    if (error) throw new Error(error.message);
   }
 
   static async adminReject(id: string, adminUserId: string, reason: string): Promise<void> {
-    const { error } = await supabase
-      .from('affiliate_payment_requests')
-      .update({ status: 'rejected', approved_by: adminUserId, admin_notes: reason, approved_at: new Date().toISOString() })
-      .eq('id', id)
-      .in('status', ['pending', 'approved']);
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    const { error } = await supabase.rpc('admin_reject_affiliate_payment_request', { p_id: id, p_admin: adminUserId, p_reason: reason });
+    if (error) throw new Error(error.message);
   }
 
   static async adminMarkPaid(id: string, adminUserId: string, paymentReference?: string): Promise<void> {
-    const { error } = await supabase
-      .from('affiliate_payment_requests')
-      .update({ status: 'paid', paid_by: adminUserId, paid_at: new Date().toISOString(), payment_reference: paymentReference || null })
-      .eq('id', id)
-      .in('status', ['approved']);
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    const { error } = await supabase.rpc('admin_mark_paid_affiliate_payment_request', { p_id: id, p_admin: adminUserId, p_reference: paymentReference || null });
+    if (error) throw new Error(error.message);
   }
 
   static async adminAddNotes(id: string, notes: string): Promise<void> {
