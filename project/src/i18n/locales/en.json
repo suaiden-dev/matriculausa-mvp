@@ -1251,7 +1251,8 @@
     "apply": "Apply",
     "viewDetails": "View Details",
     "deadline": "Deadline",
-    "amount": "Amount"
+    "amount": "Amount",
+    "support": "Support"
   },
   "studentDashboard": {
     "title": "Student Dashboard",
