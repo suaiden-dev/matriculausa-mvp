@@ -311,7 +311,7 @@ const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ isOpen, onClose }) =>
             {/* Footer */}
             <div className="bg-gray-50 px-8 py-6 flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                {t('stepByStepGuide.progress', { current: currentStep + 1, total: STEPS.length })}
+                {t('stepByStepGuide.progress').replace('{current}', (currentStep + 1).toString()).replace('{total}', STEPS.length.toString())}
               </div>
               
               <div className="flex items-center gap-4">
