@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Users, UserPlus, Check, X, AlertTriangle, Crown, ChevronLeft, ChevronRight, Settings, UserCheck } from 'lucide-react';
+import { Search, Users, UserPlus, X, Crown, ChevronLeft, ChevronRight, UserCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import SellerRegistrationLinkGenerator from '../../components/SellerRegistrationLinkGenerator';
@@ -92,7 +92,7 @@ const SellerManagement: React.FC = () => {
       // Buscar o user_profile_id pelo user_id
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id')
+        .select('id, email, full_name')
         .eq('user_id', userId)
         .single();
 
@@ -109,6 +109,90 @@ const SellerManagement: React.FC = () => {
         throw createError;
       }
 
+      // Buscar dados do affiliate admin atual
+      const { data: affiliateAdmin } = await supabase
+        .from('user_profiles')
+        .select('full_name, email')
+        .eq('user_id', currentUser?.id)
+        .single();
+
+      // Buscar dados do seller criado
+      const { data: sellerData } = await supabase
+        .from('sellers')
+        .select('referral_code, commission_rate')
+        .eq('user_id', userId)
+        .single();
+
+      // Enviar notificação para admin sobre criação do seller
+      try {
+        const adminNotificationPayload = {
+          tipo_notf: "Novo seller criado",
+          email_admin: "admin@matriculausa.com", // Email fixo do admin
+          nome_admin: "Admin MatriculaUSA",
+          email_seller: userProfile.email,
+          nome_seller: userProfile.full_name || userName,
+          email_affiliate_admin: affiliateAdmin?.email || "",
+          nome_affiliate_admin: affiliateAdmin?.full_name || "Affiliate Admin",
+          o_que_enviar: `O affiliate admin ${affiliateAdmin?.full_name || "Affiliate Admin"} promoveu ${userProfile.full_name || userName} a seller. Código de referência: ${sellerData?.referral_code || "N/A"}`,
+          seller_id: userId,
+          referral_code: sellerData?.referral_code || "",
+          commission_rate: sellerData?.commission_rate || 0.1,
+          created_by: "affiliate_admin"
+        };
+
+        console.log('📧 [SellerCreation] Enviando notificação para admin:', adminNotificationPayload);
+
+        const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(adminNotificationPayload),
+        });
+
+        if (adminNotificationResponse.ok) {
+          console.log('✅ [SellerCreation] Notificação para admin enviada com sucesso!');
+        } else {
+          console.warn('⚠️ [SellerCreation] Erro ao enviar notificação para admin:', adminNotificationResponse.status);
+        }
+      } catch (notificationError) {
+        console.error('❌ [SellerCreation] Erro ao enviar notificação para admin:', notificationError);
+      }
+
+      // Enviar notificação para o seller sobre sua criação
+      try {
+        const sellerNotificationPayload = {
+          tipo_notf: "Você foi promovido a seller",
+          email_seller: userProfile.email,
+          nome_seller: userProfile.full_name || userName,
+          email_affiliate_admin: affiliateAdmin?.email || "",
+          nome_affiliate_admin: affiliateAdmin?.full_name || "Affiliate Admin",
+          o_que_enviar: `Parabéns! Você foi promovido a seller pelo affiliate admin ${affiliateAdmin?.full_name || "Affiliate Admin"}. Seu código de referência é: ${sellerData?.referral_code || "N/A"}. Use este código para indicar alunos e ganhar comissões!`,
+          seller_id: userId,
+          referral_code: sellerData?.referral_code || "",
+          commission_rate: sellerData?.commission_rate || 0.1,
+          dashboard_link: "/seller/dashboard"
+        };
+
+        console.log('📧 [SellerCreation] Enviando notificação para seller:', sellerNotificationPayload);
+
+        const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(sellerNotificationPayload),
+        });
+
+        if (sellerNotificationResponse.ok) {
+          console.log('✅ [SellerCreation] Notificação para seller enviada com sucesso!');
+        } else {
+          console.warn('⚠️ [SellerCreation] Erro ao enviar notificação para seller:', sellerNotificationResponse.status);
+        }
+      } catch (notificationError) {
+        console.error('❌ [SellerCreation] Erro ao enviar notificação para seller:', notificationError);
+      }
+
       // Recarregar usuários
       await loadAllUsers();
     } catch (error: any) {
@@ -119,7 +203,7 @@ const SellerManagement: React.FC = () => {
     }
   };
 
-  const demoteFromSeller = async (userId: string, userName: string) => {
+  const demoteFromSeller = async (userId: string) => {
     try {
       setDemotingUser(userId);
 
@@ -187,12 +271,6 @@ const SellerManagement: React.FC = () => {
     }
   };
 
-  const getPaginationInfo = () => {
-    if (totalUsers === 0) return 'No users found';
-    const start = startIndex + 1;
-    const end = Math.min(endIndex, totalUsers);
-    return `Showing ${start}-${end} of ${totalUsers} users`;
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -417,7 +495,7 @@ const SellerManagement: React.FC = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             {user.isSeller ? (
                               <button
-                                onClick={() => demoteFromSeller(user.user_id, user.full_name || user.email)}
+                                onClick={() => demoteFromSeller(user.user_id)}
                                 disabled={demotingUser === user.id}
                                 className="text-red-600 hover:text-red-900 disabled:opacity-50"
                               >
