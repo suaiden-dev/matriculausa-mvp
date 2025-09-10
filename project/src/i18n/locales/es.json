@@ -2364,6 +2364,7 @@
     "students": {
       "title": "Para Estudiantes",
       "scholarships": "Becas",
+      "matriculaRewards": "Matricula Rewards",
       "universities": "Universidades",
       "howItWorks": "Cómo Funciona",
       "support": "Soporte",
@@ -2402,5 +2403,183 @@
       "subscribed": "¡Gracias por suscribirte!"
     },
     "copyright": "© 2024 Matrícula USA. Todos los derechos reservados."
+  },
+  "matriculaRewardsLanding": {
+    "badge": "Nuevo Programa de Recompensas",
+    "hero": {
+      "title": "Convierte Tus",
+      "titleHighlight": "Referencias en Descuentos",
+      "subtitle": "en Tu Matrícula",
+      "description": "Gana <strong>Matricula Coins</strong> por cada amigo que refieras y úsalas para <strong>reducir tu matrícula</strong> - 1 coin = $1 de descuento en tu pago mensual",
+      "valueCards": {
+        "referFriends": {
+          "title": "Comparte & Gana",
+          "description": "Obtén tu código único y compártelo con amigos que quieren estudiar en EE.UU."
+        },
+        "accumulateCoins": {
+          "title": "Gana Recompensas",
+          "description": "180 monedas por referencia exitosa - eso es $180 de descuento en tu matrícula"
+        },
+        "payLess": {
+          "title": "Ahorra Dinero",
+          "description": "Usa tus monedas para reducir tus pagos mensuales universitarios"
+        }
+      },
+      "cta": {
+        "getStarted": "Comenzar Ahora",
+        "learnMore": "Ver Cómo Funciona"
+      },
+      "demo": {
+        "title": "Demostración en vivo",
+        "subtitle": "Tu Panel de Recompensas",
+        "description": "Ve cómo se vería tu cuenta con algunas referencias",
+        "referralCode": {
+          "title": "Tu Código de Referencia",
+          "code": "MTR2024",
+          "copy": "Copiar Código",
+          "copied": "¡Copiado!",
+          "loginToGetCode": "Inicia sesión para obtener tu código de referencia"
+        },
+        "balance": {
+          "title": "Saldo Actual",
+          "coins": "Matricula Coins",
+          "discount": "en descuentos"
+        },
+        "discount": {
+          "title": "Descuento Disponible",
+          "forTuition": "Para Matrícula",
+          "applicableTo": "Aplicable a {count} universidades"
+        },
+        "stats": {
+          "referred": "Amigos Referidos",
+          "signedUp": "Se Inscribieron",
+          "conversion": "Tasa de Conversión",
+          "monthsSaving": "Meses Ahorrando"
+        }
+      }
+    },
+    "stats": {
+      "activeStudents": "Estudiantes Activos",
+      "partnerUniversities": "Universidades Socias",
+      "discountsGiven": "En Descuentos Otorgados",
+      "satisfactionRate": "Tasa de Satisfacción"
+    },
+    "howItWorks": {
+      "title": "Cómo Funciona Matricula Rewards",
+      "subtitle": "Un sistema simple y transparente para que ahorres en tu educación mientras ayudas a tus amigos a lograr el sueño americano",
+      "steps": {
+        "step1": {
+          "title": "Comparte Tu Código",
+          "description": "Obtén tu código único y compártelo con amigos que quieren estudiar en EE.UU.",
+          "details": "Cada código rastrea automáticamente tus referencias"
+        },
+        "step2": {
+          "title": "Amigos Se Inscriben",
+          "description": "Cuando tus amigos se registren usando tu código, ambos ganan Matricula Coins",
+          "details": "180 monedas por cada referencia exitosa"
+        },
+        "step3": {
+          "title": "Canjea Descuento de Matrícula",
+          "description": "Usa tus monedas para canjear descuentos de matrícula en la Tienda de Recompensas",
+          "details": "Selecciona tu universidad y canjea el descuento"
+        },
+        "step4": {
+          "title": "Contacta a Tu Universidad",
+          "description": "Contacta a la oficina de admisiones de tu universidad para aplicar el descuento canjeado",
+          "details": "Presenta tu código de descuento para obtener la reducción en tu matrícula"
+        }
+      },
+      "calculator": {
+        "title": "Calculadora de Reducción de Matrícula",
+        "description": "Ve cuánto puedes reducir tu matrícula mensual refiriendo amigos",
+        "label": "¿Cuántos amigos puedes referir?",
+        "friends": "amigos",
+        "coinsEarned": "Monedas Ganadas",
+        "totalSavings": "Reducción Mensual en Matrícula",
+        "cta": "Comenzar a Ahorrar Ahora"
+      },
+      "actions": {
+        "shareNow": "Comparte ahora",
+        "inviteFriends": "Invita amigos",
+        "seeEarnings": "Ver ganancias",
+        "useDiscount": "Usar descuento"
+      },
+      "journey": {
+        "startMessage": "¡Comienza tu viaje de ahorro ahora!"
+      }
+    },
+    "testimonials": {
+      "title": "Historias de Éxito",
+      "subtitle": "Únete a miles de estudiantes que ya están ahorrando en su educación y logrando el sueño americano",
+      "stories": [
+        {
+          "name": "Maria Santos",
+          "university": "University of California",
+          "text": "¡Ahorré $800 en matrícula solo compartiendo Matricula con mis amigos. Increíble!",
+          "savings": "Ahorró $800"
+        },
+        {
+          "name": "João Silva",
+          "university": "Arizona State University",
+          "text": "El programa me ayudó a reducir significativamente los costos de educación. ¡Altamente recomendado!",
+          "savings": "Ahorró $1,200"
+        },
+        {
+          "name": "Ana Rodriguez",
+          "university": "University of Miami",
+          "text": "Fácil de usar y realmente vale la pena. ¡Conseguí descuento para un semestre completo!",
+          "savings": "Ahorró $1,500"
+        }
+      ],
+      "stats": {
+        "activeStudents": "Estudiantes Activos",
+        "totalSavings": "Ahorro Total",
+        "averageRating": "Calificación Promedio",
+        "universities": "Universidades"
+      }
+    },
+    "benefits": {
+      "title": "¿Por Qué Elegir Matricula Rewards?",
+      "subtitle": "Más que un programa de referencias, es una forma inteligente de hacer tu educación más accesible",
+      "items": [
+        {
+          "title": "Ahorro Real",
+          "description": "Descuentos directos en tu matrícula universitaria",
+          "highlight": "Hasta $2,000/semestre"
+        },
+        {
+          "title": "Súper Fácil",
+          "description": "Sistema simple para compartir y ganar",
+          "highlight": "3 clics para comenzar"
+        },
+        {
+          "title": "Instantáneo",
+          "description": "Monedas acreditadas inmediatamente después de la referencia",
+          "highlight": "100 monedas/referencia"
+        }
+      ]
+    },
+    "finalCta": {
+      "title": "¿Listo para",
+      "titleHighlight": "Ahorrar?",
+      "description": "Únete a miles de estudiantes que ya están ahorrando en educación. Tu viaje hacia una educación accesible comienza con un clic.",
+      "cards": {
+        "startNow": {
+          "title": "Comenzar Ahora",
+          "description": "Obtén tu código de referencia y comienza a acumular monedas hoy mismo",
+          "cta": "Obtener Código"
+        },
+        "learnMore": {
+          "title": "Saber Más",
+          "description": "Descubre cómo funciona el sistema y ve ejemplos de ahorro real",
+          "cta": "Ver Detalles"
+        }
+      },
+      "trust": {
+        "free": "Gratis",
+        "quickStart": "Para comenzar",
+        "support": "Soporte"
+      }
+    }
   }
 }}
