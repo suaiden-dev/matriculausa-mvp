@@ -125,13 +125,19 @@ Deno.serve(async (req) => {
           if (findError && findError.code !== 'PGRST116') { // PGRST116 = no rows returned
             console.error('[validate-zelle-payment-result] Error finding existing application:', findError);
           } else if (existingApp) {
-            // Atualizar aplicação existente
+            // Atualizar aplicação existente - preservar status 'approved' se já estiver
+            const updateData: any = { 
+              updated_at: new Date().toISOString()
+            };
+            
+            // Só mudar status se não estiver 'approved' (universidade já aprovou)
+            if (existingApp.status !== 'approved') {
+              updateData.status = 'under_review'; // Status válido conforme constraint
+            }
+            
             const { error: updateAppError } = await supabase
               .from('scholarship_applications')
-              .update({ 
-                status: 'application_fee_paid',
-                updated_at: new Date().toISOString()
-              })
+              .update(updateData)
               .eq('id', existingApp.id);
 
             if (updateAppError) {
@@ -146,7 +152,7 @@ Deno.serve(async (req) => {
               .insert({
                 student_id: payment.user_id,
                 scholarship_id: scholarshipId,
-                status: 'application_fee_paid',
+                status: 'under_review', // Nova aplicação sempre começa com este status
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               });
@@ -207,6 +213,82 @@ Deno.serve(async (req) => {
             console.error('[validate-zelle-payment-result] Error updating user profile for i20 control fee:', profileError);
           } else {
             console.log('[validate-zelle-payment-result] User profile updated for i20 control fee');
+          }
+        }
+
+        // Enviar notificação para universidade se for application_fee
+        if (payment.fee_type === 'application_fee' && payment.metadata?.scholarships_ids) {
+          try {
+            console.log('[validate-zelle-payment-result] Sending notification to university for application fee payment...');
+            
+            // Buscar dados do aluno
+            const { data: alunoData, error: alunoError } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', payment.user_id)
+              .single();
+            
+            if (alunoError || !alunoData) {
+              console.warn('[validate-zelle-payment-result] Student not found for notification:', alunoError);
+            } else {
+              const scholarshipsIds = payment.metadata.scholarships_ids;
+              const scholarshipId = Array.isArray(scholarshipsIds) ? scholarshipsIds[0] : scholarshipsIds;
+              
+              // Buscar dados da bolsa
+              const { data: scholarship, error: scholarshipError } = await supabase
+                .from('scholarships')
+                .select('title, university_id')
+                .eq('id', scholarshipId)
+                .single();
+              
+              if (!scholarshipError && scholarship) {
+                // Buscar dados da universidade
+                const { data: universidade, error: univError } = await supabase
+                  .from('universities')
+                  .select('name, contact')
+                  .eq('id', scholarship.university_id)
+                  .single();
+                
+                if (!univError && universidade) {
+                  const contact = universidade.contact || {};
+                  const emailUniversidade = contact.admissionsEmail || contact.email || '';
+                  
+                  // Montar mensagem para n8n
+                  const mensagem = `O aluno ${alunoData.full_name} pagou a taxa de aplicação de $${payment.amount} via Zelle para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Acesse o painel para revisar a candidatura.`;
+                  const payload = {
+                    tipo_notf: 'Novo pagamento de application fee',
+                    email_aluno: alunoData.email,
+                    nome_aluno: alunoData.full_name,
+                    nome_bolsa: scholarship.title,
+                    nome_universidade: universidade.name,
+                    email_universidade: emailUniversidade,
+                    o_que_enviar: mensagem,
+                  };
+                  
+                  console.log('[validate-zelle-payment-result] Sending webhook to n8n:', payload);
+                  
+                  // Enviar para o n8n
+                  const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'User-Agent': 'PostmanRuntime/7.36.3',
+                    },
+                    body: JSON.stringify(payload),
+                  });
+                  
+                  const n8nText = await n8nRes.text();
+                  console.log('[validate-zelle-payment-result] N8n response:', n8nRes.status, n8nText);
+                } else {
+                  console.warn('[validate-zelle-payment-result] University not found for notification:', univError);
+                }
+              } else {
+                console.warn('[validate-zelle-payment-result] Scholarship not found for notification:', scholarshipError);
+              }
+            }
+          } catch (notifError) {
+            console.error('[validate-zelle-payment-result] Error sending notification to university:', notifError);
+            // Não falhar o processo se a notificação falhar
           }
         }
 

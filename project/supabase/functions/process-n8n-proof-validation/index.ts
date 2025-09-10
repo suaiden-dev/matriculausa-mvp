@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
           const { error: updateAppError } = await supabase
             .from('scholarship_applications')
             .update({ 
-              status: 'application_fee_paid',
+              status: 'under_review', // Status válido conforme constraint
               updated_at: new Date().toISOString()
             })
             .eq('id', existingApp.id);
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
             .insert({
               student_id: user_id,
               scholarship_id: scholarshipId,
-              status: 'application_fee_paid',
+              status: 'under_review', // Status válido conforme constraint
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             });

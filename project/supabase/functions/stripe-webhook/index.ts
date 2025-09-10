@@ -300,16 +300,29 @@ async function handleCheckoutSessionCompleted(session: any) {
       const universityId = metadata.university_id;
 
       if (userId && applicationId) {
-        // Atualizar o status da aplicação existente para 'under_review'
+        // Buscar o status atual da aplicação para preservar 'approved' se já estiver
+        const { data: currentApp, error: fetchError } = await supabase
+          .from('scholarship_applications')
+          .select('status')
+          .eq('id', applicationId)
+          .eq('student_id', userId)
+          .single();
+
+        const updateData: any = {
+          is_application_fee_paid: true,
+          payment_status: 'paid',
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        // Só alterar status se não estiver 'approved' (universidade já aprovou)
+        if (!currentApp || currentApp.status !== 'approved') {
+          updateData.status = 'under_review';
+        }
+
         const { error: appError } = await supabase
           .from('scholarship_applications')
-          .update({ 
-            status: 'under_review',
-            is_application_fee_paid: true,
-            payment_status: 'paid',
-            paid_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', applicationId)
           .eq('student_id', userId);
 

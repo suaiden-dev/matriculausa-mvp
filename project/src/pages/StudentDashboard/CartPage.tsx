@@ -9,6 +9,7 @@ import StudentTypeModal from '../../components/StudentTypeModal';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { formatCentsToDollars } from '../../utils/currency';
+import NotificationService from '../../services/NotificationService';
 
 const CartPage: React.FC = () => {
   const { t } = useTranslation();
@@ -50,12 +51,13 @@ const CartPage: React.FC = () => {
     setStudentType(type);
     setShowStudentTypeModal(false);
     window.localStorage.setItem('studentProcessType', type);
+    
     // Salvar no banco se houver aplicação ativa
     if (userProfile?.id) {
       try {
         const { data: applications, error } = await supabase
           .from('scholarship_applications')
-          .select('id')
+          .select('id, scholarship_id')
           .eq('student_id', userProfile.id)
           .order('applied_at', { ascending: false })
           .limit(1);
@@ -71,6 +73,16 @@ const CartPage: React.FC = () => {
             console.error('Error updating student_process_type in cart:', updateError);
           } else {
             console.log('student_process_type saved in cart:', type);
+            
+            // Notificar universidade sobre seleção do aluno (após confirmar tipo)
+            if (application.scholarship_id) {
+              try {
+                await notifyUniversityStudentSelection(application.scholarship_id, userProfile.id);
+              } catch (notifError) {
+                console.error('Erro ao notificar universidade sobre seleção:', notifError);
+                // Não falha o processo se a notificação falhar
+              }
+            }
           }
         }
       } catch (e) {
@@ -100,6 +112,70 @@ const CartPage: React.FC = () => {
   const handleClearCart = () => {
     if (user?.id) {
       clearCart(user.id);
+    }
+  };
+
+  // Função para notificar universidade sobre seleção do aluno
+  const notifyUniversityStudentSelection = async (scholarshipId: string, studentProfileId: string) => {
+    try {
+      // Buscar dados da bolsa e universidade
+      const { data: scholarship, error: scholarshipError } = await supabase
+        .from('scholarships')
+        .select(`
+          title,
+          universities!inner (
+            name,
+            contact
+          )
+        `)
+        .eq('id', scholarshipId)
+        .single();
+
+      if (scholarshipError || !scholarship) {
+        console.error('Erro ao buscar dados da bolsa:', scholarshipError);
+        return;
+      }
+
+      // Buscar dados do aluno
+      const { data: student, error: studentError } = await supabase
+        .from('user_profiles')
+        .select('full_name, email')
+        .eq('id', studentProfileId)
+        .single();
+
+      if (studentError || !student) {
+        console.error('Erro ao buscar dados do aluno:', studentError);
+        return;
+      }
+
+      // Preparar dados para notificação
+      const universityName = scholarship.universities.name;
+      const universityContact = scholarship.universities.contact || {};
+      const universityEmail = universityContact.admissionsEmail || universityContact.email || '';
+
+      if (!universityEmail) {
+        console.warn('Email da universidade não encontrado para notificação');
+        return;
+      }
+
+      // Criar payload e enviar notificação
+      const payload = NotificationService.createUniversitySelectionPayload(
+        student.full_name,
+        student.email,
+        universityName,
+        universityEmail,
+        scholarship.title
+      );
+
+      const result = await NotificationService.sendUniversityNotification(payload);
+      
+      if (result.success) {
+        console.log('✅ Notificação de seleção enviada com sucesso');
+      } else {
+        console.error('❌ Erro ao enviar notificação de seleção:', result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao notificar seleção de universidade:', error);
     }
   };
 
@@ -145,6 +221,7 @@ const CartPage: React.FC = () => {
         console.error('Erro ao criar aplicação:', insertError);
         throw new Error('Erro ao criar aplicação');
       }
+
 
       return { applicationId: newApp.id };
     } catch (error) {
