@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LanguageSelector from '../components/LanguageSelector';
 
 interface Message {
   sender: 'You' | 'AI';
@@ -103,7 +102,7 @@ const SmartAssistantPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] font-['Inter',system-ui,sans-serif] antialiased flex flex-col">
+    <div className="min-h-dvh bg-[#fafbfc] font-['Inter',system-ui,sans-serif] antialiased flex flex-col">
       {/* Header Premium - Responsivo */}
       <div className="bg-white border-b border-gray-100 shadow-sm backdrop-blur-sm bg-white/95 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-5">
@@ -250,6 +249,34 @@ const SmartAssistantPage: React.FC = () => {
       {/* Custom Scrollbar Styles */}
       <style dangerouslySetInnerHTML={{
         __html: `
+          /* DVH Support with fallbacks */
+          .min-h-dvh {
+            min-height: 100vh; /* Fallback for older browsers */
+            min-height: 100dvh; /* Dynamic viewport height for modern browsers */
+          }
+
+          /* Ensure proper mobile viewport handling */
+          @supports (height: 100dvh) {
+            .min-h-dvh {
+              min-height: 100dvh;
+            }
+          }
+
+          /* Mobile-specific viewport adjustments */
+          @media (max-width: 768px) {
+            .min-h-dvh {
+              min-height: 100vh;
+              min-height: 100dvh;
+            }
+            
+            /* Prevent address bar issues on mobile */
+            @supports (height: 100dvh) {
+              .min-h-dvh {
+                min-height: 100dvh;
+              }
+            }
+          }
+
           .smart-chat-messages::-webkit-scrollbar {
             width: 6px;
           }
@@ -321,6 +348,19 @@ const SmartAssistantPage: React.FC = () => {
           @media (max-width: 640px) {
             .smart-chat-messages::-webkit-scrollbar {
               width: 4px;
+            }
+            
+            /* Additional mobile viewport fixes */
+            .min-h-dvh {
+              min-height: 100vh;
+              min-height: 100dvh;
+            }
+          }
+
+          /* iOS Safari specific fixes */
+          @supports (-webkit-touch-callout: none) {
+            .min-h-dvh {
+              min-height: -webkit-fill-available;
             }
           }
         `
