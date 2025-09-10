@@ -40,6 +40,18 @@ const SellersList: React.FC<SellersListProps> = ({
   const getMissingFees = (student: any) => {
     const missingFees = [];
     
+    // Debug: Log dos dados do estudante para verificar os flags
+    if (student.email === 'kassandra969@uorak.com') {
+      console.log('🔍 [DEBUG] Kassandra payment flags:', {
+        email: student.email,
+        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+        is_application_fee_paid: student.is_application_fee_paid,
+        total_paid: student.total_paid
+      });
+    }
+    
     // Verificar Selection Process Fee ($999) - usar apenas o flag booleano
     if (!student.has_paid_selection_process_fee) {
       missingFees.push({ name: 'Selection Process', amount: 999, color: 'red' });
@@ -58,6 +70,11 @@ const SellersList: React.FC<SellersListProps> = ({
     // Verificar Application Fee ($50) - usar apenas o flag booleano
     if (!student.is_application_fee_paid) {
       missingFees.push({ name: 'Application', amount: 50, color: 'gray' });
+    }
+    
+    // Debug: Log do resultado final
+    if (student.email === 'kassandra969@uorak.com') {
+      console.log('🔍 [DEBUG] Kassandra missing fees result:', missingFees);
     }
     
     return missingFees;
