@@ -125,13 +125,19 @@ Deno.serve(async (req) => {
           if (findError && findError.code !== 'PGRST116') { // PGRST116 = no rows returned
             console.error('[validate-zelle-payment-result] Error finding existing application:', findError);
           } else if (existingApp) {
-            // Atualizar aplicação existente
+            // Atualizar aplicação existente - preservar status 'approved' se já estiver
+            const updateData: any = { 
+              updated_at: new Date().toISOString()
+            };
+            
+            // Só mudar status se não estiver 'approved' (universidade já aprovou)
+            if (existingApp.status !== 'approved') {
+              updateData.status = 'under_review'; // Status válido conforme constraint
+            }
+            
             const { error: updateAppError } = await supabase
               .from('scholarship_applications')
-              .update({ 
-                status: 'application_fee_paid',
-                updated_at: new Date().toISOString()
-              })
+              .update(updateData)
               .eq('id', existingApp.id);
 
             if (updateAppError) {
@@ -146,7 +152,7 @@ Deno.serve(async (req) => {
               .insert({
                 student_id: payment.user_id,
                 scholarship_id: scholarshipId,
-                status: 'application_fee_paid',
+                status: 'under_review', // Nova aplicação sempre começa com este status
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               });

@@ -135,6 +135,37 @@ class NotificationService {
   }
 
   /**
+   * Cria payload específico para notificar UNIVERSIDADE sobre pagamento de application fee
+   */
+  static createUniversityApplicationFeePaymentPayload(
+    studentName: string,
+    studentEmail: string,
+    universityName: string,
+    universityEmail: string,
+    scholarshipTitle: string,
+    paymentAmount: number,
+    paymentMethod: 'stripe' | 'zelle',
+    paymentId?: string
+  ): NotificationPayload {
+    const paymentMethodText = paymentMethod === 'stripe' ? 'Stripe' : 'Zelle';
+    const message = `O aluno ${studentName} pagou a taxa de aplicação de $${paymentAmount} via ${paymentMethodText} para a bolsa "${scholarshipTitle}" da universidade ${universityName}. Acesse o painel para revisar a candidatura.`;
+    
+    return {
+      tipo_notf: 'Notificação para Universidade - Pagamento de Application Fee',
+      email_aluno: studentEmail,
+      nome_aluno: studentName,
+      nome_bolsa: scholarshipTitle,
+      nome_universidade: universityName,
+      email_universidade: universityEmail,
+      o_que_enviar: message,
+      payment_amount: paymentAmount,
+      payment_method: paymentMethod,
+      payment_id: paymentId || '',
+      notification_target: 'university'
+    };
+  }
+
+  /**
    * Cria payload para notificação de seleção de universidade para processo seletivo
    */
   static createUniversitySelectionPayload(

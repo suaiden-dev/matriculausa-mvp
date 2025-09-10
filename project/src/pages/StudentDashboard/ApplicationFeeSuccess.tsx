@@ -23,7 +23,7 @@ const ApplicationFeeSuccess: React.FC = () => {
       }
 
       try {
-        // Buscar informações da sessão para obter o valor pago
+        // Chamar a Edge Function para verificar o pagamento e enviar notificação
         const { data: sessionData, error: sessionError } = await supabase.functions.invoke('verify-stripe-session-application-fee', {
           body: { sessionId },
         });

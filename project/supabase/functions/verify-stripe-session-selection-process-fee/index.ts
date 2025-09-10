@@ -162,6 +162,156 @@ Deno.serve(async (req) => {
       // Limpa carrinho
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
       if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);
+
+      // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
+      try {
+        console.log(`📤 [verify-stripe-session-selection-process-fee] Iniciando notificações...`)
+        
+        // Buscar dados do aluno (incluindo seller_referral_code)
+        const { data: alunoData, error: alunoError } = await supabase
+          .from('user_profiles')
+          .select('full_name, email, seller_referral_code')
+          .eq('user_id', userId)
+          .single();
+        
+        if (alunoError || !alunoData) {
+          console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
+          return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
+        }
+
+        // 1. NOTIFICAÇÃO PARA O ALUNO
+        const alunoNotificationPayload = {
+          tipo_notf: 'Pagamento de selection process confirmado',
+          email_aluno: alunoData.email,
+          nome_aluno: alunoData.full_name,
+          o_que_enviar: `O pagamento da taxa de processo seletivo foi confirmado para ${alunoData.full_name}. Agora você pode selecionar as escolas para aplicar.`,
+          payment_id: sessionId,
+          fee_type: 'selection_process',
+          amount: session.amount_total / 100,
+          payment_method: "stripe"
+        };
+        
+        console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
+        
+        const alunoNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'PostmanRuntime/7.36.3',
+          },
+          body: JSON.stringify(alunoNotificationPayload),
+        });
+        
+        const alunoResult = await alunoNotificationResponse.text();
+        console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
+
+        // 2. NOTIFICAÇÃO PARA SELLER/ADMIN/AFFILIATE (se houver código de seller)
+        console.log(`📤 [verify-stripe-session-selection-process-fee] DEBUG - alunoData.seller_referral_code:`, alunoData.seller_referral_code);
+        
+        if (alunoData.seller_referral_code) {
+          console.log(`📤 [verify-stripe-session-selection-process-fee] Buscando seller através do seller_referral_code: ${alunoData.seller_referral_code}`);
+          
+          // Buscar informações do seller através do seller_referral_code
+          console.log(`📤 [verify-stripe-session-selection-process-fee] Executando query: SELECT * FROM sellers WHERE referral_code = '${alunoData.seller_referral_code}'`);
+          
+          // Query simplificada para evitar erro de relacionamento
+          const { data: sellerData, error: sellerError } = await supabase
+            .from('sellers')
+            .select(`
+              id,
+              user_id,
+              name,
+              email,
+              referral_code,
+              commission_rate,
+              affiliate_admin_id
+            `)
+            .eq('referral_code', alunoData.seller_referral_code)
+            .single();
+
+          console.log(`📤 [verify-stripe-session-selection-process-fee] Resultado da busca do seller:`, { sellerData, sellerError });
+
+          if (sellerData && !sellerError) {
+            console.log(`📤 [verify-stripe-session-selection-process-fee] Seller encontrado:`, sellerData);
+
+            // Buscar dados do affiliate_admin se houver
+            let affiliateAdminData = { email: "", name: "Affiliate Admin" };
+            if (sellerData.affiliate_admin_id) {
+              console.log(`📤 [verify-stripe-session-selection-process-fee] Buscando affiliate_admin: ${sellerData.affiliate_admin_id}`);
+              
+              const { data: affiliateData, error: affiliateError } = await supabase
+                .from('affiliate_admins')
+                .select('user_id')
+                .eq('id', sellerData.affiliate_admin_id)
+                .single();
+
+              if (affiliateData && !affiliateError) {
+                const { data: affiliateProfile, error: profileError } = await supabase
+                  .from('user_profiles')
+                  .select('email, full_name')
+                  .eq('user_id', affiliateData.user_id)
+                  .single();
+
+                if (affiliateProfile && !profileError) {
+                  affiliateAdminData = {
+                    email: affiliateProfile.email || "",
+                    name: affiliateProfile.full_name || "Affiliate Admin"
+                  };
+                  console.log(`📤 [verify-stripe-session-selection-process-fee] Affiliate admin encontrado:`, affiliateAdminData);
+                }
+              }
+            }
+
+            // NOTIFICAÇÃO PARA ADMIN/SELLER/AFFILIATE
+            const adminNotificationPayload = {
+              tipo_notf: "Pagamento Stripe de selection process confirmado",
+              email_admin: "admin@matriculausa.com",
+              nome_admin: "Admin MatriculaUSA",
+              email_aluno: alunoData.email,
+              nome_aluno: alunoData.full_name,
+              email_seller: sellerData.email,
+              nome_seller: sellerData.name,
+              email_affiliate_admin: affiliateAdminData.email,
+              nome_affiliate_admin: affiliateAdminData.name,
+              o_que_enviar: `Pagamento Stripe de selection process no valor de $${(session.amount_total / 100).toFixed(2)} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              payment_id: sessionId,
+              fee_type: 'selection_process',
+              amount: session.amount_total / 100,
+              seller_id: sellerData.user_id,
+              referral_code: sellerData.referral_code,
+              commission_rate: sellerData.commission_rate,
+              payment_method: "stripe"
+            };
+
+            console.log('📧 [verify-stripe-session-selection-process-fee] Enviando notificação para admin/seller/affiliate:', adminNotificationPayload);
+
+            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'PostmanRuntime/7.36.3',
+              },
+              body: JSON.stringify(adminNotificationPayload),
+            });
+
+            if (adminNotificationResponse.ok) {
+              const adminResult = await adminNotificationResponse.text();
+              console.log('📧 [verify-stripe-session-selection-process-fee] Notificação para admin/seller/affiliate enviada com sucesso:', adminResult);
+            } else {
+              const adminError = await adminNotificationResponse.text();
+              console.error('📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para admin/seller/affiliate:', adminError);
+            }
+          } else {
+            console.log(`📤 [verify-stripe-session-selection-process-fee] Seller não encontrado para seller_referral_code: ${alunoData.seller_referral_code}`);
+          }
+        } else {
+          console.log(`📤 [verify-stripe-session-selection-process-fee] Nenhum seller_referral_code encontrado, não há seller para notificar`);
+        }
+      } catch (notifErr) {
+        console.error('[NOTIFICAÇÃO] Erro ao notificar selection process via n8n:', notifErr);
+      }
+      // --- FIM DAS NOTIFICAÇÕES ---
+
       return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
     } else {
       console.log('Session not paid or complete.');
@@ -171,4 +321,4 @@ Deno.serve(async (req) => {
     console.error(`--- CRITICAL ERROR in verify-stripe-session-selection-process-fee ---:`, error.message);
     return corsResponse({ error: 'An unexpected error occurred.', details: error.message }, 500);
   }
-}); 
+});

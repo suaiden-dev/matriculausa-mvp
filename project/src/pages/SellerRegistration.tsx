@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Phone, CheckCircle, UserCheck, Shield } from 'lucide-react';
+import { Mail, Lock, User, Phone, CheckCircle, UserCheck, Shield, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -10,10 +10,10 @@ import Header from '../components/Header';
 interface SellerRegistrationProps {}
 
 const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -22,40 +22,32 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     phone: '',
     registration_code: ''
   });
-  
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  
-  // States for registration code validation
+
+  // States para validação do código de registro
   const [registrationCodeValid, setRegistrationCodeValid] = useState<boolean | null>(null);
   const [registrationCodeLoading, setRegistrationCodeLoading] = useState(false);
   const [isRegistrationCodeLocked, setIsRegistrationCodeLocked] = useState(false);
 
-  // Load registration code from URL or localStorage
+  // Carrega o código de registro da URL ou do localStorage
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const codeFromUrl = searchParams.get('code');
-    
-    if (codeFromUrl) {
-      console.log('[SELLER_REG] Code found in URL:', codeFromUrl);
-      setFormData(prev => ({ ...prev, registration_code: codeFromUrl }));
+    const codeToValidate = codeFromUrl || localStorage.getItem('pending_seller_registration_code');
+
+    if (codeToValidate) {
+      console.log('[SELLER_REG] Código encontrado:', codeToValidate);
+      setFormData(prev => ({ ...prev, registration_code: codeToValidate }));
       setIsRegistrationCodeLocked(true);
-      validateRegistrationCode(codeFromUrl);
-    } else {
-      // Verificar localStorage
-      const pendingCode = localStorage.getItem('pending_seller_registration_code');
-      if (pendingCode) {
-        console.log('[SELLER_REG] Code found in localStorage:', pendingCode);
-        setFormData(prev => ({ ...prev, registration_code: pendingCode }));
-        setIsRegistrationCodeLocked(true);
-        validateRegistrationCode(pendingCode);
-      }
+      validateRegistrationCode(codeToValidate);
     }
   }, [location.search]);
 
-  // Validate seller registration code
+  // Valida o código de registro do vendedor
   const validateRegistrationCode = async (code: string) => {
     if (!code || code.length < 4) {
       setRegistrationCodeValid(false);
@@ -64,7 +56,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
 
     setRegistrationCodeLoading(true);
     try {
-      console.log('[SELLER_REG] Validating registration code:', code);
+      console.log('[SELLER_REG] Validando código de registro:', code);
       const { data, error } = await supabase
         .from('seller_registration_codes')
         .select('code, is_active')
@@ -72,31 +64,26 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         .eq('is_active', true)
         .single();
 
-      console.log('[SELLER_REG] Validation result:', { data, error });
-
-      if (error) {
-        console.error('[SELLER_REG] Validation error:', error);
+      if (error || !data) {
+        console.error('[SELLER_REG] Erro de validação ou código não encontrado:', error);
         setRegistrationCodeValid(false);
-      } else if (data) {
-        console.log('[SELLER_REG] Valid code:', data);
-        setRegistrationCodeValid(true);
       } else {
-        console.log('[SELLER_REG] Code not found');
-        setRegistrationCodeValid(false);
+        console.log('[SELLER_REG] Código válido:', data);
+        setRegistrationCodeValid(true);
       }
-    } catch (error) {
-      console.error('[SELLER_REG] Exceção na validação:', error);
+    } catch (err) {
+      console.error('[SELLER_REG] Exceção na validação:', err);
       setRegistrationCodeValid(false);
     } finally {
       setRegistrationCodeLoading(false);
     }
   };
 
-  // Handle registration code change
+  // Lida com a mudança no campo do código de registro
   const handleRegistrationCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, registration_code: code }));
-    
+
     if (code.length >= 4) {
       validateRegistrationCode(code);
     } else {
@@ -104,138 +91,152 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
     }
   };
 
-  // Handle form submission
+  // Lida com a submissão do formulário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validações iniciais
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (!/^[A-Za-z0-9@#$!]+$/.test(formData.password)) {
+      setError('Password must contain only letters, numbers and the characters @#$!');
+      return;
+    }
+    if (!formData.phone || formData.phone.length < 8) {
+      setError('Phone is required and must have at least 8 digits');
+      return;
+    }
+    if (!termsAccepted) {
+      setError('You must accept the terms and conditions');
+      return;
+    }
+    if (!registrationCodeValid) {
+      setError('Invalid registration code');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      console.log('[SELLER_REG] Starting seller registration process');
-              console.log('[SELLER_REG] Form data:', formData);
-      
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        setLoading(false);
-        return;
-      }
+      console.log('[SELLER_REG] Iniciando processo de registro de vendedor');
+      console.log('[SELLER_REG] Dados do formulário:', formData);
 
-      // Validate allowed password characters: letters, numbers and @#$!
-      const allowedPasswordRegex = /^[A-Za-z0-9@#$!]+$/;
-      if (!allowedPasswordRegex.test(formData.password)) {
-        setError('Password must contain only letters, numbers and the characters @#$!');
-        setLoading(false);
-        return;
-      }
-      
-      // Validate required phone
-      if (!formData.phone || formData.phone.length < 8) {
-        console.log('❌ [SELLER_REG] Phone validation failed:', {
-          phone: formData.phone,
-          length: formData.phone?.length
-        });
-        setError('Phone is required and must have at least 8 digits');
-        setLoading(false);
-        return;
-      }
-      
-      // Validate terms acceptance
-      if (!termsAccepted) {
-        setError('You must accept the terms and conditions');
-        setLoading(false);
-        return;
-      }
-
-      // Validate registration code
-      if (!formData.registration_code || !registrationCodeValid) {
-        console.log('❌ [SELLER_REG] Code validation failed:', {
-          code: formData.registration_code,
-          isValid: registrationCodeValid
-        });
-        setError('Invalid registration code');
-        setLoading(false);
-        return;
-      }
-      
-              console.log('✅ [SELLER_REG] Validations passed');
-              console.log('🔑 [SELLER_REG] Registration code used:', formData.registration_code);
-      
-      // 1. Create user in auth with seller registration code
+      // 1. Criar usuário na autenticação
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         options: {
           data: {
             full_name: formData.full_name,
-            role: 'student', // User starts as student, not as seller
+            role: 'student', // Usuário começa como 'student'
             phone: formData.phone,
-            seller_referral_code: formData.registration_code // Usar o mesmo campo que o registro normal
+            seller_referral_code: formData.registration_code
           }
         }
       });
 
-      if (authError) {
-        console.error('[SELLER_REG] Erro no signUp:', authError);
-        throw authError;
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user');
+      
+      console.log('✅ [SELLER_REG] Usuário criado com sucesso:', authData.user.id);
+
+      // 2. Enviar notificação para o admin do afiliado
+      try {
+        console.log('📧 [SELLER_REG] Buscando admin do afiliado para notificação...');
+        
+        // Busca o admin_id associado ao código de registro
+        const { data: codeData, error: codeError } = await supabase
+          .from('seller_registration_codes')
+          .select('admin_id')
+          .eq('code', formData.registration_code)
+          .single();
+
+        if (codeError || !codeData?.admin_id) {
+          throw new Error('Affiliate admin not found for this code.');
+        }
+
+        const affiliateAdminId = codeData.admin_id;
+        console.log('✅ [SELLER_REG] ID do admin do afiliado encontrado:', affiliateAdminId);
+
+        // Busca os dados do admin do afiliado
+        const { data: adminData, error: adminError } = await supabase
+          .rpc('get_user_email_by_id', { user_id_param: affiliateAdminId });
+        
+        if (adminError || !adminData || adminData.length === 0) {
+            console.warn('⚠️ [SELLER_REG] Não foi possível buscar dados do admin, a notificação pode falhar.');
+        }
+
+        const adminUser = adminData?.[0] || { full_name: 'Affiliate Admin', email: 'admin@matriculausa.com' };
+        
+        const notificationPayload = {
+          tipo_notf: "Novo vendedor se registrou",
+          email_affiliate_admin: adminUser.email,
+          nome_affiliate_admin: adminUser.full_name,
+          email_seller: formData.email.trim().toLowerCase(),
+          nome_seller: formData.full_name,
+          phone_seller: formData.phone,
+          o_que_enviar: `Um novo vendedor ${formData.full_name} (${formData.email}) se registrou usando seu código ${formData.registration_code}. Acesse o dashboard para aprovar ou rejeitar a solicitação.`,
+          registration_code: formData.registration_code,
+          seller_id: authData.user.id,
+          dashboard_link: "/affiliate-admin/dashboard?tab=pending"
+        };
+        
+        console.log('🚀 [SELLER_REG] Enviando webhook para n8n...');
+        const notificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notificationPayload),
+        });
+
+        if (notificationResponse.ok) {
+          console.log('✅ [SELLER_REG] Notificação enviada com sucesso!');
+        } else {
+          console.warn('⚠️ [SELLER_REG] Falha ao enviar notificação:', notificationResponse.statusText);
+        }
+
+      } catch (notificationError) {
+        console.error('❌ [SELLER_REG] Erro no processo de notificação:', notificationError);
+        // Não interrompe o fluxo de registro se a notificação falhar
       }
 
-      if (!authData.user) {
-        console.error('[SELLER_REG] Usuário não foi criado');
-        throw new Error('Failed to create user');
-      }
-
-      // 2. User created successfully - profile will be created automatically by trigger
-
-      // 3. Clear localStorage
+      // 3. Limpar localStorage e mostrar modal de sucesso
       localStorage.removeItem('pending_seller_registration_code');
-
-      // 4. Show verification modal
       setShowVerificationModal(true);
 
     } catch (err: any) {
-              console.error('[SELLER_REG] Registration error:', err);
-      let errorMessage = 'Authentication failed';
-      
+      console.error('❌ [SELLER_REG] Erro no registro:', err);
+      let errorMessage = 'Authentication failed. Please try again.';
       if (err.message) {
-        const message = err.message.toLowerCase();
-        
-        if (message.includes('email')) {
+        if (err.message.toLowerCase().includes('email')) {
           errorMessage = 'This email is already in use';
-        } else if (message.includes('password')) {
+        } else if (err.message.toLowerCase().includes('password')) {
           errorMessage = 'Password must have at least 6 characters';
-        } else if (message.includes('invalid')) {
-          errorMessage = 'Invalid data provided';
-        } else {
-          errorMessage = err.message;
         }
       }
-      
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle phone change
   const handlePhoneChange = (value: string | undefined) => {
     setFormData(prev => ({ ...prev, phone: value || '' }));
   };
 
-
   return (
     <div className="min-h-screen bg-white">
-      {/* Header da página de home */}
       <Header />
       
       <div className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          {/* Header da página */}
           <div className="text-center mb-12">
             <div className="flex justify-center mb-8">
               <img 
@@ -252,9 +253,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
             </p>
           </div>
 
-          {/* Form Container */}
           <div className="bg-slate-50 rounded-3xl p-8 shadow-lg border border-slate-200">
-            {/* Seller Form Header */}
             <div className="text-center mb-8">
               <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <UserCheck className="h-8 w-8 text-white" />
@@ -264,7 +263,6 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Registration Code - Largura total */}
               <div>
                 <label htmlFor="registration_code" className="block text-sm font-bold text-slate-900 mb-2">
                   Registration Code
@@ -277,40 +275,20 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                     value={formData.registration_code}
                     onChange={handleRegistrationCodeChange}
                     disabled={isRegistrationCodeLocked}
-                    className={`w-full pl-4 pr-4 py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 ${
-                      isRegistrationCodeLocked 
-                        ? 'bg-slate-100 cursor-not-allowed' 
-                        : 'bg-white'
+                    className={`w-full pl-4 pr-10 py-4 border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 ${
+                      isRegistrationCodeLocked ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'
                     } ${
-                      registrationCodeValid === true 
-                        ? 'border-green-500' 
-                        : registrationCodeValid === false 
-                        ? 'border-red-500' 
-                        : 'border-slate-300'
+                      registrationCodeValid === true ? 'border-green-500' : registrationCodeValid === false ? 'border-red-500' : 'border-slate-300'
                     }`}
                     placeholder="Enter registration code"
                     required
                   />
-                  {isRegistrationCodeLocked && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                      <Shield className="w-5 h-5 text-blue-600" />
-                    </div>
-                  )}
-                  {registrationCodeLoading && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                    </div>
-                  )}
-                  {registrationCodeValid === true && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                  )}
-                  {registrationCodeValid === false && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                      <X className="w-5 h-5 text-red-600" />
-                    </div>
-                  )}
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    {isRegistrationCodeLocked && !registrationCodeLoading && <Shield className="w-5 h-5 text-blue-600" />}
+                    {registrationCodeLoading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>}
+                    {registrationCodeValid === true && <CheckCircle className="w-5 h-5 text-green-600" />}
+                    {registrationCodeValid === false && <X className="w-5 h-5 text-red-600" />}
+                  </div>
                 </div>
                 {registrationCodeValid === false && (
                   <p className="mt-1 text-sm text-red-600">
@@ -324,15 +302,13 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                 )}
               </div>
 
-              {/* Grid de 2 colunas para os campos principais */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Full Name */}
                 <div>
                   <label htmlFor="full_name" className="block text-sm font-bold text-slate-900 mb-2">
                     Full Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                     <input
                       type="text"
                       id="full_name"
@@ -346,13 +322,12 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                   </div>
                 </div>
 
-                {/* Email */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-bold text-slate-900 mb-2">
                     Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                     <input
                       type="email"
                       id="email"
@@ -366,13 +341,12 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                   </div>
                 </div>
 
-                {/* Phone */}
                 <div>
                   <label htmlFor="phone" className="block text-sm font-bold text-slate-900 mb-2">
                     Phone
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                  <div className="relative group">
+                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 z-10" />
                     <PhoneInput
                       international
                       defaultCountry="BR"
@@ -384,13 +358,12 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                   </div>
                 </div>
 
-                {/* Password */}
                 <div>
                   <label htmlFor="password" className="block text-sm font-bold text-slate-900 mb-2">
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                     <input
                       type="password"
                       id="password"
@@ -408,13 +381,12 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                   </p>
                 </div>
 
-                {/* Confirm Password */}
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-900 mb-2">
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                     <input
                       type="password"
                       id="confirmPassword"
@@ -430,12 +402,11 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                 </div>
               </div>
 
-              {/* Terms and Privacy Policy Notice */}
               <div className="flex items-center space-x-3 mb-4">
-                  <input
-                    type="checkbox"
+                <input
+                  type="checkbox"
                   id="terms-acceptance"
-                    checked={termsAccepted}
+                  checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
                   className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] flex-shrink-0"
                 />
@@ -455,21 +426,19 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-[#05294E] hover:text-[#05294E]/80 font-medium underline"
-                    >
-                      Privacy Policy
+                  >
+                    Privacy Policy
                   </a>
                   .
-                  </label>
+                </label>
               </div>
 
-              {/* Error Message - Largura total */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}
 
-              {/* Submit Button - Largura total */}
               <button
                 type="submit"
                 disabled={loading || !registrationCodeValid || !termsAccepted}
@@ -489,7 +458,6 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
                 )}
               </button>
 
-              {/* Login Link - Largura total */}
               <div className="text-center">
                 <p className="text-sm text-slate-500">
                   Already have an account?{' '}
@@ -503,44 +471,42 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
         </div>
       </div>
 
-
-        {/* Verification Modal */}
-        {showVerificationModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Account Created Successfully!
-              </h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Please check your email for a confirmation link to activate your seller account. 
-                Click the link in the email to complete your registration.
-              </p>
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setShowVerificationModal(false);
-                    navigate('/');
-                  }}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-                >
-                  Go to Home
-                </button>
-                <button
-                  onClick={() => {
-                    setShowVerificationModal(false);
-                    navigate('/login');
-                  }}
-                  className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
-                >
-                  Sign In
-                </button>
-              </div>
+      {showVerificationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 text-center shadow-2xl">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Account Created Successfully!
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Please check your email for a confirmation link to activate your seller account. 
+              Click the link in the email to complete your registration.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setShowVerificationModal(false);
+                  navigate('/');
+                }}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Go to Home
+              </button>
+              <button
+                onClick={() => {
+                  setShowVerificationModal(false);
+                  navigate('/login');
+                }}
+                className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Sign In
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 };

@@ -32,6 +32,7 @@ function corsResponse(body: string | object | null, status = 200) {
 
 Deno.serve(async (req) => {
   console.log('--- verify-stripe-session-application-fee: Request received ---');
+  console.log('--- TESTE: Edge Function funcionando ---');
   try {
     if (req.method === 'OPTIONS') return corsResponse(null, 204);
     if (req.method !== 'POST') return corsResponse({ error: 'Method Not Allowed' }, 405);
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
       // Verifica se a aplicação existe e pertence ao usuário (usando userProfile.id)
       const { data: application, error: fetchError } = await supabase
         .from('scholarship_applications')
-        .select('id, student_id, scholarship_id, student_process_type')
+        .select('id, student_id, scholarship_id, student_process_type, status')
         .eq('id', applicationId)
         .eq('student_id', userProfile.id)
         .single();
@@ -84,11 +85,20 @@ Deno.serve(async (req) => {
 
       // Preparar dados para atualização
       const updateData: any = { 
-        status: 'under_review',
         payment_status: 'paid',
-        paid_at: new Date().toISOString()
+        paid_at: new Date().toISOString(),
+        is_application_fee_paid: true
       };
-      console.log(`[verify-stripe-session-application-fee] Application status set to 'under_review' for user ${userId}, application ${applicationId}.`);
+      
+      // Preservar o status atual se já estiver 'approved' (universidade já aprovou)
+      console.log(`[verify-stripe-session-application-fee] Current application status: '${application.status}' for user ${userId}, application ${applicationId}.`);
+      
+      if (application.status !== 'approved') {
+        updateData.status = 'under_review';
+        console.log(`[verify-stripe-session-application-fee] Application status set to 'under_review' for user ${userId}, application ${applicationId}.`);
+      } else {
+        console.log(`[verify-stripe-session-application-fee] Preserving 'approved' status for user ${userId}, application ${applicationId} (university already approved).`);
+      }
 
       // Se student_process_type não existe na aplicação, tentar obter dos metadados da sessão
       if (!application.student_process_type && session.metadata?.student_process_type) {
@@ -108,7 +118,11 @@ Deno.serve(async (req) => {
         throw new Error(`Failed to update application status: ${updateError.message}`);
       }
 
-      console.log('Application status updated to under_review with payment info');
+      if (updateData.status) {
+        console.log(`Application status updated to '${updateData.status}' with payment info`);
+      } else {
+        console.log('Application payment info updated (status preserved)');
+      }
 
       // Buscar documentos do user_profiles e vincular à application (usando userId para user_profiles)
       const { data: userProfileDocs, error: userProfileError } = await supabase
@@ -202,29 +216,59 @@ Deno.serve(async (req) => {
         const contact = universidade.contact || {};
         const emailUniversidade = contact.admissionsEmail || contact.email || '';
 
-        // Montar mensagem
-        const mensagem = `O aluno ${alunoData.full_name} selecionou a bolsa "${scholarship.title}" da universidade ${universidade.name} e pagou a taxa de aplicação. Acesse o painel para revisar a candidatura.`;
-        const payload = {
+        // Montar payload para notificação do aluno (fluxo atual)
+        const mensagemAluno = `O aluno ${alunoData.full_name} selecionou a bolsa "${scholarship.title}" da universidade ${universidade.name} e pagou a taxa de aplicação. Acesse o painel para revisar a candidatura.`;
+        const payloadAluno = {
           tipo_notf: 'Novo pagamento de application fee',
           email_aluno: alunoData.email,
           nome_aluno: alunoData.full_name,
           nome_bolsa: scholarship.title,
           nome_universidade: universidade.name,
           email_universidade: emailUniversidade,
-          o_que_enviar: mensagem,
+          o_que_enviar: mensagemAluno,
+          notification_target: 'student'
         };
-        console.log('[NOTIFICAÇÃO] Payload para n8n:', payload);
-        // Enviar para o n8n
-        const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+
+        // Montar payload específico para notificação da universidade
+        const mensagemUniversidade = `O aluno ${alunoData.full_name} pagou a taxa de aplicação de $${session.metadata?.amount || '10'} via Stripe para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Acesse o painel para revisar a candidatura.`;
+        const payloadUniversidade = {
+          tipo_notf: 'Notificação para Universidade - Pagamento de Application Fee',
+          email_aluno: alunoData.email,
+          nome_aluno: alunoData.full_name,
+          nome_bolsa: scholarship.title,
+          nome_universidade: universidade.name,
+          email_universidade: emailUniversidade,
+          o_que_enviar: mensagemUniversidade,
+          payment_amount: session.metadata?.amount || '10',
+          payment_method: 'stripe',
+          payment_id: sessionId,
+          notification_target: 'university'
+        };
+        // Enviar webhook para o aluno (fluxo atual)
+        console.log('[NOTIFICAÇÃO ALUNO] Payload para n8n:', payloadAluno);
+        const n8nResAluno = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'PostmanRuntime/7.36.3',
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payloadAluno),
         });
-        const n8nText = await n8nRes.text();
-        console.log('[NOTIFICAÇÃO] Resposta do n8n:', n8nRes.status, n8nText);
+        const n8nTextAluno = await n8nResAluno.text();
+        console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n:', n8nResAluno.status, n8nTextAluno);
+
+        // Enviar webhook específico para a universidade
+        console.log('[NOTIFICAÇÃO UNIVERSIDADE] Payload para n8n:', payloadUniversidade);
+        const n8nResUniversidade = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'PostmanRuntime/7.36.3',
+          },
+          body: JSON.stringify(payloadUniversidade),
+        });
+        const n8nTextUniversidade = await n8nResUniversidade.text();
+        console.log('[NOTIFICAÇÃO UNIVERSIDADE] Resposta do n8n:', n8nResUniversidade.status, n8nTextUniversidade);
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar universidade:', notifErr);
       }

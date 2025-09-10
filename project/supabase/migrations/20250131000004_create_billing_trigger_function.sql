@@ -47,7 +47,7 @@ BEGIN
       affiliate_code_found,
       amount_param,
       CASE 
-        WHEN fee_type_param = 'selection_process' THEN 200
+        WHEN fee_type_param = 'selection_process' THEN 180
         ELSE 0
       END,
       'completed',
