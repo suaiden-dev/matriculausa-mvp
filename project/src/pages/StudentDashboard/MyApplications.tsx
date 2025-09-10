@@ -924,59 +924,59 @@ const getLevelColor = (level: any) => {
       {/* Confirmation Modal */}
       {showConfirmationModal && pendingApplication && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="flex items-end sm:items-center justify-center min-h-dvh text-center">
             {/* Background overlay */}
             <div 
               className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
               onClick={handleCancelPayment}
             ></div>
 
-            {/* Modal panel */}
-            <div className="inline-block align-bottom bg-white rounded-3xl px-6 pt-6 pb-8 text-left overflow-hidden shadow-xl transform transition-all sm:mt-60 sm:align-middle sm:max-w-lg sm:w-full sm:p-8">
-              <div className="sm:flex sm:items-start">
-                
-                <div className="mt-3 text-center sm:mt-0 sm:text-left flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    {t('studentDashboard.myApplications.confirmationModal.title')}
-                  </h3>
-                  <div className="space-y-4">
-                    
-                    
-                    
-                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-4 border border-amber-200">
-                      <div className="flex items-start relative">
-                        <AlertCircle className="h-5 w-5 absolute text-amber-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <h4 className="text-center font-bold text-amber-900 mb-2">{t('studentDashboard.myApplications.confirmationModal.importantDecision')}</h4>
-                          <p className="text-amber-800 text-sm leading-relaxed mb-3">
-                            {t('studentDashboard.myApplications.confirmationModal.description')}
-                          </p>
-                          {otherApprovedApps.length > 0 && (
-                            <div className="bg-white rounded-xl p-3 border border-amber-200">
-                              <p className="text-amber-800 text-sm font-semibold mb-2">
-                                {otherApprovedApps.length === 1 
-                                  ? t('studentDashboard.myApplications.confirmationModal.willRemoveOthers', { count: otherApprovedApps.length })
-                                  : t('studentDashboard.myApplications.confirmationModal.willRemoveOthersPlural', { count: otherApprovedApps.length })
-                                }:
-                              </p>
-                              <ul className="text-amber-700 text-xs space-y-1">
-                                {otherApprovedApps.map(app => (
-                                  <li key={app.id} className="flex items-center">
-                                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                                    {app.scholarships?.title} - {app.scholarships?.universities?.name}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6 sm:mt-8 sm:flex sm:flex-row-reverse gap-3">
+             {/* Modal panel */}
+              <div className="relative align-bottom bg-white sm:rounded-3xl px-3 pt-3 pb-3 text-left overflow-hidden shadow-xl transform transition-all w-full max-w-lg sm:align-middle sm:p-4 max-h-[50vh] sm:max-h-[60vh] flex flex-col">
+               {/* Modal Header */}
+               <div className="flex-shrink-0">
+                 <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 text-center sm:text-left">
+                   {t('studentDashboard.myApplications.confirmationModal.title')}
+                 </h3>
+               </div>
+
+               {/* Modal Content - Scrollable */}
+               <div className="flex-1 overflow-y-auto min-h-0">
+                 <div className="space-y-2">
+                   <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-2 border border-amber-200">
+                     <div className="flex items-start">
+                       <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0 mr-3" />
+                       <div className="flex-1">
+                         <h4 className="text-center sm:text-left font-bold text-amber-900 mb-2">{t('studentDashboard.myApplications.confirmationModal.importantDecision')}</h4>
+                         <p className="text-amber-800 text-sm leading-relaxed mb-3">
+                           {t('studentDashboard.myApplications.confirmationModal.description')}
+                         </p>
+                         {otherApprovedApps.length > 0 && (
+                           <div className="bg-white rounded-xl p-3 border border-amber-200">
+                             <p className="text-amber-800 text-sm font-semibold mb-2">
+                               {otherApprovedApps.length === 1 
+                                 ? t('studentDashboard.myApplications.confirmationModal.willRemoveOthers', { count: otherApprovedApps.length })
+                                 : t('studentDashboard.myApplications.confirmationModal.willRemoveOthersPlural', { count: otherApprovedApps.length })
+                               }:
+                             </p>
+                             <ul className="text-amber-700 text-xs space-y-1">
+                               {otherApprovedApps.map(app => (
+                                 <li key={app.id} className="flex items-center">
+                                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
+                                   {app.scholarships?.title} - {app.scholarships?.universities?.name}
+                                 </li>
+                               ))}
+                             </ul>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+               
+               {/* Modal Footer - Fixed at bottom */}
+               <div className="flex-shrink-0 pt-3 mt-2 space-y-2 sm:space-y-0 sm:flex sm:flex-row-reverse sm:gap-2 border-t border-gray-100">
                 <StripeCheckout
                   productId="applicationFee"
                   feeType="application_fee"
@@ -985,7 +985,7 @@ const getLevelColor = (level: any) => {
                     Number(pendingApplication.scholarships.application_fee_amount).toFixed(2) : 
                     '350.00'
                   })`}
-                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-bold hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm text-center mb-3 sm:mb-0"
+                  className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white px-3 py-2 rounded-lg font-bold hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm text-center"
                   successUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`}
                   cancelUrl={`${window.location?.origin || ''}/student/dashboard/application-fee-error`}
                   disabled={false}
@@ -999,7 +999,7 @@ const getLevelColor = (level: any) => {
                 />
                 <button
                   type="button"
-                  className="w-full sm:w-auto bg-white text-gray-700 px-6 py-3 rounded-xl font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
+                  className="w-full bg-white text-gray-700 px-3 py-2 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 text-sm"
                   onClick={handleCancelPayment}
                 >
                   {t('studentDashboard.myApplications.confirmationModal.letMeThink')}
@@ -1189,7 +1189,7 @@ const getLevelColor = (level: any) => {
               const selectedApp = approvedList.find(a => (a as any).is_scholarship_fee_paid);
               const hasSelectedScholarship = !!selectedApp;
               return (
-                <section>
+                <section >
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.approvedByUniversity')}</h3>
                     <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} {t('studentDashboard.myApplications.sections.approved')}</span>
@@ -1202,7 +1202,7 @@ const getLevelColor = (level: any) => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center md:justify-start gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
+                  <div className="grid grid-cols-1 md:flex md:justify-start md:gap-6 md:overflow-x-auto md:pb-4 md:items-start gap-6" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -1218,7 +1218,7 @@ const getLevelColor = (level: any) => {
                       const statusInfo = getStatusDescription(application);
                       
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
+                        <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group w-full md:w-80 md:flex-shrink-0 md:min-w-0 md:self-start">
                 <div className="p-4 sm:p-6">
                   {/* Header Section */}
                   <div className="mb-4 sm:mb-6">
@@ -1411,7 +1411,7 @@ const getLevelColor = (level: any) => {
                     <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.pendingAndInProgress')}</h3>
                     <span className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-4 py-2 rounded-full font-medium">{otherList.length} {t('studentDashboard.myApplications.sections.applications')}</span>
                   </div>
-                  <div className="sm:grid flex justify-center sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-x-auto pb-4 items-start" style={{ 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6" style={{ 
                     scrollbarWidth: 'none', 
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
@@ -1425,7 +1425,7 @@ const getLevelColor = (level: any) => {
                       const statusInfo = getStatusDescription(application);
                       
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group flex-shrink-0 w-80 sm:w-96 min-w-0 self-start">
+                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group w-full md:w-80 md:flex-shrink-0 md:min-w-0 md:self-start">
                           <div className="p-4 sm:p-6">
                             {/* Header Section - mesma estrutura da seção aprovada */}
                             <div className="mb-4 sm:mb-6">
