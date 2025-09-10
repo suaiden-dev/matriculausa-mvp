@@ -809,6 +809,91 @@ const MatriculaRewardsLanding: React.FC = () => {
         </div>
       </section>
 
+      {/* QR Code Section - Desktop Only */}
+      <section className="hidden lg:block py-20 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Two Column Layout: Text + QR Code */}
+          <div className="grid grid-cols-2 gap-16 items-center">
+            {/* Left Side - Call to Action Text */}
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-4xl font-bold text-gray-900 mb-6">
+                  {t('matriculaRewardsLanding.howItWorks.qrCode.title')}
+                </h2>
+                <p className="text-xl text-gray-600 leading-relaxed mb-8">
+                  {t('matriculaRewardsLanding.howItWorks.qrCode.subtitle')}
+                </p>
+              </div>
+
+              {/* Benefits List */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-3 flex-shrink-0"></div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.quickAccess.title')}</h3>
+                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.quickAccess.description')}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-3 flex-shrink-0"></div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.startSaving.title')}</h3>
+                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.startSaving.description')}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-3 flex-shrink-0"></div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.referFriends.title')}</h3>
+                    <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.howItWorks.qrCode.benefits.referFriends.description')}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - QR Code */}
+            <div className="flex justify-center">
+              <div className="relative group">
+                {/* Outer Frame */}
+                <div className="absolute -inset-6 bg-gray-50 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* Main Container */}
+                <div className="relative bg-white rounded-2xl p-8 shadow-xl border border-gray-200 group-hover:shadow-2xl transition-all duration-500">
+                  {/* Corner Decorations */}
+                  <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-gray-300 rounded-tl-lg"></div>
+                  <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-gray-300 rounded-tr-lg"></div>
+                  <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-gray-300 rounded-bl-lg"></div>
+                  <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-gray-300 rounded-br-lg"></div>
+                  
+                  {/* QR Code */}
+                  <img 
+                    src="/qr_code_register.svg" 
+                    alt="QR Code para registro"
+                    className="w-80 h-80 mx-auto rounded-xl"
+                  />
+                  
+                  {/* Description */}
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-gray-600 font-medium mb-2">
+                      {t('matriculaRewardsLanding.howItWorks.qrCode.description')}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {t('matriculaRewardsLanding.howItWorks.qrCode.instruction')}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Floating Elements */}
+                <div className="absolute -top-3 -right-3 w-6 h-6 bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 delay-100"></div>
+                <div className="absolute -bottom-3 -left-3 w-4 h-4 bg-green-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 delay-200"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Custom Styles */}
       <style dangerouslySetInnerHTML={{
         __html: `

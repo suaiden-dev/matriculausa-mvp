@@ -2397,6 +2397,27 @@
       },
       "journey": {
         "startMessage": "Start your savings journey now!"
+      },
+      "qrCode": {
+        "title": "Register Instantly",
+        "subtitle": "Scan the QR code with your phone to access the registration page directly and start saving on your tuition today.",
+        "description": "Quick and secure access to your account",
+        "instruction": "Use your phone's camera to scan",
+        "note": "Available for mobile devices only",
+        "benefits": {
+          "quickAccess": {
+            "title": "Quick and Secure Access",
+            "description": "Register in seconds without typing long URLs"
+          },
+          "startSaving": {
+            "title": "Start Saving Immediately",
+            "description": "Earn coins from day one and apply discounts to your tuition"
+          },
+          "referFriends": {
+            "title": "Refer Friends and Multiply Your Earnings",
+            "description": "180 coins for each friend who signs up using your code"
+          }
+        }
       }
     },
     "testimonials": {

@@ -2512,6 +2512,27 @@
       },
       "journey": {
         "startMessage": "¡Comienza tu viaje de ahorro ahora!"
+      },
+      "qrCode": {
+        "title": "Regístrate Instantáneamente",
+        "subtitle": "Escanea el código QR con tu teléfono para acceder directamente a la página de registro y comienza a ahorrar en tu matrícula hoy mismo.",
+        "description": "Acceso rápido y seguro a tu cuenta",
+        "instruction": "Usa la cámara de tu teléfono para escanear",
+        "note": "Disponible solo para dispositivos móviles",
+        "benefits": {
+          "quickAccess": {
+            "title": "Acceso Rápido y Seguro",
+            "description": "Regístrate en segundos sin necesidad de escribir URLs largas"
+          },
+          "startSaving": {
+            "title": "Comienza a Ahorrar Inmediatamente",
+            "description": "Gana monedas desde el primer día y aplica descuentos a tu matrícula"
+          },
+          "referFriends": {
+            "title": "Refiere Amigos y Multiplica Tus Ganancias",
+            "description": "180 monedas por cada amigo que se registre usando tu código"
+          }
+        }
       }
     },
     "testimonials": {
