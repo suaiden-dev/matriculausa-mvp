@@ -10,58 +10,58 @@ const FAQ: React.FC = () => {
 
   const faqItems = [
     {
-      q: t('studentDashboard.faq.question1'),
-      a: t('studentDashboard.faq.answer1'),
+      q: t('home.faq.questions.q1.question'),
+      a: t('home.faq.questions.q1.answer'),
       category: 'General'
     },
     {
-      q: t('studentDashboard.faq.question2'),
-      a: t('studentDashboard.faq.answer2'),
+      q: t('home.faq.questions.q2.question'),
+      a: t('home.faq.questions.q2.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question3'),
-      a: t('studentDashboard.faq.answer3'),
+      q: t('home.faq.questions.q3.question'),
+      a: t('home.faq.questions.q3.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question4'),
-      a: t('studentDashboard.faq.answer4'),
+      q: t('home.faq.questions.q4.question'),
+      a: t('home.faq.questions.q4.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question5'),
-      a: t('studentDashboard.faq.answer5'),
+      q: t('home.faq.questions.q5.question'),
+      a: t('home.faq.questions.q5.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question6'),
-      a: t('studentDashboard.faq.answer6'),
+      q: t('home.faq.questions.q6.question'),
+      a: t('home.faq.questions.q6.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question7'),
-      a: t('studentDashboard.faq.answer7'),
+      q: t('home.faq.questions.q7.question'),
+      a: t('home.faq.questions.q7.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question8'),
-      a: t('studentDashboard.faq.answer8'),
+      q: t('home.faq.questions.q8.question'),
+      a: t('home.faq.questions.q8.answer'),
       category: 'Support'
     },
     {
-      q: t('studentDashboard.faq.question9'),
-      a: t('studentDashboard.faq.answer9'),
+      q: t('home.faq.questions.q9.question'),
+      a: t('home.faq.questions.q9.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question10'),
-      a: t('studentDashboard.faq.answer10'),
+      q: t('home.faq.questions.q10.question'),
+      a: t('home.faq.questions.q10.answer'),
       category: 'Payment'
     },
     {
-      q: t('studentDashboard.faq.question11'),
-      a: t('studentDashboard.faq.answer11'),
+      q: t('home.faq.questions.q11.question'),
+      a: t('home.faq.questions.q11.answer'),
       category: 'Support'
     }
   ];
@@ -91,11 +91,11 @@ const FAQ: React.FC = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              {t('studentDashboard.faq.title')}
+              {t('home.faq.title')}
             </h1>
             
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-              {t('studentDashboard.faq.subtitle')}
+              {t('home.faq.subtitle')}
             </p>
             
             <div className="max-w-md mx-auto relative">
@@ -130,7 +130,7 @@ const FAQ: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-3">
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('studentDashboard.faq.badge')}</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('home.faq.badge')}</h2>
               <p className="text-gray-600">
                 {filteredItems.length} question{filteredItems.length !== 1 ? 's' : ''} found
                 {searchQuery && ` for "${searchQuery}"`}

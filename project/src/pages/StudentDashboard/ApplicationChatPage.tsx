@@ -804,17 +804,17 @@ const ApplicationChatPage: React.FC = () => {
         )}
         
         {activeTab === 'documents' && applicationDetails && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4">
-                              <h2 className="text-xl font-semibold text-white flex items-center">
-                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  {t('studentDashboard.applicationChatPage.documents.title')}
-                </h2>
-                <p className="text-slate-200 text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
+          <div className="bg-white rounded-2xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-3 sm:px-6 sm:py-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {t('studentDashboard.applicationChatPage.documents.title')}
+              </h2>
+              <p className="text-slate-200 text-xs sm:text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
             </div>
-            <div className="p-6">
+            <div className="p-3 sm:p-6">
               <DocumentRequestsCard 
                 applicationId={applicationId!} 
                 isSchool={false} 
