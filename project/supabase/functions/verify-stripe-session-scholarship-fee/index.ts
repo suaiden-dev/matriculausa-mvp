@@ -89,6 +89,72 @@ Deno.serve(async (req) => {
 
       console.log('Scholarship applications updated to approved status');
 
+      // --- Notificação para a universidade via n8n ---
+      try {
+        // Buscar dados do aluno
+        const { data: alunoData, error: alunoError } = await supabase
+          .from('user_profiles')
+          .select('full_name, email')
+          .eq('user_id', userId)
+          .single();
+        if (alunoError || !alunoData) throw new Error('Aluno não encontrado para notificação');
+
+        // Para cada scholarship, enviar notificação
+        for (const scholarshipId of scholarshipIdsArray) {
+          try {
+            // Buscar dados da bolsa
+            const { data: scholarship, error: scholarshipError } = await supabase
+              .from('scholarships')
+              .select('id, title, university_id')
+              .eq('id', scholarshipId)
+              .single();
+            if (scholarshipError || !scholarship) continue;
+
+            // Buscar dados da universidade
+            const { data: universidade, error: univError } = await supabase
+              .from('universities')
+              .select('id, name, contact')
+              .eq('id', scholarship.university_id)
+              .single();
+            if (univError || !universidade) continue;
+
+            const contact = universidade.contact || {};
+            const emailUniversidade = contact.admissionsEmail || contact.email || '';
+            if (!emailUniversidade) continue;
+
+            // Montar mensagem
+            const mensagem = `O aluno ${alunoData.full_name} pagou a taxa de bolsa para "${scholarship.title}" da universidade ${universidade.name}. O aluno foi aprovado e pode prosseguir com a matrícula.`;
+            const payload = {
+              tipo_notf: 'Pagamento de taxa de bolsa',
+              email_aluno: alunoData.email,
+              nome_aluno: alunoData.full_name,
+              nome_bolsa: scholarship.title,
+              nome_universidade: universidade.name,
+              email_universidade: emailUniversidade,
+              o_que_enviar: mensagem,
+            };
+            console.log('[NOTIFICAÇÃO] Payload para n8n (scholarship fee):', payload);
+
+            // Enviar para o n8n
+            const n8nRes = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'PostmanRuntime/7.36.3',
+              },
+              body: JSON.stringify(payload),
+            });
+            const n8nText = await n8nRes.text();
+            console.log('[NOTIFICAÇÃO] Resposta do n8n (scholarship fee):', n8nRes.status, n8nText);
+          } catch (notifErr) {
+            console.error('[NOTIFICAÇÃO] Erro ao notificar universidade para scholarship:', scholarshipId, notifErr);
+          }
+        }
+      } catch (notifErr) {
+        console.error('[NOTIFICAÇÃO] Erro geral ao notificar universidades:', notifErr);
+      }
+      // --- Fim da notificação ---
+
       // Limpa carrinho (opcional)
       const { error: cartError } = await supabase.from('user_cart').delete().eq('user_id', userId);
       if (cartError) throw new Error(`Failed to clear user_cart: ${cartError.message}`);

@@ -8,6 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { formatCentsToDollars } from '../../utils/currency';
+import NotificationService from '../../services/NotificationService';
 
 const ApplicationFeePage: React.FC = () => {
   const { cart, clearCart } = useCartStore();
@@ -51,6 +52,70 @@ const ApplicationFeePage: React.FC = () => {
     };
     autoSelectFromProfileOrApp();
   }, [selectedScholarshipId, userProfile?.id]);
+
+  // Função para notificar universidade sobre seleção do aluno
+  const notifyUniversityStudentSelection = async (scholarshipId: string, studentProfileId: string) => {
+    try {
+      // Buscar dados da bolsa e universidade
+      const { data: scholarship, error: scholarshipError } = await supabase
+        .from('scholarships')
+        .select(`
+          title,
+          universities!inner (
+            name,
+            contact
+          )
+        `)
+        .eq('id', scholarshipId)
+        .single();
+
+      if (scholarshipError || !scholarship) {
+        console.error('Erro ao buscar dados da bolsa:', scholarshipError);
+        return;
+      }
+
+      // Buscar dados do aluno
+      const { data: student, error: studentError } = await supabase
+        .from('user_profiles')
+        .select('full_name, email')
+        .eq('id', studentProfileId)
+        .single();
+
+      if (studentError || !student) {
+        console.error('Erro ao buscar dados do aluno:', studentError);
+        return;
+      }
+
+      // Preparar dados para notificação
+      const universityName = scholarship.universities.name;
+      const universityContact = scholarship.universities.contact || {};
+      const universityEmail = universityContact.admissionsEmail || universityContact.email || '';
+
+      if (!universityEmail) {
+        console.warn('Email da universidade não encontrado para notificação');
+        return;
+      }
+
+      // Criar payload e enviar notificação
+      const payload = NotificationService.createUniversitySelectionPayload(
+        student.full_name,
+        student.email,
+        universityName,
+        universityEmail,
+        scholarship.title
+      );
+
+      const result = await NotificationService.sendUniversityNotification(payload);
+      
+      if (result.success) {
+        console.log('✅ Notificação de seleção enviada com sucesso');
+      } else {
+        console.error('❌ Erro ao enviar notificação de seleção:', result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao notificar seleção de universidade:', error);
+    }
+  };
 
   const createOrGetApplication = async (): Promise<{ applicationId: string } | undefined> => {
     if (!selectedScholarshipId || !userProfile?.id) {
@@ -99,6 +164,7 @@ const ApplicationFeePage: React.FC = () => {
       }
 
       console.log('New application created:', data.id, 'with student_process_type:', studentProcessType);
+      
       return { applicationId: data.id };
     } catch (error) {
       console.error('Error in createOrGetApplication:', error);

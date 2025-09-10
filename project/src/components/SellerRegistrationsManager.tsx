@@ -337,7 +337,97 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         // Don't fail completely, just log the error
       }
 
-      // 7. Reload registrations and refresh parent component
+      // 7. Send webhook notifications
+      try {
+        // Buscar dados do affiliate admin atual
+        const { data: affiliateAdminData } = await supabase
+          .from('user_profiles')
+          .select('full_name, email')
+          .eq('user_id', user?.id)
+          .single();
+
+        // Buscar dados do seller criado
+        const { data: sellerData } = await supabase
+          .from('sellers')
+          .select('referral_code, commission_rate')
+          .eq('user_id', userId)
+          .single();
+
+        // Enviar notificação para admin sobre aprovação do seller
+        try {
+          const adminNotificationPayload = {
+            tipo_notf: "Seller aprovado via registro",
+            email_admin: "admin@matriculausa.com", // Email fixo do admin
+            nome_admin: "Admin MatriculaUSA",
+            email_seller: userProfile.email,
+            nome_seller: userProfile.full_name || "Seller",
+            email_affiliate_admin: affiliateAdminData?.email || "",
+            nome_affiliate_admin: affiliateAdminData?.full_name || "Affiliate Admin",
+            o_que_enviar: `O affiliate admin ${affiliateAdminData?.full_name || "Affiliate Admin"} aprovou o registro de seller de ${userProfile.full_name || "Seller"}. Código de referência: ${sellerData?.referral_code || "N/A"}`,
+            seller_id: userId,
+            referral_code: sellerData?.referral_code || "",
+            commission_rate: sellerData?.commission_rate || 0.1,
+            created_by: "affiliate_admin_approval"
+          };
+
+          console.log('📧 [SellerApproval] Enviando notificação para admin:', adminNotificationPayload);
+
+          const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(adminNotificationPayload),
+          });
+
+          if (adminNotificationResponse.ok) {
+            console.log('✅ [SellerApproval] Notificação para admin enviada com sucesso!');
+          } else {
+            console.warn('⚠️ [SellerApproval] Erro ao enviar notificação para admin:', adminNotificationResponse.status);
+          }
+        } catch (notificationError) {
+          console.error('❌ [SellerApproval] Erro ao enviar notificação para admin:', notificationError);
+        }
+
+        // Enviar notificação para o seller sobre sua aprovação
+        try {
+          const sellerNotificationPayload = {
+            tipo_notf: "Seu registro de seller foi aprovado",
+            email_seller: userProfile.email,
+            nome_seller: userProfile.full_name || "Seller",
+            email_affiliate_admin: affiliateAdminData?.email || "",
+            nome_affiliate_admin: affiliateAdminData?.full_name || "Affiliate Admin",
+            o_que_enviar: `Parabéns! Seu registro de seller foi aprovado pelo affiliate admin ${affiliateAdminData?.full_name || "Affiliate Admin"}. Seu código de referência é: ${sellerData?.referral_code || "N/A"}. Use este código para indicar alunos e ganhar comissões!`,
+            seller_id: userId,
+            referral_code: sellerData?.referral_code || "",
+            commission_rate: sellerData?.commission_rate || 0.1,
+            dashboard_link: "/seller/dashboard"
+          };
+
+          console.log('📧 [SellerApproval] Enviando notificação para seller:', sellerNotificationPayload);
+
+          const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(sellerNotificationPayload),
+          });
+
+          if (sellerNotificationResponse.ok) {
+            console.log('✅ [SellerApproval] Notificação para seller enviada com sucesso!');
+          } else {
+            console.warn('⚠️ [SellerApproval] Erro ao enviar notificação para seller:', sellerNotificationResponse.status);
+          }
+        } catch (notificationError) {
+          console.error('❌ [SellerApproval] Erro ao enviar notificação para seller:', notificationError);
+        }
+      } catch (webhookError) {
+        console.error('❌ [SellerApproval] Erro geral ao enviar webhooks:', webhookError);
+        // Não falhar a operação por causa dos webhooks
+      }
+
+      // 8. Reload registrations and refresh parent component
       await loadRegistrations();
       if (onRefresh) {
         onRefresh(); // Refresh the parent component (SellerManagement)
