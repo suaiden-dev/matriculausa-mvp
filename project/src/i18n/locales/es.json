@@ -277,6 +277,7 @@
       "title": "Preguntas Frecuentes",
       "mainTitle": "Todo lo que Necesitas Saber",
       "subtitle": "Obtén respuestas a las preguntas más comunes sobre tarifas, pagos y el proceso de solicitud en MatriculaUSA",
+      "badge": "Preguntas y Respuestas",
       "questions": {
         "q1": {
           "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
