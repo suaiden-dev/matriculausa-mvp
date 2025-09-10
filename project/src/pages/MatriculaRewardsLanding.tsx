@@ -192,7 +192,11 @@ const MatriculaRewardsLanding: React.FC = () => {
   // ];
 
   const handleGetStarted = () => {
-    navigate('/student/dashboard/rewards');
+    if (user) {
+      navigate('/student/dashboard/rewards');
+    } else {
+      navigate('/register');
+    }
   };
 
   const scrollToHowItWorks = () => {
@@ -229,28 +233,50 @@ const MatriculaRewardsLanding: React.FC = () => {
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30">
-        {/* Animated Background */}
+        {/* Background Image - University campus scene to reinforce educational context */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-slate-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+          {/* University campus image */}
+          <img 
+            src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+            alt="University Campus Background"
+            className="w-full h-[110%] object-cover opacity-12 blur-sm transition-all duration-700 hover:opacity-8 transform scale-105"
+            style={{ objectPosition: 'center 30%' }}
+            onError={(e) => {
+              // Fallback se a imagem não carregar
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+          
+          {/* Multi-layer gradient overlay for optimal text contrast and visual hierarchy */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/85 via-blue-50/65 to-indigo-50/75"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-50/30 via-transparent to-slate-50/20"></div>
+        </div>
+
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-slate-200/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className={`text-center transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm text-blue-600 px-6 py-3 rounded-full text-sm font-semibold mb-8 shadow-lg border border-blue-100">
+            <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md text-blue-600 px-6 py-3 rounded-full text-sm font-semibold mb-8 shadow-2xl border border-blue-100/50">
               <Sparkles className="h-4 w-4 animate-pulse" />
               {t('matriculaRewardsLanding.badge')}
             </div>
 
             {/* Main Title */}
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-gray-900 mb-8 leading-tight">
-              {t('matriculaRewardsLanding.hero.title')}
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-8 leading-tight">
+              <span className="text-gray-900 drop-shadow-sm">
+                {t('matriculaRewardsLanding.hero.title')}
+              </span>
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm">
                 {t('matriculaRewardsLanding.hero.titleHighlight')}
               </span>
-              <span className="block text-3xl sm:text-4xl lg:text-5xl text-gray-600 font-medium mt-2">
+              <span className="block text-3xl sm:text-4xl lg:text-5xl text-gray-700 font-medium mt-2 drop-shadow-sm">
                 {t('matriculaRewardsLanding.hero.subtitle')}
               </span>
             </h1>
@@ -261,7 +287,7 @@ const MatriculaRewardsLanding: React.FC = () => {
             {!user || !userAffiliateCode ? (
               // 3 cards in a row when user is not logged in
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-gray-100 transform hover:scale-105 transition-all duration-300">
+                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <Share2 className="h-6 w-6 text-blue-600" />
                   </div>
@@ -269,7 +295,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                   <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.referFriends.description')}</p>
                 </div>
                 
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-gray-100 transform hover:scale-105 transition-all duration-300">
+                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
                   <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <Coins className="h-6 w-6 text-green-600" />
                   </div>
@@ -277,7 +303,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                   <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.accumulateCoins.description')}</p>
                 </div>
                 
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-gray-100 transform hover:scale-105 transition-all duration-300">
+                <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
                   <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <GraduationCap className="h-6 w-6 text-purple-600" />
                   </div>
@@ -289,7 +315,7 @@ const MatriculaRewardsLanding: React.FC = () => {
               // 2+2 layout when user is logged in
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-gray-100 transform hover:scale-105 transition-all duration-300">
+                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
                       <Share2 className="h-6 w-6 text-blue-600" />
                     </div>
@@ -297,7 +323,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                     <p className="text-gray-600 text-sm">{t('matriculaRewardsLanding.hero.valueCards.referFriends.description')}</p>
                   </div>
                   
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-gray-100 transform hover:scale-105 transition-all duration-300">
+                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
                     <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
                       <Coins className="h-6 w-6 text-green-600" />
                     </div>
@@ -309,7 +335,7 @@ const MatriculaRewardsLanding: React.FC = () => {
                 {/* Pay Less Card + Referral Code Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
                   {/* Pay Less Card */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-gray-100 transform hover:scale-105 transition-all duration-300">
+                  <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-2xl border border-gray-100/50 transform hover:scale-105 transition-all duration-300 hover:bg-white/95">
                     <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4 mx-auto">
                       <GraduationCap className="h-6 w-6 text-purple-600" />
                     </div>
@@ -378,79 +404,94 @@ const MatriculaRewardsLanding: React.FC = () => {
         </div>
       </section> */}
 
-      {/* How It Works Section - Interactive Journey */}
-      <section id="how-it-works" className="py-24 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 relative overflow-hidden">
-        {/* Animated Background */}
+      {/* How It Works Section - Mobile Optimized */}
+      <section id="how-it-works" className="py-16 md:py-24 bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-50 relative overflow-hidden">
+        {/* Simplified Background for Mobile */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-indigo-50/40"></div>
-          {/* Floating particles */}
-          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-300/40 rounded-full animate-pulse"></div>
-          <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-indigo-300/50 rounded-full animate-ping"></div>
-          <div className="absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-slate-300/30 rounded-full animate-bounce"></div>
+          {/* Simplified floating elements - only on desktop */}
+          <div className="hidden md:block absolute top-1/4 left-1/4 w-2 h-2 bg-blue-300/40 rounded-full animate-pulse"></div>
+          <div className="hidden md:block absolute top-3/4 right-1/4 w-1 h-1 bg-indigo-300/50 rounded-full animate-ping"></div>
+          <div className="hidden md:block absolute bottom-1/4 left-1/3 w-1.5 h-1.5 bg-slate-300/30 rounded-full animate-bounce"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+          <div className="text-center mb-12 md:mb-20">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 md:mb-6">
               {t('matriculaRewardsLanding.howItWorks.title')}
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               {t('matriculaRewardsLanding.howItWorks.subtitle')}
             </p>
           </div>
 
-          {/* Interactive Journey Path */}
+          {/* Mobile-First Steps Layout */}
           <div className="relative max-w-6xl mx-auto">
-            {/* Journey Path Line */}
+            {/* Desktop Journey Path Line */}
             <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-300/50 to-transparent transform -translate-y-1/2"></div>
             
-            {/* Steps Container */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-8">
+            {/* Mobile: Vertical Stack, Desktop: Horizontal Grid */}
+            <div className="space-y-8 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 lg:gap-8">
               {howItWorksSteps.map((step, index) => (
                 <div key={index} className="group relative">
-                  {/* Step Number Circle */}
-                  <div className="relative mb-8">
-                    <div className="w-20 h-20 mx-auto relative">
-                      {/* Animated Ring */}
-                      <div className="absolute inset-0 rounded-full border-2 border-gray-300/50 group-hover:border-blue-400/60 transition-all duration-700"></div>
-                      <div className="absolute inset-2 rounded-full border border-gray-400/60 group-hover:border-blue-500/70 transition-all duration-700 group-hover:animate-pulse"></div>
+                  {/* Step Number Circle - Mobile Optimized */}
+                  <div className="relative mb-6 md:mb-8">
+                    <div className="w-16 h-16 md:w-20 md:h-20 mx-auto relative">
+                      {/* Simplified Ring for Mobile */}
+                      <div className="absolute inset-0 rounded-full border-2 border-gray-300/50 md:group-hover:border-blue-400/60 transition-all duration-700"></div>
+                      <div className="absolute inset-2 rounded-full border border-gray-400/60 md:group-hover:border-blue-500/70 transition-all duration-700 md:group-hover:animate-pulse"></div>
                       
                       {/* Number */}
-                      <div className="absolute inset-4 rounded-full bg-white text-gray-700 flex items-center justify-center font-bold text-xl group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-lg">
+                      <div className="absolute inset-3 md:inset-4 rounded-full bg-white text-gray-700 flex items-center justify-center font-bold text-lg md:text-xl md:group-hover:bg-blue-500 md:group-hover:text-white transition-all duration-300 shadow-lg">
                         {index + 1}
                       </div>
                       
-                      {/* Progress Indicator */}
-                      <div className="absolute -inset-1 rounded-full border-2 border-transparent group-hover:border-blue-500/50 transition-all duration-500 group-hover:animate-spin"></div>
+                      {/* Progress Indicator - Desktop Only */}
+                      <div className="hidden md:block absolute -inset-1 rounded-full border-2 border-transparent md:group-hover:border-blue-500/50 transition-all duration-500 md:group-hover:animate-spin"></div>
                     </div>
 
-                    {/* Connecting Line to Next Step */}
+                    {/* Desktop Connecting Line */}
                     {index < howItWorksSteps.length - 1 && (
-                      <div className="hidden lg:block absolute top-10 left-1/2 w-full h-0.5 bg-gradient-to-r from-white/20 to-transparent transform translate-x-1/2 group-hover:from-blue-400/50 transition-all duration-700"></div>
+                      <div className="hidden lg:block absolute top-10 left-1/2 w-full h-0.5 bg-gradient-to-r from-white/20 to-transparent transform translate-x-1/2 md:group-hover:from-blue-400/50 transition-all duration-700"></div>
                     )}
                   </div>
 
-                  {/* Content Card */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 group-hover:bg-white group-hover:border-blue-300 transition-all duration-500 transform group-hover:-translate-y-2 shadow-lg">
+                  {/* Content Card - Mobile Optimized */}
+                  <div className="bg-white/90 md:bg-white/80 backdrop-blur-sm rounded-2xl p-6 md:p-6 border border-gray-200 md:group-hover:bg-white md:group-hover:border-blue-300 transition-all duration-500 md:group-hover:-translate-y-2 shadow-lg">
                     {/* Step Title */}
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 text-center group-hover:text-blue-600 transition-colors duration-300">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4 text-center md:group-hover:text-blue-600 transition-colors duration-300">
                       {step.title}
                     </h3>
                     
                     {/* Description */}
-                    <p className="text-gray-600 text-center mb-6 leading-relaxed">
+                    <p className="text-sm md:text-base text-gray-600 text-center mb-4 md:mb-6 leading-relaxed">
                       {step.description}
                     </p>
                     
                     {/* Key Point */}
-                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 group-hover:bg-blue-100 group-hover:border-blue-200 transition-all duration-300">
-                      <p className="text-sm text-gray-700 font-medium text-center">
+                    <div className="bg-blue-50 rounded-xl p-3 md:p-4 border border-blue-100 md:group-hover:bg-blue-100 md:group-hover:border-blue-200 transition-all duration-300">
+                      <p className="text-xs md:text-sm text-gray-700 font-medium text-center">
                         {step.details}
                       </p>
-                        </div>
+                    </div>
 
-                    {/* Hover Effect - Action Preview */}
-                    <div className="mt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
+                    {/* Mobile Action Button */}
+                    {/* <div className="mt-4 md:hidden">
+                      <div className="text-center">
+                        <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600">
+                          →
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1 font-medium">
+                          {index === 0 && t('matriculaRewardsLanding.howItWorks.actions.shareNow')}
+                          {index === 1 && t('matriculaRewardsLanding.howItWorks.actions.inviteFriends')}
+                          {index === 2 && t('matriculaRewardsLanding.howItWorks.actions.seeEarnings')}
+                          {index === 3 && t('matriculaRewardsLanding.howItWorks.actions.useDiscount')}
+                        </p>
+                      </div>
+                    </div> */}
+
+                    {/* Desktop Hover Effect */}
+                    <div className="hidden md:block mt-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
                       <div className="text-center">
                         <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 animate-bounce">
                           →
@@ -465,36 +506,129 @@ const MatriculaRewardsLanding: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Mobile Connection Line */}
-                  {index < howItWorksSteps.length - 1 && (
-                    <div className="lg:hidden flex justify-center mt-8 mb-4">
-                      <div className="w-px h-12 bg-gradient-to-b from-white/20 to-transparent"></div>
-                    </div>
-                  )}
+
                 </div>
               ))}
             </div>
 
-            {/* Success Animation */}
-            <div className="mt-16 text-center">
-              <div className="inline-flex items-center gap-4 bg-green-50 backdrop-blur-sm rounded-full px-8 py-4 border border-green-200">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center animate-pulse">
+            {/* Success Animation - Mobile Optimized */}
+            <div className="mt-12 md:mt-16 text-center">
+              <div className="inline-flex items-center gap-3 md:gap-4 bg-green-50 backdrop-blur-sm rounded-full px-6 md:px-8 py-3 md:py-4 border border-green-200">
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-green-500 flex items-center justify-center animate-pulse">
                   ✓
                 </div>
-                <span className="text-green-700 font-medium">{t('matriculaRewardsLanding.howItWorks.journey.startMessage')}</span>
+                <span className="text-sm md:text-base text-green-700 font-medium">{t('matriculaRewardsLanding.howItWorks.journey.startMessage')}</span>
               </div>
             </div>
           </div>
 
-          {/* Interactive Calculator */}
-          <div className="mt-20 bg-white/90 backdrop-blur-sm rounded-3xl p-8 lg:p-12 border border-gray-200 shadow-xl">
-            <div className="text-center mb-8">
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">{t('matriculaRewardsLanding.howItWorks.calculator.title')}</h3>
-              <p className="text-gray-600">{t('matriculaRewardsLanding.howItWorks.calculator.description')}</p>
+          {/* Interactive Calculator - Mobile Optimized */}
+          <div className="mt-12 md:mt-20 bg-white/95 backdrop-blur-md rounded-3xl p-4 md:p-8 lg:p-12 border border-gray-100 shadow-2xl">
+            {/* Calculator Header */}
+            <div className="text-center mb-6 md:mb-8">
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 md:mb-4">{t('matriculaRewardsLanding.howItWorks.calculator.title')}</h3>
+              <p className="text-gray-600 text-sm md:text-base">{t('matriculaRewardsLanding.howItWorks.calculator.description')}</p>
             </div>
 
             <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* Mobile Calculator Layout - Enhanced */}
+              <div className="md:hidden space-y-6">
+                {/* Mobile Calculator Input - Improved */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
+                  <label className="block text-base font-bold text-gray-800 mb-4 text-center">
+                    {t('matriculaRewardsLanding.howItWorks.calculator.label')}
+                  </label>
+                  
+                  {/* Current Value Display - More Prominent */}
+                  <div className="text-center mb-5">
+                    <div className="inline-flex items-center gap-3 bg-white rounded-2xl px-5 py-3 shadow-lg border border-blue-200">
+                      <Users className="h-5 w-5 text-blue-500" />
+                      <span className="text-3xl font-bold text-blue-600">{calculatorFriends}</span>
+                      <span className="text-gray-600 font-medium text-sm">{t('matriculaRewardsLanding.howItWorks.calculator.friends')}</span>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Slider */}
+                  <div className="relative px-1">
+                    <input
+                      type="range"
+                      min="1"
+                      max="50"
+                      value={calculatorFriends}
+                      onChange={(e) => setCalculatorFriends(parseInt(e.target.value))}
+                      className="w-full h-4 bg-gradient-to-r from-blue-200 to-purple-200 rounded-lg appearance-none cursor-pointer slider"
+                      style={{
+                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(calculatorFriends / 50) * 100}%, #e2e8f0 ${(calculatorFriends / 50) * 100}%, #e2e8f0 100%)`
+                      }}
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
+                      <span className="font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.minValue')}</span>
+                      <span className="font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.maxValue')}</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Select Buttons - Improved */}
+                  <div className="grid grid-cols-4 gap-2 mt-4">
+                    {[5, 10, 20, 50].map((value) => (
+                      <button
+                        key={value}
+                        onClick={() => setCalculatorFriends(value)}
+                        className={`px-2 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          calculatorFriends === value 
+                            ? 'bg-blue-500 text-white shadow-lg transform scale-105' 
+                            : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mobile Results - Enhanced Layout */}
+                <div className="space-y-4">
+                  {/* Coins Earned - Improved */}
+                  <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-5 border border-yellow-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
+                          <Coins className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.coinsEarned')}</p>
+                          <p className="text-2xl font-bold text-yellow-600">{calculateSavings(calculatorFriends).coins.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.coinsPerFriend')}</div>
+                        <div className="text-xs text-gray-500">{t('matriculaRewardsLanding.howItWorks.calculator.perFriend')}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Total Savings - Improved */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <DollarSign className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.totalSavings')}</p>
+                          <p className="text-2xl font-bold text-green-600">${calculateSavings(calculatorFriends).dollars}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 font-medium">{t('matriculaRewardsLanding.howItWorks.calculator.coinValue')}</div>
+                        <div className="text-xs text-gray-500">{t('matriculaRewardsLanding.howItWorks.calculator.usdValue')}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop Calculator Layout */}
+              <div className="hidden md:grid md:grid-cols-2 gap-8 items-center">
                 {/* Calculator Input */}
                 <div className="bg-white rounded-2xl p-6 shadow-lg">
                   <label className="block text-sm font-semibold text-gray-700 mb-4">
@@ -507,11 +641,14 @@ const MatriculaRewardsLanding: React.FC = () => {
                       max="50"
                       value={calculatorFriends}
                       onChange={(e) => setCalculatorFriends(parseInt(e.target.value))}
-                      className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                      className="w-full h-3 bg-gradient-to-r from-blue-200 to-purple-200 rounded-lg appearance-none cursor-pointer slider"
+                      style={{
+                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(calculatorFriends / 50) * 100}%, #e2e8f0 ${(calculatorFriends / 50) * 100}%, #e2e8f0 100%)`
+                      }}
                     />
                     <div className="flex justify-between text-sm text-gray-500 mt-2">
-                      <span>1</span>
-                      <span>50+</span>
+                      <span>{t('matriculaRewardsLanding.howItWorks.calculator.minValue')}</span>
+                      <span>{t('matriculaRewardsLanding.howItWorks.calculator.maxValue')}</span>
                     </div>
                   </div>
                   <div className="mt-4 text-center">
@@ -544,7 +681,7 @@ const MatriculaRewardsLanding: React.FC = () => {
               <div className="text-center mt-8">
                 <button
                   onClick={handleGetStarted}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-2xl border border-white/20"
+                  className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-2xl border border-white/20"
                 >
                   {t('matriculaRewardsLanding.howItWorks.calculator.cta')}
                 </button>
@@ -700,6 +837,83 @@ const MatriculaRewardsLanding: React.FC = () => {
           
           .animation-delay-4000 {
             animation-delay: 4s;
+          }
+
+          /* Mobile-optimized slider styles */
+          .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+          }
+
+          .slider::-webkit-slider-track {
+            background: #e2e8f0;
+            height: 8px;
+            border-radius: 4px;
+          }
+
+          .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #3b82f6;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+          }
+
+          .slider::-webkit-slider-thumb:hover {
+            background: #2563eb;
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+          }
+
+          .slider::-moz-range-track {
+            background: #e2e8f0;
+            height: 8px;
+            border-radius: 4px;
+            border: none;
+          }
+
+          .slider::-moz-range-thumb {
+            background: #3b82f6;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+          }
+
+          .slider::-moz-range-thumb:hover {
+            background: #2563eb;
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+          }
+
+          /* Mobile touch improvements */
+          @media (max-width: 768px) {
+            .slider::-webkit-slider-thumb {
+              height: 24px;
+              width: 24px;
+            }
+            
+            .slider::-moz-range-thumb {
+              height: 24px;
+              width: 24px;
+            }
+          }
+
+          /* Smooth transitions for mobile interactions */
+          @media (max-width: 768px) {
+            .group:active {
+              transform: scale(0.98);
+              transition: transform 0.1s ease;
+            }
           }
         `
       }} />

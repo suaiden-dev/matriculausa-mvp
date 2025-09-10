@@ -2375,7 +2375,13 @@
         "friends": "amigos",
         "coinsEarned": "Coins Ganhos",
         "totalSavings": "Redução Mensal na Mensalidade",
-        "cta": "Começar a Economizar Agora"
+        "cta": "Começar a Economizar Agora",
+        "minValue": "1 amigo",
+        "maxValue": "50+ amigos",
+        "coinsPerFriend": "180 coins",
+        "perFriend": "por amigo",
+        "coinValue": "1 coin =",
+        "usdValue": "$1 USD"
       },
       "actions": {
         "shareNow": "Compartilhe agora",

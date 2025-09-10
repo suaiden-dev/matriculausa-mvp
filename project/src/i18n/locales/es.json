@@ -2496,7 +2496,13 @@
         "friends": "amigos",
         "coinsEarned": "Monedas Ganadas",
         "totalSavings": "Reducción Mensual en Matrícula",
-        "cta": "Comenzar a Ahorrar Ahora"
+        "cta": "Comenzar a Ahorrar Ahora",
+        "minValue": "1 amigo",
+        "maxValue": "50+ amigos",
+        "coinsPerFriend": "180 monedas",
+        "perFriend": "por amigo",
+        "coinValue": "1 moneda =",
+        "usdValue": "$1 USD"
       },
       "actions": {
         "shareNow": "Comparte ahora",

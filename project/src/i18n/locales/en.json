@@ -2381,7 +2381,13 @@
         "friends": "friends",
         "coinsEarned": "Coins Earned",
         "totalSavings": "Monthly Tuition Reduction",
-        "cta": "Start Saving Now"
+        "cta": "Start Saving Now",
+        "minValue": "1 friend",
+        "maxValue": "50+ friends",
+        "coinsPerFriend": "180 coins",
+        "perFriend": "per friend",
+        "coinValue": "1 coin =",
+        "usdValue": "$1 USD"
       },
       "actions": {
         "shareNow": "Share now",
