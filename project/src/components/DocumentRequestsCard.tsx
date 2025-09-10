@@ -562,7 +562,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
   const normalizeStatus = (status: string) => (status || '').toLowerCase().replace(/\s+/g, '_');
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="max-w-3xl mx-auto p-0 sm:p-6">
       {isSchool && (
         <div className="flex justify-end mb-4">
           <button
@@ -578,8 +578,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
 
 
 
-      {/* Lista de Document Requests - Design Antigo */}
-      <div className="space-y-8">
+      {/* Lista de Document Requests - Design Otimizado para Mobile */}
+      <div className="space-y-4 sm:space-y-8">
         {requests.length === 0 ? (
           <div className="text-center text-slate-400 py-12">
             <svg className="mx-auto w-16 h-16 mb-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
@@ -596,27 +596,27 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
               else if (mainUpload.status === 'rejected') borderColor = '#EF4444';
             }
             return (
-              <div key={req.id} className="bg-white p-4 rounded-lg border border-slate-200 mb-3">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <div key={req.id} className="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 mb-3">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900">{req.title}</h3>
-                      <p className="text-sm text-slate-500">{req.description}</p>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-slate-900 text-sm sm:text-base truncate">{req.title}</h3>
+                      <p className="text-xs sm:text-sm text-slate-500 line-clamp-2">{req.description}</p>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors">
+                  <button className="px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-100 transition-colors flex-shrink-0 ml-2">
                     Open
                   </button>
                 </div>
 
                 {/* Student uploads for this request */}
-                <div className="ml-13">
-                  <span className="text-sm font-semibold text-slate-700 mb-2 block">
+                <div className="ml-0 sm:ml-13">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-700 mb-2 block">
                     {isSchool ? t('studentDashboard.documentRequests.forms.studentUploads') : t('studentDashboard.documentRequests.forms.yourUploads')}
                   </span>
                   {uploads[req.id]?.length > 0 ? (
@@ -639,48 +639,50 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                       }
                       
                       return (
-                        <div key={upload.id} className={`flex items-center justify-between p-3 rounded-lg ${containerColor} mb-2`}>
-                          <div className="flex items-center gap-3">
-                            <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <div key={upload.id} className={`p-2 sm:p-3 rounded-lg ${containerColor} mb-2`}>
+                          <div className="flex items-start gap-2 sm:gap-3 mb-2">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7 7v10a2 2 0 002 2h6a2 2 0 002-2V7" />
                             </svg>
-                            <span className="text-slate-700 text-sm font-medium truncate max-w-[200px]">
+                            <span className="text-slate-700 text-xs sm:text-sm font-medium truncate flex-1 min-w-0">
                               {upload.file_url?.split('/').pop()}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColor}`}>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusColor} self-start`}>
                               {normalizedStatus.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                             </span>
-                            <button
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
-                              onClick={() => {
-                                const signedUrl = signedUrls[upload.id];
-                                const fileUrl = signedUrl || upload.file_url;
-                                if (fileUrl) {
-                                  const isImage = upload.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                                  if (isImage) {
-                                    setPreviewUrl(fileUrl);
-                                  } else {
-                                    // Abrir no modal ao invés de nova aba
-                                    setPreviewUrl(fileUrl);
+                            <div className="flex gap-2">
+                              <button
+                                className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium hover:underline"
+                                onClick={() => {
+                                  const signedUrl = signedUrls[upload.id];
+                                  const fileUrl = signedUrl || upload.file_url;
+                                  if (fileUrl) {
+                                    const isImage = upload.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                                    if (isImage) {
+                                      setPreviewUrl(fileUrl);
+                                    } else {
+                                      // Abrir no modal ao invés de nova aba
+                                      setPreviewUrl(fileUrl);
+                                    }
                                   }
-                                }
-                              }}
-                            >
-                              {t('studentDashboard.documentRequests.forms.view')}
-                            </button>
-                            <button
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
-                              onClick={async () => {
-                                const signedUrl = signedUrls[upload.id] || upload.file_url;
-                                if (signedUrl) {
-                                  await handleForceDownload(signedUrl, upload.file_url?.split('/').pop() || 'document.pdf');
-                                }
-                              }}
-                            >
-                              Download
-                            </button>
+                                }}
+                              >
+                                {t('studentDashboard.documentRequests.forms.view')}
+                              </button>
+                              <button
+                                className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium hover:underline"
+                                onClick={async () => {
+                                  const signedUrl = signedUrls[upload.id] || upload.file_url;
+                                  if (signedUrl) {
+                                    await handleForceDownload(signedUrl, upload.file_url?.split('/').pop() || 'document.pdf');
+                                  }
+                                }}
+                              >
+                                Download
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -692,26 +694,28 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
 
                 {/* Upload area for this request */}
                 {!isSchool && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-                    <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">
-                      <span>{t('studentDashboard.documentRequests.forms.uploadNewFile')}</span>
-                      <input
-                        id={`file-upload-${req.id}`}
-                        type="file"
-                        className="sr-only"
-                        onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
-                      />
-                    </label>
-                    {selectedFiles[req.id] && (
-                      <span className="text-sm text-slate-600">{selectedFiles[req.id]?.name}</span>
-                    )}
-                    <button
-                      className={`bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition`}
-                      disabled={!selectedFiles[req.id] || uploading[req.id]}
-                      onClick={() => handleSendUpload(req.id)}
-                    >
-                      {uploading[req.id] ? t('studentDashboard.documentRequests.forms.uploading') : t('studentDashboard.documentRequests.forms.upload')}
-                    </button>
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex-shrink-0">
+                        <span>{t('studentDashboard.documentRequests.forms.uploadNewFile')}</span>
+                        <input
+                          id={`file-upload-${req.id}`}
+                          type="file"
+                          className="sr-only"
+                          onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
+                        />
+                      </label>
+                      {selectedFiles[req.id] && (
+                        <span className="text-xs sm:text-sm text-slate-600 truncate">{selectedFiles[req.id]?.name}</span>
+                      )}
+                      <button
+                        className={`bg-blue-600 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition flex-shrink-0`}
+                        disabled={!selectedFiles[req.id] || uploading[req.id]}
+                        onClick={() => handleSendUpload(req.id)}
+                      >
+                        {uploading[req.id] ? t('studentDashboard.documentRequests.forms.uploading') : t('studentDashboard.documentRequests.forms.upload')}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -720,26 +724,26 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
         )}
       </div>
 
-      {/* Acceptance Letter block - Design baseado no print */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-8">
+      {/* Acceptance Letter block - Design otimizado para mobile */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 sm:mt-8">
         {/* Header escuro azul */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-              <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 sm:px-6 sm:py-5">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+              <svg className="w-5 h-5 sm:w-7 sm:h-7 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white mb-1">{t('studentDashboard.documentRequests.forms.acceptanceLetter')}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-lg sm:text-2xl font-bold text-white mb-1 truncate">{t('studentDashboard.documentRequests.forms.acceptanceLetter')}</h3>
             </div>
           </div>
         </div>
         
         {/* Conteúdo principal */}
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           {/* Instruções */}
-          <p className="text-slate-700 text-lg mb-8 leading-relaxed max-w-4xl">
+          <p className="text-slate-700 text-sm sm:text-lg mb-6 sm:mb-8 leading-relaxed max-w-4xl">
             {t('studentDashboard.documentRequests.forms.acceptanceLetterInstructions')}
           </p>
           
