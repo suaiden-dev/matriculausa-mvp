@@ -611,12 +611,9 @@ const Overview: React.FC<OverviewProps> = ({
                 {recentApplications.length > 0 && (
                   <div className="text-center space-y-3 sm:space-y-4">
                     {/* Contador de Applications */}
-                                      <div className="text-xs sm:text-sm text-slate-600">
-                    {t('studentDashboard.recentApplications.showingApplications', { 
-                      count: displayedApplications.length, 
-                      total: recentApplications.length 
-                    })}
-                  </div>
+                    <div className="text-xs sm:text-sm text-slate-600">
+                      {`Showing ${displayedApplications.length} of ${recentApplications.length} applications`}
+                    </div>
                     
                     {/* Load More Button */}
                     {hasMoreApplications && (
