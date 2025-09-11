@@ -18,6 +18,8 @@ import {
   CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import AffiliateAdminNotifications from '../../components/AffiliateAdminNotifications';
+import { useI20DeadlineMonitor } from '../../hooks/useI20DeadlineMonitor';
 
 interface AffiliateAdminDashboardLayoutProps {
   user: any;
@@ -35,6 +37,12 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Monitorar deadlines do I-20
+  useI20DeadlineMonitor({
+    affiliateAdminId: user?.id || '',
+    checkInterval: 5 * 60 * 1000 // Verificar a cada 5 minutos
+  });
 
   const getActiveTab = () => {
     const path = location.pathname;
@@ -203,6 +211,16 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Notifications */}
+              <AffiliateAdminNotifications 
+                affiliateAdminId={user?.id || ''}
+                onNotificationClick={(notification) => {
+                  if (notification.link) {
+                    navigate(notification.link);
+                  }
+                }}
+              />
+
               {/* User Menu */}
               <div className="relative">
                 <button

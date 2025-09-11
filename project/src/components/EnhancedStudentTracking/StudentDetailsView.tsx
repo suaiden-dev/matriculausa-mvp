@@ -3,11 +3,13 @@ import { User, FileText } from 'lucide-react';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import { StudentInfo, ScholarshipApplication } from './types';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import I20DeadlineTimer from './I20DeadlineTimer';
 
-interface StudentDetailsViewProps {
+export interface StudentDetailsViewProps {
   studentDetails: StudentInfo;
   scholarshipApplication: ScholarshipApplication | null;
   studentDocuments: any[];
+  i20ControlFeeDeadline: Date | null;
   onBack: () => void;
   activeTab: 'details' | 'documents';
   onTabChange: (tab: 'details' | 'documents') => void;
@@ -19,6 +21,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   studentDetails,
   scholarshipApplication,
   studentDocuments,
+  i20ControlFeeDeadline,
   activeTab,
   onTabChange,
   onViewDocument,
@@ -559,6 +562,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* I-20 Control Fee Deadline Timer */}
+              <I20DeadlineTimer 
+                deadline={i20ControlFeeDeadline} 
+                hasPaid={studentDetails?.has_paid_i20_control_fee || false} 
+              />
             </div>
           </div>
         )}

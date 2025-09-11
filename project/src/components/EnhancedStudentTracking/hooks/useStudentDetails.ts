@@ -12,6 +12,7 @@ export const useStudentDetails = () => {
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [i20ControlFeeDeadline, setI20ControlFeeDeadline] = useState<Date | null>(null);
 
 
   // Usar o contexto de autenticação
@@ -529,6 +530,35 @@ export const useStudentDetails = () => {
         console.log('🔍 [AFFILIATE_DEBUG] Setting student details:', studentData);
         setStudentDetails(studentData);
 
+        // Buscar data limite do I-20 Control Fee (10 dias após o pagamento da scholarship fee)
+        if (studentData.is_scholarship_fee_paid) {
+          try {
+            const { data: scholarshipFeeData, error: scholarshipFeeError } = await supabase
+              .from('scholarship_applications')
+              .select('updated_at')
+              .eq('student_id', profile_id)
+              .eq('is_scholarship_fee_paid', true)
+              .order('updated_at', { ascending: false })
+              .limit(1);
+            
+            if (!scholarshipFeeError && scholarshipFeeData && scholarshipFeeData.length > 0) {
+              const paidDate = new Date(scholarshipFeeData[0].updated_at);
+              const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+              setI20ControlFeeDeadline(deadline);
+              console.log('🔍 [I20_DEADLINE] Calculated deadline:', deadline);
+            } else {
+              setI20ControlFeeDeadline(null);
+              console.log('🔍 [I20_DEADLINE] No scholarship fee payment found');
+            }
+          } catch (error) {
+            console.error('❌ [I20_DEADLINE] Error calculating deadline:', error);
+            setI20ControlFeeDeadline(null);
+          }
+        } else {
+          setI20ControlFeeDeadline(null);
+          console.log('🔍 [I20_DEADLINE] Scholarship fee not paid yet');
+        }
+
         // Definir aplicação de bolsa
         if (studentData.selected_scholarship_id) {
           setScholarshipApplication({
@@ -592,6 +622,7 @@ export const useStudentDetails = () => {
     setScholarshipApplication(null);
     setStudentDocuments([]);
     setDocumentRequests([]);
+    setI20ControlFeeDeadline(null);
     setError(null);
   }, []);
 
@@ -602,6 +633,7 @@ export const useStudentDetails = () => {
     scholarshipApplication,
     studentDocuments,
     documentRequests,
+    i20ControlFeeDeadline,
     loadingStudentDetails,
     error,
     loadStudentDetails,
