@@ -20,7 +20,7 @@ import FeaturedUniversitiesManagement from './FeaturedUniversitiesManagement';
 import FeaturedScholarshipsManagement from './FeaturedScholarshipsManagement';
 import AdminTransferManagement from './AdminTransferManagement';
 import AutoTransferSettings from './AutoTransferSettings';
-import TransferReports from './TransferReports';
+import FinancialAnalytics from './FinancialAnalytics';
 import TermsManagement from './TermsManagement';
 import { Dialog } from '@headlessui/react';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
@@ -575,7 +575,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/featured-scholarships" element={<FeaturedScholarshipsManagement />} />
         <Route path="/transfer-management" element={<AdminTransferManagement />} />
         <Route path="/transfer-settings" element={<AutoTransferSettings />} />
-        <Route path="/transfer-reports" element={<TransferReports />} />
+        <Route path="/financial-analytics" element={<FinancialAnalytics />} />
         <Route path="/terms" element={<TermsManagement />} />
       </Routes>
 

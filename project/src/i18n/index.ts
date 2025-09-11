@@ -46,33 +46,23 @@ const getPreferredLanguage = (): string => {
   const browserLang = navigator.language || navigator.languages?.[0] || 'en';
   const mappedLang = mapBrowserLanguage(browserLang);
   
-  console.log('🌐 Idioma detectado do navegador:', browserLang);
-  console.log('🗺️ Idioma mapeado:', mappedLang);
-  console.log('🔍 Idioma encontrado no localStorage:', savedLang);
-  console.log('🆕 É primeira visita?', isFirstVisit);
-  
   // Se é primeira visita, usar idioma do navegador
   if (isFirstVisit) {
-    console.log('🎯 Primeira visita - usando idioma do navegador:', mappedLang);
     return mappedLang;
   }
   
   // Se não é primeira visita, verificar localStorage
   if (savedLang && ['en', 'pt', 'es'].includes(savedLang)) {
-    console.log('🔍 Usando idioma salvo no localStorage:', savedLang);
     return savedLang;
   }
   
   // Fallback para idioma do navegador
-  console.log('🔄 Fallback para idioma do navegador:', mappedLang);
   return mappedLang;
 };
 
 // Inicializar i18n
 const initI18n = async () => {
   const preferredLang = getPreferredLanguage();
-  
-  console.log('🚀 Iniciando i18n com idioma preferido:', preferredLang);
   
   await i18n
     .use(LanguageDetector)
@@ -101,34 +91,23 @@ const initI18n = async () => {
         }
       }
     });
-
-  console.log('✅ i18n inicializado com idioma:', i18n.language);
   
   // IMPORTANTE: Forçar a aplicação do idioma detectado
   if (i18n.language !== preferredLang) {
-    console.log('⚠️ Idioma não foi aplicado automaticamente. Forçando...');
-    console.log('🔄 Mudando de', i18n.language, 'para', preferredLang);
+
     
     try {
       await i18n.changeLanguage(preferredLang);
-      console.log('✅ Idioma forçado com sucesso para:', preferredLang);
       
       // Salvar no localStorage para futuras visitas
       localStorage.setItem('i18nextLng', preferredLang);
-      console.log('💾 Idioma salvo no localStorage:', preferredLang);
     } catch (error) {
       console.error('❌ Erro ao forçar idioma:', error);
     }
-  } else {
-    console.log('✅ Idioma já está correto:', preferredLang);
-  }
+  } 
   
   // Marcar como inicializado para futuras visitas
   localStorage.setItem('i18n_initialized', 'true');
-  
-  // Verificação final
-  console.log('🎯 Idioma final da aplicação:', i18n.language);
-  console.log('🎯 Idioma no localStorage:', localStorage.getItem('i18nextLng'));
   
   return i18n;
 };

@@ -20,7 +20,6 @@ class ZellePaymentService {
 
   constructor() {
     this.edgeFunctionUrl = `${supabase.supabaseUrl}/functions/v1/zelle-payment-manager`;
-    console.log('✅ [ZellePaymentService] Serviço inicializado com Edge Function');
   }
 
   /**

@@ -10,7 +10,6 @@ const initializeApp = async () => {
   try {
     // Aguardar a inicialização do i18n
     await i18nInstance;
-    console.log('✅ i18n inicializado com sucesso');
     
     // Renderizar a aplicação
     createRoot(document.getElementById('root')!).render(
