@@ -1,0 +1,29 @@
+PROMPT PARA IA DESIGNER:
+
+Você é um designer de UI/UX especializado em landing pages para empresas de educação internacional. 
+Precisa criar o design juntamente com a página para o "For Students" seguindo estas diretrizes:
+
+OBJETIVO: Página para aumentar a conversão de alunos no sistema
+MELHORIAS SOLICITADAS:
+1. Layout mais moderno e clean
+2. Melhor hierarquia visual
+3. Micro-interações e animações sutis
+4. Melhor uso de espaçamento e tipografia
+5. Cards mais atrativos e interativos
+6. Utilize de Animações no decorrer do scroll
+7. Melhor responsividade mobile
+8. Elementos visuais mais premium
+9. Sites como https://staging.agentshop.com.br/en devem ser usados como exemplo
+
+RESTRIÇÕES:
+- Siga o conteúdo passado no prompt
+- Mantenha as cores da marca (#05294E e #D0151C)
+
+FOQUE EM:
+- Animações CSS/JS sutis
+- Melhor uso de sombras e profundidade
+- Cards com hover effects mais elegantes
+- Tipografia mais moderna
+- Layout mais dinâmico
+- Elementos visuais premium
+- Utilização de Animações no decorrer do scroll
