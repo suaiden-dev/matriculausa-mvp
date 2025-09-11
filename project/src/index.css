@@ -68,6 +68,31 @@
     pointer-events: none !important;
   }
 
+  /* Reduzir área clicável dos botões flutuantes para evitar cliques acidentais */
+  [title*="Smart Assistant"],
+  [title*="Help & Support"],
+  [style*="zIndex: 10001"],
+  [style*="zIndex: 10002"] {
+    /* Reduzir área clicável - só o centro do botão é clicável */
+    padding: 8px !important;
+    margin: -8px !important;
+    /* Garantir que o clique só funcione no centro */
+    pointer-events: auto !important;
+  }
+  
+  /* Área não clicável ao redor dos botões */
+  [title*="Smart Assistant"]::before,
+  [title*="Help & Support"]::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    pointer-events: none;
+    z-index: -1;
+  }
+
   /* Garantir que o botão flutuante WhatsApp seja sempre visível */
   .floating-whatsapp-button {
     position: fixed !important;
