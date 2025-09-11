@@ -11,6 +11,17 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose
   const [actualUrl, setActualUrl] = React.useState<string>(imageUrl);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Hide floating elements when modal is open
+  React.useEffect(() => {
+    // Hide floating elements when modal opens
+    document.body.classList.add('modal-open');
+    
+    // Cleanup function to show floating elements when modal closes
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, []);
+
   // Função para tentar gerar signed URL se a URL pública falhar
   const getSignedUrl = async (originalUrl: string): Promise<string | null> => {
     try {

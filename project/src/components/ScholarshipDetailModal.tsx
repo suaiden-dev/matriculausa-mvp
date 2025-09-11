@@ -51,10 +51,14 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       
+      // Hide floating elements when modal opens
+      document.body.classList.add('modal-open');
+      
       // Cleanup - restaurar estados originais
       return () => {
         document.body.style.overflow = originalOverflow || '';
         document.documentElement.style.overflow = originalHtmlOverflow || '';
+        document.body.classList.remove('modal-open');
       };
     }
   }, [isOpen]);
