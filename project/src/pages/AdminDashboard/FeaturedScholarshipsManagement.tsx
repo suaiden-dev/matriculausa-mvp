@@ -65,8 +65,7 @@ const FeaturedScholarshipsManagement: React.FC = () => {
         university_name: scholarship.universities?.name,
         university_location: scholarship.universities?.location,
         university_logo_url: scholarship.universities?.logo_url,
-        featured_order: scholarship.is_highlighted ? 
-          (scholarships.find(s => s.id === scholarship.id)?.featured_order || 1) : null
+        featured_order: scholarship.featured_order // Use the actual value from database
       }));
 
       setScholarships(processedData);
@@ -164,10 +163,19 @@ const FeaturedScholarshipsManagement: React.FC = () => {
   const reorderFeatured = async (scholarshipId: string, direction: 'up' | 'down') => {
     try {
       setSaving(true);
-      const currentIndex = featuredScholarships.findIndex(s => s.id === scholarshipId);
-      if (currentIndex === -1) return;
+      
+      // Get fresh featured scholarships list (like universities does)
+      const currentFeaturedScholarships = scholarships.filter(s => s.is_highlighted).sort((a, b) => 
+        (a.featured_order || 0) - (b.featured_order || 0)
+      );
+      
+      const currentIndex = currentFeaturedScholarships.findIndex(s => s.id === scholarshipId);
+      
+      if (currentIndex === -1) {
+        return;
+      }
 
-      const newOrder = [...featuredScholarships];
+      const newOrder = [...currentFeaturedScholarships];
       if (direction === 'up' && currentIndex > 0) {
         // Move up
         [newOrder[currentIndex], newOrder[currentIndex - 1]] = [newOrder[currentIndex - 1], newOrder[currentIndex]];
@@ -178,16 +186,37 @@ const FeaturedScholarshipsManagement: React.FC = () => {
         return; // Cannot move
       }
 
-      // Update order in database
+      // Two-step strategy to avoid constraint conflicts (like universities)
+      // Step 1: Temporarily un-feature all scholarships (one by one like universities)
+      for (const scholarship of currentFeaturedScholarships) {
+        const { error } = await supabase
+          .from('scholarships')
+          .update({ 
+            is_highlighted: false, 
+            featured_order: null 
+          })
+          .eq('id', scholarship.id);
+        
+        if (error) {
+          throw error;
+        }
+      }
+
+      // Step 2: Re-add them with new order
       for (let i = 0; i < newOrder.length; i++) {
         const { error } = await supabase
           .from('scholarships')
-          .update({ featured_order: i + 1 })
+          .update({ 
+            is_highlighted: true, 
+            featured_order: i + 1 
+          })
           .eq('id', newOrder[i].id);
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
       }
-
+      
       // Reload data
       await fetchScholarships();
       setMessage({ type: 'success', text: 'Featured order updated' });

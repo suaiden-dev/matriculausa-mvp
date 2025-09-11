@@ -122,38 +122,19 @@ Deno.serve(async (req) => {
           console.error('[Referral Reward] Failed to upsert affiliate_referrals:', upsertRefError);
         }
 
-        // Evitar duplicidade: se já existe transação com reference_type = 'selection_process_referral' e reference_id = usedCode.id, não creditar novamente
-        const { data: existingTx, error: txFetchError } = await supabase
-          .from('matriculacoin_transactions')
-          .select('id')
-          .eq('user_id', referrerId)
-          .eq('reference_id', usedCode.id)
-          .eq('reference_type', 'selection_process_referral')
-          .maybeSingle();
+        console.log('[Referral Reward] Crediting 180 MatriculaCoins to referrer...');
+        const description = `Referral reward: Selection Process Fee paid by ${referredDisplayName}`;
 
-        if (txFetchError) {
-          console.error('[Referral Reward] Failed to check existing transaction:', txFetchError);
-        }
+        const { error: rewardError } = await supabase.rpc('add_coins_to_user_matricula', {
+          user_id_param: referrerId,
+          coins_to_add: 180,
+          reason: description,
+        });
 
-        if (!existingTx) {
-          console.log('[Referral Reward] Crediting 180 MatriculaCoins to referrer...');
-          const description = `Referral reward: Selection Process Fee paid by ${referredDisplayName}`;
-
-          const { error: rewardError } = await supabase.rpc('add_credits_to_user', {
-            user_id_param: referrerId,
-            amount_param: 180,
-            reference_id_param: usedCode.id,
-            reference_type_param: 'selection_process_referral',
-            description_param: description,
-          });
-
-          if (rewardError) {
-            console.error('[Referral Reward] Failed to add credits:', rewardError);
-          } else {
-            console.log('[Referral Reward] 180 MatriculaCoins credited successfully');
-          }
+        if (rewardError) {
+          console.error('[Referral Reward] Failed to add credits:', rewardError);
         } else {
-          console.log('[Referral Reward] Transaction already exists. Skipping duplicate credit.');
+          console.log('[Referral Reward] 180 MatriculaCoins credited successfully');
         }
       } else {
         console.log('[Referral Reward] No used referral code found for this user.');

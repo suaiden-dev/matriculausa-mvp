@@ -137,6 +137,50 @@ serve(async (req) => {
       console.log('✅ [approve-zelle-payment-automatic] has_paid_selection_process_fee marcado como true')
       console.log('🔍 [approve-zelle-payment-automatic] Dados atualizados:', updateData)
 
+      // --- MATRICULA REWARDS - ADICIONAR COINS ---
+      try {
+        console.log('🎁 [approve-zelle-payment-automatic] Processando Matricula Rewards para Selection Process Fee...')
+        
+        // Buscar se o usuário usou algum código de referência
+        const { data: usedCode, error: codeError } = await supabaseClient
+          .from('used_referral_codes')
+          .select('referrer_id, affiliate_code')
+          .eq('user_id', user_id)
+          .single();
+
+        if (!codeError && usedCode) {
+          console.log('🎁 [approve-zelle-payment-automatic] Usuário usou código de referência, adicionando 180 coins para:', usedCode.referrer_id);
+          
+          // Buscar nome do usuário que pagou
+          const { data: referredUserProfile } = await supabaseClient
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', user_id)
+            .single();
+          
+          const referredDisplayName = referredUserProfile?.full_name || referredUserProfile?.email || user_id;
+          
+          // Adicionar 180 coins para o usuário que fez a indicação
+          const { data: coinsResult, error: coinsError } = await supabaseClient
+            .rpc('add_coins_to_user_matricula', {
+              user_id_param: usedCode.referrer_id,
+              coins_to_add: 180,
+              reason: `Referral reward: Selection Process Fee paid by ${referredDisplayName}`
+            });
+
+          if (coinsError) {
+            console.error('❌ [approve-zelle-payment-automatic] Erro ao adicionar coins:', coinsError);
+          } else {
+            console.log('✅ [approve-zelle-payment-automatic] 180 coins adicionados com sucesso:', coinsResult);
+          }
+        } else {
+          console.log('ℹ️ [approve-zelle-payment-automatic] Usuário não usou código de referência, não há coins para adicionar');
+        }
+      } catch (rewardsError) {
+        console.error('❌ [approve-zelle-payment-automatic] Erro ao processar Matricula Rewards:', rewardsError);
+      }
+      // --- FIM MATRICULA REWARDS ---
+
     } else if (normalizedFeeTypeGlobal === 'i20_control_fee') {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando has_paid_i20_control_fee...')
       

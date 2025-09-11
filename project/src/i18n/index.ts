@@ -86,25 +86,22 @@ const initI18n = async () => {
         // Função customizada para mapear idiomas detectados
         convertDetectedLanguage: (lng: string) => {
           const mapped = mapBrowserLanguage(lng);
-          console.log('🔧 Convertendo idioma detectado:', lng, '→', mapped);
           return mapped;
         }
       }
     });
-  
+
   // IMPORTANTE: Forçar a aplicação do idioma detectado
   if (i18n.language !== preferredLang) {
-
-    
     try {
       await i18n.changeLanguage(preferredLang);
       
       // Salvar no localStorage para futuras visitas
       localStorage.setItem('i18nextLng', preferredLang);
     } catch (error) {
-      console.error('❌ Erro ao forçar idioma:', error);
+      console.error('Erro ao forçar idioma:', error);
     }
-  } 
+  }
   
   // Marcar como inicializado para futuras visitas
   localStorage.setItem('i18n_initialized', 'true');

@@ -1,5 +1,6 @@
 import React from 'react';
 import { User, ChevronDown, ChevronRight, MapPin, DollarSign, CheckCircle2, ChevronRight as ArrowRight } from 'lucide-react';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface SellersListProps {
   filteredSellers: any[];
@@ -16,6 +17,7 @@ const SellersList: React.FC<SellersListProps> = ({
   onToggleSellerExpansion,
   onViewStudentDetails
 }) => {
+  const { getFeeAmount } = useFeeConfig();
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -52,24 +54,24 @@ const SellersList: React.FC<SellersListProps> = ({
       });
     }
     
-    // Verificar Selection Process Fee ($999) - usar apenas o flag booleano
+    // Verificar Selection Process Fee - usar apenas o flag booleano
     if (!student.has_paid_selection_process_fee) {
-      missingFees.push({ name: 'Selection Process', amount: 999, color: 'red' });
+      missingFees.push({ name: 'Selection Process', amount: getFeeAmount('selection_process'), color: 'red' });
     }
     
-    // Verificar I20 Control Fee ($999) - usar apenas o flag booleano
+    // Verificar I20 Control Fee - usar apenas o flag booleano
     if (!student.has_paid_i20_control_fee) {
-      missingFees.push({ name: 'I20 Control', amount: 999, color: 'orange' });
+      missingFees.push({ name: 'I20 Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
     }
     
-    // Verificar Scholarship Fee ($400) - usar apenas o flag booleano
+    // Verificar Scholarship Fee - usar apenas o flag booleano
     if (!student.is_scholarship_fee_paid) {
-      missingFees.push({ name: 'Scholarship', amount: 400, color: 'blue' });
+      missingFees.push({ name: 'Scholarship', amount: getFeeAmount('scholarship_fee'), color: 'blue' });
     }
     
-    // Verificar Application Fee ($50) - usar apenas o flag booleano
+    // Verificar Application Fee - usar apenas o flag booleano
     if (!student.is_application_fee_paid) {
-      missingFees.push({ name: 'Application', amount: 50, color: 'gray' });
+      missingFees.push({ name: 'Application', amount: getFeeAmount('application_fee'), color: 'gray' });
     }
     
     // Debug: Log do resultado final

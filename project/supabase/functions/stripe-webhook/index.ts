@@ -1021,6 +1021,41 @@ async function handleCheckoutSessionCompleted(session: any) {
           console.error('[NOTIFICAÇÃO] Erro ao notificar selection process via n8n:', notifErr);
         }
         // --- FIM DA NOTIFICAÇÃO ---
+
+        // --- MATRICULA REWARDS - ADICIONAR COINS ---
+        try {
+          console.log('[MATRICULA REWARDS] Verificando se usuário usou código de referência...');
+          
+          // Buscar se o usuário usou algum código de referência
+          const { data: usedCode, error: codeError } = await supabase
+            .from('used_referral_codes')
+            .select('referrer_id, affiliate_code')
+            .eq('user_id', userId)
+            .single();
+
+          if (!codeError && usedCode) {
+            console.log('[MATRICULA REWARDS] Usuário usou código de referência, adicionando 180 coins para:', usedCode.referrer_id);
+            
+            // Adicionar 180 coins para o usuário que fez a indicação
+            const { data: coinsResult, error: coinsError } = await supabase
+              .rpc('add_coins_to_user_matricula', {
+                user_id_param: usedCode.referrer_id,
+                coins_to_add: 180,
+                reason: `Referral reward: Selection Process Fee paid by ${userId}`
+              });
+
+            if (coinsError) {
+              console.error('[MATRICULA REWARDS] Erro ao adicionar coins:', coinsError);
+            } else {
+              console.log('[MATRICULA REWARDS] Coins adicionados com sucesso:', coinsResult);
+            }
+          } else {
+            console.log('[MATRICULA REWARDS] Usuário não usou código de referência, não há coins para adicionar');
+          }
+        } catch (rewardsError) {
+          console.error('[MATRICULA REWARDS] Erro ao processar Matricula Rewards:', rewardsError);
+        }
+        // --- FIM MATRICULA REWARDS ---
       }
     }
     

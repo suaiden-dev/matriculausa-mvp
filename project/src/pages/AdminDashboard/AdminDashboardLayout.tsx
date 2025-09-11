@@ -108,7 +108,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
     { id: 'matricula-rewards', label: 'Matricula Rewards', icon: Award, path: '/admin/dashboard/matricula-rewards', badge: null },
     { id: 'terms', label: 'Terms Management', icon: FileCheck, path: '/admin/dashboard/terms', badge: null },
-    { id: 'settings', label: 'System Settings', icon: Settings, path: '/admin/dashboard/settings', badge: null }
+    { id: 'settings', label: 'Content Management', icon: Settings, path: '/admin/dashboard/settings', badge: null }
   ];
 
   return (
@@ -233,7 +233,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'scholarships' && 'Scholarship Management'}
                   {activeTab === 'financial-analytics' && 'Financial Analytics'}
                   {activeTab === 'terms' && 'Terms Management'}
-                  {activeTab === 'settings' && 'System Settings'}
+                  {activeTab === 'settings' && 'Content Management'}
                 </h1>
                 <p className="text-slate-600">
                   {activeTab === 'overview' && 'Monitor platform performance and activity'}
@@ -242,7 +242,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                   {activeTab === 'scholarships' && 'Monitor scholarship programs and applications'}
                   {activeTab === 'financial-analytics' && 'Comprehensive financial insights and performance analytics'}
                   {activeTab === 'terms' && 'Create and manage terms of agreement for the affiliate program'}
-                  {activeTab === 'settings' && 'Configure system settings and preferences'}
+                  {activeTab === 'settings' && 'Manage featured scholarships and universities'}
                 </p>
               </div>
             </div>

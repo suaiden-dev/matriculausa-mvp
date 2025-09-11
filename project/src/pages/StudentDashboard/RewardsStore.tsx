@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   History,
   Zap,
-  Trophy,
   Building,
   Search,
   MapPin,
@@ -43,17 +42,6 @@ interface Reward {
   image_url?: string;
 }
 
-interface RewardRedemption {
-  id: string;
-  user_id: string;
-  reward_id: string;
-  cost_paid: number;
-  status: 'active' | 'used' | 'expired' | 'cancelled';
-  redeemed_at: string;
-  expires_at?: string;
-  used_at?: string;
-  reward: Reward;
-}
 
 const RewardsStore: React.FC = () => {
   const { t } = useTranslation();
@@ -62,7 +50,6 @@ const RewardsStore: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [credits, setCredits] = useState<MatriculacoinCredits | null>(null);
   const [activeTab, setActiveTab] = useState<'store' | 'history'>('store');
-  const [redemptions, setRedemptions] = useState<RewardRedemption[]>([]);
   const [transactions, setTransactions] = useState<MatriculacoinTransaction[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -245,21 +232,6 @@ const RewardsStore: React.FC = () => {
         console.error('Erro ao carregar histórico de tuition:', error);
       }
 
-      // Carregar histórico de resgates
-      const { data: redemptionsData, error: redemptionsError } = await supabase
-        .from('reward_redemptions')
-        .select(`
-          *,
-          reward:rewards!reward_redemptions_reward_id_fkey(*)
-        `)
-        .eq('user_id', user.id)
-        .order('redeemed_at', { ascending: false });
-
-      if (redemptionsError) {
-        console.error('Erro ao carregar resgates:', redemptionsError);
-      } else {
-        setRedemptions(redemptionsData || []);
-      }
 
       // Carregar histórico de transações
       const { data: transactionsData, error: transactionsError } = await supabase
@@ -446,20 +418,6 @@ const RewardsStore: React.FC = () => {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'used':
-        return 'bg-blue-100 text-blue-800';
-      case 'expired':
-        return 'bg-red-100 text-red-800';
-      case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
 
 
@@ -717,7 +675,13 @@ const RewardsStore: React.FC = () => {
                       <div className="flex items-center space-x-4">
                         <div className="text-right">
                           <div className="font-medium text-slate-900">{redemption.cost_coins_paid} coins</div>
-                          <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(redemption.status)}`}>
+                          <div className={`text-xs px-2 py-1 rounded-full ${
+                            redemption.status === 'active' ? 'bg-green-100 text-green-800' :
+                            redemption.status === 'used' ? 'bg-blue-100 text-blue-800' :
+                            redemption.status === 'expired' ? 'bg-red-100 text-red-800' :
+                            redemption.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
                             {redemption.status}
                           </div>
                         </div>
@@ -734,47 +698,6 @@ const RewardsStore: React.FC = () => {
               )}
             </div>
 
-            {/* Regular Redemptions */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center space-x-2">
-                <Trophy className="h-5 w-5 text-blue-600" />
-                <span>Reward Redemptions</span>
-              </h2>
-              
-              {redemptions.length > 0 ? (
-                <div className="space-y-4">
-                  {redemptions.map((redemption) => (
-                    <div key={redemption.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Gift className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-slate-900">{redemption.reward?.name}</h3>
-                          <p className="text-sm text-slate-500">
-                            Redeemed on {formatDate(redemption.redeemed_at)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <div className="font-medium text-slate-900">{redemption.cost_paid} coins</div>
-                          <div className={`text-xs px-2 py-1 rounded-full ${getStatusColor(redemption.status)}`}>
-                            {redemption.status}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Gift className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No regular redemptions yet</p>
-                  <p className="text-sm text-slate-400">Start redeeming rewards to see your history here!</p>
-                </div>
-              )}
-            </div>
 
             {/* Transactions */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

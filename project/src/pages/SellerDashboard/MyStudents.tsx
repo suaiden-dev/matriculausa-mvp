@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface Student {
   id: string;
@@ -69,7 +70,8 @@ interface MyStudentsProps {
   onViewStudent: (studentId: {id: string, profile_id: string}) => void;
 }
 
-const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
+const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefresh, onViewStudent }) => {
+  const { getFeeAmount } = useFeeConfig();
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
@@ -268,24 +270,24 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const getMissingFees = (student: Student) => {
     const missingFees = [];
     
-    // Verificar Selection Process Fee ($999) - usar apenas o flag booleano
+    // Verificar Selection Process Fee - usar apenas o flag booleano
     if (!student.has_paid_selection_process_fee) {
-      missingFees.push({ name: 'Selection Process', amount: 999, color: 'red' });
+      missingFees.push({ name: 'Selection Process', amount: getFeeAmount('selection_process'), color: 'red' });
     }
     
-    // Verificar I20 Control Fee ($999) - usar apenas o flag booleano
+    // Verificar I20 Control Fee - usar apenas o flag booleano
     if (!student.has_paid_i20_control_fee) {
-      missingFees.push({ name: 'I20 Control', amount: 999, color: 'orange' });
+      missingFees.push({ name: 'I20 Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
     }
     
-    // Verificar Scholarship Fee ($400) - usar apenas o flag booleano
+    // Verificar Scholarship Fee - usar apenas o flag booleano
     if (!student.is_scholarship_fee_paid) {
-      missingFees.push({ name: 'Scholarship', amount: 400, color: 'blue' });
+      missingFees.push({ name: 'Scholarship', amount: getFeeAmount('scholarship_fee'), color: 'blue' });
     }
     
-    // Verificar Application Fee ($50) - usar apenas o flag booleano
+    // Verificar Application Fee - usar apenas o flag booleano
     if (!student.is_application_fee_paid) {
-      missingFees.push({ name: 'Application', amount: 50, color: 'gray' });
+      missingFees.push({ name: 'Application', amount: getFeeAmount('application_fee'), color: 'gray' });
     }
     
     return missingFees;

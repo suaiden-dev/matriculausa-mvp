@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CreditCard, Smartphone, CheckCircle, X } from 'lucide-react';
 import { Scholarship } from '../types';
 import { formatCentsToDollars } from '../utils/currency';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 
 interface ScholarshipConfirmationModalProps {
   isOpen: boolean;
@@ -23,12 +24,13 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   feeType = 'application_fee' // Default para application fee
 }) => {
   const navigate = useNavigate();
+  const { getFeeAmount: getFeeAmountFromConfig, formatFeeAmount } = useFeeConfig();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
 
   // Valor dinâmico baseado no tipo de taxa
   const getFeeAmount = () => {
     if (feeType === 'scholarship_fee') {
-      return scholarship.scholarship_fee_amount || 400; // Valor padrão para scholarship fee ($400.00)
+      return scholarship.scholarship_fee_amount || getFeeAmountFromConfig('scholarship_fee') * 100; // Usar valor do useFeeConfig (em centavos)
     }
     
     // Para application fee, usar o valor real da bolsa ou valor padrão se não existir
@@ -60,7 +62,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         subtitle: 'Choose your payment method to complete your enrollment',
         feeLabel: 'Scholarship Fee:',
         feeDescription: 'Final fee to complete your scholarship enrollment',
-        buttonText: `Pay Scholarship Fee ($${formatCentsToDollars(feeAmount * 100)})`,
+        buttonText: `Pay Scholarship Fee ($${getFeeAmountFromConfig('scholarship_fee')})`,
         warningText: 'By proceeding with this payment, you\'re completing your scholarship enrollment.'
       };
     }
@@ -423,7 +425,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                     </div>
                     <div>
                       <div className="font-medium text-gray-900">Zelle</div>
-                      <div className="text-sm text-gray-600">Pay via Zelle transfer (requires automatic verification)</div>
+                      <div className="text-sm text-gray-600">Pay via Zelle transfer (requires manual verification)</div>
                     </div>
                   </div>
                 </label>

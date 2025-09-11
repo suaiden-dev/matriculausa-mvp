@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { ZelleCheckout } from './ZelleCheckout';
@@ -25,6 +26,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   metadata = {},
   studentProcessType,
 }) => {
+  const { getFeeAmount } = useFeeConfig();
   const [loading] = useState(false);
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
@@ -144,7 +146,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   };
 
   const getAmount = () => {
-    return feeType === 'selection_process' ? 999 : 350;
+    return feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee');
   };
 
   const getProductName = () => {

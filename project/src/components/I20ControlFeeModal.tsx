@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dialog } from '@headlessui/react';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 
 interface I20ControlFeeModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
   selectedPaymentMethod,
   onPaymentMethodSelect,
 }) => {
+  const { getFeeAmount } = useFeeConfig();
   // Função para selecionar o método de pagamento (sem processar imediatamente)
   const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
     onPaymentMethodSelect(method);
@@ -70,7 +72,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
               selectedMethod={selectedPaymentMethod}
               onMethodSelect={handlePaymentMethodSelect}
               feeType="i20_control_fee"
-              amount={999}
+              amount={getFeeAmount('i20_control_fee')}
             />
 
             {/* Botão de Confirmação - só aparece quando um método é selecionado */}

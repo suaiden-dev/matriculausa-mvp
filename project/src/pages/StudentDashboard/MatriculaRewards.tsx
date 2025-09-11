@@ -183,7 +183,7 @@ const MatriculaRewards: React.FC = () => {
         setCredits(creditsData);
       }
 
-      // Carrega indicações
+      // Carrega indicações (onde o usuário atual indicou alguém)
       const { data: referralsData, error: referralsError } = await supabase
         .from('affiliate_referrals')
         .select('*')
@@ -194,7 +194,24 @@ const MatriculaRewards: React.FC = () => {
       if (referralsError) {
         console.error('Erro ao carregar indicações:', referralsError);
       } else {
-        setReferrals(referralsData || []);
+        // Buscar nomes dos usuários indicados separadamente
+        if (referralsData && referralsData.length > 0) {
+          const referredIds = referralsData.map(r => r.referred_id).filter(Boolean);
+          const { data: userProfiles } = await supabase
+            .from('user_profiles')
+            .select('user_id, full_name, email')
+            .in('user_id', referredIds);
+          
+          // Adicionar dados do usuário a cada referral
+          const referralsWithUsers = referralsData.map(referral => ({
+            ...referral,
+            referred_user: userProfiles?.find(up => up.user_id === referral.referred_id)
+          }));
+          
+          setReferrals(referralsWithUsers);
+        } else {
+          setReferrals([]);
+        }
       }
 
       // Carrega transações
@@ -213,7 +230,7 @@ const MatriculaRewards: React.FC = () => {
 
       // Calcula estatísticas
       const totalReferrals = referralsData?.length || 0;
-      const totalEarnings = referralsData?.reduce((sum, ref) => sum + (ref.credits_earned || 0), 0) || 0;
+      const totalEarnings = creditsData?.total_earned || 0; // Usar total_earned da tabela matriculacoin_credits
       const currentBalance = creditsData?.balance || 0;
 
       setStats({
@@ -515,7 +532,12 @@ const MatriculaRewards: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600"><Users className="h-4 w-4"/></span>
                       <div>
-                        <p className="font-medium text-slate-900">{t('matriculaRewards.referralNumber', { id: referral.id.slice(0,8) })}</p>
+                        <p className="font-medium text-slate-900">
+                          {referral.referred_user?.full_name 
+                            ? `${referral.referred_user.full_name} (${referral.referred_user.email})`
+                            : t('matriculaRewards.referralNumber', { id: referral.id.slice(0,8) })
+                          }
+                        </p>
                         <p className="text-xs text-slate-500">{formatDate(referral.created_at)}</p>
                       </div>
                     </div>
@@ -550,7 +572,7 @@ const MatriculaRewards: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <p className={`${tx.type==='earned'?'text-green-600':tx.type==='spent'?'text-red-600':'text-yellow-600'} font-semibold`}>{tx.type==='earned'?'+':tx.type==='spent'?'-':''}{formatCoins(tx.amount)}</p>
-                      <p className="text-xs text-slate-500">{t('matriculaRewards.balanceAfter', { amount: formatCoins(tx.balance_after) })}</p>
+                      <p className="text-xs text-slate-500">Balance: {formatCoins(tx.balance_after)}</p>
                     </div>
                   </li>
                 ))}

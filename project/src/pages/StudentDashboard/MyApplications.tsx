@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { StripeCheckout } from '../../components/StripeCheckout';
@@ -34,6 +35,7 @@ type ApplicationWithScholarship = Application & {
 const MyApplications: React.FC = () => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   
   // Labels amigáveis para os documentos principais
@@ -889,8 +891,8 @@ const getLevelColor = (level: any) => {
             application_id: pendingScholarshipFeeApplication.id,
             selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
             fee_type: 'scholarship_fee',
-            amount: 850, // Valor fixo da scholarship fee
-            scholarship_fee_amount: 850
+            amount: getFeeAmount('scholarship_fee'), // Valor da scholarship fee do useFeeConfig
+            scholarship_fee_amount: getFeeAmount('scholarship_fee')
           },
           scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
         }),
@@ -1344,7 +1346,7 @@ const getLevelColor = (level: any) => {
                       <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between mb-3">
                           <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                          <span className="text-base font-bold text-gray-700">$400</span>
+                          <span className="text-base font-bold text-gray-700">${getFeeAmount('scholarship_fee')}</span>
                         </div>
                         {scholarshipFeePaid ? (
                           <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
