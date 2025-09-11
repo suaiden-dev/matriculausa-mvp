@@ -227,22 +227,22 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               
               <div className="hidden md:block">
                 <h1 className="text-2xl font-bold text-slate-900">
-                  {activeTab === 'overview' && 'Admin Overview'}
-                  {activeTab === 'universities' && 'University Management'}
-                  {activeTab === 'users' && 'User Management'}
-                  {activeTab === 'scholarships' && 'Scholarship Management'}
-                  {activeTab === 'financial-analytics' && 'Financial Analytics'}
-                  {activeTab === 'terms' && 'Terms Management'}
-                  {activeTab === 'settings' && 'Content Management'}
+                  {activeTab === 'overview'}
+                  {activeTab === 'universities'}
+                  {activeTab === 'users'}
+                  {activeTab === 'scholarships'}
+                  {activeTab === 'financial-analytics'}
+                  {activeTab === 'terms'}
+                  {activeTab === 'settings'}
                 </h1>
                 <p className="text-slate-600">
-                  {activeTab === 'overview' && 'Monitor platform performance and activity'}
-                  {activeTab === 'universities' && 'Manage university registrations and approvals'}
-                  {activeTab === 'users' && 'Manage user accounts and permissions'}
-                  {activeTab === 'scholarships' && 'Monitor scholarship programs and applications'}
-                  {activeTab === 'financial-analytics' && 'Comprehensive financial insights and performance analytics'}
-                  {activeTab === 'terms' && 'Create and manage terms of agreement for the affiliate program'}
-                  {activeTab === 'settings' && 'Manage featured scholarships and universities'}
+                  {activeTab === 'overview'}
+                  {activeTab === 'universities'}
+                  {activeTab === 'users'}
+                  {activeTab === 'scholarships'}
+                  {activeTab === 'financial-analytics'}
+                  {activeTab === 'terms'}
+                  {activeTab === 'settings'}
                 </p>
               </div>
             </div>

@@ -133,734 +133,9 @@ const PaymentManagement = (): React.JSX.Element => {
 
       if (error) throw error;
 
-      // Recarregar pagamentos Zelle
-      await loadZellePayments();
-      setShowZelleNotesModal(false);
-      setZelleAdminNotes('');
-      
-      console.log('📝 Zelle payment notes added successfully');
-    } catch (error: any) {
-      console.error('Error adding Zelle payment notes:', error);
-    } finally {
-      setZelleActionLoading(false);
-    }
-  };
-
-  const approveZellePayment = async (paymentId: string) => {
-    try {
-      setZelleActionLoading(true);
-      
-      const payment = zellePayments.find(p => p.id === paymentId);
-      if (!payment) throw new Error('Payment not found');
-
-      console.log('🔍 [approveZellePayment] Aprovando pagamento:', payment);
-
-      // Atualizar o status do pagamento para aprovado
-          const { error } = await supabase
-      .from('zelle_payments')
-      .update({
-        status: 'approved',
-        admin_approved_by: user!.id,
-        admin_approved_at: new Date().toISOString()
-      })
-      .eq('id', paymentId);
-
-      if (error) throw error;
-
-      // MARCAR COMO PAGO NAS TABELAS CORRETAS
-      console.log('💰 [approveZellePayment] Marcando como pago nas tabelas corretas...');
-      console.log('🔍 [approveZellePayment] payment.fee_type_global:', payment.fee_type_global);
-      console.log('🔍 [approveZellePayment] payment.fee_type:', payment.fee_type);
-      console.log('🔍 [approveZellePayment] payment.user_id:', payment.user_id);
-      
-      if (payment.fee_type_global === 'selection_process') {
-        console.log('🎯 [approveZellePayment] Entrando na condição selection_process');
-        console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_selection_process_fee = true WHERE user_id =', payment.user_id);
-        
-        // Marcar no user_profiles
-        const { data: updateData, error: profileError } = await supabase
-          .from('user_profiles')
-          .update({ 
-            has_paid_selection_process_fee: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', payment.user_id)
-          .select();
-
-        console.log('🔍 [approveZellePayment] Resultado da atualização:', { updateData, profileError });
-
-        if (profileError) {
-          console.error('❌ [approveZellePayment] Erro ao marcar selection_process_fee:', profileError);
-        } else {
-          console.log('✅ [approveZellePayment] has_paid_selection_process_fee marcado como true');
-          console.log('🔍 [approveZellePayment] Dados atualizados:', updateData);
-          
-          // Registrar no faturamento
-          console.log('💰 [approveZellePayment] Registrando selection_process no faturamento...');
-          const { error: billingError } = await supabase.rpc('register_payment_billing', {
-            user_id_param: payment.user_id,
-            fee_type_param: 'selection_process',
-            amount_param: payment.amount,
-            payment_session_id_param: `zelle_${payment.id}`,
-            payment_method_param: 'zelle'
-          });
-          
-          if (billingError) {
-            console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
-          } else {
-            console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
-            
-            // PROCESSAR MATRICULA REWARDS - Selection Process Fee
-            console.log('🎁 [approveZellePayment] Processando Matricula Rewards para Selection Process Fee...');
-            console.log('🎁 [approveZellePayment] payment.user_id para Matricula Rewards:', payment.user_id);
-            try {
-              // Buscar o perfil do usuário para verificar se tem código de referência
-              console.log('🎁 [approveZellePayment] Buscando perfil do usuário...');
-              const { data: userProfile, error: profileError } = await supabase
-                .from('user_profiles')
-                .select('referral_code_used')
-                .eq('user_id', payment.user_id)
-                .single();
-
-              console.log('🎁 [approveZellePayment] Resultado da busca do perfil:', { userProfile, profileError });
-
-              if (profileError) {
-                console.error('❌ [approveZellePayment] Erro ao buscar perfil do usuário:', profileError);
-              } else if (userProfile?.referral_code_used) {
-                console.log('🎁 [approveZellePayment] Usuário tem código de referência:', userProfile.referral_code_used);
-                
-                // Buscar o dono do código de referência na tabela affiliate_codes
-                console.log('🎁 [approveZellePayment] Buscando dono do código na tabela affiliate_codes...');
-                const { data: affiliateCode, error: affiliateError } = await supabase
-                  .from('affiliate_codes')
-                  .select('user_id, code')
-                  .eq('code', userProfile.referral_code_used)
-                  .eq('is_active', true)
-                  .single();
-
-                console.log('🎁 [approveZellePayment] Resultado da busca do dono do código:', { affiliateCode, affiliateError });
-
-                if (affiliateError) {
-                  console.error('❌ [approveZellePayment] Erro ao buscar dono do código de referência:', affiliateError);
-                } else if (affiliateCode && affiliateCode.user_id !== payment.user_id) {
-                  console.log('🎁 [approveZellePayment] Dono do código encontrado:', affiliateCode.user_id);
-                  console.log('🎁 [approveZellePayment] Verificando se não é auto-referência:', {
-                    affiliateUserId: affiliateCode.user_id,
-                    paymentUserId: payment.user_id,
-                    isDifferent: affiliateCode.user_id !== payment.user_id
-                  });
-                  
-                  // Dar 180 coins para o dono do código
-                  console.log('🎁 [approveZellePayment] Chamando add_coins_to_user_matricula...');
-                  
-                  // Buscar nome do usuário que pagou
-                  const { data: referredUserProfile } = await supabase
-                    .from('user_profiles')
-                    .select('full_name, email')
-                    .eq('user_id', payment.user_id)
-                    .single();
-                  
-                  const referredDisplayName = referredUserProfile?.full_name || referredUserProfile?.email || payment.user_id;
-                  
-                  const { data: coinsResult, error: coinsError } = await supabase.rpc('add_coins_to_user_matricula', {
-                    user_id_param: affiliateCode.user_id,
-                    coins_to_add: 180,
-                    reason: `Referral reward: Selection Process Fee paid by ${referredDisplayName}`
-                  });
-
-                  console.log('🎁 [approveZellePayment] Resultado do add_coins_to_user:', { coinsResult, coinsError });
-
-                  if (coinsError) {
-                    console.error('❌ [approveZellePayment] Erro ao adicionar coins:', coinsError);
-                  } else {
-                    console.log('✅ [approveZellePayment] 180 coins adicionados para o dono do código de referência');
-                    console.log('✅ [approveZellePayment] Resultado:', coinsResult);
-                  }
-                } else {
-                  console.log('ℹ️ [approveZellePayment] Nenhum dono do código de referência encontrado ou é o próprio usuário');
-                  console.log('ℹ️ [approveZellePayment] Detalhes:', {
-                    affiliateCode: !!affiliateCode,
-                    affiliateUserId: affiliateCode?.user_id,
-                    paymentUserId: payment.user_id,
-                    isSameUser: affiliateCode?.user_id === payment.user_id
-                  });
-                }
-              } else {
-                console.log('ℹ️ [approveZellePayment] Usuário não tem código de referência Matricula Rewards');
-                console.log('ℹ️ [approveZellePayment] userProfile.referral_code_used:', userProfile?.referral_code_used);
-              }
-            } catch (rewardsError) {
-              console.error('❌ [approveZellePayment] Erro ao processar Matricula Rewards:', rewardsError);
-            }
-          }
-        }
-      } else {
-        console.log('⚠️ [approveZellePayment] fee_type_global não é selection_process:', payment.fee_type_global);
-      }
-
-      console.log('🔍 [approveZellePayment] Verificando condição I-20 Control Fee...');
-      console.log('🔍 [approveZellePayment] payment.fee_type_global === "i-20_control_fee":', payment.fee_type_global === 'i-20_control_fee');
-      
-      if (payment.fee_type_global === 'i-20_control_fee') {
-        console.log('🎯 [approveZellePayment] Entrando na condição i20_control_fee');
-        console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET has_paid_i20_control_fee = true WHERE user_id =', payment.user_id);
-        
-        // Marcar no user_profiles
-        const { data: updateData, error: profileError } = await supabase
-          .from('user_profiles')
-          .update({ 
-            has_paid_i20_control_fee: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', payment.user_id)
-          .select();
-
-        console.log('🔍 [approveZellePayment] Resultado da atualização i20_control_fee:', { updateData, profileError });
-
-        if (profileError) {
-          console.error('❌ [approveZellePayment] Erro ao marcar i20_control_fee:', profileError);
-        } else {
-          console.log('✅ [approveZellePayment] has_paid_i20_control_fee marcado como true');
-          console.log('🔍 [approveZellePayment] Dados atualizados i20_control_fee:', updateData);
-          
-          // Registrar no faturamento
-          console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento...');
-          const { error: billingError } = await supabase.rpc('register_payment_billing', {
-            user_id_param: payment.user_id,
-            fee_type_param: 'i20_control_fee',
-            amount_param: payment.amount,
-            payment_session_id_param: `zelle_${payment.id}`,
-            payment_method_param: 'zelle'
-          });
-          
-          if (billingError) {
-            console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
-          } else {
-            console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
-          }
-        }
-      }
-
-      if (payment.fee_type === 'application_fee' || payment.fee_type === 'scholarship_fee') {
-        console.log('🎯 [approveZellePayment] Entrando na condição scholarship_applications');
-        console.log('🔍 [approveZellePayment] fee_type:', payment.fee_type);
-        console.log('🔍 [approveZellePayment] Executando UPDATE scholarship_applications WHERE student_id =', payment.student_id);
-        
-        // Marcar no scholarship_applications
-        const { data: updateData, error: appError } = await supabase
-          .from('scholarship_applications')
-          .update({ 
-            [payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid']: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('student_id', payment.student_id)
-          .select();
-
-        console.log('🔍 [approveZellePayment] Resultado da atualização scholarship_applications:', { updateData, appError });
-
-        if (appError) {
-          console.error('❌ [approveZellePayment] Erro ao marcar scholarship_applications:', appError);
-        } else {
-          console.log(`✅ [approveZellePayment] ${payment.fee_type === 'application_fee' ? 'is_application_fee_paid' : 'is_scholarship_fee_paid'} marcado como true`);
-          console.log('🔍 [approveZellePayment] Dados atualizados scholarship_applications:', updateData);
-          
-          // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
-          if (payment.fee_type === 'scholarship_fee') {
-            console.log('💰 [approveZellePayment] Registrando scholarship_fee no faturamento...');
-            const { error: billingError } = await supabase.rpc('register_payment_billing', {
-              user_id_param: payment.user_id,
-              fee_type_param: 'scholarship_fee',
-              amount_param: payment.amount,
-              payment_session_id_param: `zelle_${payment.id}`,
-              payment_method_param: 'zelle'
-            });
-            
-            if (billingError) {
-              console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
-            } else {
-              console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
-            }
-          }
-        }
-
-        // Se for application_fee, também atualizar user_profiles
-        if (payment.fee_type === 'application_fee') {
-          console.log('🎯 [approveZellePayment] Atualizando user_profiles para application_fee');
-          console.log('🔍 [approveZellePayment] Executando UPDATE user_profiles SET is_application_fee_paid = true WHERE user_id =', payment.user_id);
-          
-          const { data: profileUpdateData, error: profileError } = await supabase
-            .from('user_profiles')
-            .update({ 
-              is_application_fee_paid: true,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', payment.user_id)
-            .select();
-
-          console.log('🔍 [approveZellePayment] Resultado da atualização user_profiles:', { profileUpdateData, profileError });
-
-          if (profileError) {
-            console.error('❌ [approveZellePayment] Erro ao marcar is_application_fee_paid no user_profiles:', profileError);
-          } else {
-            console.log('✅ [approveZellePayment] is_application_fee_paid marcado como true no user_profiles');
-            console.log('🔍 [approveZellePayment] Dados atualizados user_profiles:', profileUpdateData);
-          }
-        }
-      }
-
-      // ENVIAR WEBHOOK PARA NOTIFICAR O ALUNO SOBRE APROVAÇÃO
-      console.log('📤 [approveZellePayment] Enviando notificação de aprovação para o aluno...');
-      
-      try {
-        // Buscar nome do admin
-        const { data: adminProfile } = await supabase
-          .from('user_profiles')
-          .select('full_name')
-          .eq('user_id', user!.id)
-          .single();
-
-        const adminName = adminProfile?.full_name || 'Admin';
-
-        // Payload para notificar o aluno sobre a aprovação
-        const approvalPayload = {
-          tipo_notf: "Pagamento aprovado",
-          email_aluno: payment.student_email,
-          nome_aluno: payment.student_name,
-          email_universidade: "",
-          o_que_enviar: `Seu pagamento de ${payment.fee_type} no valor de $${payment.amount} foi aprovado e processado com sucesso!`,
-          payment_id: paymentId,
-          fee_type: payment.fee_type,
-          amount: payment.amount,
-          approved_by: adminName
-        };
-
-        console.log('📤 [approveZellePayment] Payload de aprovação:', approvalPayload);
-
-        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(approvalPayload),
-        });
-
-        if (webhookResponse.ok) {
-          console.log('✅ [approveZellePayment] Notificação de aprovação enviada com sucesso!');
-        } else {
-          console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação de aprovação:', webhookResponse.status);
-        }
-      } catch (webhookError) {
-        console.error('❌ [approveZellePayment] Erro ao enviar webhook de aprovação:', webhookError);
-        // Não falhar o processo se o webhook falhar
-      }
-
-      // --- NOTIFICAÇÃO PARA UNIVERSIDADE ---
-      try {
-        console.log(`📤 [approveZellePayment] Enviando notificação de ${payment.fee_type} para universidade...`);
-        
-        const notificationEndpoint = payment.fee_type === 'application_fee' 
-          ? 'notify-university-application-fee-paid'
-          : payment.fee_type === 'scholarship_fee'
-          ? 'notify-university-scholarship-fee-paid'
-          : null;
-        
-        if (notificationEndpoint) {
-          const payload = {
-            application_id: payment.scholarship_id || payment.student_id, // Usando scholarship_id se disponível, senão student_id
-            user_id: payment.user_id,
-            scholarship_id: payment.scholarship_id || null
-          };
-          
-          console.log(`📤 [approveZellePayment] Payload para universidade:`, payload);
-          
-          const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            },
-            body: JSON.stringify(payload),
-          });
-
-          if (notificationResponse.ok) {
-            console.log(`✅ [approveZellePayment] Notificação de ${payment.fee_type} enviada para universidade com sucesso!`);
-          } else {
-            console.warn(`⚠️ [approveZellePayment] Erro ao enviar notificação de ${payment.fee_type} para universidade:`, notificationResponse.status);
-          }
-        } else {
-          console.log(`ℹ️ [approveZellePayment] Tipo de taxa ${payment.fee_type} não requer notificação para universidade`);
-        }
-      } catch (notificationError) {
-        console.error('❌ [approveZellePayment] Erro ao enviar notificação para universidade:', notificationError);
-        // Não falhar o processo se a notificação falhar
-      }
-
-      // --- NOTIFICAÇÕES PARA ADMIN, AFFILIATE ADMIN E SELLER ---
-      try {
-        console.log(`📤 [approveZellePayment] Buscando informações do seller e affiliate admin...`);
-        
-        // Buscar informações do seller relacionado ao pagamento
-        // Primeiro tentar buscar pelo user_id diretamente
-        let { data: sellerData, error: sellerError } = await supabase
-          .from('sellers')
-          .select(`
-            id,
-            user_id,
-            name,
-            email,
-            referral_code,
-            affiliate_admin_id
-          `)
-          .eq('user_id', payment.user_id)
-          .single();
-
-        // Se não encontrar pelo user_id, buscar pelo seller_referral_code do usuário
-        if (sellerError && sellerError.code === 'PGRST116') {
-          console.log('🔍 [approveZellePayment] Seller não encontrado pelo user_id, buscando pelo seller_referral_code...');
-          
-          // Buscar o seller_referral_code do usuário
-          const { data: userProfile, error: userError } = await supabase
-            .from('user_profiles')
-            .select('seller_referral_code')
-            .eq('user_id', payment.user_id)
-            .single();
-
-          if (!userError && userProfile?.seller_referral_code) {
-            console.log('🔍 [approveZellePayment] seller_referral_code encontrado:', userProfile.seller_referral_code);
-            
-            // Buscar o seller pelo referral_code
-            const { data: sellerByCode, error: sellerByCodeError } = await supabase
-              .from('sellers')
-              .select(`
-                id,
-                user_id,
-                name,
-                email,
-                referral_code,
-                affiliate_admin_id
-              `)
-              .eq('referral_code', userProfile.seller_referral_code)
-              .single();
-
-            if (!sellerByCodeError && sellerByCode) {
-              sellerData = sellerByCode;
-              sellerError = null;
-              console.log('✅ [approveZellePayment] Seller encontrado pelo referral_code:', sellerData);
-            } else {
-              console.log('❌ [approveZellePayment] Seller não encontrado pelo referral_code:', sellerByCodeError);
-            }
-          } else {
-            console.log('❌ [approveZellePayment] seller_referral_code não encontrado no perfil do usuário:', userError);
-          }
-        }
-
-        // Buscar informações do affiliate admin separadamente se existir
-        let affiliateAdminData = null;
-        if (sellerData && sellerData.affiliate_admin_id) {
-          console.log('🔍 [approveZellePayment] Buscando affiliate admin com ID:', sellerData.affiliate_admin_id);
-          
-          // Primeiro buscar o affiliate_admin
-          const { data: affiliateData, error: affiliateError } = await supabase
-            .from('affiliate_admins')
-            .select('user_id')
-            .eq('id', sellerData.affiliate_admin_id)
-            .single();
-          
-          if (!affiliateError && affiliateData) {
-            console.log('✅ [approveZellePayment] Affiliate admin encontrado:', affiliateData);
-            
-            // Depois buscar as informações do user_profiles
-            const { data: userProfileData, error: userProfileError } = await supabase
-              .from('user_profiles')
-              .select('full_name, email')
-              .eq('user_id', affiliateData.user_id)
-              .single();
-            
-            if (!userProfileError && userProfileData) {
-              affiliateAdminData = {
-                user_id: affiliateData.user_id,
-                user_profiles: userProfileData
-              };
-              console.log('✅ [approveZellePayment] Dados do affiliate admin carregados:', affiliateAdminData);
-            } else {
-              console.log('❌ [approveZellePayment] Erro ao buscar user_profiles do affiliate admin:', userProfileError);
-            }
-          } else {
-            console.log('❌ [approveZellePayment] Erro ao buscar affiliate admin:', affiliateError);
-          }
-        }
-
-        if (sellerData && !sellerError) {
-          console.log(`📤 [approveZellePayment] Seller encontrado:`, sellerData);
-
-          // NOTIFICAÇÃO PARA ADMIN
-          try {
-            const adminNotificationPayload = {
-              tipo_notf: "Pagamento de aluno aprovado",
-              email_admin: "admin@matriculausa.com",
-              nome_admin: "Admin MatriculaUSA",
-              email_aluno: payment.student_email,
-              nome_aluno: payment.student_name,
-              email_seller: sellerData.email,
-              nome_seller: sellerData.name,
-              email_affiliate_admin: affiliateAdminData?.user_profiles?.email || "",
-              nome_affiliate_admin: affiliateAdminData?.user_profiles?.full_name || "Affiliate Admin",
-              o_que_enviar: `Pagamento de ${payment.fee_type} no valor de $${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
-              payment_id: paymentId,
-              fee_type: payment.fee_type,
-              amount: payment.amount,
-              seller_id: sellerData.user_id,
-              referral_code: sellerData.referral_code,
-            };
-
-            console.log('📧 [approveZellePayment] Enviando notificação para admin:', adminNotificationPayload);
-
-            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(adminNotificationPayload),
-            });
-
-            if (adminNotificationResponse.ok) {
-              console.log('✅ [approveZellePayment] Notificação para admin enviada com sucesso!');
-            } else {
-              console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação para admin:', adminNotificationResponse.status);
-            }
-          } catch (adminNotificationError) {
-            console.error('❌ [approveZellePayment] Erro ao enviar notificação para admin:', adminNotificationError);
-          }
-
-          // NOTIFICAÇÃO PARA AFFILIATE ADMIN
-          if (affiliateAdminData?.user_profiles?.email) {
-            try {
-              const affiliateAdminNotificationPayload = {
-                tipo_notf: "Pagamento de aluno do seu seller aprovado",
-                email_affiliate_admin: affiliateAdminData.user_profiles.email,
-                nome_affiliate_admin: affiliateAdminData.user_profiles.full_name || "Affiliate Admin",
-                email_aluno: payment.student_email,
-                nome_aluno: payment.student_name,
-                email_seller: sellerData.email,
-                nome_seller: sellerData.name,
-                o_que_enviar: `Pagamento de ${payment.fee_type} no valor de $${payment.amount} do aluno ${payment.student_name} foi aprovado. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
-                payment_id: paymentId,
-                fee_type: payment.fee_type,
-                amount: payment.amount,
-                seller_id: sellerData.user_id,
-                referral_code: sellerData.referral_code,
-              };
-
-              console.log('📧 [approveZellePayment] Enviando notificação para affiliate admin:', affiliateAdminNotificationPayload);
-
-              const affiliateAdminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(affiliateAdminNotificationPayload),
-              });
-
-              if (affiliateAdminNotificationResponse.ok) {
-                console.log('✅ [approveZellePayment] Notificação para affiliate admin enviada com sucesso!');
-              } else {
-                console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação para affiliate admin:', affiliateAdminNotificationResponse.status);
-              }
-            } catch (affiliateAdminNotificationError) {
-              console.error('❌ [approveZellePayment] Erro ao enviar notificação para affiliate admin:', affiliateAdminNotificationError);
-            }
-          }
-
-          // NOTIFICAÇÃO PARA SELLER
-          try {
-            const sellerNotificationPayload = {
-              tipo_notf: "Pagamento do seu aluno aprovado",
-              email_seller: sellerData.email,
-              nome_seller: sellerData.name,
-              email_aluno: payment.student_email,
-              nome_aluno: payment.student_name,
-              o_que_enviar: `Parabéns! O pagamento de ${payment.fee_type} no valor de $${payment.amount} do seu aluno ${payment.student_name} foi aprovado. Você ganhará comissão sobre este pagamento!`,
-              payment_id: paymentId,
-              fee_type: payment.fee_type,
-              amount: payment.amount,
-              seller_id: sellerData.user_id,
-              referral_code: sellerData.referral_code
-            };
-
-            console.log('📧 [approveZellePayment] Enviando notificação para seller:', sellerNotificationPayload);
-
-            const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(sellerNotificationPayload),
-            });
-
-            if (sellerNotificationResponse.ok) {
-              console.log('✅ [approveZellePayment] Notificação para seller enviada com sucesso!');
-            } else {
-              console.warn('⚠️ [approveZellePayment] Erro ao enviar notificação para seller:', sellerNotificationResponse.status);
-            }
-          } catch (sellerNotificationError) {
-            console.error('❌ [approveZellePayment] Erro ao enviar notificação para seller:', sellerNotificationError);
-          }
-
-        } else {
-          console.log(`ℹ️ [approveZellePayment] Nenhum seller encontrado para o usuário ${payment.user_id}`);
-        }
-      } catch (sellerLookupError) {
-        console.error('❌ [approveZellePayment] Erro ao buscar informações do seller:', sellerLookupError);
-        // Não falhar o processo se a busca do seller falhar
-      }
-
-      // Recarregar pagamentos Zelle
-      await loadZellePayments();
-      setShowZelleReviewModal(false);
-      
-      console.log('✅ [approveZellePayment] Zelle payment approved, marked as paid, and student notified successfully');
-    } catch (error: any) {
-      console.error('❌ [approveZellePayment] Error approving Zelle payment:', error);
-    } finally {
-      setZelleActionLoading(false);
-    }
-  };
-
-  const rejectZellePayment = async (paymentId: string, reason?: string) => {
-    try {
-      setZelleActionLoading(true);
-      
-      const payment = zellePayments.find(p => p.id === paymentId);
-      if (!payment) throw new Error('Payment not found');
-
-      console.log('🔍 [rejectZellePayment] Rejeitando pagamento:', payment);
-
-      // Atualizar o status do pagamento para rejeitado
-          const { error } = await supabase
-      .from('zelle_payments')
-      .update({
-        status: 'rejected',
-        admin_notes: reason || zelleRejectReason
-      })
-      .eq('id', paymentId);
-
-      if (error) throw error;
-
-      // ENVIAR WEBHOOK PARA NOTIFICAR O ALUNO
-      console.log('📤 [rejectZellePayment] Enviando notificação de rejeição para o aluno...');
-      
-      try {
-        // Buscar nome do admin
-        const { data: adminProfile } = await supabase
-          .from('user_profiles')
-          .select('full_name')
-          .eq('user_id', user!.id)
-          .single();
-
-        const adminName = adminProfile?.full_name || 'Admin';
-
-        // Payload para notificar o aluno sobre a rejeição
-        const rejectionPayload = {
-          tipo_notf: "Pagamento rejeitado",
-          email_aluno: payment.student_email,
-          nome_aluno: payment.student_name,
-          email_universidade: "",
-          o_que_enviar: `Seu pagamento de ${payment.fee_type} no valor de $${payment.amount} foi rejeitado. Motivo: ${reason || zelleRejectReason}`,
-          payment_id: paymentId,
-          fee_type: payment.fee_type,
-          amount: payment.amount,
-          rejection_reason: reason || zelleRejectReason,
-          rejected_by: adminName
-        };
-
-        console.log('📤 [rejectZellePayment] Payload de rejeição:', rejectionPayload);
-
-        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(rejectionPayload),
-        });
-
-        if (webhookResponse.ok) {
-          console.log('✅ [rejectZellePayment] Notificação de rejeição enviada com sucesso!');
-        } else {
-          console.warn('⚠️ [rejectZellePayment] Erro ao enviar notificação de rejeição:', webhookResponse.status);
-        }
-      } catch (webhookError) {
-        console.error('❌ [rejectZellePayment] Erro ao enviar webhook de rejeição:', webhookError);
-        // Não falhar o processo se o webhook falhar
-      }
-
-      // Recarregar pagamentos Zelle
-      await loadZellePayments();
-      setShowZelleReviewModal(false);
-      setZelleRejectReason('');
-      
-      console.log('✅ [rejectZellePayment] Zelle payment rejected and student notified successfully');
-    } catch (error: any) {
-      console.error('❌ [rejectZellePayment] Error rejecting Zelle payment:', error);
-    } finally {
-      setZelleActionLoading(false);
-    }
-  };
-
-  // Funções auxiliares para abrir modais
-  const openRejectModal = (id: string) => {
-    const request = universityRequests.find(r => r.id === id);
-    setSelectedRequest(request || null);
-    setShowRejectModal(true);
-  };
-
-  const openMarkPaidModal = (id: string) => {
-    const request = universityRequests.find(r => r.id === id);
-    setSelectedRequest(request || null);
-    setShowMarkPaidModal(true);
-  };
-
-  const openAddNotesModal = (id: string) => {
-    const request = universityRequests.find(r => r.id === id);
-    setSelectedRequest(request || null);
-    setShowAddNotesModal(true);
-  };
-
-  // Funções auxiliares para abrir modais de Zelle
-
-  const openZelleReviewModal = (paymentId: string) => {
-    const payment = zellePayments.find(p => p.id === paymentId);
-    setSelectedZellePayment(payment || null);
-    setShowZelleReviewModal(true);
-  };
-
-  const handleZelleReviewSuccess = () => {
-    // Recarregar os pagamentos Zelle após aprovação/rejeição
-    loadZellePayments();
-    setShowZelleReviewModal(false);
-    setSelectedZellePayment(null);
-  };
-
-  const openZelleNotesModal = (paymentId: string) => {
-    const payment = zellePayments.find(p => p.id === paymentId);
-    if (payment) {
-      setSelectedZellePayment(payment);
-      setZelleAdminNotes(payment.admin_notes || '');
-      setShowZelleNotesModal(true);
-    }
-  };
-
-  const openZelleProofModal = (paymentId: string) => {
-    const payment = zellePayments.find(p => p.id === paymentId);
-    if (payment && payment.payment_proof_url) {
-      // Se payment_proof_url já é uma URL completa, usar diretamente
-      // Se é um caminho relativo, construir URL completa
-      let fullUrl = payment.payment_proof_url;
-      if (!payment.payment_proof_url.startsWith('http')) {
-        fullUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${payment.payment_proof_url}`;
-      }
-      setSelectedZelleProofUrl(fullUrl);
-      setSelectedZelleProofFileName(`Zelle Payment Proof - ${payment.student_name}`);
-      setShowZelleProofModal(true);
+      setUniversities(data || []);
+    } catch (error) {
+      console.error('Error loading universities:', error);
     }
   };
 
@@ -1235,196 +510,196 @@ const PaymentManagement = (): React.JSX.Element => {
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm font-medium">Total Revenue</p>
-              <p className="text-2xl font-bold">${formatCentsToDollars(stats.totalRevenue).toLocaleString()}</p>
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Revenue</p>
+                  <p className="text-2xl font-bold">${formatCentsToDollars(stats.totalRevenue).toLocaleString()}</p>
+                </div>
+                <DollarSign size={32} className="text-blue-200" />
+              </div>
             </div>
-            <DollarSign size={32} className="text-blue-200" />
-          </div>
-        </div>
 
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm font-medium">Paid Payments</p>
-              <p className="text-2xl font-bold">{stats.paidPayments}</p>
+            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm font-medium">Paid Payments</p>
+                  <p className="text-2xl font-bold">{stats.paidPayments}</p>
+                </div>
+                <CheckCircle size={32} className="text-green-200" />
+              </div>
             </div>
-            <CheckCircle size={32} className="text-green-200" />
-          </div>
-        </div>
 
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-100 text-sm font-medium">Pending Payments</p>
-              <p className="text-2xl font-bold">{stats.pendingPayments}</p>
+            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-sm font-medium">Pending Payments</p>
+                  <p className="text-2xl font-bold">{stats.pendingPayments}</p>
+                </div>
+                <XCircle size={32} className="text-orange-200" />
+              </div>
             </div>
-            <XCircle size={32} className="text-orange-200" />
-          </div>
-        </div>
 
-        <div className="bg-[#05294E] rounded-xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-sm font-medium">Monthly Growth</p>
-              <p className="text-2xl font-bold">+{stats.monthlyGrowth}%</p>
-            </div>
-            <TrendingUp size={32} className="text-purple-200" />
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Filter size={20} />
-            Filters & Search
-          </h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
-            <button
-              onClick={handleExport}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Download size={16} />
-              Export CSV
-            </button>
-            <div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
-              <button
-                onClick={() => handleViewModeChange('grid')}
-                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
-                  viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}
-                title="Grid view"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => handleViewModeChange('list')}
-                className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
-                  viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}
-                title="List view"
-              >
-                <List className="h-4 w-4" />
-              </button>
+            <div className="bg-[#05294E] rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Monthly Growth</p>
+                  <p className="text-2xl font-bold">+{stats.monthlyGrowth}%</p>
+                </div>
+                <TrendingUp size={32} className="text-purple-200" />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search by student name, email, university, or scholarship..."
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          />
-        </div>
-
-        {/* Advanced Filters */}
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-gray-200">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">University</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filters.university}
-                onChange={(e) => setFilters({ ...filters, university: e.target.value })}
-              >
-                <option value="all">All Universities</option>
-                {universities.map(uni => (
-                  <option key={uni.id} value={uni.id}>{uni.name}</option>
-                ))}
-              </select>
+          {/* Filters */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Filter size={20} />
+                Filters & Search
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  {showFilters ? 'Hide Filters' : 'Show Filters'}
+                </button>
+                <button
+                  onClick={handleExport}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Export CSV
+                </button>
+                <div className="flex bg-gray-100 border border-gray-200 rounded-xl p-1">
+                  <button
+                    onClick={() => handleViewModeChange('grid')}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                      viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="Grid view"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleViewModeChange('list')}
+                    className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
+                      viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    title="List view"
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fee Type</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filters.feeType}
-                onChange={(e) => setFilters({ ...filters, feeType: e.target.value })}
-              >
-                <option value="all">All Fee Types</option>
-                {FEE_TYPES.map(fee => (
-                  <option key={fee.value} value={fee.value}>{fee.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              >
-                {STATUS_OPTIONS.map(status => (
-                  <option key={status.value} value={status.value}>{status.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
-                type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filters.dateFrom}
-                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                type="text"
+                placeholder="Search by student name, email, university, or scholarship..."
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
-              <input
-                type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filters.dateTo}
-                onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-              />
-            </div>
+            {/* Advanced Filters */}
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">University</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={filters.university}
+                    onChange={(e) => setFilters({ ...filters, university: e.target.value })}
+                  >
+                    <option value="all">All Universities</option>
+                    {universities.map(uni => (
+                      <option key={uni.id} value={uni.id}>{uni.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="lg:col-span-5 flex justify-end">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-        )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Fee Type</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={filters.feeType}
+                    onChange={(e) => setFilters({ ...filters, feeType: e.target.value })}
+                  >
+                    <option value="all">All Fee Types</option>
+                    {FEE_TYPES.map(fee => (
+                      <option key={fee.value} value={fee.value}>{fee.label}</option>
+                    ))}
+                  </select>
+                </div>
 
-        <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredPayments.length} of {payments.length} payments
-          {totalPages > 1 && (
-            <>
-              <span className="mx-2">•</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={filters.status}
+                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  >
+                    {STATUS_OPTIONS.map(status => (
+                      <option key={status.value} value={status.value}>{status.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={filters.dateFrom}
+                    onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={filters.dateTo}
+                    onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                  />
+                </div>
+
+                <div className="lg:col-span-5 flex justify-end">
+                  <button
+                    onClick={resetFilters}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 text-sm text-gray-600">
+              Showing {filteredPayments.length} of {payments.length} payments
+              {totalPages > 1 && (
+                <>
+                  <span className="mx-2">•</span>
                   <span>Page {currentPage} of {totalPages}</span>
-            </>
-          )}
-        </div>
-      </div>
+                </>
+              )}
+            </div>
+          </div>
 
-      {/* Payments Table/Grid */}
-      {viewMode === 'list' ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
+          {/* Payments Table/Grid */}
+          {viewMode === 'list' ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee Type</th>
@@ -1432,218 +707,218 @@ const PaymentManagement = (): React.JSX.Element => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {currentPayments.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
-                      <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No payments found</h3>
-                          <p className="mt-1 text-sm text-gray-500">Try adjusting your search criteria or filters.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  currentPayments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <User className="h-5 w-5 text-gray-600" />
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{payment.student_name}</div>
-                            <div className="text-sm text-gray-500">{payment.student_email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Building2 className="h-4 w-4 text-gray-400 mr-2" />
-                          <div className="text-sm text-gray-900">{payment.university_name}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          FEE_TYPES.find(ft => ft.value === payment.fee_type)?.color || 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {FEE_TYPES.find(ft => ft.value === payment.fee_type)?.label || payment.fee_type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                        ${formatCentsToDollars(payment.amount)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          payment.status === 'paid' 
-                            ? 'bg-green-100 text-green-800' 
-                            : payment.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {payment.status === 'paid' && <CheckCircle className="w-3 h-3 mr-1" />}
-                          {payment.status === 'pending' && <XCircle className="w-3 h-3 mr-1" />}
-                          {payment.status === 'failed' && <AlertCircle className="w-3 h-3 mr-1" />}
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {payment.payment_date 
-                            ? new Date(payment.payment_date).toLocaleDateString()
-                            : 'N/A'
-                          }
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => handleViewDetails(payment)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-                        >
-                          <Eye size={16} />
-                          Details
-                        </button>
-                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentPayments.map((payment) => (
-            <div key={payment.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between hover:shadow-lg transition-all duration-300">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <User className="h-5 w-5 text-gray-500" />
-                  <span className="font-bold text-gray-900">{payment.student_name}</span>
-                </div>
-                <div className="text-sm text-gray-600 mb-1">{payment.student_email}</div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Building2 className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-900">{payment.university_name}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentPayments.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+                          <h3 className="mt-2 text-sm font-medium text-gray-900">No payments found</h3>
+                          <p className="mt-1 text-sm text-gray-500">Try adjusting your search criteria or filters.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      currentPayments.map((payment) => (
+                        <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-gray-600" />
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">{payment.student_name}</div>
+                                <div className="text-sm text-gray-500">{payment.student_email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <Building2 className="h-4 w-4 text-gray-400 mr-2" />
+                              <div className="text-sm text-gray-900">{payment.university_name}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              FEE_TYPES.find(ft => ft.value === payment.fee_type)?.color || 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {FEE_TYPES.find(ft => ft.value === payment.fee_type)?.label || payment.fee_type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                            ${formatCentsToDollars(payment.amount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              payment.status === 'paid' 
+                                ? 'bg-green-100 text-green-800' 
+                                : payment.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {payment.status === 'paid' && <CheckCircle className="w-3 h-3 mr-1" />}
+                              {payment.status === 'pending' && <XCircle className="w-3 h-3 mr-1" />}
+                              {payment.status === 'failed' && <AlertCircle className="w-3 h-3 mr-1" />}
+                              {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-1" />
+                              {payment.payment_date 
+                                ? new Date(payment.payment_date).toLocaleDateString()
+                                : 'N/A'
+                              }
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => handleViewDetails(payment)}
+                              className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                            >
+                              <Eye size={16} />
+                              Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {currentPayments.map((payment) => (
+                <div key={payment.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between hover:shadow-lg transition-all duration-300">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="h-5 w-5 text-gray-500" />
+                      <span className="font-bold text-gray-900">{payment.student_name}</span>
+                    </div>
+                    <div className="text-sm text-gray-600 mb-1">{payment.student_email}</div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-900">{payment.university_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${FEE_TYPES.find(ft => ft.value === payment.fee_type)?.color || 'bg-gray-100 text-gray-800'}`}>
                         {FEE_TYPES.find(ft => ft.value === payment.fee_type)?.label || payment.fee_type}
                       </span>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-green-500" />
-                  <span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-900">{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="h-4 w-4 text-green-500" />
+                      <span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-900">{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'paid' ? 'bg-green-100 text-green-800' : payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                         {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                       </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleViewDetails(payment)}
+                    className="mt-4 w-full bg-blue-600 text-white py-2.5 px-4 rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm"
+                  >
+                    Details
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Paginação */}
+          {filteredPayments.length > 0 && totalPages > 1 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length}
+                  </span>
+                  <span className="ml-2">payments</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={goToFirstPage}
+                    disabled={currentPage === 1}
+                    className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {getPageNumbers().map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                          page === currentPage
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={goToLastPage}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span>Show:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    className="px-2 py-1 border border-gray-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span>per page</span>
                 </div>
               </div>
-              <button
-                onClick={() => handleViewDetails(payment)}
-                className="mt-4 w-full bg-blue-600 text-white py-2.5 px-4 rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm"
-              >
-                Details
-              </button>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Paginação */}
-      {filteredPayments.length > 0 && totalPages > 1 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length}
-              </span>
-                  <span className="ml-2">payments</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={goToFirstPage}
-                disabled={currentPage === 1}
-                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              </button>
-
-              <button
-                onClick={goToPreviousPage}
-                disabled={currentPage === 1}
-                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-
-              <div className="flex items-center gap-1">
-                {getPageNumbers().map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => goToPage(page)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                      page === currentPage
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-
-              <button
-                onClick={goToLastPage}
-                disabled={currentPage === totalPages}
-                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>Show:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                className="px-2 py-1 border border-gray-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span>per page</span>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
         </>
       )}
 
@@ -2127,4 +1402,4 @@ const PaymentManagement = (): React.JSX.Element => {
   );
 };
 
-export default PaymentManagement; 
+export default PaymentManagement;
