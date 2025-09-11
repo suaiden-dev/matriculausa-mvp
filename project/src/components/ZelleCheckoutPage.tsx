@@ -445,14 +445,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   console.log('✅ [ZelleCheckout] Resposta positiva específica - pagamento aprovado automaticamente, não enviando notificação para admin');
                 }
                 
-                // Armazenar a resposta do n8n no localStorage para a página de waiting
-                localStorage.setItem(`n8n_response_${realPaymentId}`, JSON.stringify(responseJson));
-                localStorage.setItem('latest_n8n_response', JSON.stringify(responseJson));
-                console.log('💾 [ZelleCheckout] Resposta do n8n armazenada no localStorage');
-                console.log('💾 [ZelleCheckout] Chave:', `n8n_response_${realPaymentId}`);
-                console.log('💾 [ZelleCheckout] Valor:', JSON.stringify(responseJson));
-
-                // Atualizar pagamento no banco com resultado do n8n
+                // ✅ SEMPRE atualizar o pagamento no banco com a imagem e resposta do n8n
                 console.log('💾 [ZelleCheckout] Atualizando pagamento no banco com resultado do n8n...');
 
                 try {
@@ -470,7 +463,8 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     attempts++;
                     console.log(`🔍 [ZelleCheckout] Tentativa ${attempts}/${maxAttempts} de buscar pagamento...`);
                     
-                    const { data, error } = await supabase
+                    // Primeiro tentar buscar com fee_type específico
+                    let { data, error } = await supabase
                       .from('zelle_payments')
                       .select('id')
                       .eq('user_id', user?.id)
@@ -479,6 +473,26 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       .order('created_at', { ascending: false })
                       .limit(1)
                       .single();
+
+                    // Se não encontrar com fee_type específico, buscar por valor e status (para pagamentos criados pelo n8n)
+                    if (error && error.code === 'PGRST116') {
+                      console.log(`🔍 [ZelleCheckout] Não encontrado com fee_type específico, buscando por valor e status...`);
+                      const { data: dataByAmount, error: errorByAmount } = await supabase
+                        .from('zelle_payments')
+                        .select('id')
+                        .eq('user_id', user?.id)
+                        .eq('amount', currentFee.amount)
+                        .eq('status', 'pending_verification')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .single();
+                      
+                      if (!errorByAmount && dataByAmount) {
+                        data = dataByAmount;
+                        error = null;
+                        console.log(`✅ [ZelleCheckout] Pagamento encontrado por valor e status!`);
+                      }
+                    }
 
                     if (error && error.code === 'PGRST116') {
                       // Nenhum registro encontrado, aguardar mais um pouco
@@ -502,25 +516,44 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
                   console.log('🔍 [ZelleCheckout] Pagamento encontrado para atualização:', recentPayment.id);
 
+                  // Preparar dados de atualização baseado na resposta da IA
+                  const updateData: any = {
+                    screenshot_url: imageUrl,
+                    admin_notes: `n8n response: ${responseJson.response || responseText}`,
+                    updated_at: new Date().toISOString()
+                  };
+
+                  // ✅ APENAS quando a IA aprova, marcar como aprovado
+                  if (isPositiveResponse) {
+                    updateData.status = 'approved';
+                    updateData.admin_approved_at = new Date().toISOString();
+                    console.log('✅ [ZelleCheckout] Marcando pagamento como aprovado');
+                  } else {
+                    console.log('⏳ [ZelleCheckout] Mantendo pagamento como pending_verification para revisão manual');
+                  }
+
                   // Atualizar o registro encontrado
-                  const { data: updateData, error: updateError } = await supabase
+                  const { data: updateResult, error: updateError } = await supabase
                     .from('zelle_payments')
-                    .update({
-                      screenshot_url: imageUrl,
-                      admin_notes: `n8n response: ${responseJson.response || responseText}`,
-                      updated_at: new Date().toISOString()
-                    })
+                    .update(updateData)
                     .eq('id', recentPayment.id)
                     .select();
 
                   if (updateError) {
                     console.error('❌ [ZelleCheckout] Erro ao atualizar pagamento:', updateError);
                   } else {
-                    console.log('✅ [ZelleCheckout] Pagamento atualizado com sucesso:', updateData);
+                    console.log('✅ [ZelleCheckout] Pagamento atualizado com sucesso:', updateResult);
                   }
                 } catch (updateError) {
                   console.error('❌ [ZelleCheckout] Erro ao processar pagamento:', updateError);
                 }
+                
+                // Armazenar a resposta do n8n no localStorage para a página de waiting
+                localStorage.setItem(`n8n_response_${realPaymentId}`, JSON.stringify(responseJson));
+                localStorage.setItem('latest_n8n_response', JSON.stringify(responseJson));
+                console.log('💾 [ZelleCheckout] Resposta do n8n armazenada no localStorage');
+                console.log('💾 [ZelleCheckout] Chave:', `n8n_response_${realPaymentId}`);
+                console.log('💾 [ZelleCheckout] Valor:', JSON.stringify(responseJson));
               }
               
               // Verificar outros campos possíveis
