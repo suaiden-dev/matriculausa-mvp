@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomLoading from '../../components/CustomLoading';
 import { CheckCircle } from 'lucide-react';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const sessionId = params.get('session_id');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { formatFeeAmount } = useFeeConfig();
 
   useEffect(() => {
     const verifySession = async () => {
@@ -83,7 +85,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
         <h1 className="text-3xl font-bold text-green-700 mb-2">Selection Process Fee Payment Successful!</h1>
         <p className="text-slate-700 mb-6 text-center">
-          Your payment of <span className="font-bold">$999</span> was processed successfully.<br/>
+          Your payment of <span className="font-bold">{formatFeeAmount(350)}</span> was processed successfully.<br/>
           You now have access to all scholarships and can apply freely.
         </p>
         <button

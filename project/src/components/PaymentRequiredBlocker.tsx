@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Lock, CreditCard, ArrowRight, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 import Header from './Header';
 
 interface PaymentRequiredBlockerProps {
@@ -16,6 +17,7 @@ const PaymentRequiredBlocker: React.FC<PaymentRequiredBlockerProps> = ({
 }) => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const { getFeeAmount } = useFeeConfig();
   const navigate = useNavigate();
 
   const getPageContent = () => {
@@ -78,7 +80,7 @@ const PaymentRequiredBlocker: React.FC<PaymentRequiredBlockerProps> = ({
               </div>
               <div className="text-left">
                 <div className="text-sm font-medium text-slate-500">{t('paymentBlocker.selectionProcessFee')}</div>
-                <div className="text-2xl font-bold text-slate-900">$999</div>
+                <div className="text-2xl font-bold text-slate-900">${getFeeAmount('selection_process')}</div>
               </div>
             </div>
 

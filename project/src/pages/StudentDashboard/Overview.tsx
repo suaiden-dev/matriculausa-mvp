@@ -18,6 +18,7 @@ import {
   Tag
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
@@ -45,6 +46,7 @@ const Overview: React.FC<OverviewProps> = ({
 }) => {
   const { t } = useTranslation();
   const { activeDiscount } = useReferralCode();
+  const { getFeeAmount } = useFeeConfig();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
@@ -108,10 +110,10 @@ const Overview: React.FC<OverviewProps> = ({
   // Valores das taxas para o ProgressBar
   // A application fee agora é variável, então não mostramos um valor específico
   const dynamicFeeValues = [
-    '$999', // Selection Process Fee (fixo)
+    `$${getFeeAmount('selection_process')}`, // Selection Process Fee
     'As per university', // Application Fee (variável - não mostra valor específico)
-    '$400', // Scholarship Fee (fixo)
-    '$999', // I-20 Control Fee (fixo)
+    `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
+    `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
   ];
 
   // Lógica da barra de progresso dinâmica
@@ -304,9 +306,9 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-left sm:text-right">
                   {activeDiscount?.has_discount ? (
                     <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">$999</div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${getFeeAmount('selection_process')}</div>
                       <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${999 - (activeDiscount.discount_amount || 0)}
+                        ${getFeeAmount('selection_process') - (activeDiscount.discount_amount || 0)}
                       </div>
                       <div className="flex items-center sm:justify-center mt-1">
                         <Tag className="h-3 w-3 text-green-300 mr-1" />
@@ -316,7 +318,7 @@ const Overview: React.FC<OverviewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">$999</div>
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${getFeeAmount('selection_process')}</div>
                   )}
                 </div>
               </div>

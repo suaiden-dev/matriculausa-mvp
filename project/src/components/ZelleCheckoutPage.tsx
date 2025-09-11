@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 
 interface ZelleCheckoutPageProps {
   feeType?: string;
@@ -42,6 +43,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { getFeeAmount } = useFeeConfig();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,7 +78,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
   // Obter parâmetros da URL
   const feeType = searchParams.get('type') || searchParams.get('feeType') || 'selection_process';
-  const amount = searchParams.get('amount') || '999';
+  const amount = searchParams.get('amount') || getFeeAmount('selection_process').toString();
   const scholarshipsIds = searchParams.get('scholarshipsIds') || '';
   const applicationFeeAmount = searchParams.get('applicationFeeAmount') ? parseFloat(searchParams.get('applicationFeeAmount')!) : undefined;
   
@@ -95,25 +97,25 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const feeInfo: FeeInfo[] = [
     {
       type: 'selection_process',
-      amount: activeDiscount && feeType === 'selection_process' ? 999 - (activeDiscount.discount_amount || 0) : 999,
+      amount: activeDiscount && feeType === 'selection_process' ? getFeeAmount('selection_process') - (activeDiscount.discount_amount || 0) : getFeeAmount('selection_process'),
       description: `Selection Process Fee - Complete your application process${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'application_fee',
-      amount: applicationFeeAmount || 350, // Usar valor dinâmico se disponível
+      amount: applicationFeeAmount || getFeeAmount('application_fee'), // Usar valor dinâmico se disponível
       description: 'Application Fee - Apply for a specific scholarship',
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'scholarship_fee',
-      amount: 400,
+      amount: getFeeAmount('scholarship_fee'),
       description: 'Scholarship Fee - Confirm your scholarship application',
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'i20_control',
-      amount: 999,
+      amount: getFeeAmount('i20_control_fee'),
       description: 'I-20 Control Fee - Document processing and validation',
       icon: <CreditCard className="w-6 h-6" />
     }
@@ -776,7 +778,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <ol className="space-y-3 text-gray-700">
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">1</span>
-                      <span>{t('zelleCheckout.steps.step1')} <strong>${currentFee.amount} USD</strong> {t('zelleCheckout.step2')}</span>
+                      <span>{t('zelleCheckout.steps.step1')} <strong>(${currentFee.amount} USD)</strong></span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">2</span>

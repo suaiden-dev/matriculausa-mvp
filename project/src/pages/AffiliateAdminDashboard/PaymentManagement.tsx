@@ -15,12 +15,14 @@ import {
   Award
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { supabase } from '../../lib/supabase';
 import FinancialOverview from './FinancialOverview';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 
 const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
+  const { getFeeAmount } = useFeeConfig();
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'financial-overview' | 'payment-requests' | 'commission-history'>('financial-overview');
@@ -94,8 +96,10 @@ const PaymentManagement: React.FC = () => {
       // Derivar pendências (sem pagamento) para estimar pending credits, se necessário
       let derivedPending = 0;
       rows.forEach((r: any) => {
-        const paidSelection = !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= 999;
-        const paidScholarship = !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= 1400;
+        const selectionFee = getFeeAmount('selection_process');
+        const scholarshipFee = getFeeAmount('scholarship_fee');
+        const paidSelection = !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= selectionFee;
+        const paidScholarship = !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= (selectionFee + scholarshipFee);
         const hasAnyPayment = paidSelection || paidScholarship || (Number(r.total_paid) || 0) > 0;
         if (!hasAnyPayment) derivedPending += 1;
       });

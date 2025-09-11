@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { HelpCircle, Search, ChevronDown, ChevronUp, MessageCircle, Phone, Mail, CheckCircle, Clock } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import SmartChat from '../components/SmartChat';
 
 const FAQ: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslationWithFees();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
 

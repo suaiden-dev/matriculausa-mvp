@@ -9,10 +9,10 @@ export interface FeeConfig {
 }
 
 const DEFAULT_FEE_CONFIG: FeeConfig = {
-  selection_process_fee: 999,
+  selection_process_fee: 350,
   application_fee_default: 350,
-  scholarship_fee_default: 400,
-  i20_control_fee: 999
+  scholarship_fee_default: 550,
+  i20_control_fee: 900
 };
 
 export const useFeeConfig = () => {
@@ -75,7 +75,6 @@ export const useFeeConfig = () => {
       };
 
       setFeeConfig(finalConfig);
-      console.log('✅ [useFeeConfig] Configurações de taxas carregadas:', finalConfig);
 
     } catch (err) {
       console.error('❌ [useFeeConfig] Erro inesperado:', err);
@@ -141,6 +140,19 @@ export const useFeeConfig = () => {
     return `$${amount.toFixed(2)}`;
   };
 
+  const processTranslation = (text: any): string => {
+    // Verifica se o texto é uma string válida
+    if (typeof text !== 'string') {
+      return text; // Retorna o valor original se não for string
+    }
+    
+    return text
+      .replace(/\${selectionProcessFee}/g, formatFeeAmount(feeConfig.selection_process_fee))
+      .replace(/\${scholarshipFee}/g, formatFeeAmount(feeConfig.scholarship_fee_default))
+      .replace(/\${i20ControlFee}/g, formatFeeAmount(feeConfig.i20_control_fee))
+      .replace(/\${applicationFee}/g, formatFeeAmount(feeConfig.application_fee_default));
+  };
+
   return {
     feeConfig,
     loading,
@@ -148,6 +160,7 @@ export const useFeeConfig = () => {
     loadFeeConfig,
     updateFeeConfig,
     getFeeAmount,
-    formatFeeAmount
+    formatFeeAmount,
+    processTranslation
   };
 };
