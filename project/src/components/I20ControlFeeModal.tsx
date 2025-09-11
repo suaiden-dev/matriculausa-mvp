@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { useFeeConfig } from '../hooks/useFeeConfig';
@@ -19,6 +19,21 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
   onPaymentMethodSelect,
 }) => {
   const { getFeeAmount } = useFeeConfig();
+  
+  // Hide floating elements when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [isOpen]);
+  
   // Função para selecionar o método de pagamento (sem processar imediatamente)
   const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
     onPaymentMethodSelect(method);
