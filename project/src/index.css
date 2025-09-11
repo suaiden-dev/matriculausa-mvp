@@ -49,6 +49,21 @@
     pointer-events: none !important;
   }
 
+  /* Hide floating elements when modal is open */
+  body.modal-open .floating-cart-button,
+  body.modal-open .floating-cart-area,
+  body.modal-open .floating-whatsapp-button,
+  body.modal-open .floating-whatsapp-area,
+  body.modal-open [data-testid="cart-icon"],
+  body.modal-open [class*="floating-"],
+  body.modal-open [class*="smart-chat"],
+  body.modal-open [style*="position: fixed"][style*="z-index"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
   /* Garantir que o botão flutuante WhatsApp seja sempre visível */
   .floating-whatsapp-button {
     position: fixed !important;

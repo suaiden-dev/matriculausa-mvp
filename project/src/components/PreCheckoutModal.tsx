@@ -105,6 +105,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       if (viewport) {
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
       }
+      
+      // Hide floating elements when modal is open
+      document.body.classList.add('modal-open');
     } else {
       // Clean up state when modal closes
       console.log('🔍 [PreCheckoutModal] Modal fechando, limpando estados');
@@ -123,6 +126,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       if (viewport) {
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
+      
+      // Show floating elements again when modal closes
+      document.body.classList.remove('modal-open');
     }
   }, [isOpen]);
 
@@ -165,6 +171,9 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       if (viewport) {
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
+      
+      // Remove modal-open class on unmount
+      document.body.classList.remove('modal-open');
     };
   }, []);
 
