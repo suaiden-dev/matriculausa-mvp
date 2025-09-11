@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Routes, Route, useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import SellerDashboardLayout from './SellerDashboardLayout';
@@ -30,6 +30,14 @@ interface Student {
   fees_count?: number;
   scholarship_title?: string;
   university_name?: string;
+  // Flags de pagamento usados em MyStudents
+  has_paid_selection_process_fee: boolean;
+  has_paid_i20_control_fee: boolean;
+  is_scholarship_fee_paid: boolean;
+  is_application_fee_paid: boolean;
+  // Datas auxiliares
+  scholarship_fee_paid_date: string | null;
+  i20_deadline: string | null;
 }
 
 interface SellerProfile {
@@ -155,8 +163,8 @@ const SellerDashboard: React.FC = () => {
         throw new Error(`Failed to load referrals: ${referralsError.message}`);
       }
 
-      // Convert referrals to student format with fee information
-      const studentsData = (referralsData || []).map((referral: any) => ({
+      // Primeiro, convertemos dados básicos dos referrals
+      const baseStudents = (referralsData || []).map((referral: any) => ({
         id: referral.user_id,
         profile_id: referral.profile_id,
         full_name: referral.student_name,
@@ -168,14 +176,83 @@ const SellerDashboard: React.FC = () => {
         latest_activity: referral.registration_date,
         scholarship_title: referral.scholarship_title || 'No scholarship selected',
         university_name: referral.university_name || 'No university selected',
-        // Adicionar flags de pagamento individuais
-        has_paid_selection_process_fee: referral.has_paid_selection_process_fee,
-        has_paid_i20_control_fee: referral.has_paid_i20_control_fee,
-        is_scholarship_fee_paid: referral.is_scholarship_fee_paid,
-        is_application_fee_paid: referral.is_application_fee_paid,
-        // Adicionar data de pagamento da scholarship fee para o deadline do I-20
-        scholarship_fee_paid_date: referral.scholarship_fee_paid_date
+        // valores padrão até carregarmos das tabelas corretas
+        has_paid_selection_process_fee: !!referral.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: !!referral.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: !!referral.is_scholarship_fee_paid,
+        is_application_fee_paid: !!referral.is_application_fee_paid,
+        scholarship_fee_paid_date: referral.scholarship_fee_paid_date || null,
+        i20_deadline: null as string | null
       }));
+
+      // Buscar flags verdadeiros em user_profiles e datas em scholarship_applications_clean
+      const profileIds = baseStudents.map((s: any) => s.profile_id).filter(Boolean);
+      const userIds = baseStudents.map((s: any) => s.id).filter(Boolean);
+
+      console.log('🔍 [SELLER] Profile IDs to fetch:', profileIds);
+      console.log('🔍 [SELLER] User IDs to fetch:', userIds);
+
+      const [userProfilesResp, schAppsResp] = await Promise.all([
+        supabase
+          .from('user_profiles')
+          .select('id, has_paid_selection_process_fee, has_paid_i20_control_fee, i20_control_fee_due_date')
+          .in('id', profileIds),
+        supabase
+          .from('scholarship_applications')
+          .select('student_id, is_scholarship_fee_paid, is_application_fee_paid')
+          .in('student_id', profileIds)
+      ]);
+
+      console.log('🔍 [SELLER] User profiles response:', userProfilesResp);
+      console.log('🔍 [SELLER] Scholarship apps response:', schAppsResp);
+
+      if (userProfilesResp.error) {
+        console.warn('[SELLER] Falha ao carregar user_profiles para flags:', userProfilesResp.error);
+      }
+      if (schAppsResp.error) {
+        console.warn('[SELLER] Falha ao carregar scholarship_applications:', schAppsResp.error);
+      }
+
+      const profileIdToFlags = new Map<string, any>();
+      (userProfilesResp.data || []).forEach((p: any) => {
+        profileIdToFlags.set(p.id, {
+          has_paid_selection_process_fee: !!p.has_paid_selection_process_fee,
+          has_paid_i20_control_fee: !!p.has_paid_i20_control_fee,
+          i20_deadline: p.i20_control_fee_due_date ? String(p.i20_control_fee_due_date) : null
+        });
+      });
+
+      const profileIdToScholarshipFlags = new Map<string, any>();
+      (schAppsResp.data || []).forEach((row: any) => {
+        profileIdToScholarshipFlags.set(row.student_id, {
+          is_scholarship_fee_paid: !!row.is_scholarship_fee_paid,
+          is_application_fee_paid: !!row.is_application_fee_paid
+        });
+      });
+
+      // Mesclar dados corretos
+      const studentsData = baseStudents.map((s: any) => {
+        const profileFlags = profileIdToFlags.get(s.profile_id) || {};
+        const scholarshipFlags = profileIdToScholarshipFlags.get(s.profile_id) || {};
+        const result = {
+          ...s,
+          ...profileFlags,
+          ...scholarshipFlags,
+          scholarship_fee_paid_date: null // Não temos data de pagamento, apenas flags
+        };
+        
+        // Log específico para a Kiara
+        if (s.email === 'kiara4854@uorak.com') {
+          console.log('🔍 [SELLER] Kiara data merge:', {
+            original: s,
+            profileFlags,
+            scholarshipFlags,
+            final: result
+          });
+        }
+        
+        return result;
+      });
 
       // Process seller data
       const processedSeller = {
@@ -335,7 +412,6 @@ const SellerDashboard: React.FC = () => {
         return (
           <MyStudents 
             students={students}
-            sellerProfile={sellerProfile}
             onRefresh={handleRefresh}
             onViewStudent={(student: {id: string, profile_id: string}) => {
               setSelectedStudentId(student.id);
