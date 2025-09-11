@@ -466,13 +466,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
         
-        // Processar código de referência do user_metadata se existir (sempre que o usuário faz login)
-        console.log('🔍 [USEAUTH] Verificando user_metadata:', {
-          hasAffiliateCode: !!session.user.user_metadata?.affiliate_code,
-          affiliateCode: session.user.user_metadata?.affiliate_code,
-          userMetadata: session.user.user_metadata
-        });
-        
         if (session.user.user_metadata?.affiliate_code) {
           console.log('🎁 [USEAUTH] Processando código de afiliado do user_metadata:', session.user.user_metadata.affiliate_code);
           

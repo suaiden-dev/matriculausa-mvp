@@ -172,7 +172,9 @@ const SellerDashboard: React.FC = () => {
         has_paid_selection_process_fee: referral.has_paid_selection_process_fee,
         has_paid_i20_control_fee: referral.has_paid_i20_control_fee,
         is_scholarship_fee_paid: referral.is_scholarship_fee_paid,
-        is_application_fee_paid: referral.is_application_fee_paid
+        is_application_fee_paid: referral.is_application_fee_paid,
+        // Adicionar data de pagamento da scholarship fee para o deadline do I-20
+        scholarship_fee_paid_date: referral.scholarship_fee_paid_date
       }));
 
       // Process seller data

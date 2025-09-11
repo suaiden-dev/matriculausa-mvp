@@ -12,11 +12,11 @@ import {
   TrendingUp,
   TrendingDown,
   Building,
-  Clock,
   Award,
   CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 
 interface Student {
   id: string;
@@ -37,6 +37,9 @@ interface Student {
   has_paid_i20_control_fee?: boolean;
   is_scholarship_fee_paid?: boolean;
   is_application_fee_paid?: boolean;
+  // Para o deadline do I-20
+  scholarship_fee_paid_date?: string;
+  i20_deadline?: Date;
 }
 
 interface University {
@@ -66,7 +69,7 @@ interface MyStudentsProps {
   onViewStudent: (studentId: {id: string, profile_id: string}) => void;
 }
 
-const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefresh, onViewStudent }) => {
+const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
@@ -286,6 +289,20 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
     }
     
     return missingFees;
+  };
+
+  // Função para calcular deadline do I-20
+  const calculateI20Deadline = (student: Student): Date | null => {
+    if (!student.is_scholarship_fee_paid || student.has_paid_i20_control_fee) {
+      return null;
+    }
+
+    if (student.scholarship_fee_paid_date) {
+      const paidDate = new Date(student.scholarship_fee_paid_date);
+      return new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+    }
+
+    return null;
   };
 
   // Estatísticas calculadas dinamicamente
@@ -669,6 +686,18 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
                         ));
                       })()}
                     </div>
+                  </div>
+                </div>
+
+                {/* I-20 Control Fee Deadline Status */}
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-600">I-20 Control Fee:</span>
+                    <SellerI20DeadlineTimer 
+                      deadline={calculateI20Deadline(student)}
+                      hasPaid={student.has_paid_i20_control_fee || false}
+                      studentName={student.full_name}
+                    />
                   </div>
                 </div>
               </div>
