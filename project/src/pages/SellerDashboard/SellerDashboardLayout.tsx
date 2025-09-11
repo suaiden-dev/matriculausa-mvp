@@ -18,6 +18,8 @@ import {
   Target
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import SellerNotifications from '../../components/SellerNotifications';
+import { useSellerI20DeadlineMonitor } from '../../hooks/useSellerI20DeadlineMonitor';
 
 interface SellerDashboardLayoutProps {
   user: any;
@@ -39,6 +41,12 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Monitorar deadlines do I-20 para sellers
+  useSellerI20DeadlineMonitor({
+    sellerId: user?.id || '',
+    checkInterval: 5 * 60 * 1000 // Verificar a cada 5 minutos
+  });
 
   const getActiveTab = () => {
     // If currentView is provided, use it (for card navigation)
@@ -219,6 +227,16 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Notifications */}
+              <SellerNotifications 
+                sellerId={user?.id || ''}
+                onNotificationClick={(notification) => {
+                  if (notification.link) {
+                    navigate(notification.link);
+                  }
+                }}
+              />
 
               {/* User Menu */}
               <div className="relative">

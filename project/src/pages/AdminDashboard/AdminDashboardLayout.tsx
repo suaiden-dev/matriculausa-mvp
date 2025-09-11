@@ -21,7 +21,6 @@ import {
   CreditCard,
   Star,
   ArrowRightLeft,
-  FileText,
   FileCheck
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -53,7 +52,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     if (path.includes('/affiliate-payment-requests')) return 'affiliate-payment-requests';
 
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
-    if (path.includes('/transfer-reports')) return 'transfer-reports';
+    if (path.includes('/financial-analytics')) return 'financial-analytics';
     if (path.includes('/terms')) return 'terms';
     if (path.includes('/settings')) return 'settings';
     return 'overview';
@@ -103,7 +102,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'payments', label: 'Payment Management', icon: CreditCard, path: '/admin/dashboard/payments', badge: null },
-    { id: 'transfer-reports', label: 'Transfer Reports', icon: FileText, path: '/admin/dashboard/transfer-reports', badge: null },
+    { id: 'financial-analytics', label: 'Financial Analytics', icon: BarChart3, path: '/admin/dashboard/financial-analytics', badge: null },
 
 
     { id: 'application-monitoring', label: 'Application Monitoring', icon: Activity, path: '/admin/dashboard/application-monitoring', badge: null },
@@ -228,22 +227,22 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               
               <div className="hidden md:block">
                 <h1 className="text-2xl font-bold text-slate-900">
-                  {activeTab === 'overview' && 'Admin Overview'}
-                  {activeTab === 'universities' && 'University Management'}
-                  {activeTab === 'users' && 'User Management'}
-                  {activeTab === 'scholarships' && 'Scholarship Management'}
-                  {activeTab === 'transfer-reports' && 'Transfer Reports'}
-                  {activeTab === 'terms' && 'Terms Management'}
-                  {activeTab === 'settings' && 'Content Management'}
+                  {activeTab === 'overview'}
+                  {activeTab === 'universities'}
+                  {activeTab === 'users'}
+                  {activeTab === 'scholarships'}
+                  {activeTab === 'financial-analytics'}
+                  {activeTab === 'terms'}
+                  {activeTab === 'settings'}
                 </h1>
                 <p className="text-slate-600">
-                  {activeTab === 'overview' && 'Monitor platform performance and activity'}
-                  {activeTab === 'universities' && 'Manage university registrations and approvals'}
-                  {activeTab === 'users' && 'Manage user accounts and permissions'}
-                  {activeTab === 'scholarships' && 'Monitor scholarship programs and applications'}
-                  {activeTab === 'transfer-reports' && 'Financial analytics and transfer performance insights'}
-                  {activeTab === 'terms' && 'Create and manage terms of agreement for the affiliate program'}
-                  {activeTab === 'settings' && 'Manage featured scholarships and universities'}
+                  {activeTab === 'overview'}
+                  {activeTab === 'universities'}
+                  {activeTab === 'users'}
+                  {activeTab === 'scholarships'}
+                  {activeTab === 'financial-analytics'}
+                  {activeTab === 'terms'}
+                  {activeTab === 'settings'}
                 </p>
               </div>
             </div>

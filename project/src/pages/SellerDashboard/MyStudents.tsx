@@ -12,11 +12,11 @@ import {
   TrendingUp,
   TrendingDown,
   Building,
-  Clock,
   Award,
   CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface Student {
@@ -25,7 +25,6 @@ interface Student {
   full_name: string;
   email: string;
   country?: string;
-  total_paid: number;
   created_at: string;
   status: string;
   latest_activity: string;
@@ -33,11 +32,16 @@ interface Student {
   scholarship_title?: string;
   university_name?: string;
   university_id?: string;
-  // Flags de pagamento necessários para a visualização das taxas faltantes
-  has_paid_selection_process_fee?: boolean;
-  has_paid_i20_control_fee?: boolean;
-  is_scholarship_fee_paid?: boolean;
-  is_application_fee_paid?: boolean;
+  
+  // Flags de pagamento (agora obrigatórios para cálculos corretos)
+  has_paid_selection_process_fee: boolean;
+  has_paid_i20_control_fee: boolean;
+  is_scholarship_fee_paid: boolean;
+  is_application_fee_paid: boolean;
+  
+  // Para o deadline do I-20 (agora com tipos mais precisos)
+  scholarship_fee_paid_date: string | null;
+  i20_deadline: string | null; // Data ISO string
 }
 
 interface University {
@@ -62,12 +66,11 @@ interface FilterState {
 
 interface MyStudentsProps {
   students: Student[];
-  sellerProfile: any;
   onRefresh: () => void;
   onViewStudent: (studentId: {id: string, profile_id: string}) => void;
 }
 
-const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefresh, onViewStudent }) => {
+const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
   const { getFeeAmount } = useFeeConfig();
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -163,13 +166,13 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
       if (filters.paymentFilter !== 'all') {
         switch (filters.paymentFilter) {
           case 'paid':
-            if (student.total_paid <= 0) return false;
+            if (calculateStudentTotalPaid(student) <= 0) return false;
             break;
           case 'unpaid':
-            if (student.total_paid > 0) return false;
+            if (calculateStudentTotalPaid(student) > 0) return false;
             break;
           case 'high_value':
-            if (student.total_paid < 1000) return false; // $1000+
+            if (calculateStudentTotalPaid(student) < 1000) return false; // $1000+
             break;
         }
       }
@@ -183,9 +186,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
       let bValue: any;
 
       switch (filters.sortBy) {
-        case 'revenue':
-          aValue = a.total_paid || 0;
-          bValue = b.total_paid || 0;
+          case 'revenue':
+          aValue = calculateStudentTotalPaid(a);
+          bValue = calculateStudentTotalPaid(b);
           break;
         case 'name':
           aValue = a.full_name || '';
@@ -265,34 +268,102 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
 
   // Função para determinar quais taxas estão faltando para um aluno
   const getMissingFees = (student: Student) => {
+    // Debug para verificar os dados do estudante
+    if (student.email === 'kiara4854@uorak.com') {
+      console.log('Student data:', {
+        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+        is_application_fee_paid: student.is_application_fee_paid,
+        scholarship_fee_paid_date: student.scholarship_fee_paid_date,
+        i20_deadline: student.i20_deadline
+      });
+    }
     const missingFees = [];
     
-    // Verificar Selection Process Fee - usar apenas o flag booleano
+    // Verificar Selection Process Fee (primeira taxa a ser paga)
     if (!student.has_paid_selection_process_fee) {
-      missingFees.push({ name: 'Selection Process', amount: getFeeAmount('selection_process'), color: 'red' });
+      const selectionProcessFee = getFeeAmount('selection_process');
+      missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
+      return missingFees; // Se não pagou essa, não mostra as outras
     }
     
-    // Verificar I20 Control Fee - usar apenas o flag booleano
-    if (!student.has_paid_i20_control_fee) {
-      missingFees.push({ name: 'I20 Control', amount: getFeeAmount('i20_control_fee'), color: 'orange' });
-    }
-    
-    // Verificar Scholarship Fee - usar apenas o flag booleano
+    // Verificar Scholarship Fee (segunda taxa a ser paga)
     if (!student.is_scholarship_fee_paid) {
-      missingFees.push({ name: 'Scholarship', amount: getFeeAmount('scholarship_fee'), color: 'blue' });
+      const scholarshipFee = getFeeAmount('scholarship_fee');
+      missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
+      return missingFees; // Se não pagou essa, não mostra as outras
     }
     
-    // Verificar Application Fee - usar apenas o flag booleano
+    // Verificar I20 Control Fee (terceira taxa a ser paga)
+    if (!student.has_paid_i20_control_fee) {
+      const i20ControlFee = getFeeAmount('i20_control_fee');
+      missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
+    }
+    
+    // Verificar Application Fee (última taxa a ser paga)
     if (!student.is_application_fee_paid) {
-      missingFees.push({ name: 'Application', amount: getFeeAmount('application_fee'), color: 'gray' });
+      const applicationFee = getFeeAmount('application_fee');
+      missingFees.push({ name: 'Application', amount: applicationFee, color: 'gray' });
     }
     
     return missingFees;
   };
 
+  // Função para calcular deadline do I-20
+  const calculateI20Deadline = (student: Student): Date | null => {
+    // Se o I-20 já foi pago, não há deadline
+    if (student.has_paid_i20_control_fee) {
+      return null;
+    }
+
+    // Se a scholarship fee foi paga, devemos mostrar o deadline
+    if (student.is_scholarship_fee_paid) {
+      // Primeiro tenta usar o deadline específico do I-20
+      if (student.i20_deadline) {
+        return new Date(student.i20_deadline);
+      }
+
+      // Se não tiver deadline específico, usa a data de pagamento da scholarship + 10 dias
+      if (student.scholarship_fee_paid_date) {
+        const paidDate = new Date(student.scholarship_fee_paid_date);
+        return new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+      }
+      
+      // Se não tiver data de pagamento da scholarship, usa a data de criação + 10 dias
+      const createdDate = new Date(student.created_at);
+      return new Date(createdDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+    }
+
+    return null;
+  };
+
   // Estatísticas calculadas dinamicamente
+  // Função para calcular o total pago por um aluno
+  const calculateStudentTotalPaid = (student: Student): number => {
+    let total = 0;
+
+    if (student.has_paid_selection_process_fee) {
+      total += getFeeAmount('selection_process');
+    }
+    
+    if (student.has_paid_i20_control_fee) {
+      total += getFeeAmount('i20_control_fee');
+    }
+    
+    if (student.is_scholarship_fee_paid) {
+      total += getFeeAmount('scholarship_fee');
+    }
+    
+    if (student.is_application_fee_paid) {
+      total += getFeeAmount('application_fee');
+    }
+
+    return total;
+  };
+
   const stats = React.useMemo(() => {
-    const totalRevenue = filteredStudents.reduce((sum, student) => sum + (student.total_paid || 0), 0);
+    const totalRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
     const activeStudents = filteredStudents.filter(s => 
       s.status === 'active' || s.status === 'registered' || s.status === 'enrolled'
     ).length;
@@ -636,7 +707,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
                     
                     <div className="flex items-center text-sm font-medium text-green-600">
                       <DollarSign className="h-4 w-4 mr-1" />
-                      {formatCurrency(student.total_paid)}
+                      {formatCurrency(calculateStudentTotalPaid(student))}
                     </div>
                   </div>
                 </div>
@@ -671,6 +742,18 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, sellerProfile, onRefr
                         ));
                       })()}
                     </div>
+                  </div>
+                </div>
+
+                {/* I-20 Control Fee Deadline Status */}
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-600">I-20 Control Fee:</span>
+                    <SellerI20DeadlineTimer 
+                      deadline={calculateI20Deadline(student)}
+                      hasPaid={student.has_paid_i20_control_fee || false}
+                      studentName={student.full_name}
+                    />
                   </div>
                 </div>
               </div>
