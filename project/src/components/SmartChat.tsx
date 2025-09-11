@@ -163,38 +163,38 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           }}
           title={"Help & Support Options"}
         >
-          {/* Botão interno menor - só este é clicável */}
-          <button
-            onClick={toggleHelp}
-            className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
-            style={{
-              minWidth: '48px',
-              minHeight: '48px',
-              pointerEvents: 'auto'
-            }}
-            title="Help & Support Options"
+        {/* Ícone de Ajuda - área clicável reduzida */}
+        <div
+          onClick={toggleHelp}
+          className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
+          style={{
+            minWidth: '48px',
+            minHeight: '48px',
+            pointerEvents: 'auto'
+          }}
+          title="Help & Support Options"
+        >
+          <svg 
+            width="28" 
+            height="28" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            xmlns="http://www.w3.org/2000/svg"
+            className={`transition-transform duration-300 ${isHelpExpanded ? 'rotate-180' : ''}`}
           >
-            <svg 
-              width="24" 
-              height="24" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg"
-              className={`transition-transform duration-300 ${isHelpExpanded ? 'rotate-180' : ''}`}
-            >
-              {/* Círculo de fundo */}
-              <circle cx="12" cy="12" r="12" fill="#193156" />
-              
-              {/* Borda branca */}
-              <circle cx="12" cy="12" r="11" fill="none" stroke="white" strokeWidth="2" />
-              
-              {/* Interrogação branca */}
-              <path 
-                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" 
-                fill="white"
-              />
-            </svg>
-          </button>
+            {/* Círculo de fundo */}
+            <circle cx="12" cy="12" r="12" fill="#193156" />
+            
+            {/* Borda branca */}
+            <circle cx="12" cy="12" r="11" fill="none" stroke="white" strokeWidth="2" />
+            
+            {/* Interrogação branca */}
+            <path 
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" 
+              fill="white"
+            />
+          </svg>
+        </div>
         </div>
       </div>
 
@@ -229,8 +229,8 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           {isMobile ? 'Smart Assistant (New Tab)' : 'Smart Assistant'}
           <div className="absolute top-1/2 left-full transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-[#161d29]"></div>
         </div>
-        {/* Botão interno menor - só este é clicável */}
-        <button
+        {/* Ícone Smart Assistant - área clicável reduzida */}
+        <div
           onClick={openChat}
           className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
           style={{
@@ -240,13 +240,13 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           }}
           title={isMobile ? "Smart Assistant - Opens in new tab" : "Smart Assistant - Ask me anything!"}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
             <path d="M7 9H17V11H7V9ZM7 12H13V14H7V12Z" fill="currentColor"/>
             <circle cx="9" cy="9" r="1" fill="currentColor"/>
             <circle cx="15" cy="9" r="1" fill="currentColor"/>
           </svg>
-        </button>
+        </div>
       </div>
 
       {/* WhatsApp Button - Com animação de dropdown */}
