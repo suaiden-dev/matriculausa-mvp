@@ -16,13 +16,15 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
 
   // Esconder elementos flutuantes quando modal está aberto
   React.useEffect(() => {
-    document.body.classList.add('modal-open');
+    if (documentUrl) {
+      document.body.classList.add('modal-open');
+    }
     
     // Restaurar elementos flutuantes quando modal fecha
     return () => {
       document.body.classList.remove('modal-open');
     };
-  }, []);
+  }, [documentUrl]);
 
   // Função para tentar gerar signed URL se a URL pública falhar
   const getSignedUrl = async (originalUrl: string): Promise<string | null> => {
@@ -110,6 +112,8 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       setLoading(true);
       setError(null);
       
+      console.log('🔍 DocumentViewerModal - Iniciando carregamento:', documentUrl);
+      
       // ✅ CORREÇÃO: Garantir que documentUrl seja sempre uma URL completa
       let finalDocumentUrl = documentUrl;
       
@@ -144,27 +148,33 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       
       // Detectar tipo de documento
       const type = detectDocumentType(finalDocumentUrl, fileName);
+      console.log('🔍 DocumentViewerModal - Tipo detectado:', type, 'para URL:', finalDocumentUrl);
       setDocumentType(type);
       
       try {
         // Primeiro tenta carregar a URL original
+        console.log('🔍 DocumentViewerModal - Testando URL original:', finalDocumentUrl);
         const response = await fetch(finalDocumentUrl, { method: 'HEAD' });
         
         if (response.ok) {
+          console.log('✅ DocumentViewerModal - URL original funcionou');
           setActualUrl(finalDocumentUrl);
           setLoading(false);
           return;
         }
       } catch (e) {
-        // Erro ao testar URL original
+        console.log('❌ DocumentViewerModal - URL original falhou:', e);
       }
       
       // Se a URL original falhou, tentar signed URL
+      console.log('🔍 DocumentViewerModal - Tentando signed URL...');
       const signedUrl = await getSignedUrl(finalDocumentUrl);
       if (signedUrl) {
+        console.log('✅ DocumentViewerModal - Signed URL funcionou:', signedUrl);
         setActualUrl(signedUrl);
         setLoading(false);
       } else {
+        console.log('❌ DocumentViewerModal - Todas as tentativas falharam');
         setError('Failed to load document');
         setLoading(false);
       }
