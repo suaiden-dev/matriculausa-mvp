@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       // Student not yet approved - redirect to Selection Process
       mensagem = `Student ${alunoData.full_name} has completed the Application Fee payment ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount).toFixed(2) : '350.00'}) for the scholarship "${scholarship.title}" at ${university.name}. The student awaits university approval. Please access the Selection Process page to review the application.`;
       redirectUrl = '/school/dashboard/selection-process';
-      tipoNotf = 'Student Awaiting Approval - Application Fee Paid';
+      tipoNotf = 'Application Fee Payment Received';
     }
 
     const payload = {
