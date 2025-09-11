@@ -625,6 +625,138 @@ const PaymentManagement = (): React.JSX.Element => {
             console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
           } else {
             console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
+            
+            // PROCESSAR MATRICULA REWARDS - Selection Process Fee
+            console.log('🎁 [approveZellePayment] Processando Matricula Rewards para Selection Process Fee...');
+            console.log('🎁 [approveZellePayment] payment.user_id para Matricula Rewards:', payment.user_id);
+            try {
+              // Buscar o perfil do usuário para verificar se tem código de referência
+              console.log('🎁 [approveZellePayment] Buscando perfil do usuário...');
+              const { data: userProfile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('referral_code_used')
+                .eq('user_id', payment.user_id)
+                .single();
+
+              console.log('🎁 [approveZellePayment] Resultado da busca do perfil:', { userProfile, profileError });
+
+              if (profileError) {
+                console.error('❌ [approveZellePayment] Erro ao buscar perfil do usuário:', profileError);
+              } else if (userProfile?.referral_code_used) {
+                console.log('🎁 [approveZellePayment] Usuário tem código de referência:', userProfile.referral_code_used);
+                
+                // Buscar o dono do código de referência na tabela affiliate_codes
+                console.log('🎁 [approveZellePayment] Buscando dono do código na tabela affiliate_codes...');
+                const { data: affiliateCode, error: affiliateError } = await supabase
+                  .from('affiliate_codes')
+                  .select('user_id, code')
+                  .eq('code', userProfile.referral_code_used)
+                  .eq('is_active', true)
+                  .single();
+
+                console.log('🎁 [approveZellePayment] Resultado da busca do dono do código:', { affiliateCode, affiliateError });
+
+                if (affiliateError) {
+                  console.error('❌ [approveZellePayment] Erro ao buscar dono do código de referência:', affiliateError);
+                } else if (affiliateCode && affiliateCode.user_id !== payment.user_id) {
+                  console.log('🎁 [approveZellePayment] Dono do código encontrado:', affiliateCode.user_id);
+                  console.log('🎁 [approveZellePayment] Verificando se não é auto-referência:', {
+                    affiliateUserId: affiliateCode.user_id,
+                    paymentUserId: payment.user_id,
+                    isDifferent: affiliateCode.user_id !== payment.user_id
+                  });
+                  
+                  // Dar 180 coins para o dono do código
+                  console.log('🎁 [approveZellePayment] Chamando add_coins_to_user_matricula...');
+                  
+                  // Buscar nome do usuário que pagou
+                  const { data: referredUserProfile } = await supabase
+                    .from('user_profiles')
+                    .select('full_name, email')
+                    .eq('user_id', payment.user_id)
+                    .single();
+                  
+                  const referredDisplayName = referredUserProfile?.full_name || referredUserProfile?.email || payment.user_id;
+                  
+                  const { data: coinsResult, error: coinsError } = await supabase.rpc('add_coins_to_user_matricula', {
+                    user_id_param: affiliateCode.user_id,
+                    coins_to_add: 180,
+                    reason: `Referral reward: Selection Process Fee paid by ${referredDisplayName}`
+                  });
+
+                  console.log('🎁 [approveZellePayment] Resultado do add_coins_to_user:', { coinsResult, coinsError });
+
+                  if (coinsError) {
+                    console.error('❌ [approveZellePayment] Erro ao adicionar coins:', coinsError);
+                  } else {
+                    console.log('✅ [approveZellePayment] 180 coins adicionados para o dono do código de referência');
+                    console.log('✅ [approveZellePayment] Resultado:', coinsResult);
+                    
+                    // Enviar notificação de coins para o dono do código
+                    try {
+                      console.log('📧 [approveZellePayment] Enviando notificação de coins...');
+                      
+                      // Buscar dados do dono do código
+                      const { data: referrerProfile } = await supabase
+                        .from('user_profiles')
+                        .select('full_name, email')
+                        .eq('user_id', affiliateCode.user_id)
+                        .single();
+                      
+                      const referrerName = referrerProfile?.full_name || referrerProfile?.email || 'Unknown User';
+                      const referrerEmail = referrerProfile?.email || '';
+                      
+                      // Enviar webhook de notificação
+                      const webhookUrl = 'https://nwh.suaiden.com/webhook/notfmatriculausa';
+                      const mensagem = `Você recebeu 180 MatriculaCoins como recompensa por indicação! O aluno ${referredDisplayName} pagou a taxa de Selection Process Fee via Zelle (aprovado pelo admin) usando seu código de referência.`;
+                      
+                      const notificationPayload = {
+                        tipo_notf: 'Recompensa de MatriculaCoins por Indicação',
+                        email_aluno: referrerEmail,
+                        nome_aluno: referrerName,
+                        o_que_enviar: mensagem,
+                        coins_amount: 180,
+                        referred_student_name: referredDisplayName,
+                        referred_student_email: referredUserProfile?.email || '',
+                        payment_method: 'zelle_admin',
+                        fee_type: 'selection_process',
+                        reward_type: 'referral'
+                      };
+                      
+                      const webhookResponse = await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'User-Agent': 'MatriculaUSA/1.0'
+                        },
+                        body: JSON.stringify(notificationPayload)
+                      });
+                        
+                        if (webhookResponse.ok) {
+                          console.log('✅ [approveZellePayment] Notificação de coins enviada com sucesso!');
+                        } else {
+                          console.error('❌ [approveZellePayment] Erro ao enviar notificação de coins:', webhookResponse.status);
+                        }
+                    } catch (notificationError) {
+                      console.error('❌ [approveZellePayment] Erro ao enviar notificação de coins:', notificationError);
+                    }
+                  }
+                } else {
+                  console.log('ℹ️ [approveZellePayment] Nenhum dono do código de referência encontrado ou é o próprio usuário');
+                  console.log('ℹ️ [approveZellePayment] Detalhes:', {
+                    affiliateCode: !!affiliateCode,
+                    affiliateUserId: affiliateCode?.user_id,
+                    paymentUserId: payment.user_id,
+                    isSameUser: affiliateCode?.user_id === payment.user_id
+                  });
+                }
+              } else {
+                console.log('ℹ️ [approveZellePayment] Usuário não tem código de referência Matricula Rewards');
+                console.log('ℹ️ [approveZellePayment] userProfile.referral_code_used:', userProfile?.referral_code_used);
+              }
+            } catch (rewardsError) {
+              console.error('❌ [approveZellePayment] Erro ao processar Matricula Rewards:', rewardsError);
+            }
           }
         }
       } else {
@@ -799,12 +931,18 @@ const PaymentManagement = (): React.JSX.Element => {
         
         if (notificationEndpoint) {
           const payload = {
-            application_id: payment.scholarship_id || payment.student_id, // Usando scholarship_id se disponível, senão student_id
+            application_id: payment.student_id, // Sempre usar student_id para buscar a aplicação
             user_id: payment.user_id,
             scholarship_id: payment.scholarship_id || null
           };
           
           console.log(`📤 [approveZellePayment] Payload para universidade:`, payload);
+          
+          console.log(`🔗 [approveZellePayment] URL da Edge Function:`, `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`);
+          console.log(`🔗 [approveZellePayment] Headers:`, {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          });
           
           const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${notificationEndpoint}`, {
             method: 'POST',
@@ -815,10 +953,22 @@ const PaymentManagement = (): React.JSX.Element => {
             body: JSON.stringify(payload),
           });
 
+          console.log(`📊 [approveZellePayment] Resposta da Edge Function:`, {
+            status: notificationResponse.status,
+            statusText: notificationResponse.statusText,
+            ok: notificationResponse.ok
+          });
+
           if (notificationResponse.ok) {
-            console.log(`✅ [approveZellePayment] Notificação de ${payment.fee_type} enviada para universidade com sucesso!`);
+            const responseData = await notificationResponse.json();
+            console.log(`✅ [approveZellePayment] Notificação de ${payment.fee_type} enviada para universidade com sucesso!`, responseData);
           } else {
-            console.warn(`⚠️ [approveZellePayment] Erro ao enviar notificação de ${payment.fee_type} para universidade:`, notificationResponse.status);
+            const errorData = await notificationResponse.text();
+            console.warn(`⚠️ [approveZellePayment] Erro ao enviar notificação de ${payment.fee_type} para universidade:`, {
+              status: notificationResponse.status,
+              statusText: notificationResponse.statusText,
+              error: errorData
+            });
           }
         } else {
           console.log(`ℹ️ [approveZellePayment] Tipo de taxa ${payment.fee_type} não requer notificação para universidade`);

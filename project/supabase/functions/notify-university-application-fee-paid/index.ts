@@ -51,9 +51,9 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Student data not found' }, 404);
     }
 
-    // Buscar dados da aplicação e bolsa
-    // Primeiro tentar buscar por ID da aplicação
-    let { data: applicationData, error: appError } = await supabase
+    // Buscar dados da aplicação e bolsa por student_id
+    console.log(`Buscando aplicação para student_id: ${application_id}`);
+    const { data: applicationData, error: appError } = await supabase
       .from('scholarship_applications')
       .select(`
         id,
@@ -72,40 +72,12 @@ Deno.serve(async (req) => {
           )
         )
       `)
-      .eq('id', application_id)
+      .eq('student_id', application_id)
       .single();
 
-    // Se não encontrar por ID, tentar buscar por student_id
     if (appError || !applicationData) {
-      console.log('Tentando buscar aplicação por student_id...');
-      const { data: appDataByStudent, error: appErrorByStudent } = await supabase
-        .from('scholarship_applications')
-        .select(`
-          id,
-          status,
-          is_application_fee_paid,
-          is_scholarship_fee_paid,
-          scholarships!inner(
-            id,
-            title,
-            university_id,
-            application_fee_amount,
-            universities!inner(
-              id,
-              name,
-              contact
-            )
-          )
-        `)
-        .eq('student_id', application_id)
-        .single();
-      
-      if (appErrorByStudent || !appDataByStudent) {
-        console.error('Erro ao buscar dados da aplicação por ID e student_id:', appError, appErrorByStudent);
-        return corsResponse({ error: 'Application data not found' }, 404);
-      }
-      
-      applicationData = appDataByStudent;
+      console.error('Erro ao buscar dados da aplicação por student_id:', appError);
+      return corsResponse({ error: 'Application data not found' }, 404);
     }
 
     const scholarship = applicationData.scholarships;
@@ -122,31 +94,20 @@ Deno.serve(async (req) => {
       }, 200);
     }
 
-    // Determinar se o aluno já foi aprovado pela universidade
-    const isApprovedByUniversity = applicationData.status === 'approved';
-    const scholarshipFeePaid = applicationData.is_scholarship_fee_paid;
+    // Para pagamentos Zelle de application fee, sempre enviar notificação padrão
+    // independente do status da aplicação
+    console.log(`[DEBUG] Status da aplicação: ${applicationData.status}`);
+    console.log(`[DEBUG] is_application_fee_paid: ${applicationData.is_application_fee_paid}`);
+    console.log(`[DEBUG] is_scholarship_fee_paid: ${applicationData.is_scholarship_fee_paid}`);
     
-    // Montar mensagem baseada no status de aprovação e pagamento da scholarship fee
-    let mensagem, redirectUrl, tipoNotf;
+    // Sempre enviar notificação de "Application Fee Payment Received" para pagamentos Zelle
+    const mensagem = `Student ${alunoData.full_name} has completed the Application Fee payment ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount).toFixed(2) : '350.00'}) for the scholarship "${scholarship.title}" at ${university.name}. The student awaits university approval. Please access the Selection Process page to review the application.`;
+    const redirectUrl = '/school/dashboard/selection-process';
+    const tipoNotf = 'Application Fee Payment Received';
     
-    if (isApprovedByUniversity) {
-      if (scholarshipFeePaid) {
-        // Student approved and both fees paid
-        mensagem = `Student ${alunoData.full_name} has completed the Application Fee payment ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount).toFixed(2) : '350.00'}) for the scholarship "${scholarship.title}" at ${university.name}. The student has paid both fees and is ready for enrollment. Please access the Students page to track the process.`;
-        redirectUrl = '/school/dashboard/selection-process';
-        tipoNotf = 'Approved Student - Application Fee Paid (Both Fees Paid)';
-      } else {
-        // Student approved, Application Fee paid, but Scholarship Fee pending
-        mensagem = `Student ${alunoData.full_name} has completed the Application Fee payment ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount).toFixed(2) : '350.00'}) for the scholarship "${scholarship.title}" at ${university.name}. The student still needs to pay the Scholarship Fee ($400.00) to complete the process. Please access the Students page to track the progress.`;
-        redirectUrl = '/school/dashboard/selection-process';
-        tipoNotf = 'Approved Student - Application Fee Paid (Scholarship Fee Pending)';
-      }
-    } else {
-      // Student not yet approved - redirect to Selection Process
-      mensagem = `Student ${alunoData.full_name} has completed the Application Fee payment ($${scholarship.application_fee_amount ? (scholarship.application_fee_amount).toFixed(2) : '350.00'}) for the scholarship "${scholarship.title}" at ${university.name}. The student awaits university approval. Please access the Selection Process page to review the application.`;
-      redirectUrl = '/school/dashboard/selection-process';
-      tipoNotf = 'Application Fee Payment Received';
-    }
+    // Para o payload, sempre usar valores padrão para notificação de application fee
+    const isApprovedByUniversity = false; // Sempre false para notificação de application fee
+    const scholarshipFeePaid = false; // Sempre false para notificação de application fee
 
     const payload = {
       tipo_notf: tipoNotf,
