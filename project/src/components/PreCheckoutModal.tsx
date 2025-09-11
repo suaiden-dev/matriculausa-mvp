@@ -82,7 +82,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
     codeApplied
   });
 
-  // Reset state when modal opens/closes
+  // Reset state when modal opens/closes and control iOS zoom
   useEffect(() => {
     console.log('🔍 [PreCheckoutModal] useEffect triggered, isOpen:', isOpen);
     
@@ -99,7 +99,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setActiveTerm(null); // Reset active term
       setUserClickedCheckbox(false); // Reset user interaction flag
       checkReferralCodeUsage();
-      // Don't load terms automatically - only when checkbox is checked
+      
+      // iOS Safari zoom prevention
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      }
     } else {
       // Clean up state when modal closes
       console.log('🔍 [PreCheckoutModal] Modal fechando, limpando estados');
@@ -112,6 +117,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setShowTermsModal(false);
       setActiveTerm(null);
       setUserClickedCheckbox(false);
+      
+      // Restore original viewport settings
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
     }
   }, [isOpen]);
 
@@ -148,6 +159,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setShowTermsModal(false);
       setActiveTerm(null);
       setUserClickedCheckbox(false);
+      
+      // Restore original viewport settings on unmount
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
     };
   }, []);
 
@@ -640,6 +657,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                           ? 'border-green-300 bg-green-50 cursor-not-allowed' 
                           : 'border-gray-300'
                       }`}
+                      style={{ fontSize: '16px' }}
                       maxLength={8}
                     />
                     {!hasAffiliateCode && (
