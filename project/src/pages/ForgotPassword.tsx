@@ -429,8 +429,8 @@ const ForgotPassword: React.FC = () => {
         <div className="text-center">
           <p className="text-sm text-slate-500">
             Need help? Contact our support team at{' '}
-            <a href="mailto:support@matriculausa.com" className="text-[#05294E] hover:underline font-medium">
-              support@matriculausa.com
+            <a href="mailto:info@matriculausa.com" className="text-[#05294E] hover:underline font-medium">
+              info@matriculausa.com
             </a>
           </p>
         </div>

@@ -22,7 +22,7 @@ const CheckoutCancel: React.FC = () => {
             If you encountered any issues during the checkout process or have questions about our services, please don't hesitate to contact our support team.
           </p>
           <p className="text-slate-600">
-            <strong>Email:</strong> support@matriculausa.com
+            <strong>Email:</strong> info@matriculausa.com
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

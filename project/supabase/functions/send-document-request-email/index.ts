@@ -10,7 +10,7 @@ if (!mailerSendApiKey) {
 
 // Configurações do MailerSend com fallbacks
 const mailerSendUrl = Deno.env.get('MAILERSEND_URL') || 'https://api.mailersend.com/v1/email';
-const fromEmail = Deno.env.get('FROM_EMAIL') || 'support@matriculausa.com';
+const fromEmail = Deno.env.get('FROM_EMAIL') || 'info@matriculausa.com';
 const fromName = Deno.env.get('FROM_NAME') || 'Matrícula USA';
 
 Deno.serve(async (req) => {
