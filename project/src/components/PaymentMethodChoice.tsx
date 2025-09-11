@@ -34,7 +34,7 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
       id: 'zelle',
       name: 'zelle',
       display_name: 'Zelle',
-      description: 'Pay via Zelle transfer (requires automatic verification)',
+      description: 'Pay via Zelle transfer (requires manual verification)',
       icon: Smartphone,
       is_active: true,
       requires_verification: true
@@ -102,7 +102,7 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
                     <div className="mt-2 flex items-center space-x-1">
                       <AlertCircle className="w-4 h-4 text-amber-500" />
                       <span className="text-xs text-amber-700">
-                        Automatic verification required
+                        Manual verification required
                       </span>
                     </div>
                   )}

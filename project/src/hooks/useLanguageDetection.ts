@@ -111,7 +111,6 @@ export const useLanguageDetection = () => {
     
     // Verificar se o idioma detectado já está aplicado
     if (i18n.isInitialized && i18n.language !== detectedLang) {
-      console.log('⚠️ Idioma detectado não está aplicado. Aplicando automaticamente...');
       forceApplyDetectedLanguage();
     }
   }, []);

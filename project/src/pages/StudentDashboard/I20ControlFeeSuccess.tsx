@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 const I20ControlFeeSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -8,6 +9,7 @@ const I20ControlFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
+  const { formatFeeAmount } = useFeeConfig();
   const sessionId = params.get('session_id');
 
   console.log('🔍 [I20ControlFeeSuccess] Componente renderizado com sessionId:', sessionId);
@@ -102,7 +104,7 @@ const I20ControlFeeSuccess: React.FC = () => {
         <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
         <h1 className="text-3xl font-bold text-green-700 mb-2">I-20 Control Fee Payment Successful!</h1>
         <p className="text-slate-700 mb-6 text-center">
-          Your payment of <span className="font-bold">$999</span> has been processed successfully.<br/>
+          Your payment of <span className="font-bold">{formatFeeAmount(900)}</span> has been processed successfully.<br/>
           Your I-20 document will be processed and sent to you soon.
         </p>
         <Link to="/student/dashboard/applications" className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300">

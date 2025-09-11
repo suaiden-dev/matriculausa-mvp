@@ -129,7 +129,7 @@
       "step1": "Complete Zelle transfer to the provided recipient",
       "step2": "Save the confirmation screenshot",
       "step3": "Upload your confirmation screenshot",
-      "step4": "Submit for automatic verification"
+      "step4": "Submit for manual verification"
     },
     "requirements": {
       "title": "Important: Your payment confirmation MUST include:",
@@ -144,10 +144,10 @@
     },
     "steps": {
       "title": "Complete these steps:",
-      "step1": "Complete your Zelle transfer of",
+      "step1": "Complete your Zelle transfer of the required amount",
       "step2": "Save the payment confirmation screenshot that shows all required information",
       "step3": "Upload your confirmation screenshot below",
-      "step4": "Submit for automatic verification (completed within 24 hours)"
+      "step4": "Submit for manual verification (completed within 24 hours)"
     },
     "reviewDetails": "Review your payment details"
   },
@@ -285,11 +285,11 @@
         },
         "q2": {
           "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee (US$999) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "answer": "The Selection Process Fee (US${selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         "q3": {
           "question": "What is the Scholarship Fee?",
-          "answer": "The Scholarship Fee (US$400) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+          "answer": "The Scholarship Fee (US${scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
         },
         "q4": {
           "question": "What is the Application Fee?",
@@ -297,7 +297,7 @@
         },
         "q5": {
           "question": "What is the I-20 Control Fee?",
-          "answer": "The I-20 Control Fee (US$999) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+          "answer": "The I-20 Control Fee (US${i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
         },
         "q6": {
           "question": "Are there any other fees I should be aware of?",
@@ -387,7 +387,7 @@
         "items": ["Academic history & achievements", "Career goals & preferences", "Financial requirements"]
       },
       "selectionFee": {
-        "title": "Pay Selection Fee ($999)",
+        "title": "Pay Selection Fee (${selectionProcessFee})",
         "description": "Unlock all scholarships. This fee is final and non-refundable.",
         "items": ["Access to scholarship browse", "Initiate application process", "One-time fee"]
       },
@@ -402,12 +402,12 @@
         "items": ["See approved scholarships", "Confirm university choice", "Secure your spot"]
       },
       "scholarshipFee": {
-        "title": "Pay Scholarship Fee ($400)",
+        "title": "Pay Scholarship Fee (${scholarshipFee})",
         "description": "Get direct chat with your university. This fee is final and non-refundable.",
         "items": ["Direct chat with university", "Submit additional documents", "Final scholarship commitment"]
       },
       "i20Fee": {
-        "title": "Pay I-20 Control Fee ($999)",
+        "title": "Pay I-20 Control Fee (${i20ControlFee})",
         "description": "Needed for your F-1 visa. This fee is final and non-refundable.",
         "items": ["Essential for F-1 student visa", "Covers I-20 processing", "10-day payment window"]
       }
@@ -439,11 +439,11 @@
       },
       "q2": {
         "question": "What is the Selection Process Fee?",
-        "answer": "The Selection Process Fee (US$999) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "answer": "The Selection Process Fee (US${selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
       },
       "q3": {
         "question": "What is the Scholarship Fee?",
-        "answer": "The Scholarship Fee (US$400) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
+        "answer": "The Scholarship Fee (US${scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
       },
       "q4": {
         "question": "What is the Application Fee?",
@@ -451,7 +451,7 @@
       },
       "q5": {
         "question": "What is the I-20 Control Fee?",
-        "answer": "The I-20 Control Fee (US$999) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
+        "answer": "The I-20 Control Fee (US${i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents. This fee is final and non-refundable."
       }
     }
   },
@@ -2171,8 +2171,8 @@
     "howItWorks": "How it Works",
     "step1Title": "Share your code",
     "step1Description": "Share your unique referral code with friends and family",
-    "step2Title": "They sign up",
-    "step2Description": "When they use your code to sign up, you earn coins",
+    "step2Title": "They pay the selection process fee",
+    "step2Description": "When they use your code and pay the selection process fee, you earn coins",
     "step3Title": "Redeem your rewards",
     "step3Description": "Use your coins to get tuition discounts at participating universities",
     "participatingUniversities": "Participating Universities",

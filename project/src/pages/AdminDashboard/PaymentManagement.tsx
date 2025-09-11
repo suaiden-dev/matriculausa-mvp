@@ -625,6 +625,89 @@ const PaymentManagement = (): React.JSX.Element => {
             console.error('❌ [approveZellePayment] Erro ao registrar faturamento:', billingError);
           } else {
             console.log('✅ [approveZellePayment] Faturamento registrado com sucesso');
+            
+            // PROCESSAR MATRICULA REWARDS - Selection Process Fee
+            console.log('🎁 [approveZellePayment] Processando Matricula Rewards para Selection Process Fee...');
+            console.log('🎁 [approveZellePayment] payment.user_id para Matricula Rewards:', payment.user_id);
+            try {
+              // Buscar o perfil do usuário para verificar se tem código de referência
+              console.log('🎁 [approveZellePayment] Buscando perfil do usuário...');
+              const { data: userProfile, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('referral_code_used')
+                .eq('user_id', payment.user_id)
+                .single();
+
+              console.log('🎁 [approveZellePayment] Resultado da busca do perfil:', { userProfile, profileError });
+
+              if (profileError) {
+                console.error('❌ [approveZellePayment] Erro ao buscar perfil do usuário:', profileError);
+              } else if (userProfile?.referral_code_used) {
+                console.log('🎁 [approveZellePayment] Usuário tem código de referência:', userProfile.referral_code_used);
+                
+                // Buscar o dono do código de referência na tabela affiliate_codes
+                console.log('🎁 [approveZellePayment] Buscando dono do código na tabela affiliate_codes...');
+                const { data: affiliateCode, error: affiliateError } = await supabase
+                  .from('affiliate_codes')
+                  .select('user_id, code')
+                  .eq('code', userProfile.referral_code_used)
+                  .eq('is_active', true)
+                  .single();
+
+                console.log('🎁 [approveZellePayment] Resultado da busca do dono do código:', { affiliateCode, affiliateError });
+
+                if (affiliateError) {
+                  console.error('❌ [approveZellePayment] Erro ao buscar dono do código de referência:', affiliateError);
+                } else if (affiliateCode && affiliateCode.user_id !== payment.user_id) {
+                  console.log('🎁 [approveZellePayment] Dono do código encontrado:', affiliateCode.user_id);
+                  console.log('🎁 [approveZellePayment] Verificando se não é auto-referência:', {
+                    affiliateUserId: affiliateCode.user_id,
+                    paymentUserId: payment.user_id,
+                    isDifferent: affiliateCode.user_id !== payment.user_id
+                  });
+                  
+                  // Dar 180 coins para o dono do código
+                  console.log('🎁 [approveZellePayment] Chamando add_coins_to_user_matricula...');
+                  
+                  // Buscar nome do usuário que pagou
+                  const { data: referredUserProfile } = await supabase
+                    .from('user_profiles')
+                    .select('full_name, email')
+                    .eq('user_id', payment.user_id)
+                    .single();
+                  
+                  const referredDisplayName = referredUserProfile?.full_name || referredUserProfile?.email || payment.user_id;
+                  
+                  const { data: coinsResult, error: coinsError } = await supabase.rpc('add_coins_to_user_matricula', {
+                    user_id_param: affiliateCode.user_id,
+                    coins_to_add: 180,
+                    reason: `Referral reward: Selection Process Fee paid by ${referredDisplayName}`
+                  });
+
+                  console.log('🎁 [approveZellePayment] Resultado do add_coins_to_user:', { coinsResult, coinsError });
+
+                  if (coinsError) {
+                    console.error('❌ [approveZellePayment] Erro ao adicionar coins:', coinsError);
+                  } else {
+                    console.log('✅ [approveZellePayment] 180 coins adicionados para o dono do código de referência');
+                    console.log('✅ [approveZellePayment] Resultado:', coinsResult);
+                  }
+                } else {
+                  console.log('ℹ️ [approveZellePayment] Nenhum dono do código de referência encontrado ou é o próprio usuário');
+                  console.log('ℹ️ [approveZellePayment] Detalhes:', {
+                    affiliateCode: !!affiliateCode,
+                    affiliateUserId: affiliateCode?.user_id,
+                    paymentUserId: payment.user_id,
+                    isSameUser: affiliateCode?.user_id === payment.user_id
+                  });
+                }
+              } else {
+                console.log('ℹ️ [approveZellePayment] Usuário não tem código de referência Matricula Rewards');
+                console.log('ℹ️ [approveZellePayment] userProfile.referral_code_used:', userProfile?.referral_code_used);
+              }
+            } catch (rewardsError) {
+              console.error('❌ [approveZellePayment] Erro ao processar Matricula Rewards:', rewardsError);
+            }
           }
         }
       } else {

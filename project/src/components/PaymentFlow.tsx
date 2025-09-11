@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StripeCheckout } from './StripeCheckout';
 import { ZellePaymentFlow } from './ZellePaymentFlow';
 import { PaymentMethodChoice } from './PaymentMethodChoice';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 
 interface PaymentFlowProps {
   productId: string;
@@ -28,6 +29,7 @@ export const PaymentFlow: React.FC<PaymentFlowProps> = ({
   studentProcessType,
   beforeCheckout,
 }) => {
+  const { getFeeAmount } = useFeeConfig();
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'zelle' | null>(null);
 
@@ -51,7 +53,7 @@ export const PaymentFlow: React.FC<PaymentFlowProps> = ({
   };
 
   const getAmount = () => {
-    return feeType === 'selection_process' ? 999 : 350;
+    return feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee');
   };
 
   // Se um método foi selecionado, renderizar o componente correspondente

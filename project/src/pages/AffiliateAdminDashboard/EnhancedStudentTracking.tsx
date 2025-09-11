@@ -818,21 +818,28 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     
     // Verificar Selection Process Fee
     if (feeFilters.selectionProcessFee !== 'all') {
-      const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= 999;
+      const selectionFee = getFeeAmount('selection_process');
+      const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= selectionFee;
       if (feeFilters.selectionProcessFee === 'paid' && !hasPaidSelection) return false;
       if (feeFilters.selectionProcessFee === 'pending' && hasPaidSelection) return false;
     }
     
     // Verificar I20 Control Fee
     if (feeFilters.i20ControlFee !== 'all') {
-      const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= 1998;
+      const selectionFee = getFeeAmount('selection_process');
+      const i20Fee = getFeeAmount('i20_control_fee');
+      const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= (selectionFee + i20Fee);
       if (feeFilters.i20ControlFee === 'paid' && !hasPaidI20) return false;
       if (feeFilters.i20ControlFee === 'pending' && hasPaidI20) return false;
     }
     
     // Verificar Scholarship Fee
     if (feeFilters.scholarshipFee !== 'all') {
-      const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= 2398;
+      const selectionFee = getFeeAmount('selection_process');
+      const i20Fee = getFeeAmount('i20_control_fee');
+      const scholarshipFee = getFeeAmount('scholarship_fee');
+      const totalFees = selectionFee + i20Fee + scholarshipFee;
+      const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= totalFees;
       if (feeFilters.scholarshipFee === 'paid' && !hasPaidScholarship) return false;
       if (feeFilters.scholarshipFee === 'pending' && hasPaidScholarship) return false;
     }
@@ -989,22 +996,26 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const getMissingFees = (student: any) => {
     const missingFees = [];
     
-    // Verificar Selection Process Fee ($999)
-    const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= 999;
+    const selectionFee = getFeeAmount('selection_process');
+    const i20Fee = getFeeAmount('i20_control_fee');
+    const scholarshipFee = getFeeAmount('scholarship_fee');
+    
+    // Verificar Selection Process Fee
+    const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= selectionFee;
     if (!hasPaidSelection) {
-      missingFees.push({ name: 'Selection Process', amount: 999, color: 'red' });
+      missingFees.push({ name: 'Selection Process', amount: selectionFee, color: 'red' });
     }
     
-    // Verificar I20 Control Fee ($999)
-    const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= 1998;
+    // Verificar I20 Control Fee
+    const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= (selectionFee + i20Fee);
     if (!hasPaidI20) {
-      missingFees.push({ name: 'I20 Control', amount: 999, color: 'orange' });
+      missingFees.push({ name: 'I20 Control', amount: i20Fee, color: 'orange' });
     }
     
-    // Verificar Scholarship Fee ($400)
-    const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= 2398;
+    // Verificar Scholarship Fee
+    const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= (selectionFee + i20Fee + scholarshipFee);
     if (!hasPaidScholarship) {
-      missingFees.push({ name: 'Scholarship', amount: 400, color: 'blue' });
+      missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
     }
     
     // Verificar Application Fee ($50) - apenas para referência, não conta na receita
@@ -2208,7 +2219,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                     {/* Selection Process Fee Filter */}
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Selection Process Fee ($999)
+                        Selection Process Fee (${getFeeAmount('selection_process')})
                       </label>
                       <select
                         value={filters.feeFilters.selectionProcessFee}
@@ -2230,7 +2241,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                     {/* I20 Control Fee Filter */}
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">
-                        I20 Control Fee ($999)
+                        I20 Control Fee (${getFeeAmount('i20_control_fee')})
                       </label>
                       <select
                         value={filters.feeFilters.i20ControlFee}

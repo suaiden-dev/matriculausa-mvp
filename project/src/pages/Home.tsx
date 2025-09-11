@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Heart, Brain, Rocket, Clock, CreditCard, MapPin, Lock } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
@@ -12,7 +12,7 @@ import { slugify } from '../utils/slugify';
 import SEOHead from '../components/SEO/SEOHead';
 
 const Home: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslationWithFees();
   const navigate = useNavigate();
   const { universities } = useUniversities();
   

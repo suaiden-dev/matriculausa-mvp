@@ -40,19 +40,25 @@ const FeaturedUniversitiesManagement: React.FC = () => {
     fetchUniversities();
   }, []);
 
+
+
   const fetchUniversities = async () => {
     try {
       setLoading(true);
+      
       const { data, error } = await supabase
         .from('universities')
         .select('id, name, location, logo_url, is_approved, is_featured, featured_order')
         .eq('is_approved', true)
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+      
       setUniversities(data || []);
+      
     } catch (error) {
-      console.error('Error loading universities:', error);
       setMessage({ type: 'error', text: 'Error loading universities' });
     } finally {
       setLoading(false);
@@ -82,7 +88,7 @@ const FeaturedUniversitiesManagement: React.FC = () => {
   const toggleFeatured = async (universityId: string, currentFeatured: boolean) => {
     try {
       if (currentFeatured) {
-        // Unmark as featured
+        // Remove from featured
         const { error } = await supabase
           .from('universities')
           .update({ 
@@ -91,10 +97,14 @@ const FeaturedUniversitiesManagement: React.FC = () => {
           })
           .eq('id', universityId);
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
+        
       } else {
         // Check if we already have 6 featured universities
         const featuredCount = universities.filter(u => u.is_featured).length;
+        
         if (featuredCount >= 6) {
           setMessage({ 
             type: 'error', 
@@ -103,8 +113,12 @@ const FeaturedUniversitiesManagement: React.FC = () => {
           return;
         }
 
-        // Mark as featured and set order
-        const nextOrder = featuredCount + 1;
+        // Find the next available featured_order
+        const featuredUniversities = universities.filter(u => u.is_featured);
+        const usedOrders = featuredUniversities.map(u => u.featured_order).filter(order => order !== null);
+        const maxOrder = Math.max(...usedOrders, 0);
+        const nextOrder = maxOrder + 1;
+        
         const { error } = await supabase
           .from('universities')
           .update({ 
@@ -113,11 +127,14 @@ const FeaturedUniversitiesManagement: React.FC = () => {
           })
           .eq('id', universityId);
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
       }
 
-      // Reload data
+      // Reload data from server
       await fetchUniversities();
+      
       setMessage({ 
         type: 'success', 
         text: currentFeatured ? 'University removed from featured' : 'University added to featured' 
@@ -126,7 +143,6 @@ const FeaturedUniversitiesManagement: React.FC = () => {
       // Clear message after 3 seconds
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      console.error('Error updating featured status:', error);
       setMessage({ type: 'error', text: 'Error updating university featured status' });
     }
   };
@@ -153,14 +169,35 @@ const FeaturedUniversitiesManagement: React.FC = () => {
         return; // Cannot move
       }
 
-      // Update order in database
+      // Strategy: Use a different approach - temporarily set is_featured to false
+      // Step 1: Temporarily remove all from featured to avoid constraint conflicts
+      for (const university of featuredUniversities) {
+        const { error } = await supabase
+          .from('universities')
+          .update({ 
+            is_featured: false, 
+            featured_order: null 
+          })
+          .eq('id', university.id);
+        
+        if (error) {
+          throw error;
+        }
+      }
+
+      // Step 2: Add them back in the new order
       for (let i = 0; i < newOrder.length; i++) {
         const { error } = await supabase
           .from('universities')
-          .update({ featured_order: i + 1 })
+          .update({ 
+            is_featured: true, 
+            featured_order: i + 1 
+          })
           .eq('id', newOrder[i].id);
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
       }
 
       // Reload data
@@ -260,6 +297,7 @@ const FeaturedUniversitiesManagement: React.FC = () => {
           {message.text}
         </div>
       )}
+
 
       {/* Featured Universities */}
       {universities.filter(u => u.is_featured).length > 0 && (

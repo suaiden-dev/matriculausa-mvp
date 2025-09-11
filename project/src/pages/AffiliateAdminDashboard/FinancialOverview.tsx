@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 // Declare Chart.js types
 declare global {
@@ -64,6 +65,8 @@ interface CalculatedMetrics {
 }
 
 const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceReloadToken }) => {
+  const { getFeeAmount } = useFeeConfig();
+  
   // Financial statistics state
   const [financialStats, setFinancialStats] = useState<FinancialStats>({
     totalCredits: 0,
@@ -172,11 +175,18 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const totalRevenue = rows.reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0);
       const totalReferrals = rows.length || 0;
       // Derivar status a partir de pagamentos reais (considerando as 3 taxas: selection, i20_control, scholarship)
-      const getPaidFlags = (r: any) => ({
-        paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= 999,
-        paidI20Control: !!r.has_paid_i20_control_fee || (Number(r.total_paid) || 0) >= 1998, // 999 + 999
-        paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= 2398 // 999 + 999 + 400
-      });
+      const getPaidFlags = (r: any) => {
+        const selectionFee = getFeeAmount('selection_process');
+        const i20Fee = getFeeAmount('i20_control_fee');
+        const scholarshipFee = getFeeAmount('scholarship_fee');
+        const totalFees = selectionFee + i20Fee + scholarshipFee;
+        
+        return {
+          paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= selectionFee,
+          paidI20Control: !!r.has_paid_i20_control_fee || (Number(r.total_paid) || 0) >= (selectionFee + i20Fee),
+          paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= totalFees
+        };
+      };
       let derivedCompleted = 0;
       let derivedPending = 0;
       rows.forEach((r: any) => {
@@ -276,10 +286,15 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
     // Calcular tendências de referência (baseado em pagamentos, não no campo status genérico)
     const totalReferrals = referralsData?.length || 0;
-    const getPaidFlags = (r: any) => ({
-      paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= 999,
-      paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= 1400
-    });
+    const getPaidFlags = (r: any) => {
+      const selectionFee = getFeeAmount('selection_process');
+      const scholarshipFee = getFeeAmount('scholarship_fee');
+      
+      return {
+        paidSelection: !!r.has_paid_selection_process_fee || (Number(r.total_paid) || 0) >= selectionFee,
+        paidScholarship: !!r.is_scholarship_fee_paid || (Number(r.total_paid) || 0) >= (selectionFee + scholarshipFee)
+      };
+    };
     const completedReferrals = referralsData?.filter((r: any) => {
       const { paidSelection, paidScholarship } = getPaidFlags(r);
       return paidSelection || paidScholarship || (Number(r.total_paid) || 0) > 0;
@@ -307,9 +322,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
 
     // Montar eventos por taxa paga (evitar "pending" quando já há pagamento confirmado)
-    const SELECTION_FEE_AMOUNT = 999;
-    const I20_CONTROL_FEE_AMOUNT = 999;
-    const SCHOLARSHIP_FEE_AMOUNT = 400;
+    const SELECTION_FEE_AMOUNT = getFeeAmount('selection_process');
+    const I20_CONTROL_FEE_AMOUNT = getFeeAmount('i20_control_fee');
+    const SCHOLARSHIP_FEE_AMOUNT = getFeeAmount('scholarship_fee');
 
     referralsData?.slice(0, 10).forEach((row: any) => {
       const totalPaid = Number(row.total_paid) || 0;

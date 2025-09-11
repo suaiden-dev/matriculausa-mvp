@@ -24,11 +24,11 @@ import {
   GraduationCap,
   CreditCard
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, tRaw } = useTranslationWithFees();
   
   return (
     <div className="bg-white min-h-screen">
@@ -73,7 +73,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-[#05294E]">1. {t('howItWorks.steps.profile.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.profile.description')}</p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(tRaw('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -88,7 +88,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-green-700">2. {t('howItWorks.steps.selectionFee.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.selectionFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(tRaw('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -103,7 +103,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-blue-700">3. {t('howItWorks.steps.documents.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.documents.description')}</p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(tRaw('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -118,7 +118,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-yellow-700">4. {t('howItWorks.steps.applicationFee.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.applicationFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(tRaw('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -133,7 +133,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-purple-700">5. {t('howItWorks.steps.scholarshipFee.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.scholarshipFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.scholarshipFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(tRaw('howItWorks.steps.scholarshipFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -148,7 +148,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-red-700">6. {t('howItWorks.steps.i20Fee.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.i20Fee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.i20Fee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(tRaw('howItWorks.steps.i20Fee.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>

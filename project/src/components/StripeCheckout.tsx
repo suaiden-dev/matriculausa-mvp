@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Dialog } from '@headlessui/react';
 import { useAuth } from '../hooks/useAuth';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
@@ -50,6 +51,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const { isAuthenticated, updateUserProfile } = useAuth();
+  const { getFeeAmount } = useFeeConfig();
 
   const product = STRIPE_PRODUCTS[productId as keyof typeof STRIPE_PRODUCTS];
   
@@ -214,10 +216,10 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       // Redirecionar para a página de checkout do Zelle
       const params = new URLSearchParams({
         feeType: feeType,
-        amount: feeType === 'selection_process' ? '999' : 
-                feeType === 'application_fee' ? '350' :
-                feeType === 'scholarship_fee' ? '400' :
-                feeType === 'enrollment_fee' ? '999' : '999',
+        amount: feeType === 'selection_process' ? getFeeAmount('selection_process').toString() : 
+                feeType === 'application_fee' ? getFeeAmount('application_fee').toString() :
+                feeType === 'scholarship_fee' ? getFeeAmount('scholarship_fee').toString() :
+                feeType === 'enrollment_fee' ? getFeeAmount('i20_control_fee').toString() : getFeeAmount('selection_process').toString(),
         scholarshipsIds: scholarshipsIds?.join(',') || ''
       });
       window.location.href = `/checkout/zelle?${params.toString()}`;
@@ -330,7 +332,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           onProceedToCheckout={handlePreCheckoutSuccess}
           feeType={feeType}
           productName={product.name}
-          productPrice={feeType === 'selection_process' ? 999 : 350}
+          productPrice={feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee')}
         />
       )}
 
@@ -382,7 +384,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   selectedMethod={selectedPaymentMethod}
                   onMethodSelect={handlePaymentMethodSelect}
                   feeType={feeType}
-                  amount={400}
+                  amount={getFeeAmount('scholarship_fee')}
                 />
               </div>
             </Dialog.Panel>
@@ -446,7 +448,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   selectedMethod={selectedPaymentMethod}
                   onMethodSelect={handlePaymentMethodSelect}
                   feeType={feeType}
-                  amount={feeType === 'selection_process' ? 999 : feeType === 'scholarship_fee' ? 400 : 350}
+                  amount={feeType === 'selection_process' ? getFeeAmount('selection_process') : feeType === 'scholarship_fee' ? getFeeAmount('scholarship_fee') : getFeeAmount('application_fee')}
                 />
               </div>
             </Dialog.Panel>

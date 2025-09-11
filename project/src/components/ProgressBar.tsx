@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, DollarSign, Award, FileText, ArrowRight, Lock, Clock } from 'lucide-react';
+import { useFeeConfig } from '../hooks/useFeeConfig';
 
 interface Step {
   label: string;
@@ -31,13 +32,14 @@ const getStepIcon = (idx: number, completed: boolean, current: boolean) => {
 };
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
+  const { getFeeAmount } = useFeeConfig();
   const currentIdx = steps.findIndex(step => step.current);
   // Valores padrão das taxas (usados quando não há valores customizados)
   const defaultFeeValues = [
-    '$999', // Selection Process Fee
-    '$350', // Application Fee
-    '$400', // Scholarship Fee
-    '$999', // I-20 Control Fee
+    `$${getFeeAmount('selection_process')}`, // Selection Process Fee
+    `$${getFeeAmount('application_fee')}`, // Application Fee
+    `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
+    `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
   ];
   
   // Usar valores customizados se fornecidos, senão usar os padrão
