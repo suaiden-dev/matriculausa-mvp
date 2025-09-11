@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CreditCard, Smartphone, CheckCircle, X } from 'lucide-react';
@@ -26,6 +26,20 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   const navigate = useNavigate();
   const { getFeeAmount: getFeeAmountFromConfig, formatFeeAmount } = useFeeConfig();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
+
+  // Hide floating elements when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [isOpen]);
 
   // Valor dinâmico baseado no tipo de taxa
   const getFeeAmount = () => {

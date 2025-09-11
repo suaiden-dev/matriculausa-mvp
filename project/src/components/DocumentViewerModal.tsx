@@ -165,6 +165,57 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     }
   }, [documentUrl, fileName]);
 
+  // Esconder botões flutuantes quando modal está ativo
+  React.useEffect(() => {
+    // Pequeno delay para garantir que o modal está totalmente renderizado
+    const timer = setTimeout(() => {
+      // Esconder todos os botões flutuantes possíveis
+      const selectors = [
+        '.floating-whatsapp-button',
+        '.floating-whatsapp-area',
+        '.floating-cart-button', 
+        '.floating-cart-area',
+        '[class*="smart-chat"]',
+        '[title*="Smart Assistant"]',
+        '[title*="Help & Support"]',
+        '[data-testid="cart-icon"]',
+        'div[style*="position: fixed"][style*="bottom"]',
+        'div[style*="position: fixed"][style*="right"]'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          (element as HTMLElement).style.setProperty('display', 'none', 'important');
+        });
+      });
+    }, 50);
+    
+    return () => {
+      clearTimeout(timer);
+      // Restaurar botões quando modal fecha
+      const selectors = [
+        '.floating-whatsapp-button',
+        '.floating-whatsapp-area',
+        '.floating-cart-button',
+        '.floating-cart-area', 
+        '[class*="smart-chat"]',
+        '[title*="Smart Assistant"]',
+        '[title*="Help & Support"]',
+        '[data-testid="cart-icon"]',
+        'div[style*="position: fixed"][style*="bottom"]',
+        'div[style*="position: fixed"][style*="right"]'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          (element as HTMLElement).style.removeProperty('display');
+        });
+      });
+    };
+  }, []);
+
   const handleDownload = async () => {
     try {
       const response = await fetch(actualUrl);
@@ -268,10 +319,10 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
 
   const modalContent = (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] transition-opacity p-4 document-viewer-overlay"
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center transition-opacity p-4 document-viewer-overlay"
       onClick={onClose}
       style={{ 
-        zIndex: 9999,
+        zIndex: 9999999,
         top: 0,
         left: 0,
         right: 0,

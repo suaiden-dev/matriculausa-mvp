@@ -71,8 +71,8 @@ const Footer: React.FC = () => {
             <h3 className="text-xl font-bold text-white">{t('footer.students.support')}</h3>
             <ul className="space-y-3">
               <li><Link to="/faq" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.faq')}</Link></li>
-              <li><Link to="/contact-us" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.contact')}</Link></li>
-              <li><Link to="/help-center" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.helpCenter')}</Link></li>
+              <li><Link to="/contact" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.company.contact')}</Link></li>
+              <li><Link to="/help" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.students.helpCenter')}</Link></li>
               <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.privacy')}</Link></li>
               <li><Link to="/terms-of-service" className="text-slate-300 hover:text-white transition-colors hover:translate-x-1 transform duration-200 block">{t('footer.legal.terms')}</Link></li>
             </ul>

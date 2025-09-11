@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
 import { Dialog } from '@headlessui/react';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
@@ -7,7 +6,6 @@ import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
-import { ZelleCheckout } from './ZelleCheckout';
 
 interface StripeCheckoutProps {
   productId: keyof typeof STRIPE_PRODUCTS;
@@ -44,7 +42,22 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 }) => {
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
+
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
+
+  // Hide floating elements when any modal is open
+  useEffect(() => {
+    if (showPreCheckoutModal || showScholarshipFeeModal || showI20ControlFeeModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showPreCheckoutModal, showScholarshipFeeModal, showI20ControlFeeModal]);
   const [showPaymentMethodSelector, setShowPaymentMethodSelector] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
   const [loading, setLoading] = useState(false);
@@ -330,7 +343,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           isOpen={showPreCheckoutModal}
           onClose={() => setShowPreCheckoutModal(false)}
           onProceedToCheckout={handlePreCheckoutSuccess}
-          feeType={feeType}
+          feeType={feeType === 'i20_control_fee' ? 'application_fee' : feeType}
           productName={product.name}
           productPrice={feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee')}
         />

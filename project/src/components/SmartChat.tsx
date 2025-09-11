@@ -152,8 +152,7 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
       >
         {/* Botão de Ajuda */}
         <div
-          onClick={toggleHelp}
-          className={`w-16 h-16 rounded-full bg-[#193156] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(25,49,86,0.4)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-300 group relative hover:scale-105 ${
+          className={`w-16 h-16 rounded-full bg-[#193156] text-white flex items-center justify-center shadow-[0_0_0_2.5px_#f7f7f7,0_6px_20px_rgba(25,49,86,0.4)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-300 group relative ${
             isHelpExpanded ? 'rotate-180 scale-110' : ''
           }`}
           style={{
@@ -164,7 +163,17 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
           }}
           title={"Help & Support Options"}
         >
-          {/* Ícone de Ajuda */}
+        {/* Ícone de Ajuda - área clicável reduzida */}
+        <div
+          onClick={toggleHelp}
+          className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
+          style={{
+            minWidth: '48px',
+            minHeight: '48px',
+            pointerEvents: 'auto'
+          }}
+          title="Help & Support Options"
+        >
           <svg 
             width="28" 
             height="28" 
@@ -186,12 +195,12 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
             />
           </svg>
         </div>
+        </div>
       </div>
 
       {/* Smart Assistant Chat Bubble - Com animação de dropdown */}
       <div
-        onClick={openChat}
-        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center cursor-pointer z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out group relative hover:scale-105 ${
+        className={`fixed w-16 h-16 rounded-full bg-gradient-to-br from-[#193156] via-[#193156] to-[#a41e22] text-[#f7f7f7] flex items-center justify-center z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out group relative ${
           isMobile ? 'active:scale-95' : 'hover:scale-105'
         }`}
         style={{
@@ -215,17 +224,24 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
         }}
         title={isMobile ? "Smart Assistant - Opens in new tab" : "Smart Assistant - Ask me anything!"}
       >
-        {/* Tooltip */}
-        <div className="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-3 py-1 bg-[#161d29] text-[#f7f7f7] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap border border-[#2e3f60] shadow-lg">
-          {isMobile ? 'Smart Assistant (New Tab)' : 'Smart Assistant'}
-          <div className="absolute top-1/2 left-full transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-[#161d29]"></div>
+        {/* Ícone Smart Assistant - área clicável reduzida */}
+        <div
+          onClick={openChat}
+          className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
+          style={{
+            minWidth: '48px',
+            minHeight: '48px',
+            pointerEvents: 'auto'
+          }}
+          title={isMobile ? "Smart Assistant - Opens in new tab" : "Smart Assistant - Ask me anything!"}
+        >
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
+            <path d="M7 9H17V11H7V9ZM7 12H13V14H7V12Z" fill="currentColor"/>
+            <circle cx="9" cy="9" r="1" fill="currentColor"/>
+            <circle cx="15" cy="9" r="1" fill="currentColor"/>
+          </svg>
         </div>
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor"/>
-          <path d="M7 9H17V11H7V9ZM7 12H13V14H7V12Z" fill="currentColor"/>
-          <circle cx="9" cy="9" r="1" fill="currentColor"/>
-          <circle cx="15" cy="9" r="1" fill="currentColor"/>
-        </svg>
       </div>
 
       {/* WhatsApp Button - Com animação de dropdown */}
@@ -254,11 +270,6 @@ const SmartChat: React.FC<SmartChatProps> = ({isStudentPage = false}) => {
         }}
         title="Contact us via WhatsApp"
       >
-        {/* Tooltip */}
-        <div className="absolute right-full top-1/2 transform -translate-y-1/2 mr-2 px-3 py-1 bg-[#161d29] text-[#f7f7f7] text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap border border-[#2e3f60] shadow-lg">
-          WhatsApp
-          <div className="absolute top-1/2 left-full transform -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-[#161d29]"></div>
-        </div>
         <a
           href="https://wa.me/12136762544"
           target="_blank"
