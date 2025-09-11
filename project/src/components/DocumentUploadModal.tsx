@@ -8,17 +8,6 @@ interface DocumentUploadModalProps {
 }
 
 const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ onSuccess, onClose }) => {
-  // Hide floating elements when modal is open
-  React.useEffect(() => {
-    // Hide floating elements when modal opens
-    document.body.classList.add('modal-open');
-    
-    // Cleanup function to show floating elements when modal closes
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, []);
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full relative">
