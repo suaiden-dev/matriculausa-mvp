@@ -998,46 +998,46 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
       </div>
 
       {/* Acceptance Letter block - Design otimizado para mobile */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 sm:mt-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 sm:mt-8 relative">
         {/* Header escuro azul */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 sm:px-6 sm:py-5">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-              <svg className="w-5 h-5 sm:w-7 sm:h-7 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-3 sm:px-6 sm:py-5">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+              <svg className="w-4 h-4 sm:w-7 sm:h-7 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2z" />
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-lg sm:text-2xl font-bold text-white mb-1 truncate">{t('studentDashboard.documentRequests.forms.acceptanceLetter')}</h3>
+              <h3 className="text-base sm:text-2xl font-bold text-white mb-1 truncate">{t('studentDashboard.documentRequests.forms.acceptanceLetter')}</h3>
             </div>
           </div>
         </div>
         
         {/* Conteúdo principal */}
-        <div className="p-4 sm:p-8">
+        <div className="p-3 sm:p-8">
           {/* Instruções */}
-          <p className="text-slate-700 text-sm sm:text-lg mb-6 sm:mb-8 leading-relaxed max-w-4xl">
+          <p className="text-slate-700 text-xs sm:text-lg mb-4 sm:mb-8 leading-relaxed max-w-4xl">
             {t('studentDashboard.documentRequests.forms.acceptanceLetterInstructions')}
           </p>
           
           {/* Status para o aluno */}
           {!isSchool && (
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-3 sm:gap-4">
 
               {acceptanceLetter && (acceptanceLetter.acceptance_letter_status === 'approved' || acceptanceLetter.acceptance_letter_status === 'sent') ? (
-                <div className="text-center">
-                  <div className="mb-4">
-                    <span className="px-6 py-3 bg-green-100 text-green-800 border border-green-300 rounded-xl text-base font-semibold">
+                <div className="text-center w-full max-w-sm">
+                  <div className="mb-3 sm:mb-4 relative">
+                    <span className="inline-block px-3 py-2 sm:px-6 sm:py-3 bg-green-100 text-green-800 border border-green-300 rounded-xl text-sm sm:text-base font-semibold break-words">
                       {t('studentDashboard.documentRequests.forms.acceptanceLetterReceived')}
                     </span>
                   </div>
-                  <p className="text-green-700 text-sm mb-4">
+                  <p className="text-green-700 text-xs sm:text-sm mb-3 sm:mb-4 px-2 leading-relaxed">
                     {t('studentDashboard.documentRequests.forms.enrolledMessage')}
                   </p>
                   {acceptanceLetter.acceptance_letter_url && (
-                    <div className="flex gap-2 justify-center">
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center w-full px-2">
                       <button
-                        className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-blue-600 text-white px-3 py-2 sm:px-4 rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto"
                         disabled={downloadingAcceptanceLetter}
                         onClick={async () => {
                           try {
@@ -1094,7 +1094,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({ application
                         )}
                       </button>
                       <button
-                        className="bg-white text-blue-600 border border-blue-600 px-4 py-2 rounded font-semibold shadow hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-white text-blue-600 border border-blue-600 px-3 py-2 sm:px-4 rounded-lg font-semibold shadow hover:bg-blue-50 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto"
                         disabled={viewingAcceptanceLetter}
                         onClick={async () => {
                           try {
