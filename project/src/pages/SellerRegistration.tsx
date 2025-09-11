@@ -166,13 +166,14 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
           .rpc('get_user_email_by_id', { user_id_param: affiliateAdminId });
         
         if (adminError || !adminData || adminData.length === 0) {
-            console.warn('⚠️ [SELLER_REG] Não foi possível buscar dados do admin, a notificação pode falhar.');
+            console.warn('⚠ [SELLER_REG] Não foi possível buscar dados do admin, a notificação pode falhar.');
         }
 
         const adminUser = adminData?.[0] || { full_name: 'Affiliate Admin', email: 'admin@matriculausa.com' };
         
-        const notificationPayload = {
-          tipo_notf: "Novo vendedor se registrou",
+        // 2.1. NOTIFICAÇÃO PARA O AFFILIATE ADMIN
+        const affiliateNotificationPayload = {
+          tipo_notf: "Novo vendedor se registrou - Affiliate Admin",
           email_affiliate_admin: adminUser.email,
           nome_affiliate_admin: adminUser.full_name,
           email_seller: formData.email.trim().toLowerCase(),
@@ -181,20 +182,51 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
           o_que_enviar: `Um novo vendedor ${formData.full_name} (${formData.email}) se registrou usando seu código ${formData.registration_code}. Acesse o dashboard para aprovar ou rejeitar a solicitação.`,
           registration_code: formData.registration_code,
           seller_id: authData.user.id,
-          dashboard_link: "/affiliate-admin/dashboard?tab=pending"
+          dashboard_link: "/affiliate-admin/dashboard?tab=pending",
+          notification_target: 'affiliate_admin'
         };
         
-        console.log('🚀 [SELLER_REG] Enviando webhook para n8n...');
-        const notificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        console.log('🚀 [SELLER_REG] Enviando notificação para affiliate admin...');
+        const affiliateNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(notificationPayload),
+          body: JSON.stringify(affiliateNotificationPayload),
         });
 
-        if (notificationResponse.ok) {
-          console.log('✅ [SELLER_REG] Notificação enviada com sucesso!');
+        if (affiliateNotificationResponse.ok) {
+          console.log('✅ [SELLER_REG] Notificação para affiliate admin enviada com sucesso!');
         } else {
-          console.warn('⚠️ [SELLER_REG] Falha ao enviar notificação:', notificationResponse.statusText);
+          console.warn('⚠ [SELLER_REG] Falha ao enviar notificação para affiliate admin:', affiliateNotificationResponse.statusText);
+        }
+
+        // 2.2. NOTIFICAÇÃO PARA O ADMIN
+        const adminNotificationPayload = {
+          tipo_notf: "Novo vendedor se registrou - Admin",
+          email_admin: "admin@matriculausa.com",
+          nome_admin: "Admin MatriculaUSA",
+          email_affiliate_admin: adminUser.email,
+          nome_affiliate_admin: adminUser.full_name,
+          email_seller: formData.email.trim().toLowerCase(),
+          nome_seller: formData.full_name,
+          phone_seller: formData.phone,
+          o_que_enviar: `Um novo vendedor ${formData.full_name} (${formData.email}) se registrou usando o código ${formData.registration_code} do affiliate admin ${adminUser.full_name}. Acesse o dashboard para acompanhar a aprovação.`,
+          registration_code: formData.registration_code,
+          seller_id: authData.user.id,
+          dashboard_link: "/admin/dashboard?tab=sellers",
+          notification_target: 'admin'
+        };
+        
+        console.log('🚀 [SELLER_REG] Enviando notificação para admin...');
+        const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(adminNotificationPayload),
+        });
+
+        if (adminNotificationResponse.ok) {
+          console.log('✅ [SELLER_REG] Notificação para admin enviada com sucesso!');
+        } else {
+          console.warn('⚠ [SELLER_REG] Falha ao enviar notificação para admin:', adminNotificationResponse.statusText);
         }
 
       } catch (notificationError) {

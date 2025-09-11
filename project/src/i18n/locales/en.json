@@ -277,6 +277,7 @@
       "title": "Frequently Asked Questions",
       "mainTitle": "Everything You Need to Know",
       "subtitle": "Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA",
+      "badge": "Questions & Answers",
       "questions": {
         "q1": {
           "question": "What fees or payments are required to use MatriculaUSA?",
@@ -475,6 +476,10 @@
     "resultsFound": "scholarships found"
   },
   "scholarshipsPage": {
+    "loginRequired": {
+      "title": "Login Required",
+      "message": "Please log in to view scholarship details and access all features"
+    },
     "featuredSection": {
       "title": "Featured Scholarships",
       "subtitle": "Weekly Highlights",
@@ -591,6 +596,10 @@
       "partnerUniversities": "Partner Universities",
       "title": "American Universities",
       "subtitle": "Discover world-class institutions offering exceptional education and scholarship opportunities."
+    },
+    "loginRequired": {
+      "title": "Login Required",
+      "message": "Please log in to view university details and access all features"
     },
     "search": {
       "placeholder": "Search universities...",
@@ -1243,7 +1252,8 @@
     "apply": "Apply",
     "viewDetails": "View Details",
     "deadline": "Deadline",
-    "amount": "Amount"
+    "amount": "Amount",
+    "support": "Support"
   },
   "studentDashboard": {
     "title": "Student Dashboard",
@@ -2373,7 +2383,13 @@
         "friends": "friends",
         "coinsEarned": "Coins Earned",
         "totalSavings": "Monthly Tuition Reduction",
-        "cta": "Start Saving Now"
+        "cta": "Start Saving Now",
+        "minValue": "1 friend",
+        "maxValue": "50+ friends",
+        "coinsPerFriend": "180 coins",
+        "perFriend": "per friend",
+        "coinValue": "1 coin =",
+        "usdValue": "$1 USD"
       },
       "actions": {
         "shareNow": "Share now",
@@ -2383,6 +2399,27 @@
       },
       "journey": {
         "startMessage": "Start your savings journey now!"
+      },
+      "qrCode": {
+        "title": "Register Instantly",
+        "subtitle": "Scan the QR code with your phone to access the registration page directly and start saving on your tuition today.",
+        "description": "Quick and secure access to your account",
+        "instruction": "Use your phone's camera to scan",
+        "note": "Available for mobile devices only",
+        "benefits": {
+          "quickAccess": {
+            "title": "Quick and Secure Access",
+            "description": "Register in seconds without typing long URLs"
+          },
+          "startSaving": {
+            "title": "Start Saving Immediately",
+            "description": "Earn coins from day one and apply discounts to your tuition"
+          },
+          "referFriends": {
+            "title": "Refer Friends and Multiply Your Earnings",
+            "description": "180 coins for each friend who signs up using your code"
+          }
+        }
       }
     },
     "testimonials": {

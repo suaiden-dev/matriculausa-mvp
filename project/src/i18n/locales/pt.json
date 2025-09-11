@@ -277,6 +277,7 @@
       "title": "Perguntas Frequentes",
       "mainTitle": "Tudo o que Você Precisa Saber",
       "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA",
+      "badge": "Perguntas e Respostas",
       "questions": {
         "q1": {
           "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
@@ -475,6 +476,10 @@
     "resultsFound": "bolsas encontradas"
   },
   "scholarshipsPage": {
+    "loginRequired": {
+      "title": "Login Necessário",
+      "message": "Faça login para visualizar os detalhes das bolsas de estudo e acessar todos os recursos"
+    },
     "featuredSection": {
       "title": "Bolsas em Destaque",
       "subtitle": "Destaques Semanais",
@@ -591,6 +596,10 @@
       "partnerUniversities": "Universidades Parceiras",
       "title": "Universidades Americanas",
       "subtitle": "Descubra instituições de classe mundial oferecendo educação excepcional e oportunidades de bolsa."
+    },
+    "loginRequired": {
+      "title": "Login Necessário",
+      "message": "Faça login para visualizar os detalhes das universidades e acessar todos os recursos"
     },
     "search": {
       "placeholder": "Buscar universidades...",
@@ -2367,7 +2376,13 @@
         "friends": "amigos",
         "coinsEarned": "Coins Ganhos",
         "totalSavings": "Redução Mensal na Mensalidade",
-        "cta": "Começar a Economizar Agora"
+        "cta": "Começar a Economizar Agora",
+        "minValue": "1 amigo",
+        "maxValue": "50+ amigos",
+        "coinsPerFriend": "180 coins",
+        "perFriend": "por amigo",
+        "coinValue": "1 coin =",
+        "usdValue": "$1 USD"
       },
       "actions": {
         "shareNow": "Compartilhe agora",
@@ -2377,6 +2392,27 @@
       },
       "journey": {
         "startMessage": "Comece sua jornada de economia agora!"
+      },
+      "qrCode": {
+        "title": "Registre-se Instantaneamente",
+        "subtitle": "Escaneie o QR code com seu celular para acessar diretamente a página de registro e comece a economizar na sua mensalidade hoje mesmo.",
+        "description": "Acesso rápido e seguro ao seu cadastro",
+        "instruction": "Use a câmera do seu celular para escanear",
+        "note": "Disponível apenas para dispositivos móveis",
+        "benefits": {
+          "quickAccess": {
+            "title": "Acesso Rápido e Seguro",
+            "description": "Registre-se em segundos sem precisar digitar URLs longas"
+          },
+          "startSaving": {
+            "title": "Comece a Economizar Imediatamente",
+            "description": "Ganhe coins desde o primeiro dia e aplique descontos na sua mensalidade"
+          },
+          "referFriends": {
+            "title": "Indique Amigos e Multiplique Seus Ganhos",
+            "description": "180 coins por cada amigo que se inscrever usando seu código"
+          }
+        }
       }
     },
     "testimonials": {

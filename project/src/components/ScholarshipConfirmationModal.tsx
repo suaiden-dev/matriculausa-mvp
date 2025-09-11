@@ -286,8 +286,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
       
       {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
-        <Dialog.Panel className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0">
+      <div className="fixed inset-0 flex items-end sm:items-center justify-center z-30">
+        <Dialog.Panel className="w-full h-full sm:h-auto sm:max-w-2xl bg-white  md:rounded-2xl shadow-2xl overflow-hidden relative border-0 sm:max-h-[90vh] flex flex-col">
           {/* Loading Overlay */}
           {isProcessing && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -300,7 +300,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           )}
           
           {/* Header */}
-          <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
+          <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 sm:p-6 flex-shrink-0">
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
@@ -325,9 +325,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-6">
             {/* Scholarship Info */}
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
               <h3 className="font-semibold text-gray-900 mb-2">Selected Scholarship</h3>
               <div className="space-y-2">
                 <div className="flex justify-between">
@@ -349,7 +349,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             </div>
 
             {/* Important Decision Warning */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div>
@@ -367,7 +367,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
               
               <div className="grid gap-3">
                 {/* Stripe Option */}
-                <label className="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                <label className="relative flex items-center p-2 sm:p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
                   <input
                     type="radio"
                     name="payment-method"
@@ -398,7 +398,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                 </label>
 
                 {/* Zelle Option */}
-                <label className="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                <label className="relative flex items-center p-2 sm:p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
                   <input
                     type="radio"
                     name="payment-method"
@@ -432,10 +432,10 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 px-6 py-4 flex gap-3">
+          <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0">
             <button
               onClick={onClose}
-              className="flex-1 bg-white text-gray-700 py-3 px-6 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
+              className="flex-1 bg-white text-gray-700 py-2 px-3 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm"
             >
               Let me think about it
             </button>
@@ -443,7 +443,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             <button
               onClick={handleProceed}
               disabled={!canProceed || isProcessing}
-              className="flex-1 bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 bg-green-600 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
             >
               {isProcessing ? (
                 <div className="flex items-center justify-center">
