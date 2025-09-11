@@ -1537,10 +1537,10 @@
       "step3Title": "Earn Rewards",
       "step3Description": "You earn 200 MatriculaCoins for each successful referral.",
       "participatingUniversities": "Participating Universities",
-      "universitiesDescription": "These universities accept MatriculaCoins for tuition discounts. If your university is not listed, they may not have opted to participate in the program yet.",
+      "universitiesDescription": "These universities accept MatriculaCoins for fee discounts. If your university is not listed, they may not have opted to participate in the program yet.",
       "searchUniversities": "Search universities by name, location, or type...",
       "importantInformation": "Important Information",
-      "universityNotListed": "If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!",
+      "universityNotListed": "If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. You can still earn coins by referring friends, but you won't be able to redeem them for fee discounts at your university until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!",
       "backToRewards": "Back to Rewards",
       "coinsAvailable": "Matricula Coins Available",
       "rewardsStore": "Rewards Store",
@@ -2366,23 +2366,23 @@
           "details": "180 coins for each successful referral"
         },
         "step3": {
-          "title": "Redeem Tuition Discount",
-          "description": "Use your coins to redeem tuition discounts from the Rewards Store",
+          "title": "Redeem Fee Discount",
+          "description": "Use your coins to redeem fee discounts from the Rewards Store",
           "details": "Select your university and redeem the discount"
         },
         "step4": {
           "title": "Contact Your University",
           "description": "Contact your university's admissions office to apply the redeemed discount",
-          "details": "Present your discount code to get the reduction on your tuition"
+          "details": "Present your discount code to get the reduction on your fees"
         }
       },
       "calculator": {
-        "title": "Tuition Reduction Calculator",
-        "description": "See how much you can reduce your monthly tuition by referring friends",
+        "title": "Matrícula Coins Calculator",
+        "description": "See how many coins you can earn by referring friends",
         "label": "How many friends can you refer?",
         "friends": "friends",
         "coinsEarned": "Coins Earned",
-        "totalSavings": "Monthly Tuition Reduction",
+        "totalSavings": "Value Available for Redemption",
         "cta": "Start Saving Now",
         "minValue": "1 friend",
         "maxValue": "50+ friends",
@@ -2413,7 +2413,7 @@
           },
           "startSaving": {
             "title": "Start Saving Immediately",
-            "description": "Earn coins from day one and apply discounts to your tuition"
+            "description": "Earn coins from day one and apply discounts to your fees"
           },
           "referFriends": {
             "title": "Refer Friends and Multiply Your Earnings",
@@ -2458,7 +2458,7 @@
       "items": [
         {
           "title": "Real Savings",
-          "description": "Direct discounts on your university tuition",
+          "description": "Direct discounts on your university fees",
           "highlight": "Up to $2,000/semester"
         },
         {
