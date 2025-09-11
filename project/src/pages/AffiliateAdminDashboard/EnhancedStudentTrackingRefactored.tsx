@@ -18,14 +18,14 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
 
   // Hooks personalizados
-  const { sellers, students, universities, loading, error } = useStudentData(userId);
+  const { sellers, students, universities, loading } = useStudentData(userId);
   const {
     selectedStudent,
     studentDetails,
     scholarshipApplication,
     studentDocuments,
     documentRequests,
-    loadingStudentDetails,
+    i20ControlFeeDeadline,
     loadStudentDetails,
     backToList
   } = useStudentDetails();
@@ -124,6 +124,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               studentDetails={studentDetails}
               scholarshipApplication={scholarshipApplication}
               studentDocuments={studentDocuments}
+              i20ControlFeeDeadline={i20ControlFeeDeadline}
               onBack={backToList}
               activeTab={activeTab}
               onTabChange={setActiveTab}

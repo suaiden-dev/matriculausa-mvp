@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, ChevronDown, ChevronRight, Eye, MapPin, DollarSign, CheckCircle2 } from 'lucide-react';
+import { User, ChevronDown, ChevronRight, MapPin, DollarSign, CheckCircle2, ChevronRight as ArrowRight } from 'lucide-react';
 
 interface SellersListProps {
   filteredSellers: any[];
@@ -169,13 +169,17 @@ const SellersList: React.FC<SellersListProps> = ({
                             Registered on
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                            Actions
+                            I-20 Deadline
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-slate-200">
                         {sellerStudents.map((student) => (
-                          <tr key={student.id} className="hover:bg-slate-50">
+                          <tr 
+                            key={student.id} 
+                            className="hover:bg-blue-50 hover:shadow-sm cursor-pointer transition-all duration-200 group"
+                            onClick={() => onViewStudentDetails(student.id, student.profile_id)}
+                          >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -244,14 +248,36 @@ const SellersList: React.FC<SellersListProps> = ({
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                               {formatDate(student.created_at)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <button
-                                onClick={() => onViewStudentDetails(student.id, student.profile_id)}
-                                className="text-[#05294E] hover:text-[#041f38] flex items-center space-x-1 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                              >
-                                <Eye className="h-4 w-4" />
-                                <span>View Details</span>
-                              </button>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  {(() => {
+                                    // Calcular data limite do I-20 (10 dias após scholarship fee pago)
+                                    if (student.is_scholarship_fee_paid && !student.has_paid_i20_control_fee) {
+                                      // Para simplificar, vamos mostrar apenas se há deadline ativo
+                                      // A data exata será calculada no componente de detalhes
+                                      return (
+                                        <div className="flex items-center space-x-2">
+                                          <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                          <span className="text-orange-700 font-medium text-xs">Active Deadline</span>
+                                        </div>
+                                      );
+                                    } else if (student.has_paid_i20_control_fee) {
+                                      return (
+                                        <div className="flex items-center space-x-2">
+                                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                          <span className="text-green-700 font-medium text-xs">Paid</span>
+                                        </div>
+                                      );
+                                    } else {
+                                      return (
+                                        <span className="text-slate-400 text-xs">Not applicable</span>
+                                      );
+                                    }
+                                  })()}
+                                </div>
+                                <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                              </div>
                             </td>
                           </tr>
                         ))}
