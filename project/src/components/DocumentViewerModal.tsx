@@ -14,6 +14,16 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   const [error, setError] = React.useState<string | null>(null);
   const [documentType, setDocumentType] = React.useState<'pdf' | 'image' | 'unknown'>('unknown');
 
+  // Esconder elementos flutuantes quando modal está aberto
+  React.useEffect(() => {
+    document.body.classList.add('modal-open');
+    
+    // Restaurar elementos flutuantes quando modal fecha
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, []);
+
   // Função para tentar gerar signed URL se a URL pública falhar
   const getSignedUrl = async (originalUrl: string): Promise<string | null> => {
     try {
@@ -192,21 +202,23 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   const renderContent = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center min-h-[400px] min-w-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <div className="ml-3 text-gray-600">Carregando documento...</div>
+        <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] p-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600"></div>
+            <div className="text-gray-600 text-sm sm:text-base text-center">Carregando documento...</div>
+          </div>
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="flex items-center justify-center min-h-[400px] min-w-[400px] flex-col">
-          <div className="text-red-500 text-lg mb-4">⚠️ Erro ao carregar documento</div>
-          <div className="text-gray-600 text-center mb-4">{error}</div>
+        <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] flex-col p-4">
+          <div className="text-red-500 text-base sm:text-lg mb-4 text-center">⚠️ Erro ao carregar documento</div>
+          <div className="text-gray-600 text-center mb-4 text-sm sm:text-base">{error}</div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-sm sm:text-base"
           >
             Fechar
           </button>
@@ -217,7 +229,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     // Para PDFs, usa iframe
     if (documentType === 'pdf') {
       return (
-        <div className="w-full h-full min-h-[600px]">
+        <div className="w-full h-full min-h-[400px] sm:min-h-[600px]">
           <iframe
             src={actualUrl}
             className="w-full h-full border-0 rounded"
@@ -233,32 +245,35 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     // Para imagens, usa img tag
     if (documentType === 'image') {
       return (
-        <img 
-          src={actualUrl} 
-          alt="Document preview" 
-          className="object-contain w-full h-full max-h-[80vh]"
-          onLoad={() => {
-            // Imagem carregada com sucesso
-          }}
-          onError={() => {
-            setError('Erro ao carregar imagem. Tente fazer o download.');
-          }}
-        />
+        <div className="w-full h-full flex items-center justify-center p-2">
+          <img 
+            src={actualUrl} 
+            alt="Document preview" 
+            className="object-contain w-full h-full max-h-[70vh] sm:max-h-[80vh]"
+            onLoad={() => {
+              // Imagem carregada com sucesso
+            }}
+            onError={() => {
+              setError('Erro ao carregar imagem. Tente fazer o download.');
+            }}
+          />
+        </div>
       );
     }
 
     // Para tipos desconhecidos, oferece apenas download
     return (
-      <div className="flex items-center justify-center min-h-[400px] min-w-[400px] flex-col">
-        <div className="text-gray-700 text-lg mb-4">📄 Documento disponível</div>
-        <div className="text-gray-600 text-center mb-4">
+      <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] flex-col p-4">
+        <div className="text-gray-700 text-base sm:text-lg mb-4 text-center">📄 Documento disponível</div>
+        <div className="text-gray-600 text-center mb-4 text-sm sm:text-base max-w-md">
           Este tipo de documento não pode ser visualizado no navegador.
-          <br />
+          <br className="hidden sm:block" />
+          <span className="sm:hidden"> </span>
           Clique em "Download" para baixar e abrir em um aplicativo apropriado.
         </div>
         <button
           onClick={handleDownload}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base"
         >
           Download Documento
         </button>
@@ -268,7 +283,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
 
   const modalContent = (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] transition-opacity p-4 document-viewer-overlay"
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] transition-opacity p-2 sm:p-4 document-viewer-overlay"
       onClick={onClose}
       style={{ 
         zIndex: 9999,
@@ -281,36 +296,36 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       }}
     >
       <div 
-        className="relative bg-white rounded-lg shadow-2xl max-w-6xl max-h-[95vh] w-full h-full flex flex-col overflow-hidden"
+        className="relative bg-white rounded-lg shadow-2xl max-w-6xl max-h-[95dvh] w-full h-full flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header com título e botões */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-semibold text-gray-800 truncate">
+        <div className="flex items-center justify-between p-2 sm:p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+          <h3 className="text-sm sm:text-lg font-semibold text-gray-800 truncate">
             {fileName || 'Documento'}
           </h3>
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             {!error && !loading && (
               <button
                 onClick={handleDownload}
-                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                className="px-2 sm:px-3 py-1 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2"
                 title="Download"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Download
+                <span className="hidden sm:inline">Download</span>
               </button>
             )}
             <button
               onClick={onClose}
-              className="px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-sm font-medium flex items-center gap-2"
+              className="px-2 sm:px-3 py-1 sm:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2"
               title="Fechar"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Fechar
+              <span className="hidden sm:inline">Fechar</span>
             </button>
           </div>
         </div>
