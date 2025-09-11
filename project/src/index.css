@@ -57,7 +57,11 @@
   body.modal-open [data-testid="cart-icon"],
   body.modal-open [class*="floating-"],
   body.modal-open [class*="smart-chat"],
-  body.modal-open [style*="position: fixed"][style*="z-index"] {
+  body.modal-open [style*="position: fixed"][style*="z-index"],
+  body.modal-open [title*="Smart Assistant"],
+  body.modal-open [title*="Help & Support"],
+  body.modal-open [style*="zIndex: 10001"],
+  body.modal-open [style*="zIndex: 10002"] {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
