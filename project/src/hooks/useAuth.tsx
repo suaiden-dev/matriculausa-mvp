@@ -253,6 +253,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // O role será elevado para 'seller' apenas após aprovação do admin
             const finalRole = session.user.user_metadata?.seller_referral_code ? 'student' : desiredRoleFromMetadata;
 
+            // Buscar o pacote de bolsas se fornecido
+            let scholarshipPackageId = null;
+            if (session.user.user_metadata?.scholarship_package_number) {
+              try {
+                const { data: packageData, error: packageError } = await supabase
+                  .from('scholarship_packages')
+                  .select('id')
+                  .eq('package_number', session.user.user_metadata.scholarship_package_number)
+                  .eq('is_active', true)
+                  .single();
+                
+                if (!packageError && packageData) {
+                  scholarshipPackageId = packageData.id;
+                  console.log('✅ [USEAUTH] Pacote de bolsas encontrado:', packageData.id);
+                } else {
+                  console.warn('⚠️ [USEAUTH] Pacote de bolsas não encontrado:', packageError);
+                }
+              } catch (err) {
+                console.error('❌ [USEAUTH] Erro ao buscar pacote de bolsas:', err);
+              }
+            }
+
             const profileData = {
               user_id: session.user.id,
               full_name: fullName,
@@ -261,7 +283,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               role: finalRole,
               // Include referral codes if provided
               affiliate_code: session.user.user_metadata?.affiliate_code || null,
-              seller_referral_code: session.user.user_metadata?.seller_referral_code || null
+              seller_referral_code: session.user.user_metadata?.seller_referral_code || null,
+              scholarship_package_id: scholarshipPackageId
             };
             
             console.log('🔍 [USEAUTH] profileData que será inserido:', profileData);
@@ -446,6 +469,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(builtUser);
         setSupabaseUser(session.user);
 
+        // Salvar no cache para evitar flicker em próximas navegações
+        if (profile && builtUser) {
+          localStorage.setItem('cached_user', JSON.stringify(builtUser));
+          localStorage.setItem('cached_user_profile', JSON.stringify(profile));
+        }
+
         // Sincronizar telefone do user_metadata se o perfil não tiver
         if (profile && !profile.phone && session.user.user_metadata?.phone) {
           try {
@@ -530,10 +559,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
+    // Verificar se já temos dados em cache para evitar flicker
+    const cachedUser = localStorage.getItem('cached_user');
+    const cachedProfile = localStorage.getItem('cached_user_profile');
+    
+    if (cachedUser && cachedProfile) {
+      try {
+        const userData = JSON.parse(cachedUser);
+        const profileData = JSON.parse(cachedProfile);
+        setUser(userData);
+        setUserProfile(profileData);
+        setLoading(false);
+      } catch (e) {
+        // Se falhar ao parsear cache, continuar com verificação normal
+      }
+    }
+    
     supabase.auth.getSession().then(({ data: { session } }) => {
       fetchAndSetUser(session);
       setLoading(false);
     });
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_, session) => {
         fetchAndSetUser(session);
@@ -623,6 +669,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('pending_full_name');
       localStorage.removeItem('pending_phone');
       localStorage.removeItem('pending_affiliate_code');
+      localStorage.removeItem('cached_user');
+      localStorage.removeItem('cached_user_profile');
       localStorage.removeItem('pending_seller_referral_code');
       localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
       sessionStorage.clear();
@@ -647,6 +695,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('pending_full_name');
       localStorage.removeItem('pending_phone');
       localStorage.removeItem('pending_affiliate_code');
+      localStorage.removeItem('cached_user');
+      localStorage.removeItem('cached_user_profile');
       localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
       sessionStorage.clear();
       
@@ -678,10 +728,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       Object.entries(userData).filter(([/*k*/ _k, value]) => value !== undefined && value !== null)
     );
     
+    console.log('🔍 [USEAUTH] userData original:', userData);
+    console.log('🔍 [USEAUTH] cleanUserData:', cleanUserData);
+    
     const signUpData = {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
+      full_name: cleanUserData.full_name, // Adicionar full_name explicitamente
     };
+    
+    console.log('🔍 [USEAUTH] signUpData final:', signUpData);
     
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();

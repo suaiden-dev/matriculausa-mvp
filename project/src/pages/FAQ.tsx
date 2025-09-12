@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { HelpCircle, Search, ChevronDown, ChevronUp, MessageCircle, Phone, Mail, CheckCircle, Clock } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
+import { useDynamicFees } from '../hooks/useDynamicFees';
 import SmartChat from '../components/SmartChat';
 
 const FAQ: React.FC = () => {
   const { t } = useTranslationWithFees();
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
+
+  // Debug logs
+  console.log('🔍 [FAQ] Dynamic fees:', { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName });
 
   const faqItems = [
     {
@@ -16,12 +21,16 @@ const FAQ: React.FC = () => {
     },
     {
       q: t('home.faq.questions.q2.question'),
-      a: t('home.faq.questions.q2.answer'),
+      a: hasSellerPackage 
+        ? `The Selection Process Fee is ${selectionProcessFee} and includes access to our AI-powered scholarship discovery, personalized recommendations, and application support. This fee is final and non-refundable.`
+        : t('home.faq.questions.q2.answer'),
       category: 'Payment'
     },
     {
       q: t('home.faq.questions.q3.question'),
-      a: t('home.faq.questions.q3.answer'),
+      a: hasSellerPackage 
+        ? `The Scholarship Fee is ${scholarshipFee} and covers the formalization of your scholarship grant, direct communication with your chosen university, and final documentation support. This fee is final and non-refundable.`
+        : t('home.faq.questions.q3.answer'),
       category: 'Payment'
     },
     {
@@ -31,7 +40,9 @@ const FAQ: React.FC = () => {
     },
     {
       q: t('home.faq.questions.q5.question'),
-      a: t('home.faq.questions.q5.answer'),
+      a: hasSellerPackage 
+        ? `The I-20 Control Fee is ${i20ControlFee} and is essential for your F-1 student visa process. This fee must be paid within 10 days after approval and is final and non-refundable.`
+        : t('home.faq.questions.q5.answer'),
       category: 'Payment'
     },
     {

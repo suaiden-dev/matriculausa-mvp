@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       return corsResponse(null, 204);
     }
 
-    const { success_url, cancel_url, price_id: incomingPriceId } = await req.json();
+    const { success_url, cancel_url, price_id: incomingPriceId, metadata } = await req.json();
     const price_id = incomingPriceId;
     const mode = 'payment';
 
@@ -50,27 +50,82 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
+    // Buscar taxas do pacote do usuário
+    let userPackageFees = null;
+    try {
+      const { data: packageData, error: packageError } = await supabase
+        .rpc('get_user_package_fees', {
+          user_id_param: user.id
+        });
+
+      if (!packageError && packageData && packageData.length > 0) {
+        userPackageFees = packageData[0];
+        console.log('[stripe-checkout-i20-control-fee] ✅ Taxas do pacote encontradas:', userPackageFees);
+      } else {
+        console.log('[stripe-checkout-i20-control-fee] ⚠️ Usuário não tem pacote atribuído, usando taxas padrão');
+      }
+    } catch (err) {
+      console.error('[stripe-checkout-i20-control-fee] ❌ Erro ao buscar taxas do pacote:', err);
+    }
+
     // Metadata para rastreamento
     const sessionMetadata = {
       student_id: user.id,
       fee_type: 'i20_control_fee',
+      ...metadata,
     };
 
-    const session = await stripe.checkout.sessions.create({
+    // Adicionar informações do pacote como strings no metadata
+    if (userPackageFees) {
+      sessionMetadata.user_has_package = 'true';
+      sessionMetadata.package_name = userPackageFees.package_name;
+      sessionMetadata.package_selection_fee = userPackageFees.selection_process_fee.toString();
+      sessionMetadata.package_scholarship_fee = userPackageFees.scholarship_fee.toString();
+      sessionMetadata.package_i20_fee = userPackageFees.i20_control_fee.toString();
+    } else {
+      sessionMetadata.user_has_package = 'false';
+    }
+
+    // Configuração da sessão Stripe
+    let sessionConfig: any = {
       payment_method_types: ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
-      line_items: [
-        {
-          price: price_id,
-          quantity: 1,
-        },
-      ],
       mode,
       success_url,
       cancel_url,
       metadata: sessionMetadata,
-    });
+    };
+
+    // Se o usuário tem pacote, usar preço dinâmico
+    if (userPackageFees) {
+      const dynamicAmount = Math.round(userPackageFees.i20_control_fee * 100); // Converter para centavos
+      sessionConfig.line_items = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'I-20 Control Fee',
+              description: `I-20 Control Fee - ${userPackageFees.package_name}`,
+            },
+            unit_amount: dynamicAmount,
+          },
+          quantity: 1,
+        },
+      ];
+      console.log('[stripe-checkout-i20-control-fee] ✅ Usando valor dinâmico do pacote:', userPackageFees.i20_control_fee);
+    } else {
+      // Usar price_id padrão se não tiver pacote
+      sessionConfig.line_items = [
+        {
+          price: price_id,
+          quantity: 1,
+        },
+      ];
+      console.log('[stripe-checkout-i20-control-fee] ⚠️ Usando price_id padrão:', price_id);
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {

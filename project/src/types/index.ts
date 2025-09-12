@@ -423,3 +423,28 @@ export interface PayoutInvoice {
   status: 'issued' | 'voided';
   created_at: string;
 }
+
+// Sistema de Pacotes de Bolsas
+export interface ScholarshipPackage {
+  id: string;
+  name: string;
+  description?: string;
+  package_number: number;
+  selection_process_fee: number;
+  i20_control_fee: number;
+  scholarship_fee: number;
+  total_paid: number;
+  scholarship_amount: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserPackageFees {
+  selection_process_fee: number;
+  i20_control_fee: number;
+  scholarship_fee: number;
+  total_paid: number;
+  scholarship_amount: number;
+  package_name: string;
+}

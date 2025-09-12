@@ -611,12 +611,33 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log('✅ [approveZellePayment] has_paid_selection_process_fee marcado como true');
           console.log('🔍 [approveZellePayment] Dados atualizados:', updateData);
           
-          // Registrar no faturamento
-          console.log('💰 [approveZellePayment] Registrando selection_process no faturamento...');
+          // Buscar valor dinâmico correto baseado no pacote do usuário
+          console.log('💰 [approveZellePayment] Buscando valor dinâmico correto...');
+          let correctAmount = payment.amount; // Valor padrão
+          
+          try {
+            // Buscar taxas do pacote do usuário
+            const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
+              user_id_param: payment.user_id
+            });
+            
+            if (!packageError && userPackageFees && userPackageFees.length > 0) {
+              const packageFees = userPackageFees[0];
+              correctAmount = packageFees.selection_process_fee;
+              console.log('✅ [approveZellePayment] Valor dinâmico encontrado:', correctAmount, 'Pacote:', packageFees.package_name);
+            } else {
+              console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão:', correctAmount);
+            }
+          } catch (error) {
+            console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico, usando valor padrão:', error);
+          }
+
+          // Registrar no faturamento com valor correto
+          console.log('💰 [approveZellePayment] Registrando selection_process no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
             user_id_param: payment.user_id,
             fee_type_param: 'selection_process',
-            amount_param: payment.amount,
+            amount_param: correctAmount,
             payment_session_id_param: `zelle_${payment.id}`,
             payment_method_param: 'zelle'
           });
@@ -788,12 +809,33 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log('✅ [approveZellePayment] has_paid_i20_control_fee marcado como true');
           console.log('🔍 [approveZellePayment] Dados atualizados i20_control_fee:', updateData);
           
-          // Registrar no faturamento
-          console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento...');
+          // Buscar valor dinâmico correto baseado no pacote do usuário
+          console.log('💰 [approveZellePayment] Buscando valor dinâmico correto para i20_control_fee...');
+          let correctAmount = payment.amount; // Valor padrão
+          
+          try {
+            // Buscar taxas do pacote do usuário
+            const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
+              user_id_param: payment.user_id
+            });
+            
+            if (!packageError && userPackageFees && userPackageFees.length > 0) {
+              const packageFees = userPackageFees[0];
+              correctAmount = packageFees.i20_control_fee;
+              console.log('✅ [approveZellePayment] Valor dinâmico encontrado para i20_control_fee:', correctAmount, 'Pacote:', packageFees.package_name);
+            } else {
+              console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão para i20_control_fee:', correctAmount);
+            }
+          } catch (error) {
+            console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para i20_control_fee, usando valor padrão:', error);
+          }
+
+          // Registrar no faturamento com valor correto
+          console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
             user_id_param: payment.user_id,
             fee_type_param: 'i20_control_fee',
-            amount_param: payment.amount,
+            amount_param: correctAmount,
             payment_session_id_param: `zelle_${payment.id}`,
             payment_method_param: 'zelle'
           });
@@ -831,11 +873,32 @@ const PaymentManagement = (): React.JSX.Element => {
           
           // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
           if (payment.fee_type === 'scholarship_fee') {
-            console.log('💰 [approveZellePayment] Registrando scholarship_fee no faturamento...');
+            // Buscar valor dinâmico correto baseado no pacote do usuário
+            console.log('💰 [approveZellePayment] Buscando valor dinâmico correto para scholarship_fee...');
+            let correctAmount = payment.amount; // Valor padrão
+            
+            try {
+              // Buscar taxas do pacote do usuário
+              const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
+                user_id_param: payment.user_id
+              });
+              
+              if (!packageError && userPackageFees && userPackageFees.length > 0) {
+                const packageFees = userPackageFees[0];
+                correctAmount = packageFees.scholarship_fee;
+                console.log('✅ [approveZellePayment] Valor dinâmico encontrado para scholarship_fee:', correctAmount, 'Pacote:', packageFees.package_name);
+              } else {
+                console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão para scholarship_fee:', correctAmount);
+              }
+            } catch (error) {
+              console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para scholarship_fee, usando valor padrão:', error);
+            }
+
+            console.log('💰 [approveZellePayment] Registrando scholarship_fee no faturamento com valor:', correctAmount);
             const { error: billingError } = await supabase.rpc('register_payment_billing', {
               user_id_param: payment.user_id,
               fee_type_param: 'scholarship_fee',
-              amount_param: payment.amount,
+              amount_param: correctAmount,
               payment_session_id_param: `zelle_${payment.id}`,
               payment_method_param: 'zelle'
             });

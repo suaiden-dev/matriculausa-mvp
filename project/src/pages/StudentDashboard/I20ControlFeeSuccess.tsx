@@ -9,7 +9,8 @@ const I20ControlFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const { formatFeeAmount } = useFeeConfig();
+  const { user } = useAuth();
+  const { formatFeeAmount } = useFeeConfig(user?.id);
   const sessionId = params.get('session_id');
 
   console.log('🔍 [I20ControlFeeSuccess] Componente renderizado com sessionId:', sessionId);

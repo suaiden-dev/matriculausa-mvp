@@ -1,34 +1,24 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { 
   User, 
-  Brain, 
-  CheckCircle, 
-  ArrowRight, 
   Sparkles, 
-  Target, 
   Shield, 
-  Award, 
   Clock, 
-  Users,
   FileText,
-  Search,
-  Heart,
   Star,
-  TrendingUp,
-  Rocket,
   BookOpen,
-  DollarSign,
   Lock,
   MessageCircle,
   GraduationCap,
   CreditCard
 } from 'lucide-react';
-import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
+import { useTranslation } from 'react-i18next';
+import { useDynamicFees } from '../hooks/useDynamicFees';
 import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
-  const { t, tRaw } = useTranslationWithFees();
+  const { t } = useTranslation();
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   
   return (
     <div className="bg-white min-h-screen">
@@ -73,7 +63,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-[#05294E]">1. {t('howItWorks.steps.profile.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.profile.description')}</p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(tRaw('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -85,12 +75,21 @@ const HowItWorks: React.FC = () => {
               <CreditCard className="h-8 w-8 text-green-600" />
                   </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-green-700">2. {t('howItWorks.steps.selectionFee.title')}</h3>
-              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.selectionFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
+              <h3 className="text-2xl font-bold mb-2 text-green-700">
+                2. Pay Selection Fee ({selectionProcessFee})
+                {hasSellerPackage && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {packageName}
+                  </span>
+                )}
+              </h3>
+              <p className="text-slate-700 mb-2 text-lg">
+                Pay the Selection Process Fee of <strong className="text-green-600">{selectionProcessFee}</strong> and submit your documents <strong>{t('fees.finalNonRefundable')}</strong>
+              </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(tRaw('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
+                <li>Access to scholarship browse</li>
+                <li>Initiate application process</li>
+                <li>One time fee</li>
               </ul>
                     </div>
                   </div>
@@ -103,7 +102,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-blue-700">3. {t('howItWorks.steps.documents.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.documents.description')}</p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(tRaw('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -118,7 +117,7 @@ const HowItWorks: React.FC = () => {
               <h3 className="text-2xl font-bold mb-2 text-yellow-700">4. {t('howItWorks.steps.applicationFee.title')}</h3>
               <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.applicationFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(tRaw('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -130,12 +129,21 @@ const HowItWorks: React.FC = () => {
               <BookOpen className="h-8 w-8 text-purple-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-purple-700">5. {t('howItWorks.steps.scholarshipFee.title')}</h3>
-              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.scholarshipFee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
+              <h3 className="text-2xl font-bold mb-2 text-purple-700">
+                5. Pay Scholarship Fee ({scholarshipFee})
+                {hasSellerPackage && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {packageName}
+                  </span>
+                )}
+              </h3>
+              <p className="text-slate-700 mb-2 text-lg">
+                Pay the <strong className="text-purple-600">{scholarshipFee}</strong> Scholarship Fee to formalize the grant <strong>{t('fees.finalNonRefundable')}</strong>
+              </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(tRaw('howItWorks.steps.scholarshipFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
+                <li>Direct chat with university</li>
+                <li>Submit additional documents</li>
+                <li>Final scholarship commitment</li>
               </ul>
                   </div>
                 </div>
@@ -145,12 +153,21 @@ const HowItWorks: React.FC = () => {
               <Lock className="h-8 w-8 text-red-600" />
                   </div>
             <div>
-              <h3 className="text-2xl font-bold mb-2 text-red-700">6. {t('howItWorks.steps.i20Fee.title')}</h3>
-              <p className="text-slate-700 mb-2 text-lg">{t('howItWorks.steps.i20Fee.description')} <strong>{t('fees.finalNonRefundable')}</strong></p>
+              <h3 className="text-2xl font-bold mb-2 text-red-700">
+                6. Pay I-20 Control Fee ({i20ControlFee})
+                {hasSellerPackage && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {packageName}
+                  </span>
+                )}
+              </h3>
+              <p className="text-slate-700 mb-2 text-lg">
+                Pay the <strong className="text-red-600">{i20ControlFee}</strong> I-20 Control Fee (within 10 days after approval) <strong>{t('fees.finalNonRefundable')}</strong>
+              </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(tRaw('howItWorks.steps.i20Fee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
+                <li>Essential for F-1 student visa</li>
+                <li>Required for enrollment</li>
+                <li>Final step before visa application</li>
               </ul>
             </div>
           </div>
@@ -197,20 +214,41 @@ const HowItWorks: React.FC = () => {
               <p>{t('howItWorks.faq.q1.answer')}</p>
               </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">2. {t('howItWorks.faq.q2.question')}</h3>
-              <p>{t('howItWorks.faq.q2.answer')}</p>
+              <h3 className="font-bold text-[#05294E]">2. What is the Selection Process Fee?</h3>
+              <p>
+                The Selection Process Fee ({selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.
+                {hasSellerPackage && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {packageName}
+                  </span>
+                )}
+              </p>
                     </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">3. {t('howItWorks.faq.q3.question')}</h3>
-              <p>{t('howItWorks.faq.q3.answer')}</p>
+              <h3 className="font-bold text-[#05294E]">3. What is the Scholarship Fee?</h3>
+              <p>
+                The Scholarship Fee ({scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications.
+                {hasSellerPackage && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {packageName}
+                  </span>
+                )}
+              </p>
                   </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">4. {t('howItWorks.faq.q4.question')}</h3>
-              <p>{t('howItWorks.faq.q4.answer')}</p>
+              <h3 className="font-bold text-[#05294E]">4. What is the Application Fee?</h3>
+              <p>The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.</p>
                 </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
-              <h3 className="font-bold text-[#05294E]">5. {t('howItWorks.faq.q5.question')}</h3>
-              <p>{t('howItWorks.faq.q5.answer')}</p>
+              <h3 className="font-bold text-[#05294E]">5. What is the I-20 Control Fee?</h3>
+              <p>
+                The I-20 Control Fee ({i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents.
+                {hasSellerPackage && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {packageName}
+                  </span>
+                )}
+              </p>
                     </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
               <h3 className="font-bold text-[#05294E]">6. Are there any other fees I should be aware of?</h3>
@@ -230,7 +268,14 @@ const HowItWorks: React.FC = () => {
             </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
               <h3 className="font-bold text-[#05294E]">10. Do I have to pay all fees at once?</h3>
-              <p>No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the Application Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously.</p>
+              <p>
+                No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee ({selectionProcessFee}) first, then the Scholarship Fee ({scholarshipFee}) (if applicable), followed by the Application Fee, and finally the I-20 Control Fee ({i20ControlFee}). All are mandatory for the complete flow, but do not need to be paid simultaneously.
+                {hasSellerPackage && (
+                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {packageName}
+                  </span>
+                )}
+              </p>
             </div>
             <div className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
               <h3 className="font-bold text-[#05294E]">11. Who can I contact if I have questions about fees or payments?</h3>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { UserPackageFees } from '../types';
 
 export interface FeeConfig {
   selection_process_fee: number;
@@ -15,14 +16,21 @@ const DEFAULT_FEE_CONFIG: FeeConfig = {
   i20_control_fee: 900
 };
 
-export const useFeeConfig = () => {
+export const useFeeConfig = (userId?: string) => {
   const [feeConfig, setFeeConfig] = useState<FeeConfig>(DEFAULT_FEE_CONFIG);
+  const [userPackageFees, setUserPackageFees] = useState<UserPackageFees | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadFeeConfig();
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      loadUserPackageFees();
+    }
+  }, [userId]);
 
   const loadFeeConfig = async () => {
     try {
@@ -85,6 +93,28 @@ export const useFeeConfig = () => {
     }
   };
 
+  const loadUserPackageFees = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_package_fees', {
+          user_id_param: userId
+        });
+
+      if (error) {
+        console.warn('⚠️ [useFeeConfig] Erro ao carregar taxas do pacote do usuário:', error);
+        setUserPackageFees(null);
+        return;
+      }
+
+      setUserPackageFees(data && data.length > 0 ? data[0] : null);
+    } catch (err) {
+      console.error('❌ [useFeeConfig] Erro inesperado ao carregar taxas do pacote:', err);
+      setUserPackageFees(null);
+    }
+  };
+
   const updateFeeConfig = async (newConfig: Partial<FeeConfig>) => {
     try {
       setLoading(true);
@@ -121,6 +151,25 @@ export const useFeeConfig = () => {
       return customAmount;
     }
 
+    // Se o usuário tem um pacote atribuído, usar as taxas do pacote
+    if (userPackageFees) {
+      switch (feeType) {
+        case 'selection_process':
+          return userPackageFees.selection_process_fee;
+         case 'application_fee':
+           // Application fee sempre usa o valor fixo do sistema (não muda com pacotes)
+           return feeConfig.application_fee_default;
+        case 'scholarship_fee':
+          return userPackageFees.scholarship_fee;
+        case 'i-20_control_fee':
+        case 'i20_control_fee':
+          return userPackageFees.i20_control_fee;
+        default:
+          return userPackageFees.selection_process_fee;
+      }
+    }
+
+    // Fallback para taxas padrão do sistema
     switch (feeType) {
       case 'selection_process':
         return feeConfig.selection_process_fee;
@@ -155,9 +204,11 @@ export const useFeeConfig = () => {
 
   return {
     feeConfig,
+    userPackageFees,
     loading,
     error,
     loadFeeConfig,
+    loadUserPackageFees,
     updateFeeConfig,
     getFeeAmount,
     formatFeeAmount,

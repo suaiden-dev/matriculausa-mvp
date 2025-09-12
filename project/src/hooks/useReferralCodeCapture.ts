@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export const useReferralCodeCapture = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Captura código de referência da URL em qualquer página
@@ -23,6 +24,13 @@ export const useReferralCodeCapture = () => {
         isMatriculaRewardsCode,
         length: refCode.length
       });
+
+      // Se for seller code e estiver na página de auth, redirecionar para página específica
+      if (isSellerCode && (location.pathname === '/auth' || location.pathname === '/register')) {
+        console.log('[useReferralCodeCapture] 🔄 Redirecionando para página de registro específica do seller');
+        navigate(`/student/register?ref=${refCode}`, { replace: true });
+        return;
+      }
       
               if (isSellerCode) {
           // Código de seller - salva separadamente

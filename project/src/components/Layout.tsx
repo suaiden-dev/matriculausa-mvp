@@ -1,8 +1,6 @@
 import React, { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
-// import StepByStepButton from './OnboardingTour/StepByStepButton';
-// import GuideTestButton from './OnboardingTour/GuideTestButton';
 import { useLocation } from 'react-router-dom';
 import SmartChat from './SmartChat';
 
@@ -14,7 +12,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const hideHeader = location.pathname.startsWith('/school') ||
                      location.pathname.startsWith('/admin') ||
-                     location.pathname.startsWith('/student') ||
+                     (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
                      location.pathname.startsWith('/affiliate-admin') ||
                      location.pathname.startsWith('/seller') ||
                      location.pathname === '/smart-assistant';
@@ -34,27 +32,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {!hideHeader && <Header />}
       <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
         {children}
-        {
-          !isAdmin && location.pathname !== '/smart-assistant' && <SmartChat 
-            isStudentPage={isStudentPage}
-          />
-        }
+        {!isAdmin && location.pathname !== '/smart-assistant' && (
+          <SmartChat isStudentPage={isStudentPage} />
+        )}
       </main>
       {!hideFooter && <Footer />}
-      {/* <StepByStepButton /> */}
-      {/* <GuideTestButton /> */}
     </div>
   );
 };
 
 export default Layout;
-
-export const AnalyzingLoader: React.FC<{ message?: string }> = ({ message = 'Analyzing uploaded documents...' }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[1000]">
-    <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border border-slate-100 relative animate-fade-in flex flex-col items-center">
-      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-6"></div>
-      <h2 className="text-2xl font-extrabold mb-2 text-slate-800 text-center">{message}</h2>
-      <p className="text-slate-500 text-center">This may take up to 1 minute.</p>
-    </div>
-  </div>
-);
