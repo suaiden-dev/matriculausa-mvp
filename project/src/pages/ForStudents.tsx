@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { AnimatedList } from "../components/ui/AnimatedList";
+import { AnimatedList } from "../components/magicui/animated-list";
 import FAQSection from '../components/FAQSection';
 import '../styles/scrollbar.css';
 import { 
@@ -534,8 +534,8 @@ const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
     return (
       <div key={index} className="relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100">
         {/* Progress bar centralizada */}
-        <div className="absolute left-1/2 top-0 transform -translate-x-1/2 h-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] rounded-t-3xl"
-          style={{ width: `${((index + 1) / steps.length) * 100}%` }}></div>
+        {/* <div className="absolute left-1/2 top-0 transform -translate-x-1/2 h-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] rounded-t-3xl"
+          style={{ width: `${((index + 1) / steps.length) * 100}%` }}></div> */}
         <div className="flex flex-col md:flex-row items-center p-8">
           {/* Step Number Circle */}
           <div className="flex-shrink-0 mb-6 md:mb-0 md:mr-8">
@@ -558,7 +558,7 @@ const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
             </p>
           </div>
           {/* Price */}
-          <div className="flex-shrink-0 mt-6 md:mt-0 md:ml-8">
+          {/* <div className="flex-shrink-0 mt-6 md:mt-0 md:ml-8">
             <div className={`px-6 py-4 rounded-2xl font-bold text-lg border-2 ${
               t(step.priceKey) === "Grátis" || t(step.priceKey) === "Free" || t(step.priceKey) === "Gratis"
                 ? "bg-green-50 text-green-700 border-green-200" 
@@ -568,7 +568,7 @@ const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
             }`}>
               {t(step.priceKey)}
             </div>
-          </div>
+          </div> */}
         </div>
         {/* Connection line to next step */}
         {index < steps.length - 1 && (
@@ -595,10 +595,11 @@ const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
           <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/5 to-[#D0151C]/5 rounded-3xl"></div>
           <div className="relative p-8">
             <AnimatedList 
-              items={stepCards} 
-              stagger={0.15} 
+              delay={500} 
               className="space-y-6" 
-            />
+            >
+              {stepCards}
+            </AnimatedList>
           </div>
         </div>
         {/* Final CTA */}
@@ -1345,19 +1346,23 @@ const MatriculaRewardsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTACl
     visible: {
       opacity: 1,
       transition: {
-        delayChildren: 0.2,
-        staggerChildren: 0.1
+        delayChildren: 0.3,
+        staggerChildren: 0.2
       }
     }
   };
 
   const itemVariants = {
-    hidden: { y: 30, opacity: 0 },
+    hidden: { y: 50, opacity: 0, scale: 0.9 },
     visible: {
       y: 0,
       opacity: 1,
+      scale: 1,
       transition: {
-        duration: 0.6
+        duration: 0.8,
+        type: "spring" as const,
+        stiffness: 100,
+        damping: 15
       }
     }
   };
@@ -1406,21 +1411,67 @@ const MatriculaRewardsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTACl
         >
           {/* Header */}
           <motion.div variants={itemVariants} className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-full text-sm font-semibold mb-6 border border-blue-200">
-              <Gift className="h-4 w-4" />
+            <motion.div 
+              className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-full text-sm font-semibold mb-6 border border-blue-200"
+              whileHover={{ 
+                scale: 1.05,
+                backgroundColor: "#dbeafe",
+                transition: { duration: 0.2 }
+              }}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ 
+                delay: 0.2,
+                type: "spring",
+                stiffness: 200,
+                damping: 15
+              }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ 
+                  repeat: Infinity, 
+                  duration: 2,
+                  delay: 1
+                }}
+              >
+                <Gift className="h-4 w-4" />
+              </motion.div>
               {t('matriculaRewardsLanding.badge')}
-            </div>
+            </motion.div>
             
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-6">
-              <span className="text-slate-900">{t('matriculaRewardsLanding.hero.title')}</span>
-              <span className="block text-transparent bg-clip-text bg-blue-600 mt-2">
+            <motion.h2 
+              className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-6"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+            >
+              <motion.span 
+                className="text-slate-900"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6, duration: 0.6 }}
+              >
+                {t('matriculaRewardsLanding.hero.title')}
+              </motion.span>
+              <motion.span 
+                className="block text-transparent bg-clip-text bg-blue-600 mt-2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8, duration: 0.6 }}
+              >
                 {t('matriculaRewardsLanding.hero.titleHighlight')}
-              </span>
-            </h2>
+              </motion.span>
+            </motion.h2>
             
-            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+            <motion.p 
+              className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.0, duration: 0.6 }}
+            >
               {t('matriculaRewardsLanding.hero.subtitle')}
-            </p>
+            </motion.p>
           </motion.div>
 
           {/* How It Works - Mobile Optimized */}
@@ -1431,9 +1482,20 @@ const MatriculaRewardsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTACl
                   key={index}
                   variants={itemVariants}
                   className="group relative"
+                  whileHover={{ 
+                    y: -8,
+                    scale: 1.02,
+                    transition: { duration: 0.2 }
+                  }}
                 >
                   {/* Step Card */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                  <motion.div 
+                    className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300"
+                    whileHover={{ 
+                      boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
+                      borderColor: "#3b82f6"
+                    }}
+                  >
                     {/* Step Number */}
                     <div className="w-16 h-16 mx-auto mb-6 relative">
                       <div className="absolute inset-0 rounded-full border-2 border-slate-300 group-hover:border-blue-400 transition-all duration-300"></div>
@@ -1456,7 +1518,7 @@ const MatriculaRewardsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTACl
                     {index < steps.length - 1 && (
                       <div className="hidden md:block absolute top-8 left-full w-8 h-0.5 bg-slate-300 transform translate-x-0 group-hover:bg-blue-400 transition-all duration-500"></div>
                     )}
-                  </div>
+                  </motion.div>
                 </motion.div>
               ))}
             </div>
