@@ -65,6 +65,7 @@ interface ScholarshipApplication {
   documents: any[];
   acceptance_letter_status: string;
   acceptance_letter_url: string;
+  acceptance_letter_sent_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
   paid_at: string;
@@ -762,6 +763,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
             documents: applicationData.documents || [],
             acceptance_letter_status: applicationData.acceptance_letter_status || 'pending',
             acceptance_letter_url: applicationData.acceptance_letter_url || '',
+            acceptance_letter_sent_at: applicationData.acceptance_letter_sent_at || null,
             is_application_fee_paid: applicationData.is_application_fee_paid || false,
             is_scholarship_fee_paid: applicationData.is_scholarship_fee_paid || false,
             paid_at: applicationData.updated_at || new Date().toISOString(),
@@ -783,6 +785,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
             documents: studentData.documents || [],
             acceptance_letter_status: 'pending',
             acceptance_letter_url: '',
+            acceptance_letter_sent_at: null,
             is_application_fee_paid: studentData.is_application_fee_paid || false,
             is_scholarship_fee_paid: studentData.is_scholarship_fee_paid || false,
             paid_at: new Date().toISOString(),

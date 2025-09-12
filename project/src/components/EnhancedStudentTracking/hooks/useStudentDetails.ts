@@ -530,33 +530,39 @@ export const useStudentDetails = () => {
         console.log('🔍 [AFFILIATE_DEBUG] Setting student details:', studentData);
         setStudentDetails(studentData);
 
-        // Buscar data limite do I-20 Control Fee (10 dias após o pagamento da scholarship fee)
-        if (studentData.is_scholarship_fee_paid) {
-          try {
-            const { data: scholarshipFeeData, error: scholarshipFeeError } = await supabase
-              .from('scholarship_applications')
-              .select('updated_at')
-              .eq('student_id', profile_id)
-              .eq('is_scholarship_fee_paid', true)
-              .order('updated_at', { ascending: false })
-              .limit(1);
+        // Buscar data limite do I-20 Control Fee (10 dias após o envio da carta de aceite)
+        try {
+          const { data: applicationData, error: applicationError } = await supabase
+            .from('scholarship_applications')
+            .select('acceptance_letter_sent_at, acceptance_letter_status, i20_control_fee_due_date')
+            .eq('student_id', profile_id)
+            .not('acceptance_letter_sent_at', 'is', null)
+            .in('acceptance_letter_status', ['sent', 'approved'])
+            .order('acceptance_letter_sent_at', { ascending: false })
+            .limit(1);
+          
+          if (!applicationError && applicationData && applicationData.length > 0) {
+            const application = applicationData[0];
             
-            if (!scholarshipFeeError && scholarshipFeeData && scholarshipFeeData.length > 0) {
-              const paidDate = new Date(scholarshipFeeData[0].updated_at);
-              const deadline = new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+            // Se já tem deadline específico do I-20, usar ele
+            if (application.i20_control_fee_due_date) {
+              const deadline = new Date(application.i20_control_fee_due_date);
               setI20ControlFeeDeadline(deadline);
-              console.log('🔍 [I20_DEADLINE] Calculated deadline:', deadline);
+              console.log('🔍 [I20_DEADLINE] Using specific I20 deadline:', deadline);
             } else {
-              setI20ControlFeeDeadline(null);
-              console.log('🔍 [I20_DEADLINE] No scholarship fee payment found');
+              // Calcular deadline baseado na data de envio da carta de aceite + 10 dias
+              const acceptanceDate = new Date(application.acceptance_letter_sent_at);
+              const deadline = new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+              setI20ControlFeeDeadline(deadline);
+              console.log('🔍 [I20_DEADLINE] Calculated deadline from acceptance letter:', deadline);
             }
-          } catch (error) {
-            console.error('❌ [I20_DEADLINE] Error calculating deadline:', error);
+          } else {
             setI20ControlFeeDeadline(null);
+            console.log('🔍 [I20_DEADLINE] No acceptance letter sent yet');
           }
-        } else {
+        } catch (error) {
+          console.error('❌ [I20_DEADLINE] Error calculating deadline:', error);
           setI20ControlFeeDeadline(null);
-          console.log('🔍 [I20_DEADLINE] Scholarship fee not paid yet');
         }
 
         // Definir aplicação de bolsa
