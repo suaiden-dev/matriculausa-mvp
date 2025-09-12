@@ -2312,7 +2312,8 @@
     "balanceAfter": "Saldo: {amount}",
     "tryAgain": "Intentar de Nuevo",
     "errorLoadingData": "Error al cargar datos",
-    "loading": "Cargando {title}..."
+    "loading": "Cargando {title}...",
+    "shareDescription": "Usa los botones de abajo para compartir tu código rápidamente"
   },
   "preCheckoutModal": {
     "securePayment": "Pago Seguro",
