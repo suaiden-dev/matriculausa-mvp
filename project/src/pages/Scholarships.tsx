@@ -47,7 +47,7 @@ const Scholarships: React.FC = () => {
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
 
   // Get min and max scholarship values from data
-  const scholarshipValues = scholarships.map((s: Scholarship) => Number(s.annual_value_with_scholarship) || 0).filter(val => val > 0);
+  const scholarshipValues = scholarships.map((s: Scholarship) => s.amount).filter(val => val && val > 0);
   const maxScholarshipValue = scholarshipValues.length > 0 ? Math.max(...scholarshipValues) : 100000;
 
   // Range state
@@ -193,7 +193,7 @@ const Scholarships: React.FC = () => {
     }
     
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const value = Number(scholarship.annual_value_with_scholarship) || 0;
+    const value = scholarship.annual_value_with_scholarship ?? 0;
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
@@ -210,7 +210,7 @@ const Scholarships: React.FC = () => {
       if (uniId && !approvedUniversityIds.has(uniId)) return false;
     }
     const matchesSearch = scholarship.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const value = Number(scholarship.annual_value_with_scholarship) || 0;
+    const value = scholarship.annual_value_with_scholarship ?? 0;
     const matchesRange = (minPrice === 0 || value >= minPrice) && (maxPrice === 0 || value <= maxPrice);
     const matchesLevel = selectedLevel === 'all' || (scholarship.level && scholarship.level.toLowerCase() === selectedLevel);
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
