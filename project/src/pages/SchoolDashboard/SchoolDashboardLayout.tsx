@@ -570,7 +570,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className="pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full">
+        <main className={`pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full overflow-y-hidden ${location.pathname.includes('/inbox') ? 'bg-white' : ''}`}>
           <div className="max-w-7xl mx-auto">
             {/* Welcome Message for Incomplete Profiles */}
             {(!university || !university.profile_completed) && !location.pathname.includes('/profile') && (

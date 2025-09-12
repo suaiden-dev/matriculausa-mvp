@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { AnimatedList } from "../components/ui/AnimatedList";
+import { AnimatedList } from "../components/magicui/animated-list";
 import FAQSection from '../components/FAQSection';
 import '../styles/scrollbar.css';
 import { 
@@ -25,45 +25,69 @@ import {
   X,
   TrendingUp,
   RefreshCw,
-  Quote
+  Quote,
+  Coins,
+  Users,
+  Share2,
+  Gift
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const ForStudents: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleCTAClick = () => {
+    if (user) {
+      navigate('/student/dashboard/scholarships');
+    } else {
+      navigate('/register');
+    }
+  };
+
+  const handleMatriculaRewardsClick = () => {
+    navigate('/matricula-rewards');
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Scroll Progress Bar */}
       {/* <ScrollProgress /> */}
       
       {/* Hero Section */}
-      <HeroSection />
+      <HeroSection onCTAClick={handleCTAClick} />
       
       {/* Benefits Section */}
-      <BenefitsSection />
+      <BenefitsSection onCTAClick={handleCTAClick} />
       
       {/* Social Proof Section */}
-      <SocialProofSection />
+      <SocialProofSection onCTAClick={handleCTAClick} />
       
       {/* How It Works Section */}
-      <HowItWorksSection />
+      <HowItWorksSection onCTAClick={handleCTAClick} />
+      
+      {/* Matricula Rewards Section */}
+      <MatriculaRewardsSection onCTAClick={handleMatriculaRewardsClick} />
       
       {/* Comparison Section */}
-      <ComparisonSection />
+      <ComparisonSection onCTAClick={handleCTAClick} />
       
       {/* FAQ Section */}
       <FAQSection />
       
       {/* Guarantee Section */}
-      <GuaranteeSection />
+      <GuaranteeSection onCTAClick={handleCTAClick} />
       
       {/* Special Offer Section - CTA FINAL */}
-      <SpecialOfferSection />
+      <SpecialOfferSection onCTAClick={handleCTAClick} />
     </div>
   );
 };
 
 // Hero Section Component
-const HeroSection: React.FC = () => {
+const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.2 });
@@ -139,6 +163,7 @@ const HeroSection: React.FC = () => {
             {/* CTA Button */}
             <motion.div variants={itemVariants} className="mb-8">
               <motion.button
+                onClick={onCTAClick}
                 whileHover={{ 
                   scale: 1.05,
                   boxShadow: "0 20px 40px rgba(208, 21, 28, 0.4)"
@@ -215,7 +240,7 @@ const HeroSection: React.FC = () => {
 };
 
 // Benefits Section Component
-const BenefitsSection: React.FC = () => {
+const BenefitsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
@@ -430,6 +455,7 @@ const BenefitsSection: React.FC = () => {
             className="text-center mt-16"
           >
             <motion.button
+              onClick={onCTAClick}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="inline-flex items-center px-12 py-6 bg-gradient-to-r from-[#D0151C] to-red-600 text-white font-bold text-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300"
@@ -446,7 +472,7 @@ const BenefitsSection: React.FC = () => {
 };
 
 // How It Works Section Component
-const HowItWorksSection: React.FC = () => {
+const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation();
   const { ref } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -508,8 +534,8 @@ const HowItWorksSection: React.FC = () => {
     return (
       <div key={index} className="relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-slate-100">
         {/* Progress bar centralizada */}
-        <div className="absolute left-1/2 top-0 transform -translate-x-1/2 h-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] rounded-t-3xl"
-          style={{ width: `${((index + 1) / steps.length) * 100}%` }}></div>
+        {/* <div className="absolute left-1/2 top-0 transform -translate-x-1/2 h-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] rounded-t-3xl"
+          style={{ width: `${((index + 1) / steps.length) * 100}%` }}></div> */}
         <div className="flex flex-col md:flex-row items-center p-8">
           {/* Step Number Circle */}
           <div className="flex-shrink-0 mb-6 md:mb-0 md:mr-8">
@@ -532,7 +558,7 @@ const HowItWorksSection: React.FC = () => {
             </p>
           </div>
           {/* Price */}
-          <div className="flex-shrink-0 mt-6 md:mt-0 md:ml-8">
+          {/* <div className="flex-shrink-0 mt-6 md:mt-0 md:ml-8">
             <div className={`px-6 py-4 rounded-2xl font-bold text-lg border-2 ${
               t(step.priceKey) === "Grátis" || t(step.priceKey) === "Free" || t(step.priceKey) === "Gratis"
                 ? "bg-green-50 text-green-700 border-green-200" 
@@ -542,7 +568,7 @@ const HowItWorksSection: React.FC = () => {
             }`}>
               {t(step.priceKey)}
             </div>
-          </div>
+          </div> */}
         </div>
         {/* Connection line to next step */}
         {index < steps.length - 1 && (
@@ -569,15 +595,17 @@ const HowItWorksSection: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/5 to-[#D0151C]/5 rounded-3xl"></div>
           <div className="relative p-8">
             <AnimatedList 
-              items={stepCards} 
-              stagger={0.15} 
+              delay={500} 
               className="space-y-6" 
-            />
+            >
+              {stepCards}
+            </AnimatedList>
           </div>
         </div>
         {/* Final CTA */}
         <div className="text-center mt-16">
           <button
+            onClick={onCTAClick}
             className="inline-flex items-center px-12 py-6 bg-[#05294E] text-white font-bold text-xl rounded-2xl shadow-2xl hover:bg-[#0a3a62] transition-all duration-300 group"
           >
             <GraduationCap className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform duration-300" />
@@ -594,7 +622,7 @@ const HowItWorksSection: React.FC = () => {
 };
 
 // Comparison Section Component - Before vs After
-const ComparisonSection: React.FC = () => {
+const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
@@ -737,6 +765,7 @@ const ComparisonSection: React.FC = () => {
           {/* Bottom CTA */}
           <motion.div variants={cardVariants} className="text-center">
             <motion.button
+              onClick={onCTAClick}
               whileHover={{ 
                 scale: 1.05,
                 boxShadow: "0 20px 40px rgba(208, 21, 28, 0.4)"
@@ -762,7 +791,7 @@ const ComparisonSection: React.FC = () => {
 };
 
 // Special Offer Section Component
-const SpecialOfferSection: React.FC = () => {
+const SpecialOfferSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
@@ -868,6 +897,7 @@ const SpecialOfferSection: React.FC = () => {
           {/* CTA */}
           <motion.div variants={itemVariants} className="text-center px-4 sm:px-0">
             <motion.button
+              onClick={onCTAClick}
               whileHover={{ 
                 scale: 1.05,
                 boxShadow: "0 25px 50px rgba(208, 21, 28, 0.5)"
@@ -901,7 +931,7 @@ const SpecialOfferSection: React.FC = () => {
 };
 
 // Guarantee Section Component
-const GuaranteeSection: React.FC = () => {
+const GuaranteeSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
@@ -1018,6 +1048,7 @@ const GuaranteeSection: React.FC = () => {
             </h3>
             
             <motion.button
+              onClick={onCTAClick}
               whileHover={{ 
                 scale: 1.05,
                 boxShadow: "0 20px 40px rgba(255, 255, 255, 0.2)"
@@ -1043,7 +1074,7 @@ const GuaranteeSection: React.FC = () => {
 };
 
 // Social Proof Section Component - Prova Social
-const SocialProofSection: React.FC = () => {
+const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
@@ -1272,6 +1303,7 @@ const SocialProofSection: React.FC = () => {
           {/* CTA */}
           <motion.div variants={itemVariants} className="text-center mt-16">
             <motion.button
+              onClick={onCTAClick}
               whileHover={{ 
                 scale: 1.05,
                 boxShadow: "0 20px 40px rgba(208, 21, 28, 0.3)"
@@ -1289,6 +1321,229 @@ const SocialProofSection: React.FC = () => {
                 →
               </motion.div>
             </motion.button>
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+// Matricula Rewards Section Component
+const MatriculaRewardsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
+  const { t } = useTranslation();
+  const controls = useAnimation();
+  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
+  const [calculatorFriends, setCalculatorFriends] = React.useState(5);
+
+  useEffect(() => {
+    if (inView) {
+      controls.start('visible');
+    }
+  }, [controls, inView]);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        delayChildren: 0.3,
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 50, opacity: 0, scale: 0.9 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.8,
+        type: "spring" as const,
+        stiffness: 100,
+        damping: 15
+      }
+    }
+  };
+
+  const calculateSavings = (friends: number) => {
+    const coins = friends * 180;
+    const dollars = coins;
+    return { coins, dollars };
+  };
+
+  const steps = [
+    {
+      number: "01",
+      icon: Share2,
+      title: t('matriculaRewardsLanding.howItWorks.steps.step1.title'),
+      description: t('matriculaRewardsLanding.howItWorks.steps.step1.description')
+    },
+    {
+      number: "02",
+      icon: Users,
+      title: t('matriculaRewardsLanding.howItWorks.steps.step2.title'),
+      description: t('matriculaRewardsLanding.howItWorks.steps.step2.description')
+    },
+    {
+      number: "03",
+      icon: Coins,
+      title: t('matriculaRewardsLanding.howItWorks.steps.step3.title'),
+      description: t('matriculaRewardsLanding.howItWorks.steps.step3.description')
+    }
+  ];
+
+  return (
+    <section ref={ref} className="py-20 bg-white relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-200 rounded-full blur-2xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-200 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          animate={controls}
+          initial="hidden"
+          variants={containerVariants}
+        >
+          {/* Header */}
+          <motion.div variants={itemVariants} className="text-center mb-16">
+            <motion.div 
+              className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-6 py-3 rounded-full text-sm font-semibold mb-6 border border-blue-200"
+              whileHover={{ 
+                scale: 1.05,
+                backgroundColor: "#dbeafe",
+                transition: { duration: 0.2 }
+              }}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ 
+                delay: 0.2,
+                type: "spring",
+                stiffness: 200,
+                damping: 15
+              }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ 
+                  repeat: Infinity, 
+                  duration: 2,
+                  delay: 1
+                }}
+              >
+                <Gift className="h-4 w-4" />
+              </motion.div>
+              {t('matriculaRewardsLanding.badge')}
+            </motion.div>
+            
+            <motion.h2 
+              className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-6"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+            >
+              <motion.span 
+                className="text-slate-900"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6, duration: 0.6 }}
+              >
+                {t('matriculaRewardsLanding.hero.title')}
+              </motion.span>
+              <motion.span 
+                className="block text-transparent bg-clip-text bg-blue-600 mt-2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8, duration: 0.6 }}
+              >
+                {t('matriculaRewardsLanding.hero.titleHighlight')}
+              </motion.span>
+            </motion.h2>
+            
+            <motion.p 
+              className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.0, duration: 0.6 }}
+            >
+              {t('matriculaRewardsLanding.hero.subtitle')}
+            </motion.p>
+          </motion.div>
+
+          {/* How It Works - Mobile Optimized */}
+          <motion.div variants={itemVariants} className="mb-16">
+            <div className="space-y-6 md:space-y-0 md:grid md:grid-cols-3 md:gap-8">
+              {steps.map((step, index) => (
+                <motion.div
+                  key={index}
+                  variants={itemVariants}
+                  className="group relative"
+                  whileHover={{ 
+                    y: -8,
+                    scale: 1.02,
+                    transition: { duration: 0.2 }
+                  }}
+                >
+                  {/* Step Card */}
+                  <motion.div 
+                    className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300"
+                    whileHover={{ 
+                      boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
+                      borderColor: "#3b82f6"
+                    }}
+                  >
+                    {/* Step Number */}
+                    <div className="w-16 h-16 mx-auto mb-6 relative">
+                      <div className="absolute inset-0 rounded-full border-2 border-slate-300 group-hover:border-blue-400 transition-all duration-300"></div>
+                      <div className="absolute inset-2 rounded-full border border-slate-400 group-hover:border-blue-500 transition-all duration-300"></div>
+                      <div className="absolute inset-3 rounded-full bg-white text-slate-700 flex items-center justify-center font-bold text-lg group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-lg">
+                        {index + 1}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <h3 className="text-lg font-bold text-slate-900 mb-3 text-center group-hover:text-blue-600 transition-colors duration-300">
+                      {step.title}
+                    </h3>
+                    
+                    <p className="text-sm text-slate-600 text-center leading-relaxed">
+                      {step.description}
+                    </p>
+
+                    {/* Connection line for desktop */}
+                    {index < steps.length - 1 && (
+                      <div className="hidden md:block absolute top-8 left-full w-8 h-0.5 bg-slate-300 transform translate-x-0 group-hover:bg-blue-400 transition-all duration-500"></div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Interactive Calculator - Mobile First */}
+         
+
+          {/* Final CTA */}
+          <motion.div variants={itemVariants} className="text-center">
+            <motion.button
+              onClick={onCTAClick}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-2xl border-2 border-blue-600 hover:border-blue-700"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <Gift className="h-6 w-6" />
+                <span>{t('matriculaRewardsLanding.finalCta.cards.startNow.cta')}</span>
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </motion.button>
+            <p className="mt-4 text-sm text-slate-600 max-w-md mx-auto">
+              {t('matriculaRewardsLanding.finalCta.description')}
+            </p>
           </motion.div>
         </motion.div>
       </div>

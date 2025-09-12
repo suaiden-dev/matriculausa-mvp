@@ -5,8 +5,6 @@ import {
   CheckCircle, 
   AlertCircle,
   Star,
-  TrendingUp,
-  Clock,
   Users,
   DollarSign,
   ArrowLeft,
@@ -17,8 +15,6 @@ import {
   MapPin,
   Globe,
   Calendar,
-  User,
-  Shield,
   CheckCircle2,
   XCircle,
   Info
@@ -30,17 +26,6 @@ import { MatriculacoinCredits, MatriculacoinTransaction, TuitionDiscount, Tuitio
 import { TuitionRewardsService } from '../../services/TuitionRewardsService';
 import { Link } from 'react-router-dom';
 
-interface Reward {
-  id: string;
-  name: string;
-  description: string;
-  cost: number;
-  type: 'discount_fixed' | 'discount_percentage' | 'premium_access';
-  value: number;
-  duration?: number;
-  is_active: boolean;
-  image_url?: string;
-}
 
 
 const RewardsStore: React.FC = () => {
@@ -67,6 +52,12 @@ const RewardsStore: React.FC = () => {
   const [redeemingTuition, setRedeemingTuition] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [universitiesPerPage] = useState(6); // 2x3 grid for modal
+
+  // Estados para resgate customizado
+  const [showCustomRedemption, setShowCustomRedemption] = useState(false);
+  const [customCoinsAmount, setCustomCoinsAmount] = useState<number>(0);
+  const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0);
+  const [isCustomRedemption, setIsCustomRedemption] = useState(false);
 
   // Estados para universidade automática
   const [userUniversity, setUserUniversity] = useState<any>(null);
@@ -281,6 +272,7 @@ const RewardsStore: React.FC = () => {
   // Selecionar desconto de tuition
   const handleSelectTuitionDiscount = async (discount: TuitionDiscount) => {
     setSelectedDiscount(discount);
+    setIsCustomRedemption(false);
     
     // Se o usuário é aluno matriculado, usar sua universidade automaticamente
     if (isEnrolledStudent && userUniversity) {
@@ -296,6 +288,46 @@ const RewardsStore: React.FC = () => {
         console.error('Erro ao buscar dados da universidade:', error);
         setError(error.message || 'Failed to fetch university data');
       }
+    } else {
+      // Se não é aluno matriculado, mostrar seleção de universidade
+      setShowUniversitySelection(true);
+    }
+  };
+
+  // Iniciar resgate customizado
+  const handleCustomRedemption = () => {
+    setCustomCoinsAmount(0);
+    setCustomDiscountAmount(0);
+    setIsCustomRedemption(true);
+    setShowCustomRedemption(true);
+  };
+
+  // Atualizar quantidade customizada de coins
+  const handleCustomCoinsChange = (amount: number) => {
+    setCustomCoinsAmount(amount);
+    setCustomDiscountAmount(amount); // 1 coin = $1 USD
+  };
+
+  // Confirmar resgate customizado
+  const handleConfirmCustomRedemption = () => {
+    if (customCoinsAmount < 10) {
+      setError('Minimum 10 coins required for redemption');
+      return;
+    }
+    
+    if (customCoinsAmount > (credits?.balance || 0)) {
+      setError('Insufficient Matricula Coins');
+      return;
+    }
+    
+    setShowCustomRedemption(false);
+    
+    // Se o usuário é aluno matriculado, usar sua universidade automaticamente
+    if (isEnrolledStudent && userUniversity) {
+      setSelectedUniversity(userUniversity);
+      setShowUniversitySelection(false);
+      // Ir direto para confirmação
+      handleSelectUniversity(userUniversity);
     } else {
       // Se não é aluno matriculado, mostrar seleção de universidade
       setShowUniversitySelection(true);
@@ -320,27 +352,52 @@ const RewardsStore: React.FC = () => {
 
   // Resgatar desconto de tuition
   const handleRedeemTuitionDiscount = async () => {
-    if (!user?.id || !selectedDiscount || !selectedUniversity) {
+    if (!user?.id || !selectedUniversity) {
       setError('Missing required data');
       return;
     }
 
-    setRedeemingTuition(selectedDiscount.id);
+    // Verificar se é resgate customizado ou pré-definido
+    if (isCustomRedemption) {
+      if (!customCoinsAmount || customCoinsAmount < 10) {
+        setError('Invalid custom coins amount');
+        return;
+      }
+    } else {
+      if (!selectedDiscount) {
+        setError('Missing discount data');
+        return;
+      }
+    }
+
+    setRedeemingTuition(isCustomRedemption ? 'custom' : selectedDiscount?.id || '');
     setError(null);
     setSuccessMessage(null);
 
     try {
-      const result = await TuitionRewardsService.redeemTuitionDiscount(
-        user.id,
-        selectedUniversity.id,
-        selectedDiscount.id
-      );
+      
+      if (isCustomRedemption) {
+        // Resgate customizado
+        await TuitionRewardsService.redeemCustomTuitionDiscount(
+          user.id,
+          selectedUniversity.id,
+          customCoinsAmount
+        );
+      } else {
+        // Resgate pré-definido
+        await TuitionRewardsService.redeemTuitionDiscount(
+          user.id,
+          selectedUniversity.id,
+          selectedDiscount!.id
+        );
+      }
 
       // Atualizar créditos localmente
+      const coinsToDeduct = isCustomRedemption ? customCoinsAmount : selectedDiscount!.cost_coins;
       setCredits(prev => prev ? {
         ...prev,
-        balance: prev.balance - selectedDiscount.cost_coins,
-        total_spent: prev.total_spent + selectedDiscount.cost_coins
+        balance: prev.balance - coinsToDeduct,
+        total_spent: prev.total_spent + coinsToDeduct
       } : null);
 
       // Recarregar apenas os dados necessários
@@ -348,9 +405,15 @@ const RewardsStore: React.FC = () => {
 
       // Mostrar mensagem de sucesso
       const isEnrolledAtSelectedUniversity = isEnrolledStudent && userUniversity && selectedUniversity.id === userUniversity.id;
-      const successMessageText = isEnrolledAtSelectedUniversity
-        ? `🎓 Successfully redeemed ${selectedDiscount.discount_amount} tuition discount for your enrolled university: ${selectedUniversity.name}!`
-        : `Successfully redeemed ${selectedDiscount.discount_amount} tuition discount for ${selectedUniversity.name}!`;
+      const discountAmount = isCustomRedemption ? customDiscountAmount : selectedDiscount!.discount_amount;
+      
+      const successMessageText = isCustomRedemption
+        ? isEnrolledAtSelectedUniversity
+          ? `🎓 ${t('matriculaRewards.customRedemption.customRedemptionSuccessEnrolled', { amount: `$${discountAmount}`, university: selectedUniversity.name })}`
+          : t('matriculaRewards.customRedemption.customRedemptionSuccess', { amount: `$${discountAmount}`, university: selectedUniversity.name })
+        : isEnrolledAtSelectedUniversity
+          ? `🎓 Successfully redeemed $${discountAmount} tuition discount for your enrolled university: ${selectedUniversity.name}!`
+          : `Successfully redeemed $${discountAmount} tuition discount for ${selectedUniversity.name}!`;
       
       setSuccessMessage(successMessageText);
 
@@ -359,6 +422,9 @@ const RewardsStore: React.FC = () => {
       setSelectedUniversity(null);
       setShowConfirmation(false);
       setConfirmationData(null);
+      setIsCustomRedemption(false);
+      setCustomCoinsAmount(0);
+      setCustomDiscountAmount(0);
 
       // Limpar mensagem de sucesso após 5 segundos
       setTimeout(() => {
@@ -399,14 +465,6 @@ const RewardsStore: React.FC = () => {
   };
 
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -426,7 +484,7 @@ const RewardsStore: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 font-medium">Loading Rewards Store...</p>
+          <p className="text-slate-600 font-medium">{t('matriculaRewards.rewardsStore.loadingRewardsStore')}</p>
         </div>
       </div>
     );
@@ -439,13 +497,13 @@ const RewardsStore: React.FC = () => {
           <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
             <Gift className="h-6 w-6 text-red-600" />
           </div>
-          <p className="text-slate-900 font-medium">Error loading Rewards Store</p>
+          <p className="text-slate-900 font-medium">{t('rewardsStore.errorLoadingRewardsStore')}</p>
           <p className="text-slate-500 text-sm">{error}</p>
           <button 
             onClick={loadStoreData}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
-            Try Again
+            {t('rewardsStore.tryAgain')}
           </button>
         </div>
       </div>
@@ -457,48 +515,40 @@ const RewardsStore: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             <Link 
               to="/student/dashboard/rewards"
               className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Back to Rewards</span>
+              <span>{t('matriculaRewards.rewardsStore.backToRewards')}</span>
             </Link>
           </div>
 
-          <div className="flex items-center justify-center space-x-8 mb-6">
-            {/* Balance Display */}
-            <div className="text-center">
-              <div className="text-4xl font-bold text-slate-900 mb-2">
-                {credits?.balance || 0}
+          {/* Balance Card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('matriculaRewards.rewardsStore.title')}</h1>
+                <p className="text-slate-600 text-lg">{t('matriculaRewards.rewardsStore.subtitle')}</p>
               </div>
-              <div className="text-lg font-medium text-slate-600">
-                Matricula Coins Available
-              </div>
-            </div>
-
-            {/* Store Icon */}
-            <div className="relative">
-              <div className="w-32 h-32 flex items-center justify-center">
-                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-8 shadow-lg">
-                  <ShoppingCart className="h-16 w-16 text-white" />
+              <div className="text-right">
+                <div className="text-4xl font-bold text-slate-900 mb-1">
+                  {credits?.balance || 0}
+                </div>
+                <div className="text-lg font-medium text-slate-600">
+                  {t('matriculaRewards.rewardsStore.matriculaCoinsAvailable')}
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Rewards Store</h1>
-            <p className="text-slate-600 text-lg">Redeem your Matricula Coins for exclusive rewards</p>
             
             {/* Mensagem para alunos matriculados */}
             {isEnrolledStudent && userUniversity && (
-              <div className="mt-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-2xl text-sm max-w-md mx-auto">
-                <div className="flex items-center justify-center">
+              <div className="mt-6 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl text-sm">
+                <div className="flex items-center">
                   <Info className="h-4 w-4 mr-2" />
                   <span>
-                    <strong>Enrolled Student:</strong> Your tuition discounts will automatically apply to <strong>{userUniversity.name}</strong>
+                    <strong>{t('matriculaRewards.rewardsStore.enrolledStudent')}</strong> {t('matriculaRewards.rewardsStore.enrolledStudentMessage')} <strong>{userUniversity.name}</strong>
                   </span>
                 </div>
               </div>
@@ -539,7 +589,7 @@ const RewardsStore: React.FC = () => {
             >
               <div className="flex items-center space-x-2">
                 <Gift className="h-4 w-4" />
-                <span>Store</span>
+                <span>{t('matriculaRewards.rewardsStore.store')}</span>
               </div>
             </button>
             <button
@@ -552,7 +602,7 @@ const RewardsStore: React.FC = () => {
             >
               <div className="flex items-center space-x-2">
                 <History className="h-4 w-4" />
-                <span>History</span>
+                <span>{t('matriculaRewards.rewardsStore.history')}</span>
               </div>
             </button>
           </div>
@@ -561,6 +611,30 @@ const RewardsStore: React.FC = () => {
         {/* Store Tab */}
         {activeTab === 'store' && (
           <>
+            {/* Quick Custom Redemption */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-1">{t('matriculaRewards.rewardsStore.customTuitionDiscount')}</h3>
+                  <p className="text-slate-600 text-sm">{t('matriculaRewards.rewardsStore.redeemAnyAmount')}</p>
+                </div>
+                <div className="flex items-center space-x-4">
+
+                  <button
+                    onClick={handleCustomRedemption}
+                    disabled={!credits || credits.balance < 10}
+                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                      credits && credits.balance >= 10
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {t('matriculaRewards.rewardsStore.createCustom')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Tuition Discounts Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {tuitionDiscounts.map((discount) => (
@@ -571,7 +645,7 @@ const RewardsStore: React.FC = () => {
                     {discount.cost_coins <= (credits?.balance || 0) && (
                       <div className="absolute top-4 right-4">
                         <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                          Available
+                          {t('matriculaRewards.rewardsStore.available')}
                         </div>
                       </div>
                     )}
@@ -594,7 +668,7 @@ const RewardsStore: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <DollarSign className="h-4 w-4 text-green-500" />
                         <span className="text-sm font-medium text-green-600">
-                          ${discount.discount_amount} off tuition
+                          ${discount.discount_amount} {t('matriculaRewards.rewardsStore.offTuition')}
                         </span>
                       </div>
                     </div>
@@ -613,17 +687,12 @@ const RewardsStore: React.FC = () => {
                         {redeemingTuition === discount.id ? (
                           <div className="flex items-center justify-center space-x-2">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Redeeming...</span>
-                          </div>
-                        ) : credits && credits.balance >= discount.cost_coins ? (
-                          <div className="flex items-center justify-center space-x-2">
-                            <Gift className="h-4 w-4" />
-                            <span>Redeem for University</span>
+                            <span>{t('matriculaRewards.rewardsStore.redeeming')}</span>
                           </div>
                         ) : (
                           <div className="flex items-center justify-center space-x-2">
-                            <AlertCircle className="h-4 w-4" />
-                            <span>Need {discount.cost_coins - (credits?.balance || 0)} more coins</span>
+                            <Gift className="h-4 w-4" />
+                            <span>{t('matriculaRewards.rewardsStore.redeemForUniversity')}</span>
                           </div>
                         )}
                       </button>
@@ -637,8 +706,8 @@ const RewardsStore: React.FC = () => {
             {tuitionDiscounts.length === 0 && (
               <div className="text-center py-12">
                 <Gift className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500">No rewards available at the moment</p>
-                <p className="text-sm text-slate-400">Check back later for new rewards!</p>
+                <p className="text-slate-500">{t('matriculaRewards.rewardsStore.noRewardsAvailable')}</p>
+                <p className="text-sm text-slate-400">{t('matriculaRewards.rewardsStore.checkBackLater')}</p>
               </div>
             )}
           </>
@@ -651,7 +720,7 @@ const RewardsStore: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center space-x-2">
                 <Building className="h-5 w-5 text-green-600" />
-                <span>Tuition Discount History</span>
+                <span>{t('matriculaRewards.rewardsStore.tuitionDiscountHistory')}</span>
               </h2>
               
               {tuitionRedemptions.length > 0 ? (
@@ -676,8 +745,8 @@ const RewardsStore: React.FC = () => {
                         <div className="text-right">
                           <div className="font-medium text-slate-900">{redemption.cost_coins_paid} coins</div>
                           <div className={`text-xs px-2 py-1 rounded-full ${
-                            redemption.status === 'active' ? 'bg-green-100 text-green-800' :
-                            redemption.status === 'used' ? 'bg-blue-100 text-blue-800' :
+                            redemption.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                            redemption.status === 'pending' ? 'bg-blue-100 text-blue-800' :
                             redemption.status === 'expired' ? 'bg-red-100 text-red-800' :
                             redemption.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
                             'bg-gray-100 text-gray-800'
@@ -692,8 +761,8 @@ const RewardsStore: React.FC = () => {
               ) : (
                 <div className="text-center py-8">
                   <Building className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No tuition discounts redeemed yet</p>
-                  <p className="text-sm text-slate-400">Redeem tuition discounts to see your history here!</p>
+                  <p className="text-slate-500">{t('matriculaRewards.rewardsStore.noTuitionDiscounts')}</p>
+                  <p className="text-sm text-slate-400">{t('matriculaRewards.rewardsStore.redeemTuitionDiscounts')}</p>
                 </div>
               )}
             </div>
@@ -703,7 +772,7 @@ const RewardsStore: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center space-x-2">
                 <History className="h-5 w-5 text-green-600" />
-                <span>Transaction History</span>
+                <span>{t('matriculaRewards.rewardsStore.transactionHistory')}</span>
               </h2>
               
               {transactions.length > 0 ? (
@@ -743,8 +812,8 @@ const RewardsStore: React.FC = () => {
               ) : (
                 <div className="text-center py-8">
                   <History className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No transactions yet</p>
-                  <p className="text-sm text-slate-400">Your transaction history will appear here!</p>
+                  <p className="text-slate-500">{t('matriculaRewards.rewardsStore.noTransactions')}</p>
+                  <p className="text-sm text-slate-400">{t('matriculaRewards.rewardsStore.transactionHistoryMessage')}</p>
                 </div>
               )}
             </div>
@@ -759,18 +828,18 @@ const RewardsStore: React.FC = () => {
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-slate-900">
-                  Select Your University
+                  {t('matriculaRewards.rewardsStore.selectUniversity')}
                 </h2>
                 <button
                   onClick={() => setShowUniversitySelection(false)}
                   className="text-slate-400 hover:text-slate-600"
-                  title="Close modal"
+                  title={t('matriculaRewards.rewardsStore.closeModal')}
                 >
                   <XCircle className="h-6 w-6" />
                 </button>
               </div>
               <p className="text-slate-600 mt-2">
-                Choose the university where you want to apply the ${selectedDiscount?.discount_amount} tuition discount
+                {t('matriculaRewards.rewardsStore.chooseUniversity')} ${selectedDiscount?.discount_amount}
               </p>
               
               {/* Mensagem para alunos matriculados */}
@@ -779,15 +848,15 @@ const RewardsStore: React.FC = () => {
                   <div className="flex items-center">
                     <Info className="h-4 w-4 mr-2" />
                     <span>
-                      <strong>Note:</strong> You're enrolled at <strong>{userUniversity.name}</strong>. 
-                      If you select a different university, the discount will apply there instead.
+                      <strong>{t('matriculaRewards.rewardsStore.noteEnrolled')}</strong> {t('matriculaRewards.rewardsStore.youAreEnrolled')} <strong>{userUniversity.name}</strong>. 
+                      {t('matriculaRewards.rewardsStore.differentUniversity')}
                     </span>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="p-6">
+            <div className="p-6 max-h-[500px] overflow-y-auto">
               {/* Search */}
               <div className="mb-6">
                 <div className="relative">
@@ -796,7 +865,7 @@ const RewardsStore: React.FC = () => {
                     type="text"
                     value={searchUniversities}
                     onChange={(e) => handleSearchUniversities(e.target.value)}
-                    placeholder="Search universities by name or location..."
+                    placeholder={t('matriculaRewards.rewardsStore.searchUniversitiesPlaceholder')}
                     className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -806,13 +875,9 @@ const RewardsStore: React.FC = () => {
                   <div className="flex items-start space-x-2">
                     <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-blue-800">
-                      <p className="font-medium mb-1">Important Information:</p>
+                      <p className="font-medium mb-1">{t('matriculaRewards.rewardsStore.importantInformation')}</p>
                       <p>
-                        Only universities that have opted to participate in the Matricula Rewards program are shown here. 
-                        If your university is not listed, it means they haven't joined the program yet. 
-                        You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts 
-                        at your university until they participate. Consider reaching out to your university's admissions office 
-                        to encourage them to join!
+                        {t('matriculaRewards.rewardsStore.onlyParticipatingUniversities')}
                       </p>
                     </div>
                   </div>
@@ -878,7 +943,7 @@ const RewardsStore: React.FC = () => {
                     disabled={currentPage === 1}
                     className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Previous
+                    {t('matriculaRewards.rewardsStore.previous')}
                   </button>
                   
                   <div className="flex items-center space-x-1">
@@ -902,7 +967,7 @@ const RewardsStore: React.FC = () => {
                     disabled={currentPage === Math.ceil(filteredUniversities.length / universitiesPerPage)}
                     className="px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {t('matriculaRewards.rewardsStore.next')}
                   </button>
                 </div>
               )}
@@ -910,8 +975,8 @@ const RewardsStore: React.FC = () => {
               {filteredUniversities.length === 0 && (
                 <div className="text-center py-8">
                   <Building className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No universities found</p>
-                  <p className="text-sm text-slate-400">Try adjusting your search terms</p>
+                  <p className="text-slate-500">{t('matriculaRewards.rewardsStore.noUniversitiesFound')}</p>
+                  <p className="text-sm text-slate-400">{t('matriculaRewards.rewardsStore.adjustSearchTerms')}</p>
                 </div>
               )}
             </div>
@@ -919,27 +984,91 @@ const RewardsStore: React.FC = () => {
         </div>
       )}
 
+      {/* Custom Redemption Modal */}
+      {showCustomRedemption && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-slate-900">{t('matriculaRewards.rewardsStore.customTuitionDiscountModal')}</h2>
+                <button
+                  onClick={() => {
+                    setShowCustomRedemption(false);
+                    setCustomCoinsAmount(0);
+                    setCustomDiscountAmount(0);
+                    setIsCustomRedemption(false);
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    {t('matriculaRewards.rewardsStore.amountOfCoinsToRedeem')}
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max={Math.min(10000, credits?.balance || 0)}
+                    value={customCoinsAmount || ''}
+                    onChange={(e) => handleCustomCoinsChange(parseInt(e.target.value) || 0)}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder={t('matriculaRewards.rewardsStore.enterCoinsAmount')}
+                  />
+
+                </div>
+
+                {customCoinsAmount > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-sm text-slate-600">{t('matriculaRewards.rewardsStore.tuitionDiscountPreview')}</div>
+                        <div className="text-2xl font-bold text-blue-600">${customDiscountAmount}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-slate-600">{t('matriculaRewards.rewardsStore.costPreview')}</div>
+                        <div className="text-lg font-semibold text-slate-900">{customCoinsAmount} coins</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowCustomRedemption(false);
+                      setCustomCoinsAmount(0);
+                      setCustomDiscountAmount(0);
+                      setIsCustomRedemption(false);
+                    }}
+                    className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                  >
+                    {t('matriculaRewards.rewardsStore.cancel')}
+                  </button>
+                  <button
+                    onClick={handleConfirmCustomRedemption}
+                    disabled={!customCoinsAmount || customCoinsAmount < 10 || customCoinsAmount > (credits?.balance || 0)}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300"
+                  >
+                    {t('matriculaRewards.rewardsStore.continue')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* University Confirmation Modal */}
       {showConfirmation && confirmationData && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl max-w-lg w-full border border-white/20">
-            {/* Header com gradiente sutil */}
-            <div className="relative p-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white rounded-t-2xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-indigo-50/30 rounded-t-2xl"></div>
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div>
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-700 bg-clip-text text-transparent">
-                      Confirm University
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-1">
-                      {isEnrolledStudent && userUniversity && selectedUniversity?.id === userUniversity.id
-                        ? 'Your enrolled university'
-                        : 'Verify your university'
-                      }
-                    </p>
-                  </div>
-                </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-slate-900">{t('matriculaRewards.rewardsStore.confirmUniversity')}</h2>
                 <button
                   onClick={() => {
                     setShowConfirmation(false);
@@ -947,121 +1076,55 @@ const RewardsStore: React.FC = () => {
                     setSelectedUniversity(null);
                     setSelectedDiscount(null);
                   }}
-                  className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center transition-all duration-200 group"
-                  title="Close modal"
+                  className="text-slate-400 hover:text-slate-600"
                 >
-                  <XCircle className="h-5 w-5 text-slate-500 group-hover:text-slate-700 transition-colors" />
+                  <XCircle className="h-6 w-6" />
                 </button>
               </div>
-              
-              {/* Mensagem especial para alunos matriculados */}
-              {isEnrolledStudent && userUniversity && selectedUniversity?.id === userUniversity.id && (
-                <div className="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 text-green-700 px-4 py-3 rounded-xl text-sm shadow-sm">
-                  <div className="flex items-center">
-                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                      <CheckCircle className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="font-medium">Tuition discount will be automatically applied!</span>
+
+              {/* University Info */}
+              <div className="bg-slate-50 rounded-lg p-4 mb-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <Building className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900">{confirmationData.name}</h3>
+                    <p className="text-slate-600 text-sm flex items-center">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {confirmationData.location}
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* University Info - Card com design moderno */}
-              <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl p-6 border border-slate-200/50">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/30 to-indigo-100/30 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
                 
-                <div className="relative">
-                  <div className="flex items-center space-x-4 mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                      <Building className="h-8 w-8 text-white" />
+                {confirmationData.website && (
+                  <div className="text-sm text-slate-600">
+                    <span className="font-medium">{t('matriculaRewards.rewardsStore.website')}</span> {confirmationData.website}
+                  </div>
+                )}
+              </div>
+
+              {/* Discount Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-sm text-slate-600">
+                      {isCustomRedemption ? t('matriculaRewards.rewardsStore.customTuitionDiscount') : 'Tuition Discount'}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-slate-800 mb-1">{confirmationData.name}</h3>
-                      <p className="text-slate-600 flex items-center">
-                        <MapPin className="h-4 w-4 mr-2 text-slate-400" />
-                        {confirmationData.location}
-                      </p>
+                    <div className="text-2xl font-bold text-blue-600">
+                      ${isCustomRedemption ? customDiscountAmount : selectedDiscount?.discount_amount}
                     </div>
                   </div>
-
-                  {/* Grid de informações organizadas */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {confirmationData.website && (
-                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <Globe className="h-4 w-4 text-blue-500" />
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Website</span>
-                        </div>
-                        <span className="text-sm text-slate-700 font-medium">{confirmationData.website}</span>
-                      </div>
-                    )}
-                    {confirmationData.established_year && (
-                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <Calendar className="h-4 w-4 text-indigo-500" />
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Established</span>
-                        </div>
-                        <span className="text-sm text-slate-700 font-medium">{confirmationData.established_year}</span>
-                      </div>
-                    )}
-                    {confirmationData.student_count && (
-                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <Users className="h-4 w-4 text-emerald-500" />
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Students</span>
-                        </div>
-                        <span className="text-sm text-slate-700 font-medium">{confirmationData.student_count.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {confirmationData.type && (
-                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <Shield className="h-4 w-4 text-purple-500" />
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Type</span>
-                        </div>
-                        <span className="text-sm text-slate-700 font-medium">{confirmationData.type}</span>
-                      </div>
-                    )}
-                    {confirmationData.campus_size && (
-                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 col-span-2">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <MapPin className="h-4 w-4 text-rose-500" />
-                          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Campus Size</span>
-                        </div>
-                        <span className="text-sm text-slate-700 font-medium">{confirmationData.campus_size}</span>
-                      </div>
-                    )}
+                  <div className="text-right">
+                    <div className="text-sm text-slate-600">{t('matriculaRewards.rewardsStore.costPreview')}</div>
+                    <div className="text-lg font-semibold text-slate-900">
+                      {isCustomRedemption ? customCoinsAmount : selectedDiscount?.cost_coins} coins
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Discount Info - Card destacado */}
-              {selectedDiscount && (
-                <div className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100/50 rounded-2xl p-6 border border-green-200/50">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-green-200/40 to-emerald-200/40 rounded-full -translate-y-12 translate-x-12 blur-xl"></div>
-                  
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="text-lg font-bold text-slate-800 mb-1">Tuition Discount</h4>
-                        <p className="text-slate-600 text-sm">{selectedDiscount.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                          ${selectedDiscount.discount_amount}
-                        </div>
-                        <div className="text-sm text-slate-500 font-medium">
-                          {selectedDiscount.cost_coins} Matricula Coins
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons - Design moderno */}
+              {/* Action Buttons */}
               <div className="flex space-x-3">
                 <button
                   onClick={() => {
@@ -1070,23 +1133,23 @@ const RewardsStore: React.FC = () => {
                     setSelectedUniversity(null);
                     setSelectedDiscount(null);
                   }}
-                  className="flex-1 px-6 py-3 border-2 border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRedeemTuitionDiscount}
-                  disabled={redeemingTuition === selectedDiscount?.id}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:from-green-300 disabled:to-emerald-400 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform disabled:transform-none"
-                >
-                  {redeemingTuition === selectedDiscount?.id ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      <span>Processing...</span>
-                    </div>
-                  ) : (
-                    'Confirm & Redeem'
-                  )}
+                  className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+                  >
+                    {t('matriculaRewards.rewardsStore.cancel')}
+                  </button>
+                  <button
+                    onClick={handleRedeemTuitionDiscount}
+                    disabled={redeemingTuition === selectedDiscount?.id || redeemingTuition === 'custom'}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300"
+                  >
+                    {redeemingTuition === selectedDiscount?.id || redeemingTuition === 'custom' ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>{t('matriculaRewards.rewardsStore.processing')}</span>
+                      </div>
+                    ) : (
+                      t('matriculaRewards.rewardsStore.confirmAndRedeem')
+                    )}
                 </button>
               </div>
             </div>

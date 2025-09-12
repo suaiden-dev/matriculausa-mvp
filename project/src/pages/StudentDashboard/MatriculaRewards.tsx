@@ -405,6 +405,44 @@ const MatriculaRewards: React.FC = () => {
                 <span className="text-3xl font-extrabold text-slate-900">{formatCoins(credits?.balance || 0)}</span>
                 <span className="text-sm text-slate-500">{t('matriculaRewards.coins')}</span>
               </div>
+              
+              {/* Referral Code - Integrated in Hero */}
+              {affiliateCode && (
+                <div className="mt-6 max-w-lg">
+                  <div className="bg-white rounded-xl border-2 border-blue-200 p-4 shadow-lg">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Gift className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Seu código</p>
+                          <p className="text-xl font-bold tracking-wide text-slate-900 font-mono break-all">
+                            {affiliateCode.code}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(getShareUrl(affiliateCode.code))}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0"
+                      >
+                        {copied ? (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="hidden sm:inline text-sm">Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4" />
+                            <span className="hidden sm:inline text-sm">Copiar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Stats */}
               <div className="mt-4 grid grid-cols-2 gap-4 max-w-md">
                 <Card className="p-4 gap-0">
@@ -431,95 +469,70 @@ const MatriculaRewards: React.FC = () => {
           </div>
         </Card>
 
-        {/* Referral Code + Share */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 p-0">
-            <CardHeader className="pb-0">
-              <CardTitle className="text-lg">{t('matriculaRewards.yourReferralCode')}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 pb-6">
-            {affiliateCode && (
-              <div className="mt-4 grid gap-4">
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                      <Gift className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">{t('matriculaRewards.yourCode')}</p>
-                      <p className="text-2xl font-bold tracking-wide text-slate-900">{affiliateCode.code}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(getShareUrl(affiliateCode.code))}
-                    className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-                  >
-                    {copied ? <CheckCircle className="h-4 w-4"/> : <Copy className="h-4 w-4"/>}
-                    {copied ? t('matriculaRewards.linkCopied') : t('matriculaRewards.copyLink')}
-                  </button>
-                </div>
-
-                <div>
-                  <p className="mb-2 text-sm font-medium text-slate-700">{t('matriculaRewards.shareWithFriends')}</p>
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      aria-label={t('matriculaRewards.facebook')}
-                      onClick={() => shareToSocialMedia('facebook', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-3 py-2 text-white hover:brightness-95"
-                    >
-                      <FacebookLogo />
-                      <span className="hidden sm:inline">{t('matriculaRewards.facebook')}</span>
-                    </button>
-                    <button
-                      aria-label={t('matriculaRewards.twitter')}
-                      onClick={() => shareToSocialMedia('twitter', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2] px-3 py-2 text-white hover:brightness-95"
-                    >
-                      <TwitterLogo />
-                      <span className="hidden sm:inline">{t('matriculaRewards.twitter')}</span>
-                    </button>
-                    <button
-                      aria-label={t('matriculaRewards.linkedin')}
-                      onClick={() => shareToSocialMedia('linkedin', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#0A66C2] px-3 py-2 text-white hover:brightness-95"
-                    >
-                      <LinkedInLogo />
-                      <span className="hidden sm:inline">{t('matriculaRewards.linkedin')}</span>
-                    </button>
-                    <button
-                      aria-label={t('matriculaRewards.whatsapp')}
-                      onClick={() => shareToSocialMedia('whatsapp', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-3 py-2 text-white hover:brightness-95"
-                    >
-                      <WhatsAppIcon width={16} height={16} className="text-white" />
-                      <span className="hidden sm:inline">{t('matriculaRewards.whatsapp')}</span>
-                    </button>
-                    <button
-                      aria-label={t('matriculaRewards.email')}
-                      onClick={() => shareToSocialMedia('email', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-3 py-2 text-white hover:brightness-95"
-                    >
-                      <Mail className="h-4 w-4" />
-                      <span className="hidden sm:inline">{t('matriculaRewards.email')}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-            </CardContent>
+        {/* Quick Share Section */}
+        {affiliateCode && (
+          <Card className="p-6">
+            <div className="text-center mb-4">
+              <h2 className="text-lg font-semibold text-slate-900 mb-2">
+                Compartilhar com amigos
+              </h2>
+              <p className="text-slate-600 text-sm">
+                {t('matriculaRewards.shareDescription')}
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => shareToSocialMedia('whatsapp', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-white hover:brightness-95 transition-all"
+              >
+                <WhatsAppIcon width={16} height={16} className="text-white" />
+                <span className="text-sm font-medium">WhatsApp</span>
+              </button>
+              <button
+                onClick={() => shareToSocialMedia('facebook', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2 text-white hover:brightness-95 transition-all"
+              >
+                <FacebookLogo />
+                <span className="text-sm font-medium">Facebook</span>
+              </button>
+              <button
+                onClick={() => shareToSocialMedia('twitter', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1DA1F2] px-4 py-2 text-white hover:brightness-95 transition-all"
+              >
+                <TwitterLogo />
+                <span className="text-sm font-medium">Twitter</span>
+              </button>
+              <button
+                onClick={() => shareToSocialMedia('email', getShareUrl(affiliateCode.code), `${t('matriculaRewards.title')} ${t('matriculaRewards.yourCode')} ${affiliateCode.code}! ${t('matriculaRewards.visitStoreDescription')}`)}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-4 py-2 text-white hover:brightness-95 transition-all"
+              >
+                <Mail className="h-4 w-4" />
+                <span className="text-sm font-medium">Email</span>
+              </button>
+            </div>
           </Card>
+        )}
 
-          {/* CTA Store */}
-          <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-600 p-6 text-white shadow-md">
-            <h3 className="text-lg font-semibold">{t('matriculaRewards.spendYourCoins')}</h3>
-            <p className="text-blue-100 mt-1">{t('matriculaRewards.visitStoreDescription')}</p>
-            <Link to="/student/dashboard/rewards/store" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 ring-1 ring-white/20 hover:bg-white/20">
-              <Gift className="h-4 w-4"/>
-              {t('matriculaRewards.visitRewardsStore')}
-              <ArrowUpRight className="h-4 w-4"/>
-            </Link>
+        {/* CTA Store */}
+        <Card className="relative overflow-hidden border-2 border-blue-200 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90" />
+          <div className="relative z-10 p-6 md:p-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="text-center md:text-left">
+                <h3 className="text-2xl md:text-3xl font-bold mb-2">{t('matriculaRewards.spendYourCoins')}</h3>
+                <p className="text-blue-100 text-lg">{t('matriculaRewards.visitStoreDescription')}</p>
+              </div>
+              <Link 
+                to="/student/dashboard/rewards/store" 
+                className="inline-flex items-center gap-3 rounded-xl bg-white/20 backdrop-blur-sm px-6 py-4 ring-2 ring-white/30 hover:bg-white/30 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Gift className="h-6 w-6"/>
+                <span className="font-semibold text-lg">{t('matriculaRewards.visitRewardsStore')}</span>
+                <ArrowUpRight className="h-5 w-5"/>
+              </Link>
+            </div>
           </div>
-        </div>
+        </Card>
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
