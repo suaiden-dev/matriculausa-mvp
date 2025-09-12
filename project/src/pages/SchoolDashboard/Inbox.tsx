@@ -422,78 +422,78 @@ const Inbox: React.FC = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          {/* Header */}
+            {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-slate-200">
             <h2 className="text-2xl font-bold text-slate-800 flex items-center">
               <Calendar className="h-6 w-6 mr-2 text-[#05294E]" />
-              Schedule AI Demo
+                Schedule AI Demo
             </h2>
             <button
-              onClick={() => setShowMeetingModal(false)}
+                onClick={() => setShowMeetingModal(false)}
               className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              aria-label="Close modal"
-            >
-              <X className="h-6 w-6 text-slate-600" />
+                aria-label="Close modal"
+              >
+                <X className="h-6 w-6 text-slate-600" />
             </button>
-          </div>
+            </div>
 
           <form onSubmit={(e) => { e.preventDefault(); handleSendMeetingRequest(); }} className="p-6 space-y-6">
-            {/* University Email */}
+              {/* University Email */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 <Mail className="inline h-4 w-4 mr-2" />
-                University Email *
-              </label>
-              <input
-                type="email"
-                value={meetingForm.email}
-                onChange={(e) => setMeetingForm(prev => ({ ...prev, email: e.target.value }))}
+                  University Email *
+                </label>
+                <input
+                  type="email"
+                  value={meetingForm.email}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, email: e.target.value }))}
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
-                placeholder="university@example.com"
-                required
-              />
+                  placeholder="university@example.com"
+                  required
+                />
             </div>
 
-            {/* Preferred Date */}
+              {/* Preferred Date */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 <Calendar className="inline h-4 w-4 mr-2" />
-                Preferred Date *
-              </label>
-              <input
-                type="date"
-                value={meetingForm.preferredDate}
-                onChange={(e) => setMeetingForm(prev => ({ ...prev, preferredDate: e.target.value }))}
+                  Preferred Date *
+                </label>
+                <input
+                  type="date"
+                  value={meetingForm.preferredDate}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, preferredDate: e.target.value }))}
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
-                required
-              />
+                  required
+                />
               <p className="mt-2 text-sm text-slate-500">
-                We'll contact you to confirm the exact time
-              </p>
+                  We'll contact you to confirm the exact time
+                </p>
             </div>
 
-            {/* Message */}
+              {/* Message */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 <FileText className="inline h-4 w-4 mr-2" />
-                What you want to achieve with AI
-              </label>
-              <textarea
-                value={meetingForm.message}
-                onChange={(e) => setMeetingForm(prev => ({ ...prev, message: e.target.value }))}
-                rows={4}
+                  What you want to achieve with AI
+                </label>
+                <textarea
+                  value={meetingForm.message}
+                  onChange={(e) => setMeetingForm(prev => ({ ...prev, message: e.target.value }))}
+                  rows={4}
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all resize-none"
-                placeholder="Tell us about your email automation needs..."
-              />
+                  placeholder="Tell us about your email automation needs..."
+                />
             </div>
 
-            {/* Submit Button */}
+              {/* Submit Button */}
             <button
-              type="submit"
+                type="submit"
               className="w-full bg-[#05294E] text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-[#041f3d] transition-colors flex items-center justify-center"
-            >
+              >
               <Send className="h-5 w-5 mr-2" />
-              Send Request
+                Send Request
             </button>
           </form>
         </div>
@@ -509,45 +509,45 @@ const Inbox: React.FC = () => {
         {/* Hero Section */}
         <AnimatedSection direction="up" delay={0.1}>
           <div className="pt-20 pb-16 text-center border-b border-slate-100">
-            <motion.div 
+        <motion.div 
               className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-8"
               whileHover={{ scale: 1.1 }}
               transition={{ type: "spring", damping: 20, stiffness: 300 }}
             >
               <Mail className="h-8 w-8 text-white" />
-            </motion.div>
-            
+          </motion.div>
+          
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-slate-900 mb-6 tracking-tight">
               AI-Powered
-              <br />
+            <br />
               <span className="font-bold">Email Management</span>
             </h1>
             
             <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-12 font-light">
-              Transform your university's email communication with our advanced AI system that automatically 
+            Transform your university's email communication with our advanced AI system that automatically 
               processes, categorizes, and responds to student inquiries.
             </p>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <motion.button
-                onClick={() => setShowMeetingModal(true)}
+                <motion.button 
+                  onClick={() => setShowMeetingModal(true)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="bg-slate-900 text-white px-8 py-4 rounded-none font-medium text-lg hover:bg-slate-800 transition-colors border-2 border-slate-900 min-w-[200px]"
-              >
-                Schedule Meeting
-              </motion.button>
+                >
+                  Schedule Meeting
+                </motion.button>
               <motion.button
                 onClick={() => window.open("mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing.")}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="border-2 border-slate-900 text-slate-900 px-8 py-4 rounded-none font-medium text-lg hover:bg-slate-900 hover:text-white transition-colors min-w-[200px]"
               >
-                Contact Us
+                  Contact Us
               </motion.button>
+              </div>
             </div>
-          </div>
         </AnimatedSection>
 
         {/* Features Section */}
@@ -555,7 +555,7 @@ const Inbox: React.FC = () => {
           <div className="py-20 border-b border-slate-100">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16">
               
-              <motion.div 
+        <motion.div 
                 className="space-y-8"
                 initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -572,10 +572,10 @@ const Inbox: React.FC = () => {
                 </div>
               </motion.div>
 
-              <motion.div 
+            <motion.div
                 className="space-y-8"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
                 <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center">
@@ -588,7 +588,7 @@ const Inbox: React.FC = () => {
                   </p>
                 </div>
               </motion.div>
-
+              
               <motion.div 
                 className="space-y-8"
                 initial={{ opacity: 0, x: 30 }}
@@ -604,7 +604,7 @@ const Inbox: React.FC = () => {
                     Set up automated email sequences and follow-ups to improve student engagement and response times.
                   </p>
                 </div>
-              </motion.div>
+        </motion.div>
 
             </div>
           </div>
@@ -614,22 +614,22 @@ const Inbox: React.FC = () => {
         <AnimatedSection direction="up" delay={0.3}>
           <div className="py-20 border-b border-slate-100">
             <div className="max-w-4xl mx-auto">
-              <motion.h2 
+            <motion.h2 
                 className="text-3xl lg:text-4xl font-light text-slate-900 text-center mb-16 tracking-tight"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
                 How AI Transforms Your <span className="font-bold">Email Management</span>
-              </motion.h2>
-              
-              {/* AI Features Details */}
+            </motion.h2>
+            
+            {/* AI Features Details */}
               <div className="space-y-16">
-                <motion.div 
+              <motion.div 
                   className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
                 >
                   <div className="order-2 lg:order-1">
                     <h3 className="text-2xl font-bold text-slate-900 mb-6">Intelligent Processing</h3>
@@ -655,7 +655,7 @@ const Inbox: React.FC = () => {
                   </div>
                 </motion.div>
                 
-                <motion.div 
+                    <motion.div
                   className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -683,8 +683,8 @@ const Inbox: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </motion.div>
-              </div>
+                    </motion.div>
+                  </div>
 
             </div>
           </div>
@@ -705,32 +705,32 @@ const Inbox: React.FC = () => {
             <div className="max-w-4xl mx-auto">
               <div className="space-y-12">
                 
-                <motion.div 
+                      <motion.div
                   className="flex flex-col md:flex-row items-start gap-8"
                   initial={{ opacity: 0, x: -30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                        whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.1 }}
                 >
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 bg-slate-900 text-white rounded-none flex items-center justify-center text-2xl font-bold">
                       01
-                    </div>
                   </div>
+                </div>
                   <div className="flex-grow">
                     <h4 className="text-xl font-bold text-slate-900 mb-3">Contact & Setup</h4>
                     <p className="text-slate-600 leading-relaxed">
                       Contact our team to activate AI email management and configure your university's specific needs.
                     </p>
-                  </div>
-                </motion.div>
+                </div>
+              </motion.div>
 
                 <div className="w-px h-12 bg-slate-200 mx-8"></div>
-
-                <motion.div 
+              
+              <motion.div 
                   className="flex flex-col md:flex-row items-start gap-8"
-                  initial={{ opacity: 0, x: 30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
                 >
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 bg-slate-900 text-white rounded-none flex items-center justify-center text-2xl font-bold">
@@ -747,27 +747,27 @@ const Inbox: React.FC = () => {
 
                 <div className="w-px h-12 bg-slate-200 mx-8"></div>
 
-                <motion.div 
+                    <motion.div
                   className="flex flex-col md:flex-row items-start gap-8"
                   initial={{ opacity: 0, x: -30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
+                        whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.3 }}
                 >
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 bg-slate-900 text-white rounded-none flex items-center justify-center text-2xl font-bold">
                       03
-                    </div>
                   </div>
+                </div>
                   <div className="flex-grow">
                     <h4 className="text-xl font-bold text-slate-900 mb-3">Smart Management</h4>
                     <p className="text-slate-600 leading-relaxed">
                       Access AI-powered dashboard with automated workflows and intelligent email management.
                     </p>
-                  </div>
-                </motion.div>
+                </div>
+              </motion.div>
 
-              </div>
             </div>
+          </div>
           </div>
         </AnimatedSection>
 
@@ -786,7 +786,7 @@ const Inbox: React.FC = () => {
               
               <div className="bg-slate-50 p-12 border-l-4 border-slate-900">
                 <div className="space-y-8">
-                  <motion.div 
+                  <motion.div
                     className="text-left"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -794,13 +794,13 @@ const Inbox: React.FC = () => {
                   >
                     <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">Student Email</div>
                     <div className="text-lg font-medium text-slate-900">"What documents do I need for admission?"</div>
-                  </motion.div>
+                    </motion.div>
                   
                   <div className="flex justify-center">
                     <div className="w-px h-8 bg-slate-300"></div>
-                  </div>
-                  
-                  <motion.div 
+              </div>
+            
+              <motion.div 
                     className="text-left"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -808,13 +808,13 @@ const Inbox: React.FC = () => {
                   >
                     <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">AI Analysis</div>
                     <div className="text-lg font-medium text-slate-900">AI analyzes request and generates personalized response</div>
-                  </motion.div>
+                    </motion.div>
                   
                   <div className="flex justify-center">
                     <div className="w-px h-8 bg-slate-300"></div>
                   </div>
                   
-                  <motion.div 
+                      <motion.div
                     className="text-left"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -822,9 +822,9 @@ const Inbox: React.FC = () => {
                   >
                     <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">University Response</div>
                     <div className="text-lg font-medium text-slate-900">University reviews and sends AI-generated response</div>
-                  </motion.div>
+                          </motion.div>
+                  </div>
                 </div>
-              </div>
             </div>
           </div>
         </AnimatedSection>
@@ -832,17 +832,17 @@ const Inbox: React.FC = () => {
         {/* Benefits Section */}
         <AnimatedSection direction="up" delay={0.6}>
           <div className="py-20">
-            <motion.h3 
+              <motion.h3 
               className="text-3xl lg:text-4xl font-light text-slate-900 text-center mb-16 tracking-tight"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
               Why Choose <span className="font-bold">AI-Powered Email Management?</span>
-            </motion.h3>
-            
+              </motion.h3>
+              
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <motion.div 
+                  <motion.div
                 className="space-y-6"
                 initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -859,7 +859,7 @@ const Inbox: React.FC = () => {
                 </div>
               </motion.div>
 
-              <motion.div 
+                        <motion.div
                 className="space-y-6"
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -873,8 +873,8 @@ const Inbox: React.FC = () => {
                   <p className="text-slate-600">
                     Respond to student inquiries in minutes instead of hours with AI-generated responses.
                   </p>
-                </div>
-              </motion.div>
+                    </div>
+                  </motion.div>
 
               <motion.div 
                 className="space-y-6"
@@ -890,10 +890,10 @@ const Inbox: React.FC = () => {
                   <p className="text-slate-600">
                     Automatically prioritize and route emails based on content analysis and student status.
                   </p>
-                </div>
-              </motion.div>
+          </div>
+        </motion.div>
 
-              <motion.div 
+        <motion.div 
                 className="space-y-6"
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -919,68 +919,68 @@ const Inbox: React.FC = () => {
             <div className="max-w-4xl mx-auto text-center">
               <motion.h3 
                 className="text-3xl lg:text-4xl font-light text-slate-900 mb-8 tracking-tight"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-              >
+                >
                 Ready to Transform Your <span className="font-bold">Email Management?</span>
               </motion.h3>
               
-              <motion.p 
+                <motion.p 
                 className="text-xl text-slate-600 mb-12 font-light"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-              >
-                Join leading universities using AI to streamline student communication and improve response efficiency.
-              </motion.p>
+                >
+                  Join leading universities using AI to streamline student communication and improve response efficiency.
+                </motion.p>
 
               <motion.div 
                 className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
                 <motion.button
-                  onClick={() => setShowMeetingModal(true)}
+                    onClick={() => setShowMeetingModal(true)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="bg-slate-900 text-white px-10 py-4 rounded-none font-medium text-lg hover:bg-slate-800 transition-colors border-2 border-slate-900 min-w-[240px]"
-                >
-                  Schedule Meeting
-                </motion.button>
+                  >
+                    Schedule Meeting
+                  </motion.button>
                 <motion.button
                   onClick={() => window.open("mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing.")}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="border-2 border-slate-900 text-slate-900 px-10 py-4 rounded-none font-medium text-lg hover:bg-slate-900 hover:text-white transition-colors min-w-[240px]"
                 >
-                  Contact Us
+                    Contact Us
                 </motion.button>
-              </motion.div>
+            </motion.div>
 
-              <motion.div 
+            <motion.div 
                 className="border-t border-slate-200 pt-8"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-              >
+            >
                 <p className="text-slate-500 font-light">
-                  Questions? Contact us at{' '}
-                  <a 
-                    href="mailto:support@matricula.usa.com" 
+                Questions? Contact us at{' '}
+                <a 
+                  href="mailto:support@matricula.usa.com" 
                     className="text-slate-900 hover:text-slate-700 underline transition-colors"
-                  >
-                    support@matricula.usa.com
-                  </a>
-                </p>
-              </motion.div>
-            </div>
+                >
+                  support@matricula.usa.com
+                </a>
+              </p>
+            </motion.div>
           </div>
-        </AnimatedSection>
       </div>
-    </div>
+        </AnimatedSection>
+          </div>
+      </div>
   );
 };
 
-export default Inbox;
+export default Inbox; 
