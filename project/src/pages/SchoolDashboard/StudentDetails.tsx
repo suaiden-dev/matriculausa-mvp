@@ -3,13 +3,10 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
-import ApplicationChat from '../../components/ApplicationChat';
-import { useApplicationChat } from '../../hooks/useApplicationChat';
-import { useAuth } from '../../hooks/useAuth';
-import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { MessageCircle, FileText, UserCircle, Eye, Download, CheckCircle2, XCircle } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { FileText, UserCircle, CheckCircle2 } from 'lucide-react';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 
 interface ApplicationDetails extends Application {
@@ -48,7 +45,6 @@ const StudentDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const chat = useApplicationChat(applicationId);
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents'>('details');
@@ -77,7 +73,6 @@ const StudentDetails: React.FC = () => {
   const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
   const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState(false);
 
-  const [fileSelectionError, setFileSelectionError] = useState<string | null>(null);
   const [isFileSelecting, setIsFileSelecting] = useState(false);
 
   // Estados para o modal de nova solicitação de documento
@@ -208,24 +203,40 @@ const StudentDetails: React.FC = () => {
   const syncDocumentsStatus = async () => {
     if (!application?.documents || !application?.user_profiles?.user_id) return;
     
+    console.log('=== SINCRONIZANDO STATUS DOS DOCUMENTOS ===');
+    console.log('Application documents:', application.documents);
+    console.log('Current documents_status:', application.user_profiles.documents_status);
+    
     const allDocsApproved = ['passport', 'diploma', 'funds_proof']
       .every((docType) => {
         const doc = application.documents.find((d: any) => d.type === docType);
-        return doc && (doc as any).status === 'approved';
+        const isApproved = doc && (doc as any).status === 'approved';
+        console.log(`Document ${docType}:`, doc, 'Approved:', isApproved);
+        return isApproved;
       });
+    
+    console.log('All documents approved:', allDocsApproved);
     
     // Se todos os documentos estão aprovados mas o status geral não está, atualizar
     if (allDocsApproved && application.user_profiles.documents_status !== 'approved') {
-      await supabase
+      console.log('Atualizando documents_status para approved...');
+      
+      const { error } = await supabase
         .from('user_profiles')
         .update({ documents_status: 'approved' })
         .eq('user_id', application.user_profiles.user_id);
       
-      // Atualizar o estado local
-      setApplication((prev) => prev ? ({
-        ...prev,
-        user_profiles: { ...prev.user_profiles, documents_status: 'approved' }
-      } as any) : prev);
+      if (error) {
+        console.error('Erro ao sincronizar documents_status:', error);
+      } else {
+        console.log('documents_status sincronizado com sucesso!');
+        
+        // Atualizar o estado local
+        setApplication((prev) => prev ? ({
+          ...prev,
+          user_profiles: { ...prev.user_profiles, documents_status: 'approved' }
+        } as any) : prev);
+      }
     }
   };
 
@@ -837,10 +848,19 @@ const StudentDetails: React.FC = () => {
       
       // Se todos os documentos foram aprovados, atualizar status geral
       if (allDocsApproved) {
-        await supabase
+        console.log('=== TODOS OS DOCUMENTOS APROVADOS - ATUALIZANDO STATUS ===');
+        console.log('User ID:', application.user_profiles.user_id);
+        
+        const { error: profileUpdateError } = await supabase
           .from('user_profiles')
           .update({ documents_status: 'approved' })
           .eq('user_id', application.user_profiles.user_id);
+        
+        if (profileUpdateError) {
+          console.error('Erro ao atualizar documents_status:', profileUpdateError);
+        } else {
+          console.log('documents_status atualizado para approved!');
+        }
         
         // Atualizar o estado local da aplicação
         setApplication((prev) => prev ? ({ ...prev, documents: updatedDocuments } as any) : prev);
@@ -1102,7 +1122,7 @@ const StudentDetails: React.FC = () => {
 
   // Função para limpar erros de seleção de arquivo
   const clearFileSelectionError = () => {
-    setFileSelectionError(null);
+    // Função removida - não há mais fileSelectionError
   };
 
   // Função para selecionar arquivo da carta de aceite
@@ -1116,7 +1136,7 @@ const StudentDetails: React.FC = () => {
             // Validar o arquivo
             const maxSize = 10 * 1024 * 1024; // 10MB
             if (file.size > maxSize) {
-              setFileSelectionError('File size must be less than 10MB');
+              alert('File size must be less than 10MB');
               return;
             }
             
@@ -1124,20 +1144,19 @@ const StudentDetails: React.FC = () => {
             const allowedTypes = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
             const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
             if (!allowedTypes.includes(fileExtension)) {
-              setFileSelectionError('Please select a valid file type: PDF, DOC, DOCX, JPG, JPEG, or PNG');
+              alert('Please select a valid file type: PDF, DOC, DOCX, JPG, JPEG, or PNG');
               return;
             }
             
             setAcceptanceLetterFile(file);
             setAcceptanceLetterUploaded(false);
-            setFileSelectionError(null);
             
             // Limpar o input para permitir selecionar o mesmo arquivo novamente
             event.target.value = '';
           }
         } catch (error) {
           console.error('Error processing file selection:', error);
-          setFileSelectionError('Error processing file. Please try again.');
+          alert('Error processing file. Please try again.');
         } finally {
           setIsFileSelecting(false);
         }
@@ -1145,7 +1164,7 @@ const StudentDetails: React.FC = () => {
       
     } catch (error) {
       console.error('Error selecting file:', error);
-      setFileSelectionError('Error selecting file. Please try again.');
+      alert('Error selecting file. Please try again.');
       setIsFileSelecting(false);
     }
   };
@@ -1194,14 +1213,21 @@ const StudentDetails: React.FC = () => {
         status: 'enrolled'
       };
       
+      console.log('=== ATUALIZANDO APLICAÇÃO COM STATUS ENROLLED ===');
+      console.log('Application ID:', application.id);
+      console.log('Update data:', updateData);
+      
       const { error: updateError } = await supabase
         .from('scholarship_applications')
         .update(updateData)
         .eq('id', application.id);
 
       if (updateError) {
+        console.error('Erro ao atualizar aplicação:', updateError);
         throw new Error('Failed to update application: ' + updateError.message);
       }
+
+      console.log('Aplicação atualizada com sucesso!');
 
       // Atualizar o estado local da aplicação
       setApplication(prev => prev ? ({
@@ -1215,16 +1241,22 @@ const StudentDetails: React.FC = () => {
       // Atualizar o estado local da carta de aceite
       setAcceptanceLetterUploaded(true);
 
-      // Atualizar o perfil do usuário apenas com documents_status
+      // Atualizar o perfil do usuário com documents_status e status geral
+      console.log('=== ATUALIZANDO PERFIL DO USUÁRIO ===');
+      console.log('User ID:', application.user_profiles.user_id);
+      
       const { error: profileError } = await supabase
         .from('user_profiles')
         .update({
-          documents_status: 'approved'
+          documents_status: 'approved',
+          status: 'enrolled'
         })
         .eq('user_id', application.user_profiles.user_id);
 
       if (profileError) {
         console.error('Error updating user profile:', profileError);
+      } else {
+        console.log('Perfil do usuário atualizado com sucesso!');
       }
 
       // Enviar notificação ao aluno
@@ -1333,6 +1365,10 @@ const StudentDetails: React.FC = () => {
       
       // Recarregar apenas os documentos do aluno
       await fetchStudentDocuments();
+      
+      // Recarregar os dados da aplicação para garantir sincronização
+      console.log('=== RECARREGANDO DADOS DA APLICAÇÃO ===');
+      await fetchApplicationDetails();
     } catch (error: any) {
       console.error('Error processing acceptance letter:', error);
       alert(`Failed to process acceptance letter: ${error.message}`);
@@ -1656,7 +1692,6 @@ const StudentDetails: React.FC = () => {
                                     console.log('🔍 [STUDENT_DETAILS] Application Fee Debug:', {
                                       hasScholarship: !!application?.scholarships,
                                       applicationFeeAmount: application?.scholarships?.application_fee_amount,
-                                      studentInfoApplicationFee: application?.application_fee_amount,
                                       isApplicationFeePaid: application?.is_application_fee_paid,
                                       defaultFee: getFeeAmount('application_fee')
                                     });
@@ -1670,10 +1705,6 @@ const StudentDetails: React.FC = () => {
                                     if (scholarship?.application_fee_amount) {
                                       const amount = Number(scholarship.application_fee_amount);
                                       console.log('🔍 [STUDENT_DETAILS] Using dynamic amount from scholarship (already in dollars):', amount);
-                                      return formatFeeAmount(amount);
-                                    } else if (application?.application_fee_amount) {
-                                      const amount = Number(application.application_fee_amount);
-                                      console.log('🔍 [STUDENT_DETAILS] Using application application_fee_amount:', amount);
                                       return formatFeeAmount(amount);
                                     } else {
                                       console.log('🔍 [STUDENT_DETAILS] Using default amount:', getFeeAmount('application_fee'));

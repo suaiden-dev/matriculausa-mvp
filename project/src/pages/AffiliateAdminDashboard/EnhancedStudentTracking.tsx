@@ -144,8 +144,103 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'documents'>('details');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
-  // Hook para configurações dinâmicas de taxas
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  // Hook para configurações dinâmicas de taxas (valores padrão)
+  const { getFeeAmount: getDefaultFeeAmount, formatFeeAmount } = useFeeConfig();
+  
+  // Estado para armazenar as taxas do pacote do estudante selecionado
+  const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
+  
+  // Estado para armazenar as taxas em falta de cada estudante
+  const [studentMissingFees, setStudentMissingFees] = useState<{[key: string]: any[]}>({});
+
+  // Função para carregar as taxas em falta de todos os estudantes
+  const loadAllStudentsMissingFees = async (studentsList: any[]) => {
+    const missingFeesMap: {[key: string]: any[]} = {};
+    
+    console.log('🔍 Loading missing fees for students:', studentsList.map(s => ({
+      id: s.id,
+      name: s.full_name,
+      email: s.email,
+      hasPaidSelection: s.has_paid_selection_process_fee,
+      hasPaidI20: s.has_paid_i20_control_fee,
+      isScholarshipPaid: s.is_scholarship_fee_paid,
+      isApplicationPaid: s.is_application_fee_paid,
+      totalPaid: s.total_paid,
+      allKeys: Object.keys(s)
+    })));
+    
+    // Log específico para o usuário kay
+    const kayStudent = studentsList.find(s => s.email === 'kay2563@uorak.com');
+    if (kayStudent) {
+      console.log('🔍 KAY STUDENT DATA:', {
+        id: kayStudent.id,
+        user_id: kayStudent.user_id,
+        email: kayStudent.email,
+        hasPaidSelection: kayStudent.has_paid_selection_process_fee,
+        hasPaidI20: kayStudent.has_paid_i20_control_fee,
+        isScholarshipPaid: kayStudent.is_scholarship_fee_paid,
+        isApplicationPaid: kayStudent.is_application_fee_paid,
+        totalPaid: kayStudent.total_paid,
+        allData: kayStudent
+      });
+    }
+    
+    for (const student of studentsList) {
+      try {
+        const missingFees = await getMissingFees(student);
+        missingFeesMap[student.id] = missingFees;
+      } catch (error) {
+        console.warn(`Error loading missing fees for student ${student.id}:`, error);
+        missingFeesMap[student.id] = [];
+      }
+    }
+    
+    console.log('🔍 Final missing fees map:', missingFeesMap);
+    setStudentMissingFees(missingFeesMap);
+  };
+
+  // Função para buscar as taxas do pacote do estudante
+  const loadStudentPackageFees = async (studentUserId: string) => {
+    if (!studentUserId) return;
+    try {
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: studentUserId
+      });
+      if (error) {
+        console.error('Error loading student package fees:', error);
+      } else if (packageFees && packageFees.length > 0) {
+        setStudentPackageFees(packageFees[0]);
+      } else {
+        setStudentPackageFees(null);
+      }
+    } catch (error) {
+      console.error('Error loading student package fees:', error);
+    }
+  };
+
+  // Função para obter o valor da taxa considerando o pacote do estudante
+  const getFeeAmountForStudent = (studentUserId: string, feeType: string, studentPackageFees?: any): number => {
+    // Se temos as taxas do pacote do estudante, usar elas
+    if (studentPackageFees) {
+      switch (feeType) {
+        case 'selection_process':
+          return studentPackageFees.selection_process_fee;
+        case 'scholarship_fee':
+          return studentPackageFees.scholarship_fee;
+        case 'i20_control_fee':
+        case 'i-20_control_fee':
+          return studentPackageFees.i20_control_fee;
+        case 'application_fee':
+          // Application fee sempre usa o valor fixo do sistema
+          return getDefaultFeeAmount('application_fee');
+        default:
+          return studentPackageFees.selection_process_fee;
+      }
+    }
+    
+    // Fallback para valores padrão do sistema
+    return getDefaultFeeAmount(feeType);
+  };
 
   useEffect(() => {
     console.log('🔍 studentDocuments:', studentDocuments);
@@ -271,6 +366,8 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
             })));
             
             setStudents(processedStudents);
+            // Carregar as taxas em falta para todos os estudantes
+            loadAllStudentsMissingFees(processedStudents);
           } else {
             console.log('🔍 SQL students function failed or returned no data, will use fallback');
           }
@@ -311,6 +408,8 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
             
             setSellers(sellersWithRealRevenue);
             setStudents(processedStudents);
+            // Carregar as taxas em falta para todos os estudantes
+            loadAllStudentsMissingFees(processedStudents);
             return;
           }
         } catch (error) {
@@ -495,6 +594,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     try {
       console.log('🔍 Loading details for student:', studentId);
       setSelectedStudent(studentId);
+      
+      // Carregar as taxas do pacote do estudante
+      loadStudentPackageFees(studentId);
 
       // Primeiro, tentar usar as funções SQL criadas para obter detalhes do estudante
       console.log('🔍 Calling get_student_detailed_info with studentId:', studentId);
@@ -821,7 +923,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     
     // Verificar Selection Process Fee
     if (feeFilters.selectionProcessFee !== 'all') {
-      const selectionFee = getFeeAmount('selection_process');
+      const selectionFee = getDefaultFeeAmount('selection_process'); // Usar valores padrão para filtros
       const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= selectionFee;
       if (feeFilters.selectionProcessFee === 'paid' && !hasPaidSelection) return false;
       if (feeFilters.selectionProcessFee === 'pending' && hasPaidSelection) return false;
@@ -829,8 +931,8 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     
     // Verificar I20 Control Fee
     if (feeFilters.i20ControlFee !== 'all') {
-      const selectionFee = getFeeAmount('selection_process');
-      const i20Fee = getFeeAmount('i20_control_fee');
+      const selectionFee = getDefaultFeeAmount('selection_process'); // Usar valores padrão para filtros
+      const i20Fee = getDefaultFeeAmount('i20_control_fee');
       const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= (selectionFee + i20Fee);
       if (feeFilters.i20ControlFee === 'paid' && !hasPaidI20) return false;
       if (feeFilters.i20ControlFee === 'pending' && hasPaidI20) return false;
@@ -838,9 +940,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
     
     // Verificar Scholarship Fee
     if (feeFilters.scholarshipFee !== 'all') {
-      const selectionFee = getFeeAmount('selection_process');
-      const i20Fee = getFeeAmount('i20_control_fee');
-      const scholarshipFee = getFeeAmount('scholarship_fee');
+      const selectionFee = getDefaultFeeAmount('selection_process'); // Usar valores padrão para filtros
+      const i20Fee = getDefaultFeeAmount('i20_control_fee');
+      const scholarshipFee = getDefaultFeeAmount('scholarship_fee');
       const totalFees = selectionFee + i20Fee + scholarshipFee;
       const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= totalFees;
       if (feeFilters.scholarshipFee === 'paid' && !hasPaidScholarship) return false;
@@ -996,37 +1098,58 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   };
 
   // Função para determinar quais taxas estão faltando para um aluno
-  const getMissingFees = (student: any) => {
+  const getMissingFees = async (student: any) => {
     const missingFees = [];
     
-    const selectionFee = getFeeAmount('selection_process');
-    const i20Fee = getFeeAmount('i20_control_fee');
-    const scholarshipFee = getFeeAmount('scholarship_fee');
+    // Buscar as taxas específicas do pacote do estudante
+    let studentPackageFees = null;
+    try {
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: student.user_id || student.id
+      });
+      if (!error && packageFees && packageFees.length > 0) {
+        studentPackageFees = packageFees[0];
+      }
+    } catch (error) {
+      console.warn('Error loading student package fees for missing fees calculation:', error);
+    }
     
-    // Verificar Selection Process Fee
-    const hasPaidSelection = student.has_paid_selection_process_fee || (student.total_paid || 0) >= selectionFee;
-    if (!hasPaidSelection) {
+    // Usar taxas dinâmicas se disponíveis, senão usar padrões
+    const selectionFee = studentPackageFees ? studentPackageFees.selection_process_fee : getDefaultFeeAmount('selection_process');
+    const i20Fee = studentPackageFees ? studentPackageFees.i20_control_fee : getDefaultFeeAmount('i20_control_fee');
+    const scholarshipFee = studentPackageFees ? studentPackageFees.scholarship_fee : getDefaultFeeAmount('scholarship_fee');
+    const applicationFee = getDefaultFeeAmount('application_fee'); // Sempre fixo
+    
+    console.log(`🔍 Checking missing fees for student ${student.full_name || student.email}:`, {
+      hasPaidSelection: student.has_paid_selection_process_fee,
+      hasPaidI20: student.has_paid_i20_control_fee,
+      isScholarshipPaid: student.is_scholarship_fee_paid,
+      isApplicationPaid: student.is_application_fee_paid,
+      totalPaid: student.total_paid,
+      packageFees: studentPackageFees
+    });
+    
+    // Verificar Selection Process Fee - usar apenas o flag do perfil
+    if (!student.has_paid_selection_process_fee) {
       missingFees.push({ name: 'Selection Process', amount: selectionFee, color: 'red' });
     }
     
-    // Verificar I20 Control Fee
-    const hasPaidI20 = student.has_paid_i20_control_fee || (student.total_paid || 0) >= (selectionFee + i20Fee);
-    if (!hasPaidI20) {
+    // Verificar I20 Control Fee - usar apenas o flag do perfil
+    if (!student.has_paid_i20_control_fee) {
       missingFees.push({ name: 'I20 Control', amount: i20Fee, color: 'orange' });
     }
     
-    // Verificar Scholarship Fee
-    const hasPaidScholarship = student.is_scholarship_fee_paid || (student.total_paid || 0) >= (selectionFee + i20Fee + scholarshipFee);
-    if (!hasPaidScholarship) {
+    // Verificar Scholarship Fee - usar apenas o flag da aplicação
+    if (!student.is_scholarship_fee_paid) {
       missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
     }
     
-    // Verificar Application Fee ($50) - apenas para referência, não conta na receita
-    const hasPaidApplication = student.is_application_fee_paid || false;
-    if (!hasPaidApplication) {
-      missingFees.push({ name: 'Application', amount: 50, color: 'gray' });
+    // Verificar Application Fee - usar apenas o flag da aplicação
+    if (!student.is_application_fee_paid) {
+      missingFees.push({ name: 'Application', amount: applicationFee, color: 'gray' });
     }
     
+    console.log(`🔍 Missing fees for ${student.full_name || student.email}:`, missingFees);
     return missingFees;
   };
 
@@ -1095,9 +1218,15 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
           console.log(`🔍 Application fee EXCLUDED (university fee): $${appFeeUSD}`);
         }
         
-        // Scholarship Fee (fixa - $400)
+        // Scholarship Fee (dinâmica baseada no pacote)
         if (applicationData.is_scholarship_fee_paid) {
-          const scholarshipFee = getFeeAmount('scholarship_fee');
+          // Buscar taxas do pacote do estudante
+          const { data: packageFees } = await supabase.rpc('get_user_package_fees', {
+            user_id_param: studentId
+          });
+          const scholarshipFee = packageFees && packageFees.length > 0 
+            ? packageFees[0].scholarship_fee 
+            : getDefaultFeeAmount('scholarship_fee');
           totalRevenue += scholarshipFee;
           console.log(`🔍 Scholarship fee added: $${scholarshipFee}`);
         }
@@ -1116,16 +1245,28 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       if (!profileError && profileData) {
         console.log('🔍 Profile data found:', profileData);
         
-        // Selection Process Fee (dinâmica)
+        // Selection Process Fee (dinâmica baseada no pacote)
         if (profileData.has_paid_selection_process_fee) {
-          const selectionFee = getFeeAmount('selection_process');
+          // Buscar taxas do pacote do estudante
+          const { data: packageFees } = await supabase.rpc('get_user_package_fees', {
+            user_id_param: studentId
+          });
+          const selectionFee = packageFees && packageFees.length > 0 
+            ? packageFees[0].selection_process_fee 
+            : getDefaultFeeAmount('selection_process');
           totalRevenue += selectionFee;
           console.log(`🔍 Selection process fee added: $${selectionFee}`);
         }
         
-        // I-20 Control Fee (dinâmica)
+        // I-20 Control Fee (dinâmica baseada no pacote)
         if (profileData.has_paid_i20_control_fee) {
-          const i20Fee = getFeeAmount('i-20_control_fee');
+          // Buscar taxas do pacote do estudante
+          const { data: packageFees } = await supabase.rpc('get_user_package_fees', {
+            user_id_param: studentId
+          });
+          const i20Fee = packageFees && packageFees.length > 0 
+            ? packageFees[0].i20_control_fee 
+            : getDefaultFeeAmount('i-20_control_fee');
           totalRevenue += i20Fee;
           console.log(`🔍 I-20 control fee added: $${i20Fee}`);
         }
@@ -1682,7 +1823,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
+                             <span className="text-xs text-slate-500">
+                               {studentPackageFees ? formatFeeAmount(studentPackageFees.selection_process_fee) : formatFeeAmount(getDefaultFeeAmount('selection_process'))}
+                             </span>
                            )}
                          </div>
                        </div>
@@ -1734,19 +1877,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                          </span>
                          {studentDetails?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             {(() => {
-                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Scholarship Fee Debug:', {
-                                 hasScholarship: !!studentDetails?.scholarship,
-                                 scholarshipFeeAmount: studentDetails?.scholarship?.scholarship_fee_amount,
-                                 isScholarshipFeePaid: studentDetails?.is_scholarship_fee_paid,
-                                 defaultFee: getFeeAmount('scholarship_fee')
-                               });
-                               
-                               // Scholarship Fee usa valor configurado no sistema (não valor do banco)
-                               const fixedAmount = getFeeAmount('scholarship_fee');
-                               console.log('🔍 [ENHANCED_STUDENT_TRACKING] Using system-configured scholarship amount:', fixedAmount);
-                               return formatFeeAmount(fixedAmount);
-                             })()}
+                             {studentPackageFees ? formatFeeAmount(studentPackageFees.scholarship_fee) : formatFeeAmount(getDefaultFeeAmount('scholarship_fee'))}
                            </span>
                          )}
                        </div>
@@ -1764,7 +1895,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                              {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentDetails?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
+                             <span className="text-xs text-slate-500">
+                               {studentPackageFees ? formatFeeAmount(studentPackageFees.i20_control_fee) : formatFeeAmount(getDefaultFeeAmount('i-20_control_fee'))}
+                             </span>
                            )}
                          </div>
                        </div>
@@ -2465,7 +2598,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
                                       {(() => {
-                                        const missingFees = getMissingFees(student);
+                                        const missingFees = studentMissingFees[student.id] || [];
                                         if (missingFees.length === 0) {
                                           return (
                                             <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">

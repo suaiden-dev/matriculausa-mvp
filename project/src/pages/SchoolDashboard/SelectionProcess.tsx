@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Clock, FileText, Globe, Phone, AlertCircle, Eye, Download, CheckCircle2, XCircle, UserCircle, ArrowLeft, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Clock, FileText, Globe, Phone, AlertCircle, Eye, Download, CheckCircle2, XCircle, UserCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Scholarship, Application, UserProfile } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
@@ -70,30 +70,24 @@ const SelectionProcess: React.FC = () => {
 
   // Filtrar estudantes em processo de seleção OU aprovados que ainda não pagaram as taxas
   const selectionProcessApplications = useMemo(() => {
-    return applications.filter(app => {
+    const filtered = applications.filter(app => {
       const hasPaidApplicationFee = (app as any).is_application_fee_paid;
       const hasPaidScholarshipFee = (app as any).is_scholarship_fee_paid;
       const bothFeesPaid = hasPaidApplicationFee && hasPaidScholarshipFee;
-      
-      // Debug: log dos valores para verificar
       const userProfile = (app as any).user_profiles;
-      if (userProfile?.full_name) {
-        console.log(`Student: ${userProfile.full_name}`);
-        console.log(`Application Fee: ${hasPaidApplicationFee}`);
-        console.log(`Scholarship Fee: ${hasPaidScholarshipFee}`);
-        console.log(`Documents Status: ${userProfile.documents_status}`);
-        console.log(`Application Status: ${app.status}`);
-        console.log(`Both Fees Paid: ${bothFeesPaid}`);
-      }
       
       // Incluir estudantes que:
       // 1. Estão em processo de seleção (documents_status === 'under_review') E ainda não pagaram ambas as taxas
-      // 2. OU foram aprovados (status === 'approved') mas ainda não pagaram ambas as taxas
-      return (!bothFeesPaid) && (
-        userProfile?.documents_status === 'under_review' || 
-        app.status === 'approved'
+      // 2. OU foram aprovados (status === 'approved') - independente do status de pagamento
+      // 3. OU têm documentos aprovados mas ainda não pagaram ambas as taxas
+      return (
+        (userProfile?.documents_status === 'under_review' && !bothFeesPaid) || 
+        app.status === 'approved' ||
+        (userProfile?.documents_status === 'approved' && !bothFeesPaid)
       );
     });
+    
+    return filtered;
   }, [applications]);
 
   // Função para buscar detalhes completos do estudante
@@ -157,7 +151,6 @@ const SelectionProcess: React.FC = () => {
     const doc = studentDocs.find((d) => d.type === type);
     
     if (doc) {
-      console.log(`latestDocByType(${type}): Found in studentDocs:`, doc);
       return doc;
     }
     
@@ -166,60 +159,15 @@ const SelectionProcess: React.FC = () => {
     const appDoc = Array.isArray(docs) ? docs.find((d) => d.type === type) : undefined;
     
     if (appDoc) {
-      console.log(`latestDocByType(${type}): Found in selectedStudent.documents:`, appDoc);
       return { id: `${type}`, type, file_url: appDoc.url, status: appDoc.status || 'under_review' };
     }
     
-    console.log(`latestDocByType(${type}): Document not found`);
     return undefined;
   };
 
-  const updateApplicationDocStatus = async (
-    type: string,
-    status: 'approved' | 'changes_requested' | 'under_review',
-    reviewNotes?: string
-  ) => {
-    if (!selectedStudent) return;
-    
-    try {
-      console.log(`Updating document ${type} to status: ${status}`);
-      console.log('Current studentDocs before update:', studentDocs);
-      
-      // Atualizar o estado local primeiro
-      const updatedStudentDocs = [...studentDocs];
-      const docIndex = updatedStudentDocs.findIndex((d) => d.type === type);
-      
-      if (docIndex >= 0) {
-        // Preservar todos os dados originais, apenas atualizar status
-        updatedStudentDocs[docIndex] = { 
-          ...updatedStudentDocs[docIndex], 
-          status, 
-          review_notes: reviewNotes ?? updatedStudentDocs[docIndex]?.review_notes 
-        };
-        console.log(`Updated document ${type}:`, updatedStudentDocs[docIndex]);
-      } else {
-        console.warn(`Document ${type} not found in studentDocs`);
-      }
-      
-      // Atualizar o estado local
-      setStudentDocs(updatedStudentDocs);
-      console.log('Updated studentDocs:', updatedStudentDocs);
-      
-      // NÃO atualizar o banco de dados aqui - apenas o status local
-      // O banco será atualizado quando o estudante for aprovado completamente
-      
-      console.log(`Document ${type} status updated to ${status} successfully`);
-    } catch (error) {
-      console.error('Error updating document status:', error);
-      throw error;
-    }
-  };
 
   const approveDoc = async (type: string) => {
     if (!selectedStudent) return;
-    
-    console.log(`Attempting to approve document: ${type}`);
-    console.log('Current studentDocs:', studentDocs);
     
     try {
       setUpdating(type);
@@ -279,8 +227,6 @@ const SelectionProcess: React.FC = () => {
         throw new Error('Failed to update application documents: ' + updateError.message);
       }
 
-      console.log('Documents saved to scholarship_applications:', updatedDocuments);
-
       // Atualizar o estado local dos documentos
       const updatedStudentDocs = studentDocs.map(doc => {
         if (doc.type === type) {
@@ -290,7 +236,6 @@ const SelectionProcess: React.FC = () => {
       });
       
       setStudentDocs(updatedStudentDocs);
-      console.log('Updated studentDocs:', updatedStudentDocs);
       
       // Verificar se todos os documentos foram aprovados
       const allDocsApproved = ['passport', 'diploma', 'funds_proof']
@@ -299,18 +244,10 @@ const SelectionProcess: React.FC = () => {
           return doc && doc.status === 'approved';
         });
       
-      console.log('All documents approved?', allDocsApproved);
-      
       if (allDocsApproved) {
-        console.log('All documents approved - no need to update user_profiles.documents_status');
-        
         // Atualizar o contexto global para refletir as mudanças
-        console.log('Refreshing global data after all documents approved...');
         await refreshData();
-        console.log('Global data refreshed successfully');
       }
-      
-      console.log(`Document ${type} approved successfully`);
     } catch (error: any) {
       console.error(`Error approving document ${type}:`, error);
       alert(`Failed to approve document: ${error.message || 'Unknown error'}`);
@@ -381,8 +318,6 @@ const SelectionProcess: React.FC = () => {
         throw new Error('Failed to update application documents: ' + updateError.message);
       }
 
-      console.log('Documents saved to scholarship_applications:', updatedDocuments);
-
       // Atualizar o estado local dos documentos
       const updatedStudentDocs = studentDocs.map(doc => {
         if (doc.type === type) {
@@ -427,13 +362,11 @@ const SelectionProcess: React.FC = () => {
           };
 
           try {
-            console.log('Enviando webhook (Request Changes)...');
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(webhookPayload),
             });
-            console.log('Webhook (Request Changes) status:', webhookResponse.status, 'ok:', webhookResponse.ok);
             if (!webhookResponse.ok) {
               console.error('Webhook (Request Changes) erro:', await webhookResponse.text());
             }
@@ -444,7 +377,6 @@ const SelectionProcess: React.FC = () => {
 
         // Notificação in-app no sino (Edge Function)
         try {
-          console.log('=== DEBUG: Notificação in-app (Request Changes) ===');
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
           if (accessToken) {
@@ -455,7 +387,6 @@ const SelectionProcess: React.FC = () => {
               type: 'document_changes_requested',
               link: '/student/documents',
             };
-            console.log('Payload (Request Changes):', notificationPayload);
             const resp = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',
               headers: {
@@ -464,7 +395,6 @@ const SelectionProcess: React.FC = () => {
               },
               body: JSON.stringify(notificationPayload),
             });
-            console.log('Edge Function (Request Changes) status:', resp.status, 'ok:', resp.ok);
             if (!resp.ok) {
               let txt = '';
               try { txt = await resp.text(); } catch {}
@@ -489,10 +419,26 @@ const SelectionProcess: React.FC = () => {
     try {
       setAcceptanceLoading(true);
       
-      await supabase
+      const { error: updateError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'approved' })
-        .eq('id', selectedStudent.id);
+        .eq('id', selectedStudent.id)
+        .select();
+
+      if (updateError) {
+        console.error('Erro ao atualizar status da aplicação:', updateError);
+        throw new Error('Failed to update application status: ' + updateError.message);
+      }
+
+      // Atualizar também o documents_status no perfil do usuário
+      const { error: profileUpdateError } = await supabase
+        .from('user_profiles')
+        .update({ documents_status: 'approved' })
+        .eq('user_id', selectedStudent.user_profiles.user_id);
+
+      if (profileUpdateError) {
+        console.error('Erro ao atualizar documents_status:', profileUpdateError);
+      }
 
       // Webhook e notificação (simplificado)
       try {
@@ -510,10 +456,6 @@ const SelectionProcess: React.FC = () => {
             email_universidade: user?.email,
             o_que_enviar: `Congratulations, you have been selected for the <strong>${selectedStudent.scholarships?.title || 'Bolsa'}</strong> scholarship.`
           };
-
-          console.log('Enviando webhook...');
-          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
-          console.log('Webhook payload:', webhookPayload);
           
           try {
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -522,14 +464,9 @@ const SelectionProcess: React.FC = () => {
               body: JSON.stringify(webhookPayload),
             });
             
-            console.log('Webhook response status:', webhookResponse.status);
-            console.log('Webhook response ok:', webhookResponse.ok);
-            
             if (!webhookResponse.ok) {
               const webhookErrorText = await webhookResponse.text();
               console.error('Webhook error:', webhookErrorText);
-            } else {
-              console.log('Webhook enviado com sucesso');
             }
           } catch (webhookError) {
             console.error('Erro ao enviar webhook:', webhookError);
@@ -579,14 +516,29 @@ const SelectionProcess: React.FC = () => {
         }));
         setStudentDocs(updatedStudentDocs);
         
-        console.log('Updated local state - status: approved, documents_status: approved');
-        console.log('Updated studentDocs to approved status');
       }
       
+      // Verificar se a atualização foi persistida no banco
+      const { error: verifyError } = await supabase
+        .from('scholarship_applications')
+        .select('id, status, student_id, scholarship_id')
+        .eq('id', selectedStudent.id)
+        .single();
+
+      if (verifyError) {
+        console.error('Erro ao verificar atualização:', verifyError);
+      }
+
       // Atualizar o contexto global para refletir as mudanças
-      console.log('Refreshing global data...');
+      
+      // Forçar uma atualização completa dos dados
       await refreshData();
-      console.log('Global data refreshed successfully');
+      
+      // Aguardar um pouco para garantir que os dados foram atualizados
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Atualizar novamente para garantir sincronização
+      await refreshData();
       
       // Fechar o modal após um breve delay para mostrar o sucesso
       setTimeout(() => {
@@ -613,9 +565,7 @@ const SelectionProcess: React.FC = () => {
         .eq('id', selectedStudent.id);
       
       // Atualizar o contexto global para refletir as mudanças
-      console.log('Refreshing global data after student rejection...');
       await refreshData();
-      console.log('Global data refreshed successfully');
       
       setSelectedStudent(null);
       setActiveTab('details');
@@ -784,8 +734,6 @@ const SelectionProcess: React.FC = () => {
 
   // Acceptance Letter Upload State
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
-  const [uploadingAcceptanceLetter, setUploadingAcceptanceLetter] = useState(false);
-  const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState(false);
 
   // State para documentos enviados pelo aluno
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
@@ -805,13 +753,12 @@ const SelectionProcess: React.FC = () => {
         .eq('uploaded_by', selectedStudent.user_profiles.user_id);
       
       if (error) {
-        console.log('Erro ao buscar uploads:', error);
+        console.error('Erro ao buscar uploads:', error);
         setStudentDocuments([]);
         return;
       }
 
       if (!uploads || uploads.length === 0) {
-        console.log('Nenhum upload encontrado para este aluno');
         setStudentDocuments([]);
         return;
       }
@@ -830,7 +777,6 @@ const SelectionProcess: React.FC = () => {
         request_type: 'Individual Upload'
       }));
 
-      console.log('Documentos formatados para exibição:', studentDocuments);
       setStudentDocuments(studentDocuments);
     } catch (error) {
       console.error("Error in fetchStudentDocuments:", error);
@@ -845,8 +791,6 @@ const SelectionProcess: React.FC = () => {
     if (!selectedStudent) return;
     
     try {
-      console.log('=== Buscando document requests ===');
-      
       // Buscar requests específicos para esta aplicação
       const { data: requests, error: requestsError } = await supabase
         .from('document_requests')
@@ -860,12 +804,9 @@ const SelectionProcess: React.FC = () => {
         return;
       }
 
-      console.log('Document requests encontrados:', requests);
-
       // Buscar uploads para cada request
       if (requests && requests.length > 0) {
         const requestIds = requests.map(req => req.id);
-        console.log('IDs dos requests para buscar uploads:', requestIds);
         
         const { data: uploads, error: uploadsError } = await supabase
           .from('document_request_uploads')
@@ -875,17 +816,14 @@ const SelectionProcess: React.FC = () => {
         if (uploadsError) {
           console.error("Error fetching uploads:", uploadsError);
         } else {
-          console.log('Uploads encontrados para os requests:', uploads);
           // Associar uploads aos requests
           const requestsWithUploads = requests.map(request => ({
             ...request,
             uploads: uploads?.filter(upload => upload.document_request_id === request.id) || []
           }));
-          console.log('Requests com uploads:', requestsWithUploads);
           setDocumentRequests(requestsWithUploads);
         }
       } else {
-        console.log('Nenhum document request encontrado para esta aplicação');
         setDocumentRequests([]);
       }
     } catch (error) {
@@ -949,31 +887,6 @@ const SelectionProcess: React.FC = () => {
     }
   };
 
-  // Função para baixar template
-  const handleDownloadTemplate = async (templateUrl: string) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('student-documents')
-        .download(templateUrl);
-      
-      if (error) {
-        throw new Error('Failed to download template: ' + error.message);
-      }
-
-      const arrayBuffer = await data.arrayBuffer();
-      const blob = new Blob([arrayBuffer]);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = templateUrl.split('/').pop() || 'template.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(`Failed to download template: ${err.message}`);
-    }
-  };
 
   // Função para visualizar upload de um request
   const handleViewUpload = (upload: any) => {
@@ -1048,9 +961,6 @@ const SelectionProcess: React.FC = () => {
             o_que_enviar: `Congratulations! Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been approved.`
           };
 
-          console.log('Enviando webhook...');
-          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
-          console.log('Webhook payload:', webhookPayload);
           
           try {
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -1059,14 +969,11 @@ const SelectionProcess: React.FC = () => {
               body: JSON.stringify(webhookPayload),
             });
             
-            console.log('Webhook response status:', webhookResponse.status);
-            console.log('Webhook response ok:', webhookResponse.ok);
             
             if (!webhookResponse.ok) {
               const webhookErrorText = await webhookResponse.text();
               console.error('Webhook error:', webhookErrorText);
             } else {
-              console.log('Webhook enviado com sucesso');
             }
           } catch (webhookError) {
             console.error('Erro ao enviar webhook:', webhookError);
@@ -1163,9 +1070,6 @@ const SelectionProcess: React.FC = () => {
             o_que_enviar: `Your document <strong>${uploadData.file_url?.split('/').pop()}</strong> for the request <strong>${uploadData.document_requests?.title}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
           };
 
-          console.log('Enviando webhook...');
-          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
-          console.log('Webhook payload:', webhookPayload);
           
           try {
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -1174,14 +1078,11 @@ const SelectionProcess: React.FC = () => {
               body: JSON.stringify(webhookPayload),
             });
             
-            console.log('Webhook response status:', webhookResponse.status);
-            console.log('Webhook response ok:', webhookResponse.ok);
             
             if (!webhookResponse.ok) {
               const webhookErrorText = await webhookResponse.text();
               console.error('Webhook error:', webhookErrorText);
             } else {
-              console.log('Webhook enviado com sucesso');
             }
           } catch (webhookError) {
             console.error('Erro ao enviar webhook:', webhookError);
@@ -1190,12 +1091,8 @@ const SelectionProcess: React.FC = () => {
 
         // Notificação in-app no sino do aluno — deve ser enviada SEMPRE, independente do e-mail
         try {
-          console.log('=== DEBUG: Enviando notificação in-app para rejeição de documento ===');
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
-          console.log('Access token:', accessToken ? 'Presente' : 'Ausente');
-          console.log('Student user ID:', selectedStudent?.user_profiles.user_id);
-          console.log('Session:', session);
           
           if (accessToken) {
             const notificationPayload = {
@@ -1205,11 +1102,6 @@ const SelectionProcess: React.FC = () => {
               type: 'document_rejected',
               link: '/student/dashboard',
             };
-            console.log('Payload da notificação:', notificationPayload);
-            
-            console.log('Chamando Edge Function...');
-            console.log('Edge Function URL:', `${FUNCTIONS_URL}/create-student-notification`);
-            
             const response = await fetch(`${FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',
               headers: {
@@ -1219,24 +1111,16 @@ const SelectionProcess: React.FC = () => {
               body: JSON.stringify(notificationPayload),
             });
             
-            console.log('Edge Function response status:', response.status);
-            console.log('Edge Function response ok:', response.ok);
-            console.log('Edge Function response headers:', Object.fromEntries(response.headers.entries()));
-            
             let responseData;
             try {
               responseData = await response.json();
-              console.log('Edge Function response data:', responseData);
             } catch (parseError) {
               console.error('Erro ao fazer parse da resposta da Edge Function:', parseError);
               const responseText = await response.text();
-              console.log('Edge Function response text:', responseText);
             }
             
             if (!response.ok) {
               console.error('Erro na Edge Function:', responseData);
-            } else {
-              console.log('Notificação criada com sucesso!');
             }
           } else {
             console.error('Access token não encontrado');
@@ -1348,11 +1232,6 @@ const SelectionProcess: React.FC = () => {
   // Effect para buscar documentos e requests quando o estudante for selecionado
   useEffect(() => {
     if (selectedStudent) {
-      console.log('Selected student:', selectedStudent);
-      console.log('Student user_id:', selectedStudent.user_profiles?.user_id);
-      console.log('Application id:', selectedStudent.id);
-      console.log('Documents status:', selectedStudent.user_profiles?.documents_status);
-      
       // Debug: verificar todas as tabelas relacionadas
       debugAllTables();
       
@@ -1400,8 +1279,6 @@ const SelectionProcess: React.FC = () => {
         return;
       }
       
-      console.log('Student moved to approved status (fees paid) - will appear in Students page');
-      console.log('Note: documents_status remains unchanged - controlled by document approval process');
       
       // Fechar o modal de detalhes do estudante
       setSelectedStudent(null);
@@ -1421,27 +1298,22 @@ const SelectionProcess: React.FC = () => {
     if (!selectedStudent) return;
     
     try {
-      console.log('=== DEBUG: Verificando todas as tabelas ===');
-      
       // 1. Verificar student_documents
       const { data: studentDocs, error: studentDocsError } = await supabase
         .from('student_documents')
         .select('*')
         .eq('user_id', selectedStudent.user_profiles.user_id);
-      console.log('student_documents:', { data: studentDocs, error: studentDocsError });
       
       // 2. Verificar document_requests
       const { data: docRequests, error: docRequestsError } = await supabase
         .from('document_requests')
         .select('*')
         .eq('scholarship_application_id', selectedStudent.id);
-      console.log('document_requests:', { data: docRequests, error: docRequestsError });
       
       // 3. Verificar document_request_uploads (TODOS)
       const { data: docUploads, error: docUploadsError } = await supabase
         .from('document_request_uploads')
         .select('*');
-      console.log('document_request_uploads (all):', { data: docUploads, error: docUploadsError });
       
       // 4. Verificar document_request_uploads com relacionamento
       const { data: docUploadsWithRel, error: docUploadsRelError } = await supabase
@@ -1457,7 +1329,6 @@ const SelectionProcess: React.FC = () => {
             scholarship_application_id
           )
         `);
-      console.log('document_request_uploads com relacionamento:', { data: docUploadsWithRel, error: docUploadsRelError });
       
       // 5. Verificar document_request_uploads filtrados por uploaded_by
       const { data: docUploadsByUser, error: docUploadsByUserError } = await supabase
@@ -1474,23 +1345,19 @@ const SelectionProcess: React.FC = () => {
           )
         `)
         .eq('uploaded_by', selectedStudent.user_profiles.user_id);
-      console.log('document_request_uploads por usuário:', { data: docUploadsByUser, error: docUploadsByUserError });
       
       // 6. Verificar scholarship_applications documents
       const { data: appDocs, error: appDocsError } = await supabase
         .from('scholarship_applications')
         .select('documents')
         .eq('id', selectedStudent.id);
-      console.log('scholarship_applications documents:', { data: appDocs, error: appDocsError });
       
       // 7. Verificar user_profiles documents
       const { data: profileDocs, error: profileDocsError } = await supabase
         .from('user_profiles')
         .select('documents')
         .eq('user_id', selectedStudent.user_profiles.user_id);
-      console.log('user_profiles documents:', { data: profileDocs, error: profileDocsError });
       
-      console.log('=== FIM DEBUG ===');
     } catch (error) {
       console.error('Error in debugAllTables:', error);
     }
@@ -1563,7 +1430,7 @@ const SelectionProcess: React.FC = () => {
       try {
         result = await response.json();
       } catch (e) {
-        console.log('Erro ao fazer parse do JSON de resposta:', e);
+        console.error('Erro ao fazer parse do JSON de resposta:', e);
       }
 
       if (!response.ok || !result.success) {
@@ -1587,9 +1454,6 @@ const SelectionProcess: React.FC = () => {
             o_que_enviar: `A new document request has been submitted for your review: <strong>${newDocumentRequest.title}</strong>. Please log in to your dashboard to view the details and upload the requested document.`
           };
 
-          console.log('Enviando webhook...');
-          console.log('Webhook URL:', 'https://nwh.suaiden.com/webhook/notfmatriculausa');
-          console.log('Webhook payload:', webhookPayload);
           
           try {
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
@@ -1598,14 +1462,11 @@ const SelectionProcess: React.FC = () => {
               body: JSON.stringify(webhookPayload),
             });
             
-            console.log('Webhook response status:', webhookResponse.status);
-            console.log('Webhook response ok:', webhookResponse.ok);
             
             if (!webhookResponse.ok) {
               const webhookErrorText = await webhookResponse.text();
               console.error('Webhook error:', webhookErrorText);
             } else {
-              console.log('Webhook enviado com sucesso');
             }
           } catch (webhookError) {
             console.error('Erro ao enviar webhook:', webhookError);
@@ -2189,12 +2050,6 @@ const SelectionProcess: React.FC = () => {
                                             }
                                             
                                             const statusDisplay = getDocumentStatusDisplay(documentsStatus);
-                                            console.log('Rendering Documents Status:', {
-                                              applicationDocuments,
-                                              documentsStatus,
-                                              user_profiles_documents_status: selectedStudent.user_profiles.documents_status,
-                                              selectedStudent_status: selectedStudent.status
-                                            });
                                             return (
                                               <>
                                                 <div className={`w-2 h-2 rounded-full ${statusDisplay.bgColor}`}></div>
@@ -2299,9 +2154,6 @@ const SelectionProcess: React.FC = () => {
                                   const d = latestDocByType(doc.key);
                                   const status = d?.status || 'not_submitted';
                                   
-                                  // Debug: verificar se o documento está sendo renderizado corretamente
-                                  console.log(`Rendering document ${doc.key}:`, d);
-                                  
                                   return (
                                     <div key={doc.key}>
                                       <div className="bg-white p-3 sm:p-4">
@@ -2360,7 +2212,6 @@ const SelectionProcess: React.FC = () => {
                                   <button
                                     disabled={!d || updating === d.type || status === 'approved' || selectedStudent?.status === 'approved'}
                                     onClick={() => {
-                                      console.log('Approve button clicked for:', d);
                                       if (d) approveDoc(d.type);
                                     }}
                                     className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
