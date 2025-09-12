@@ -2495,5 +2495,231 @@
         "support": "Support"
       }
     }
+  },
+  "forStudents": {
+    "hero": {
+      "title": "Study in the USA with",
+      "titleHighlight": "exclusive scholarships",
+      "subtitle": "AI-Powered Selection Process",
+      "description": "Study paying <span class=\"text-[#D0151C] font-bold\">up to 50% less</span>, with hybrid scholarships and the chance to work legally — for just <span class=\"text-yellow-400 font-bold\">$350</span> to start.",
+      "ctaButton": "Start Now",
+      "trustElements": {
+        "approval24h": "Approval in 24h",
+        "guaranteed": "100% Guaranteed",
+        "approved": "+10,000 approved"
+      }
+    },
+    "benefits": {
+      "title": "Benefits that make the difference",
+      "subtitle": "Discover why thousands of students choose Matrícula USA to fulfill their American dream",
+      "ctaButton": "Discover my ideal scholarship",
+      "benefits": {
+        "economy": {
+          "title": "Real Savings",
+          "description": "Pay up to 50% less than the full university value with our exclusive scholarships",
+          "highlight": "Up to 50% OFF"
+        },
+        "fastApproval": {
+          "title": "Fast Approval",
+          "description": "AI-optimized process that speeds up your approval by up to 80%",
+          "highlight": "24h"
+        },
+        "hybridMode": {
+          "title": "Hybrid Mode",
+          "description": "Study online and in-person, saving on accommodation and food",
+          "highlight": "Flexible"
+        },
+        "multipleOpportunities": {
+          "title": "Multiple Opportunities",
+          "description": "Apply to multiple universities simultaneously and increase your chances",
+          "highlight": "3+ Options"
+        },
+        "guaranteed": {
+          "title": "Guaranteed Approval",
+          "description": "If you're not approved following our process, we refund your money",
+          "highlight": "100%"
+        },
+        "support": {
+          "title": "Complete Support",
+          "description": "Support from application to departure to the USA",
+          "highlight": "24/7"
+        }
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "subtitle": "Simple and transparent process in 7 steps to guarantee your scholarship",
+      "ctaButton": "START NOW",
+      "ctaDescription": "Start your journey to study in the USA today",
+      "steps": {
+        "processFee": {
+          "title": "Selection Process Fee",
+          "description": "Pay only $350 to start your journey studying in the USA",
+          "price": "$350"
+        },
+        "scholarshipChoice": {
+          "title": "Scholarship Choice",
+          "description": "Our AI analyzes your profile and suggests the best scholarships for you",
+          "price": "Free"
+        },
+        "application": {
+          "title": "Application",
+          "description": "We send your application to partner universities",
+          "price": "✓"
+        },
+        "enrollmentFee": {
+          "title": "Enrollment Fee",
+          "description": "Pay only when approved by the university",
+          "price": "Variable"
+        },
+        "scholarshipFee": {
+          "title": "Scholarship Fee",
+          "description": "Scholarship value with discount applied automatically",
+          "price": "With Discount"
+        },
+        "i20Fee": {
+          "title": "I-20 Fee",
+          "description": "Official document for your student visa",
+          "price": "Included"
+        },
+        "spotGuaranteed": {
+          "title": "Guaranteed Spot",
+          "description": "Your spot is guaranteed at the chosen university",
+          "price": "✓"
+        }
+      }
+    },
+    "comparison": {
+      "title": "From high costs and uncertainty... to real savings and guaranteed approval",
+      "subtitle": "See the real difference between studying on your own vs. with Matrícula USA",
+      "ctaButton": "I WANT TO SAVE",
+      "before": {
+        "title": "Without Matrícula USA",
+        "subtitle": "Traditional process",
+        "costLabel": "Total cost: $15,000 - $25,000",
+        "items": [
+          "Slow and complex process",
+          "High rejection risk",
+          "No specialized support",
+          "Hidden costs and surprises",
+          "Difficulty getting scholarships",
+          "Manual and bureaucratic process"
+        ]
+      },
+      "after": {
+        "title": "With Matrícula USA",
+        "subtitle": "AI-optimized process",
+        "savingsLabel": "Average savings: $8,000 - $15,000",
+        "items": [
+          "Fast and simplified process",
+          "Guaranteed approval or money back",
+          "Dedicated 24/7 support",
+          "Total cost transparency",
+          "Access to exclusive scholarships",
+          "Automated and efficient process"
+        ]
+      }
+    },
+    "specialOffer": {
+      "title": "Get priority on the most competitive scholarships and exclusive benefits",
+      "subtitle": "By enrolling today, you guarantee:",
+      "urgencyTitle": "Attention: Limited Spots",
+      "urgencyDescription": "Scholarships are released in order of enrollment. <span class=\"text-[#D0151C] font-bold\">Each day of delay can mean losing your dream spot.</span>",
+      "ctaButton": "I WANT MY SCHOLARSHIP NOW",
+      "ctaDescription": "⏰ Limited time offer",
+      "benefits": [
+        {
+          "title": "24h Analysis",
+          "description": "Profile analysis in 24 hours to know your best options right away"
+        },
+        {
+          "title": "Scholarship Priority",
+          "description": "Priority on scholarships with limited spots"
+        },
+        {
+          "title": "Early Access",
+          "description": "Early access to hybrid scholarships (the most sought after)"
+        },
+        {
+          "title": "Dedicated Support",
+          "description": "Dedicated support to complete your enrollment without errors"
+        }
+      ]
+    },
+    "guarantee": {
+      "title": "Guaranteed approval or your money back",
+      "subtitle": "We know that investing in your future requires confidence. That's why Matrícula USA is the only program that offers:",
+      "ctaButton": "START RISK-FREE",
+      "guarantees": [
+        {
+          "title": "Approval Guarantee",
+          "description": "If you follow our process and are not approved, we refund the Selection Process Fee in full."
+        },
+        {
+          "title": "Transparent Process",
+          "description": "No hidden fees or surprise costs. You know exactly how much you'll pay from start to finish."
+        },
+        {
+          "title": "Support Until Arrival",
+          "description": "We don't stop at university acceptance. Our team follows the entire process until departure."
+        }
+      ],
+      "bottomMessage": "The risk is all ours. For you, it's just taking advantage of the opportunity."
+    },
+    "socialProof": {
+      "title": "More than 150 students approved in 2024 alone",
+      "subtitle": "See what our students are saying about their experience",
+      "ctaButton": "BE THE NEXT APPROVED",
+      "statistics": {
+        "approved": "Approved students",
+        "approvalRate": "Approval rate",
+        "averageSavings": "Average savings",
+        "partnerUniversities": "Partner universities"
+      },
+      "testimonials": [
+        {
+          "name": "Maria Silva",
+          "university": "University of California",
+          "course": "Computer Science",
+          "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the USA. The process was much simpler than I imagined.",
+          "savings": "$18,000"
+        },
+        {
+          "name": "João Santos",
+          "university": "Arizona State University",
+          "course": "Business Administration",
+          "text": "The hybrid mode was perfect for me. I saved a lot on accommodation and still have the in-person experience.",
+          "savings": "$22,000"
+        },
+        {
+          "name": "Ana Costa",
+          "university": "Florida International University",
+          "course": "International Business",
+          "text": "Approved at 3 different universities! The AI really found the best options for my profile.",
+          "savings": "$25,000"
+        },
+        {
+          "name": "Carlos Mendes",
+          "university": "Northern Arizona University",
+          "course": "Engineering",
+          "text": "Amazing how fast the process was. In 3 weeks I already had 2 approvals with excellent scholarships!",
+          "savings": "$30,000"
+        },
+        {
+          "name": "Fernanda Lima",
+          "university": "University of South Florida",
+          "course": "Marketing",
+          "text": "The support was fantastic from start to finish. Now I'm studying and working legally in the USA!",
+          "savings": "$20,000"
+        },
+        {
+          "name": "Roberto Silva",
+          "university": "California State University",
+          "course": "Data Science",
+          "text": "I got a hybrid scholarship that allows me to study online and in-person. Perfect for my situation!",
+          "savings": "$35,000"
+        }
+      ]
+    }
   }
 }

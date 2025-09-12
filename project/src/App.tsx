@@ -38,6 +38,7 @@ import HelpCenter from './pages/HelpCenter';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import ForUniversities from './pages/ForUniversities';
+import ForStudents from './pages/ForStudents';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
@@ -117,6 +118,7 @@ const AppContent = () => {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/for-universities" element={<ForUniversities />} />
+          <Route path="/for-students" element={<ForStudents />} />
           <Route path="/success" element={<SuccessPage />} />
           <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
           <Route path="/payment-error" element={<PaymentErrorPage />} />

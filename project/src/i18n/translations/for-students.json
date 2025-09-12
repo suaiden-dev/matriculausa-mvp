@@ -1,0 +1,278 @@
+{
+  "en": {
+    "forStudents": {
+      "hero": {
+        "title": "Your Gateway to U.S. Education",
+        "subtitle": "Discover exclusive scholarships and unlock your potential",
+        "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey."
+      },
+      "benefits": {
+        "title": "Why Choose Us?",
+        "subtitle": "Everything you need to succeed in your American education journey",
+        "benefits": {
+          "economy": {
+            "title": "Guaranteed Savings",
+            "description": "For just $350, access opportunities that can save thousands of dollars",
+            "highlight": "Up to 90% discount"
+          },
+          "fastApproval": {
+            "title": "Quick Approval",
+            "description": "Receive scholarship offers matching your profile in just weeks",
+            "highlight": "Within 24h"
+          },
+          "hybridMode": {
+            "title": "Hybrid Mode",
+            "description": "Study less time in person and more online, making your adaptation easier",
+            "highlight": "Total flexibility"
+          },
+          "multipleOpportunities": {
+            "title": "Multiple Opportunities",
+            "description": "One application puts you in multiple selection processes simultaneously",
+            "highlight": "+45 universities"
+          },
+          "guaranteed": {
+            "title": "100% Guaranteed",
+            "description": "If not approved, you get all your money back",
+            "highlight": "Zero risk"
+          },
+          "support": {
+            "title": "Complete Support",
+            "description": "Mentoring and guidance throughout the entire application process",
+            "highlight": "24/7 available"
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "How It Works",
+        "subtitle": "Your path to a U.S. university, step by step",
+        "steps": {
+          "processFee": {
+            "title": "Process Fee",
+            "description": "Pay the Selection Process Fee of $350 and submit your documents",
+            "price": "$350"
+          },
+          "scholarshipChoice": {
+            "title": "Scholarship Choice",
+            "description": "You choose the scholarship to apply for. AI only comes after, analyzing your documents for the application",
+            "price": "Free"
+          },
+          "application": {
+            "title": "Application & Pre-approval",
+            "description": "You apply to as many as you want and receive pre-approval",
+            "price": "Free"
+          },
+          "enrollmentFee": {
+            "title": "Enrollment Fee",
+            "description": "The enrollment fee is set by the university and can vary according to the scholarship granted",
+            "price": "To be defined"
+          },
+          "scholarshipFee": {
+            "title": "Scholarship Fee",
+            "description": "Pay the $550 Scholarship Fee to formalize the grant",
+            "price": "$550"
+          },
+          "i20Fee": {
+            "title": "I-20 Control Fee",
+            "description": "Pay the $900 I-20 Control Fee (within 10 days after approval)",
+            "price": "$900"
+          },
+          "spotGuaranteed": {
+            "title": "Spot Guaranteed",
+            "description": "Your spot is secure and guaranteed — we're ready to accompany you",
+            "price": "✓"
+          }
+        }
+      },
+      "comparison": {
+        "title": "Before vs After",
+        "subtitle": "See how we can help transform your journey",
+        "before": {
+          "title": "Before MatriculaUSA",
+          "items": [
+            "Months of research for universities and scholarships without knowing if eligible",
+            "No option to study in hybrid mode",
+            "Full university tuition payment (average $20,000/year)",
+            "Difficulty getting work authorization",
+            "Uncertainty if scholarship will come through",
+            "Non-existent support after enrollment",
+            "Fear of investing and losing money",
+            "Much higher total cost in the long run"
+          ]
+        },
+        "after": {
+          "title": "With MatriculaUSA",
+          "items": [
+            "Exclusive AI and specialized team show only scholarships you can actually win",
+            "Hybrid scholarships allowing in-person study few times a year, saving on housing and transportation. Average savings of U$1,000/Year",
+            "Scholarships that reduce up to 50% of the value, generating savings of up to $40,000 in the course",
+            "Access to scholarships offering OPT and CPT to work legally in the USA",
+            "Approval guarantee or selection process fee refund",
+            "Exclusive support until classes start",
+            "Accessible initial investment (from $350) with high return in total savings",
+            "Even with all fees, you save an average of $37,000 in the course"
+          ]
+        }
+      },
+      "specialOffer": {
+        "title": "Don't Miss This Opportunity",
+        "subtitle": "Start your journey to American education today",
+        "benefits": {
+          "quickAnalysis": {
+            "title": "24h Analysis",
+            "description": "Profile analysis in 24 hours to know your best options right away"
+          },
+          "scholarshipPriority": {
+            "title": "Scholarship Priority",
+            "description": "Priority for scholarships with limited spots"
+          },
+          "earlyAccess": {
+            "title": "Early Access",
+            "description": "Early access to hybrid scholarships (most sought after)"
+          },
+          "support": {
+            "title": "Dedicated Support",
+            "description": "Dedicated support to complete your application without errors"
+          }
+        }
+      }
+    }
+  },
+  "pt": {
+    "forStudents": {
+      "hero": {
+        "title": "Sua Porta de Entrada para a Educação nos EUA",
+        "subtitle": "Descubra bolsas exclusivas e desbloqueie seu potencial",
+        "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada."
+      },
+      "benefits": {
+        "title": "Por Que Nos Escolher?",
+        "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
+        "benefits": {
+          "economy": {
+            "title": "Economia Garantida",
+            "description": "Por apenas $350, acesse oportunidades que podem economizar milhares de dólares",
+            "highlight": "Até 90% de desconto"
+          },
+          "fastApproval": {
+            "title": "Aprovação Rápida",
+            "description": "Receba ofertas de bolsas compatíveis com seu perfil em poucas semanas",
+            "highlight": "Em até 24h"
+          },
+          "hybridMode": {
+            "title": "Modalidade Híbrida",
+            "description": "Estude menos tempo presencialmente e mais online, facilitando sua adaptação",
+            "highlight": "Flexibilidade total"
+          },
+          "multipleOpportunities": {
+            "title": "Múltiplas Oportunidades",
+            "description": "Uma inscrição te coloca em vários processos seletivos ao mesmo tempo",
+            "highlight": "+45 universidades"
+          },
+          "guaranteed": {
+            "title": "100% Garantido",
+            "description": "Se não for aprovado, você recebe todo seu dinheiro de volta",
+            "highlight": "Risco zero"
+          },
+          "support": {
+            "title": "Suporte Completo",
+            "description": "Mentoria e acompanhamento durante todo o processo de aplicação",
+            "highlight": "24/7 disponível"
+          }
+        }
+      },
+      "howItWorks": {
+        "title": "Como Funciona",
+        "subtitle": "Seu caminho para uma universidade americana, passo a passo",
+        "steps": {
+          "processFee": {
+            "title": "Taxa do Processo",
+            "description": "Pague a Taxa do Processo Seletivo de $350 e envie seus documentos",
+            "price": "$350"
+          },
+          "scholarshipChoice": {
+            "title": "Escolha da Bolsa",
+            "description": "Você escolhe a bolsa que deseja aplicar. A IA só entra depois, analisando seus documentos para a aplicação",
+            "price": "Grátis"
+          },
+          "application": {
+            "title": "Aplicação e Pré-aprovação",
+            "description": "Você aplica para quantas quiser e recebe pré-aprovação",
+            "price": "Grátis"
+          },
+          "enrollmentFee": {
+            "title": "Taxa de Matrícula",
+            "description": "A taxa de matrícula é definida pela universidade e pode variar conforme a bolsa concedida",
+            "price": "A definir"
+          },
+          "scholarshipFee": {
+            "title": "Taxa da Bolsa",
+            "description": "Pague a Taxa da Bolsa de $550 para formalizar a concessão",
+            "price": "$550"
+          },
+          "i20Fee": {
+            "title": "Taxa de Controle i20",
+            "description": "Pague a Control i20 Fee de $900 (até 10 dias após aprovação)",
+            "price": "$900"
+          },
+          "spotGuaranteed": {
+            "title": "Vaga Garantida",
+            "description": "Sua vaga está segura e garantida — estamos prontos para te acompanhar",
+            "price": "✓"
+          }
+        }
+      },
+      "comparison": {
+        "title": "Antes vs Depois",
+        "subtitle": "Veja como podemos transformar sua jornada",
+        "before": {
+          "title": "Antes do MatriculaUSA",
+          "items": [
+            "Meses de pesquisa por universidades e bolsas sem saber se é elegível",
+            "Nenhuma opção de estudar de forma híbrida",
+            "Pagamento do valor integral da universidade (média $20.000/ano)",
+            "Dificuldade para conseguir permissão de trabalho",
+            "Insegurança se a bolsa vai sair",
+            "Suporte inexistente após a matrícula",
+            "Medo de investir e perder dinheiro",
+            "Custo total muito maior no longo prazo"
+          ]
+        },
+        "after": {
+          "title": "Com MatriculaUSA",
+          "items": [
+            "IA exclusiva e equipe especializada mostram apenas bolsas que você pode realmente conquistar",
+            "Bolsas híbridas que permitem estudar presencialmente poucas vezes ao ano, economizando moradia e transporte. Economia média de U$1,000/Year",
+            "Bolsas que reduzem até 50% do valor, gerando economia de até $40.000 no curso",
+            "Acesso a bolsas que oferecem OPT e CPT para trabalhar legalmente nos EUA",
+            "Garantia de aprovação ou devolução do valor do processo seletivo",
+            "Suporte exclusivo até o início das aulas",
+            "Investimento inicial acessível (a partir de $350) com retorno alto em economia total",
+            "Mesmo com todas as taxas, você economiza em média $37.000 no curso"
+          ]
+        }
+      },
+      "specialOffer": {
+        "title": "Não Perca Esta Oportunidade",
+        "subtitle": "Comece sua jornada para a educação americana hoje",
+        "benefits": {
+          "quickAnalysis": {
+            "title": "Análise em 24h",
+            "description": "Análise de perfil em 24 horas para já saber suas melhores opções"
+          },
+          "scholarshipPriority": {
+            "title": "Prioridade nas Bolsas",
+            "description": "Prioridade nas bolsas com vagas limitadas"
+          },
+          "earlyAccess": {
+            "title": "Acesso Antecipado",
+            "description": "Acesso antecipado às bolsas híbridas (as mais procuradas)"
+          },
+          "support": {
+            "title": "Suporte Dedicado",
+            "description": "Suporte dedicado para concluir sua inscrição sem erros"
+          }
+        }
+      }
+    }
+  }
+}
