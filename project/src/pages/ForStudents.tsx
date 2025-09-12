@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import WhyDifferentSection from '../components/WhyDifferentSection';
 import { AnimatedList } from "../components/ui/AnimatedList";
 import FAQSection from '../components/FAQSection';
 import '../styles/scrollbar.css';
@@ -28,6 +27,7 @@ import {
   RefreshCw,
   Quote
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const ForStudents: React.FC = () => {
   return (
@@ -43,9 +43,6 @@ const ForStudents: React.FC = () => {
       
       {/* Social Proof Section */}
       <SocialProofSection />
-      
-      {/* Why Different Section */}
-      <WhyDifferentSection />
       
       {/* How It Works Section */}
       <HowItWorksSection />
@@ -67,6 +64,7 @@ const ForStudents: React.FC = () => {
 
 // Hero Section Component
 const HeroSection: React.FC = () => {
+  const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.2 });
 
@@ -122,12 +120,12 @@ const HeroSection: React.FC = () => {
               variants={itemVariants}
               className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight"
             >
-              <span className="block">Estude nos EUA com</span>
+              <span className="block">{t("forStudents.hero.title")}</span>
               <span className="block bg-gradient-to-r from-[#D0151C] to-red-400 bg-clip-text text-transparent">
-                bolsas de estudos exclusivas
+                {t("forStudents.hero.titleHighlight")}
               </span>
               <span className="block text-2xl md:text-3xl lg:text-4xl mt-4 font-bold">
-                Processo Seletivo com IA
+                {t("forStudents.hero.subtitle")}
               </span>
             </motion.h1>
 
@@ -135,10 +133,8 @@ const HeroSection: React.FC = () => {
             <motion.p 
               variants={itemVariants}
               className="text-lg md:text-xl text-slate-200 leading-relaxed mb-8"
-            >
-              Estude pagando <span className="text-[#D0151C] font-bold">até 50% menos</span>, com bolsas híbridas e 
-              chance de trabalhar legalmente — por apenas <span className="text-yellow-400 font-bold">$350</span> para começar.
-            </motion.p>
+              dangerouslySetInnerHTML={{ __html: t("forStudents.hero.description") }}
+            />
 
             {/* CTA Button */}
             <motion.div variants={itemVariants} className="mb-8">
@@ -151,7 +147,7 @@ const HeroSection: React.FC = () => {
                 className="inline-flex items-center px-8 md:px-12 py-4 md:py-6 bg-[#D0151C] text-white font-bold text-lg md:text-xl rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group w-full sm:w-auto justify-center"
               >
                 <Sparkles className="w-5 h-5 md:w-6 md:h-6 mr-3 group-hover:animate-spin" />
-                Começar Agora
+                {t("forStudents.hero.ctaButton")}
                 <ArrowRight className="w-5 h-5 md:w-6 md:h-6 ml-3 group-hover:translate-x-1 transition-transform" />
               </motion.button>
             </motion.div>
@@ -160,15 +156,15 @@ const HeroSection: React.FC = () => {
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 text-sm md:text-base">
               <div className="flex items-center">
                 <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
-                <span>Aprovação em 24h</span>
+                <span>{t("forStudents.hero.trustElements.approval24h")}</span>
               </div>
               <div className="flex items-center">
                 <Shield className="w-5 h-5 text-blue-400 mr-2" />
-                <span>100% Garantido</span>
+                <span>{t("forStudents.hero.trustElements.guaranteed")}</span>
               </div>
               <div className="flex items-center">
                 <Globe className="w-5 h-5 text-yellow-400 mr-2" />
-                <span>+10.000 aprovados</span>
+                <span>{t("forStudents.hero.trustElements.approved")}</span>
               </div>
             </motion.div>
           </div>
@@ -220,6 +216,7 @@ const HeroSection: React.FC = () => {
 
 // Benefits Section Component
 const BenefitsSection: React.FC = () => {
+  const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
   const [visibleCards, setVisibleCards] = React.useState<number[]>([]);
@@ -239,44 +236,44 @@ const BenefitsSection: React.FC = () => {
   const benefits = [
     {
       icon: DollarSign,
-      title: "Economia Garantida",
-      description: "Por apenas $350, acesse oportunidades que podem economizar milhares de dólares",
-      highlight: "Até 90% de desconto",
+      titleKey: "forStudents.benefits.benefits.economy.title",
+      descriptionKey: "forStudents.benefits.benefits.economy.description",
+      highlightKey: "forStudents.benefits.benefits.economy.highlight",
       color: "emerald"
     },
     {
       icon: Clock,
-      title: "Aprovação Rápida",
-      description: "Receba ofertas de bolsas compatíveis com seu perfil em poucas semanas",
-      highlight: "Em até 24h",
+      titleKey: "forStudents.benefits.benefits.fastApproval.title",
+      descriptionKey: "forStudents.benefits.benefits.fastApproval.description",
+      highlightKey: "forStudents.benefits.benefits.fastApproval.highlight",
       color: "blue"
     },
     {
       icon: Globe,
-      title: "Modalidade Híbrida",
-      description: "Estude menos tempo presencialmente e mais online, facilitando sua adaptação",
-      highlight: "Flexibilidade total",
+      titleKey: "forStudents.benefits.benefits.hybridMode.title",
+      descriptionKey: "forStudents.benefits.benefits.hybridMode.description",
+      highlightKey: "forStudents.benefits.benefits.hybridMode.highlight",
       color: "purple"
     },
     {
       icon: Target,
-      title: "Múltiplas Oportunidades",
-      description: "Uma inscrição te coloca em vários processos seletivos ao mesmo tempo",
-      highlight: "+45 universidades",
+      titleKey: "forStudents.benefits.benefits.multipleOpportunities.title",
+      descriptionKey: "forStudents.benefits.benefits.multipleOpportunities.description",
+      highlightKey: "forStudents.benefits.benefits.multipleOpportunities.highlight",
       color: "orange"
     },
     {
       icon: Shield,
-      title: "100% Garantido",
-      description: "Se não for aprovado, você recebe todo seu dinheiro de volta",
-      highlight: "Risco zero",
+      titleKey: "forStudents.benefits.benefits.guaranteed.title",
+      descriptionKey: "forStudents.benefits.benefits.guaranteed.description",
+      highlightKey: "forStudents.benefits.benefits.guaranteed.highlight",
       color: "red"
     },
     {
       icon: GraduationCap,
-      title: "Suporte Completo",
-      description: "Mentoria e acompanhamento durante todo o processo de aplicação",
-      highlight: "24/7 disponível",
+      titleKey: "forStudents.benefits.benefits.support.title",
+      descriptionKey: "forStudents.benefits.benefits.support.description",
+      highlightKey: "forStudents.benefits.benefits.support.highlight",
       color: "indigo"
     }
   ];
@@ -361,10 +358,10 @@ const BenefitsSection: React.FC = () => {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">
-              Vantagens que fazem a diferença
+              {t("forStudents.benefits.title")}
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Descubra por que milhares de estudantes escolhem o Matrícula USA para realizar o sonho americano
+              {t("forStudents.benefits.subtitle")}
             </p>
           </motion.div>
 
@@ -408,15 +405,15 @@ const BenefitsSection: React.FC = () => {
                   <div className="relative">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-xl font-bold text-[#05294E] group-hover:text-[#D0151C] transition-colors duration-300">
-                        {benefit.title}
+                        {t(benefit.titleKey)}
                       </h3>
                       <span className={`text-xs font-bold ${colorClasses.text} bg-white px-2 py-1 rounded-full border ${colorClasses.border}`}>
-                        {benefit.highlight}
+                        {t(benefit.highlightKey)}
                       </span>
                     </div>
                     
                     <p className="text-slate-600 leading-relaxed text-sm">
-                      {benefit.description}
+                      {t(benefit.descriptionKey)}
                     </p>
                   </div>
 
@@ -438,7 +435,7 @@ const BenefitsSection: React.FC = () => {
               className="inline-flex items-center px-12 py-6 bg-gradient-to-r from-[#D0151C] to-red-600 text-white font-bold text-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300"
             >
               <Sparkles className="w-6 h-6 mr-3" />
-              Descobrir minha bolsa ideal
+              {t("forStudents.benefits.ctaButton")}
               <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
             </motion.button>
           </motion.div>
@@ -450,57 +447,58 @@ const BenefitsSection: React.FC = () => {
 
 // How It Works Section Component
 const HowItWorksSection: React.FC = () => {
+  const { t } = useTranslation();
   const { ref } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   const steps = [
     {
       step: 1,
       icon: DollarSign,
-      title: "Taxa do Processo",
-      description: "Pague a Taxa do Processo Seletivo de $350 e envie seus documentos.",
-      price: "$350"
+      titleKey: "forStudents.howItWorks.steps.processFee.title",
+      descriptionKey: "forStudents.howItWorks.steps.processFee.description",
+      priceKey: "forStudents.howItWorks.steps.processFee.price"
     },
     {
-  step: 2,
-  icon: Brain,
-  title: "Escolha da Bolsa",
-  description: "Você escolhe a bolsa que deseja aplicar. A IA só entra depois, analisando seus documentos para a aplicação.",
-  price: "Grátis"
+      step: 2,
+      icon: Brain,
+      titleKey: "forStudents.howItWorks.steps.scholarshipChoice.title",
+      descriptionKey: "forStudents.howItWorks.steps.scholarshipChoice.description",
+      priceKey: "forStudents.howItWorks.steps.scholarshipChoice.price"
     },
     {
       step: 3,
       icon: UserCheck,
-      title: "Aplicação e Pré-aprovação",
-      description: "Você aplica para quantas quiser e recebe pré-aprovação.",
-      price: "Grátis"
+      titleKey: "forStudents.howItWorks.steps.application.title",
+      descriptionKey: "forStudents.howItWorks.steps.application.description",
+      priceKey: "forStudents.howItWorks.steps.application.price"
     },
     {
-  step: 4,
-  icon: CreditCard,
-  title: "Taxa de Matrícula",
-  description: "A taxa de matrícula é definida pela universidade e pode variar conforme a bolsa concedida.",
-  price: "A definir"
+      step: 4,
+      icon: CreditCard,
+      titleKey: "forStudents.howItWorks.steps.enrollmentFee.title",
+      descriptionKey: "forStudents.howItWorks.steps.enrollmentFee.description",
+      priceKey: "forStudents.howItWorks.steps.enrollmentFee.price"
     },
     {
       step: 5,
       icon: Award,
-      title: "Taxa da Bolsa",
-      description: "Pague a Taxa da Bolsa de $550 para formalizar a concessão.",
-      price: "$550"
+      titleKey: "forStudents.howItWorks.steps.scholarshipFee.title",
+      descriptionKey: "forStudents.howItWorks.steps.scholarshipFee.description",
+      priceKey: "forStudents.howItWorks.steps.scholarshipFee.price"
     },
     {
       step: 6,
       icon: FileText,
-      title: "Control i20 Fee",
-      description: "Pague a Control i20 Fee de $900 (até 10 dias após aprovação).",
-      price: "$900"
+      titleKey: "forStudents.howItWorks.steps.i20Fee.title",
+      descriptionKey: "forStudents.howItWorks.steps.i20Fee.description",
+      priceKey: "forStudents.howItWorks.steps.i20Fee.price"
     },
     {
       step: 7,
       icon: CheckCircle,
-      title: "Vaga Garantida",
-      description: "Sua vaga está segura e garantida — estamos prontos para te acompanhar.",
-      price: "✓"
+      titleKey: "forStudents.howItWorks.steps.spotGuaranteed.title",
+      descriptionKey: "forStudents.howItWorks.steps.spotGuaranteed.description",
+      priceKey: "forStudents.howItWorks.steps.spotGuaranteed.price"
     }
   ];
 
@@ -527,22 +525,22 @@ const HowItWorksSection: React.FC = () => {
           {/* Content */}
           <div className="flex-grow text-center md:text-left">
             <h3 className="text-2xl font-bold text-[#05294E] mb-3">
-              {step.title}
+              {t(step.titleKey)}
             </h3>
             <p className="text-slate-600 text-lg leading-relaxed">
-              {step.description}
+              {t(step.descriptionKey)}
             </p>
           </div>
           {/* Price */}
           <div className="flex-shrink-0 mt-6 md:mt-0 md:ml-8">
             <div className={`px-6 py-4 rounded-2xl font-bold text-lg border-2 ${
-              step.price === "Grátis" 
+              t(step.priceKey) === "Grátis" || t(step.priceKey) === "Free" || t(step.priceKey) === "Gratis"
                 ? "bg-green-50 text-green-700 border-green-200" 
-                : step.price === "✓" 
+                : t(step.priceKey) === "✓" 
                   ? "bg-blue-50 text-blue-700 border-blue-200"
                   : "bg-gradient-to-r from-[#D0151C] to-red-600 text-white border-transparent shadow-lg"
             }`}>
-              {step.price}
+              {t(step.priceKey)}
             </div>
           </div>
         </div>
@@ -560,17 +558,21 @@ const HowItWorksSection: React.FC = () => {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">
-            Como Funciona
+            {t("forStudents.howItWorks.title")}
           </h2>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Processo simples e transparente em 7 passos para garantir sua bolsa de estudos
+            {t("forStudents.howItWorks.subtitle")}
           </p>
         </div>
         {/* Steps com AnimatedList */}
         <div className="relative max-w-4xl mx-auto">
           <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/5 to-[#D0151C]/5 rounded-3xl"></div>
-          <div className="relative space-y-6 p-8">
-            <AnimatedList items={stepCards} stagger={0.2} />
+          <div className="relative p-8">
+            <AnimatedList 
+              items={stepCards} 
+              stagger={0.15} 
+              className="space-y-6" 
+            />
           </div>
         </div>
         {/* Final CTA */}
@@ -579,11 +581,11 @@ const HowItWorksSection: React.FC = () => {
             className="inline-flex items-center px-12 py-6 bg-[#05294E] text-white font-bold text-xl rounded-2xl shadow-2xl hover:bg-[#0a3a62] transition-all duration-300 group"
           >
             <GraduationCap className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform duration-300" />
-            COMEÇAR AGORA
+            {t("forStudents.howItWorks.ctaButton")}
             <span className="ml-3">→</span>
           </button>
           <p className="mt-4 text-slate-500">
-            Comece sua jornada para estudar nos EUA hoje mesmo
+            {t("forStudents.howItWorks.ctaDescription")}
           </p>
         </div>
       </div>
@@ -591,8 +593,9 @@ const HowItWorksSection: React.FC = () => {
   );
 };
 
-// Comparison Section Component - Antes vs Depois
+// Comparison Section Component - Before vs After
 const ComparisonSection: React.FC = () => {
+  const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -624,27 +627,20 @@ const ComparisonSection: React.FC = () => {
     }
   };
 
-  const problems = [
-    "Meses de pesquisa por universidades e bolsas sem saber se é elegível",
-    "Nenhuma opção de estudar de forma híbrida",
-    "Pagamento do valor integral da universidade (média $20.000/ano)",
-    "Dificuldade para conseguir permissão de trabalho",
-    "Insegurança se a bolsa vai sair",
-    "Suporte inexistente após a matrícula",
-    "Medo de investir e perder dinheiro",
-    "Custo total muito maior no longo prazo"
-  ];
-
-  const solutions = [
-    "IA exclusiva e equipe especializada mostram apenas bolsas que você pode realmente conquistar",
-    "Bolsas híbridas que permitem estudar presencialmente poucas vezes ao ano, economizando moradia e transporte. Economia média de U$1,000/Year",
-    "Bolsas que reduzem até 50% do valor, gerando economia de até $40.000 no curso",
-    "Acesso a bolsas que oferecem OPT e CPT para trabalhar legalmente nos EUA",
-    "Garantia de aprovação ou devolução do valor do processo seletivo",
-    "Suporte exclusivo até o início das aulas",
-    "Investimento inicial acessível (a partir de $350) com retorno alto em economia total",
-    "Mesmo com todas as taxas, você economiza em média $37.000 no curso"
-  ];
+  const data = {
+    before: {
+      title: t("forStudents.comparison.before.title"),
+      subtitle: t("forStudents.comparison.before.subtitle"),
+      costLabel: t("forStudents.comparison.before.costLabel"),
+      items: t("forStudents.comparison.before.items", { returnObjects: true }) as string[]
+    },
+    after: {
+      title: t("forStudents.comparison.after.title"),
+      subtitle: t("forStudents.comparison.after.subtitle"),
+      savingsLabel: t("forStudents.comparison.after.savingsLabel"),
+      items: t("forStudents.comparison.after.items", { returnObjects: true }) as string[]
+    }
+  };
 
   return (
     <section ref={ref} className="py-24 bg-gradient-to-br from-slate-100 to-slate-200">
@@ -657,10 +653,10 @@ const ComparisonSection: React.FC = () => {
           {/* Section Header */}
           <motion.div variants={cardVariants} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">
-              De gasto alto e incerteza… para economia real e aprovação garantida
+              {t("forStudents.comparison.title")}
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Veja a diferença real entre estudar por conta própria vs. com o Matrícula USA
+              {t("forStudents.comparison.subtitle")}
             </p>
           </motion.div>
 
@@ -680,13 +676,13 @@ const ComparisonSection: React.FC = () => {
                   <X className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-red-600">Sem Matrícula USA</h3>
-                  <p className="text-red-400">Processo tradicional</p>
+                  <h3 className="text-2xl font-bold text-red-600">{data.before.title}</h3>
+                  <p className="text-red-400">{data.before.subtitle}</p>
                 </div>
               </div>
               
               <div className="space-y-4">
-                {problems.map((problem, index) => (
+                {data.before.items.map((problem: string, index: number) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                       <X className="w-4 h-4 text-red-500" />
@@ -698,7 +694,7 @@ const ComparisonSection: React.FC = () => {
               
               <div className="mt-6 p-4 bg-red-50 rounded-2xl border border-red-200">
                 <p className="text-red-700 font-bold text-center">
-                  💸 Custo total estimado: $80.000 - $120.000
+                  {data.before.costLabel}
                 </p>
               </div>
             </motion.div>
@@ -714,13 +710,13 @@ const ComparisonSection: React.FC = () => {
                   <CheckCircle className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-[#05294E]">Com Matrícula USA</h3>
-                  <p className="text-green-600">Processo inteligente</p>
+                  <h3 className="text-2xl font-bold text-[#05294E]">{data.after.title}</h3>
+                  <p className="text-green-600">{data.after.subtitle}</p>
                 </div>
               </div>
               
               <div className="space-y-4">
-                {solutions.map((solution, index) => (
+                {data.after.items.map((solution: string, index: number) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                       <CheckCircle className="w-4 h-4 text-green-500" />
@@ -732,7 +728,7 @@ const ComparisonSection: React.FC = () => {
               
               <div className="mt-6 p-4 bg-green-50 rounded-2xl border border-green-200">
                 <p className="text-green-700 font-bold text-center">
-                  💰 Economia média: $37.000 no curso total
+                  {data.after.savingsLabel}
                 </p>
               </div>
             </motion.div>
@@ -749,7 +745,7 @@ const ComparisonSection: React.FC = () => {
               className="inline-flex items-center px-12 py-6 bg-[#D0151C] text-white font-bold text-xl rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group"
             >
               <TrendingUp className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform duration-300" />
-              QUERO ECONOMIZAR $37.000
+              {t("forStudents.comparison.ctaButton")}
               <motion.div
                 animate={{ x: [0, 5, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
@@ -767,6 +763,7 @@ const ComparisonSection: React.FC = () => {
 
 // Special Offer Section Component
 const SpecialOfferSection: React.FC = () => {
+  const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -796,28 +793,10 @@ const SpecialOfferSection: React.FC = () => {
         duration: 0.6
       }
     }
-  };  const benefits = [
-    {
-      icon: Zap,
-      title: "Análise em 24h",
-      description: "Análise de perfil em 24 horas para já saber suas melhores opções"
-    },
-    {
-      icon: Sparkles,
-      title: "Prioridade nas Bolsas",
-      description: "Prioridade nas bolsas com vagas limitadas"
-    },
-    {
-      icon: CheckCircle,
-      title: "Acesso Antecipado",
-      description: "Acesso antecipado às bolsas híbridas (as mais procuradas)"
-    },
-    {
-      icon: ShieldCheck,
-      title: "Suporte Dedicado",
-      description: "Suporte dedicado para concluir sua inscrição sem erros"
-    }
-  ];
+  };  const benefits = t("forStudents.specialOffer.benefits", { returnObjects: true }) as Array<{
+    title: string;
+    description: string;
+  }>;
 
   return (
     <section ref={ref} className="py-24 bg-gradient-to-br from-[#05294E] via-[#0a3a62] to-[#05294E] text-white relative overflow-hidden">
@@ -838,10 +817,10 @@ const SpecialOfferSection: React.FC = () => {
           <motion.div variants={itemVariants} className="text-center mb-12">
 
             <h2 className="text-4xl md:text-5xl font-black mb-6">
-              Ganhe prioridade nas bolsas mais disputadas e benefícios exclusivos
+              {t("forStudents.specialOffer.title")}
             </h2>
             <p className="text-xl text-slate-200 max-w-3xl mx-auto mb-8">
-              Ao se inscrever hoje, você garante:
+              {t("forStudents.specialOffer.subtitle")}
             </p>
           </motion.div>
 
@@ -850,23 +829,28 @@ const SpecialOfferSection: React.FC = () => {
             variants={containerVariants}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
           >
-            {benefits.map((benefit, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                whileHover={{ 
-                  y: -5,
-                  scale: 1.02
-                }}
-                className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300"
-              >
-                <div className="w-12 h-12 bg-[#D0151C] rounded-xl flex items-center justify-center mb-4">
-                  <benefit.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-bold mb-2">{benefit.title}</h3>
-                <p className="text-slate-200 text-sm leading-relaxed">{benefit.description}</p>
-              </motion.div>
-            ))}
+            {benefits.map((benefit, index) => {
+              const icons = [Zap, Sparkles, CheckCircle, ShieldCheck];
+              const IconComponent = icons[index] || Zap;
+              
+              return (
+                <motion.div
+                  key={index}
+                  variants={itemVariants}
+                  whileHover={{ 
+                    y: -5,
+                    scale: 1.02
+                  }}
+                  className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300"
+                >
+                  <div className="w-12 h-12 bg-[#D0151C] rounded-xl flex items-center justify-center mb-4">
+                    <IconComponent className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">{benefit.title}</h3>
+                  <p className="text-slate-200 text-sm leading-relaxed">{benefit.description}</p>
+                </motion.div>
+              );
+            })}
           </motion.div>
 
           {/* Urgency Section */}
@@ -876,39 +860,38 @@ const SpecialOfferSection: React.FC = () => {
           >
             <div className="flex items-center justify-center mb-4">
               <Zap className="w-8 h-8 text-yellow-400 mr-3" />
-              <h3 className="text-2xl font-bold text-yellow-400">Atenção: Vagas Limitadas</h3>
+              <h3 className="text-2xl font-bold text-yellow-400">{t("forStudents.specialOffer.urgencyTitle")}</h3>
             </div>
-            <p className="text-center text-lg leading-relaxed">
-              As bolsas são liberadas por ordem de inscrição. 
-              <span className="text-[#D0151C] font-bold"> Cada dia de atraso pode significar perder a vaga dos seus sonhos.</span>
-            </p>
+            <p className="text-center text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: t("forStudents.specialOffer.urgencyDescription") }} />
           </motion.div>
 
           {/* CTA */}
-          <motion.div variants={itemVariants} className="text-center">
+          <motion.div variants={itemVariants} className="text-center px-4 sm:px-0">
             <motion.button
               whileHover={{ 
                 scale: 1.05,
                 boxShadow: "0 25px 50px rgba(208, 21, 28, 0.5)"
               }}
               whileTap={{ scale: 0.95 }}
-              className="inline-flex items-center px-16 py-8 bg-[#D0151C] text-white font-black text-2xl rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group relative overflow-hidden"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-6 sm:px-12 md:px-16 py-4 sm:py-6 md:py-8 bg-[#D0151C] text-white font-black text-base sm:text-xl md:text-2xl rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative flex items-center">
-                <Sparkles className="w-8 h-8 mr-4 group-hover:animate-spin" />
-                QUERO MINHA BOLSA AGORA
+              <div className="relative flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4">
+                <Sparkles className="hidden sm:block w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 group-hover:animate-spin" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="whitespace-nowrap">{t("forStudents.specialOffer.ctaButton")}</span>
+                </div>
                 <motion.div
                   animate={{ x: [0, 10, 0] }}
                   transition={{ repeat: Infinity, duration: 1.2 }}
-                  className="ml-4 text-3xl"
+                  className="text-xl sm:text-2xl md:text-3xl"
                 >
                   🚀
                 </motion.div>
               </div>
             </motion.button>
-            <p className="mt-4 text-slate-300 text-sm">
-              ⏰ Oferta válida por tempo limitado
+            <p className="mt-3 sm:mt-4 text-slate-300 text-xs sm:text-sm">
+              {t("forStudents.specialOffer.ctaDescription")}
             </p>
           </motion.div>
         </motion.div>
@@ -919,6 +902,7 @@ const SpecialOfferSection: React.FC = () => {
 
 // Guarantee Section Component
 const GuaranteeSection: React.FC = () => {
+  const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -948,26 +932,10 @@ const GuaranteeSection: React.FC = () => {
         duration: 0.8
       }
     }
-  };  const guarantees = [
-    {
-      icon: Shield,
-      title: "Garantia de Aprovação",
-      description: "Se você seguir nosso processo e não for aprovado, devolvemos o valor da Taxa do Processo Seletivo integralmente.",
-      color: "bg-green-500"
-    },
-    {
-      icon: DollarSign,
-      title: "Processo Transparente",
-      description: "Sem taxas escondidas ou custos surpresa. Você sabe exatamente quanto vai pagar do início ao fim.",
-      color: "bg-blue-500"
-    },
-    {
-      icon: PhoneCall,
-      title: "Apoio até a Chegada",
-      description: "Não paramos no aceite da universidade. Nossa equipe acompanha todo o processo até o embarque.",
-      color: "bg-purple-500"
-    }
-  ];
+  };  const guarantees = t("forStudents.guarantee.guarantees", { returnObjects: true }) as Array<{
+    title: string;
+    description: string;
+  }>;
 
   return (
     <section ref={ref} className="py-24 bg-gradient-to-br from-slate-50 to-blue-50">
@@ -983,10 +951,10 @@ const GuaranteeSection: React.FC = () => {
               <Shield className="w-10 h-10 text-green-600" />
             </div>
             <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">
-              Aprovação garantida ou seu dinheiro de volta
+              {t("forStudents.guarantee.title")}
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-              Sabemos que investir no seu futuro exige confiança. Por isso, o Matrícula USA é o único programa que oferece:
+              {t("forStudents.guarantee.subtitle")}
             </p>
           </motion.div>
 
@@ -995,32 +963,39 @@ const GuaranteeSection: React.FC = () => {
             variants={containerVariants}
             className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16"
           >
-            {guarantees.map((guarantee, index) => (
-              <motion.div
-                key={index}
-                variants={cardVariants}
-                whileHover={{ 
-                  y: -10,
-                  scale: 1.02,
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-                }}
-                className="bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-100 group relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-500"></div>
-                
-                <div className={`${guarantee.color} w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                  <guarantee.icon className="w-8 h-8 text-white" />
-                </div>
-                
-                <h3 className="text-xl font-bold text-[#05294E] mb-4">
-                  {guarantee.title}
-                </h3>
-                
-                <p className="text-slate-600 leading-relaxed">
-                  {guarantee.description}
-                </p>
-              </motion.div>
-            ))}
+            {guarantees.map((guarantee, index) => {
+              const icons = [Shield, DollarSign, PhoneCall];
+              const colors = ["bg-green-500", "bg-blue-500", "bg-purple-500"];
+              const IconComponent = icons[index] || Shield;
+              const colorClass = colors[index] || "bg-green-500";
+              
+              return (
+                <motion.div
+                  key={index}
+                  variants={cardVariants}
+                  whileHover={{ 
+                    y: -10,
+                    scale: 1.02,
+                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+                  }}
+                  className="bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-100 group relative overflow-hidden"
+                >
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-500"></div>
+                  
+                  <div className={`${colorClass} w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                    <IconComponent className="w-8 h-8 text-white" />
+                  </div>
+                  
+                  <h3 className="text-xl font-bold text-[#05294E] mb-4">
+                    {guarantee.title}
+                  </h3>
+                  
+                  <p className="text-slate-600 leading-relaxed">
+                    {guarantee.description}
+                  </p>
+                </motion.div>
+              );
+            })}
           </motion.div>
 
           {/* Bottom Message */}
@@ -1039,7 +1014,7 @@ const GuaranteeSection: React.FC = () => {
             </motion.div>
             
             <h3 className="text-3xl md:text-4xl font-black mb-6">
-              O risco é todo nosso. Para você, é só aproveitar a oportunidade.
+              {t("forStudents.guarantee.bottomMessage")}
             </h3>
             
             <motion.button
@@ -1051,7 +1026,7 @@ const GuaranteeSection: React.FC = () => {
               className="inline-flex items-center px-12 py-6 bg-white text-[#05294E] font-bold text-xl rounded-2xl shadow-2xl hover:bg-slate-100 transition-all duration-300 group"
             >
               <RefreshCw className="w-6 h-6 mr-3 group-hover:rotate-180 transition-transform duration-500" />
-              COMEÇAR SEM RISCOS
+              {t("forStudents.guarantee.ctaButton")}
               <motion.div
                 animate={{ x: [0, 5, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
@@ -1069,6 +1044,7 @@ const GuaranteeSection: React.FC = () => {
 
 // Social Proof Section Component - Prova Social
 const SocialProofSection: React.FC = () => {
+  const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -1113,56 +1089,13 @@ const SocialProofSection: React.FC = () => {
     }
   };
 
-  const testimonials = [
-    {
-      name: "Maria Silva",
-      university: "University of California",
-      course: "Computer Science",
-      text: "Consegui uma bolsa de 40% e estou realizando meu sonho de estudar nos EUA. O processo foi muito mais simples do que imaginava.",
-      image: "/api/placeholder/60/60",
-      savings: "$18,000"
-    },
-    {
-      name: "João Santos",
-      university: "Arizona State University", 
-      course: "Business Administration",
-      text: "A modalidade híbrida foi perfeita para mim. Economizei muito em hospedagem e ainda tenho a experiência presencial.",
-      image: "/api/placeholder/60/60",
-      savings: "$22,000"
-    },
-    {
-      name: "Ana Costa",
-      university: "Florida International University",
-      course: "International Business",
-      text: "Aprovada em 3 universidades diferentes! A IA realmente encontrou as melhores opções para o meu perfil.",
-      image: "/api/placeholder/60/60",
-      savings: "$25,000"
-    },
-    {
-      name: "Carlos Mendes",
-      university: "Northern Arizona University",
-      course: "Engineering",
-      text: "Incrível como o processo foi rápido. Em 3 semanas já tinha 2 aprovações com bolsas excelentes!",
-      image: "/api/placeholder/60/60",
-      savings: "$30,000"
-    },
-    {
-      name: "Fernanda Lima",
-      university: "University of South Florida",
-      course: "Marketing",
-      text: "O suporte foi fantástico do início ao fim. Agora estou estudando e trabalhando legalmente nos EUA!",
-      image: "/api/placeholder/60/60",
-      savings: "$20,000"
-    },
-    {
-      name: "Roberto Silva",
-      university: "California State University",
-      course: "Data Science",
-      text: "Consegui uma bolsa híbrida que me permite estudar online e presencialmente. Perfeito para minha situação!",
-      image: "/api/placeholder/60/60",
-      savings: "$35,000"
-    }
-  ];
+  const testimonials = t("forStudents.socialProof.testimonials", { returnObjects: true }) as Array<{
+    name: string;
+    university: string;
+    course: string;
+    text: string;
+    savings: string;
+  }>;
 
   // Auto-scroll effect
   useEffect(() => {
@@ -1190,10 +1123,10 @@ const SocialProofSection: React.FC = () => {
           {/* Header */}
           <motion.div variants={itemVariants} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">
-              Mais de 150 alunos aprovados só em 2024
+              {t("forStudents.socialProof.title")}
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Veja o que nossos alunos estão dizendo sobre sua experiência
+              {t("forStudents.socialProof.subtitle")}
             </p>
           </motion.div>
 
@@ -1204,19 +1137,19 @@ const SocialProofSection: React.FC = () => {
           >
             <div className="text-center p-4 bg-white rounded-xl shadow-sm">
               <div className="text-2xl md:text-4xl font-black text-[#D0151C] mb-2">150+</div>
-              <div className="text-slate-600 text-sm md:text-base">Alunos aprovados</div>
+              <div className="text-slate-600 text-sm md:text-base">{t("forStudents.socialProof.statistics.approved")}</div>
             </div>
             <div className="text-center p-4 bg-white rounded-xl shadow-sm">
               <div className="text-2xl md:text-4xl font-black text-[#D0151C] mb-2">92%</div>
-              <div className="text-slate-600 text-sm md:text-base">Taxa de aprovação</div>
+              <div className="text-slate-600 text-sm md:text-base">{t("forStudents.socialProof.statistics.approvalRate")}</div>
             </div>
             <div className="text-center p-4 bg-white rounded-xl shadow-sm">
               <div className="text-2xl md:text-4xl font-black text-[#D0151C] mb-2">$35k</div>
-              <div className="text-slate-600 text-sm md:text-base">Economia média</div>
+              <div className="text-slate-600 text-sm md:text-base">{t("forStudents.socialProof.statistics.averageSavings")}</div>
             </div>
             <div className="text-center p-4 bg-white rounded-xl shadow-sm">
               <div className="text-2xl md:text-4xl font-black text-[#D0151C] mb-2">45</div>
-              <div className="text-slate-600 text-sm md:text-base">Universidades parceiras</div>
+              <div className="text-slate-600 text-sm md:text-base">{t("forStudents.socialProof.statistics.partnerUniversities")}</div>
             </div>
           </motion.div>
 
@@ -1257,7 +1190,7 @@ const SocialProofSection: React.FC = () => {
                       
                       {/* Savings badge */}
                       <div className="absolute top-3 md:top-4 right-3 md:right-4 bg-green-500 text-white text-xs font-bold px-2 md:px-3 py-1 rounded-full">
-                        Economizou {testimonial.savings}
+                        {t("forStudents.socialProof.statistics.averageSavings")} {testimonial.savings}
                       </div>
                       
                       <div className="flex items-center mb-4 md:mb-6">
@@ -1347,7 +1280,7 @@ const SocialProofSection: React.FC = () => {
               className="inline-flex items-center px-12 py-6 bg-[#D0151C] text-white font-bold text-xl rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group"
             >
               <CheckCircle className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform duration-300" />
-              SER O PRÓXIMO APROVADO
+              {t("forStudents.socialProof.ctaButton")}
               <motion.div
                 animate={{ x: [0, 5, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}

@@ -2488,5 +2488,231 @@
         "support": "Suporte"
       }
     }
+  },
+  "forStudents": {
+    "hero": {
+      "title": "Estude nos EUA com",
+      "titleHighlight": "bolsas de estudos exclusivas",
+      "subtitle": "Processo Seletivo com IA",
+      "description": "Estude pagando <span class=\"text-[#D0151C] font-bold\">até 50% menos</span>, com bolsas híbridas e chance de trabalhar legalmente — por apenas <span class=\"text-yellow-400 font-bold\">$350</span> para começar.",
+      "ctaButton": "Começar Agora",
+      "trustElements": {
+        "approval24h": "Aprovação em 24h",
+        "guaranteed": "100% Garantido",
+        "approved": "+10.000 aprovados"
+      }
+    },
+    "benefits": {
+      "title": "Vantagens que fazem a diferença",
+      "subtitle": "Descubra por que milhares de estudantes escolhem o Matrícula USA para realizar o sonho americano",
+      "ctaButton": "Descobrir minha bolsa ideal",
+      "benefits": {
+        "economy": {
+          "title": "Economia Real",
+          "description": "Pague até 50% menos que o valor integral da universidade com nossas bolsas exclusivas",
+          "highlight": "Até 50% OFF"
+        },
+        "fastApproval": {
+          "title": "Aprovação Rápida",
+          "description": "Processo otimizado com IA que acelera sua aprovação em até 80%",
+          "highlight": "24h"
+        },
+        "hybridMode": {
+          "title": "Modalidade Híbrida",
+          "description": "Estude online e presencialmente, economizando em hospedagem e alimentação",
+          "highlight": "Flexível"
+        },
+        "multipleOpportunities": {
+          "title": "Múltiplas Oportunidades",
+          "description": "Candidature-se para várias universidades simultaneamente e aumente suas chances",
+          "highlight": "3+ Opções"
+        },
+        "guaranteed": {
+          "title": "Aprovação Garantida",
+          "description": "Se não for aprovado seguindo nosso processo, devolvemos seu dinheiro",
+          "highlight": "100%"
+        },
+        "support": {
+          "title": "Suporte Completo",
+          "description": "Acompanhamento desde a candidatura até o embarque nos EUA",
+          "highlight": "24/7"
+        }
+      }
+    },
+    "howItWorks": {
+      "title": "Como Funciona",
+      "subtitle": "Processo simples e transparente em 7 passos para garantir sua bolsa de estudos",
+      "ctaButton": "COMEÇAR AGORA",
+      "ctaDescription": "Comece sua jornada para estudar nos EUA hoje mesmo",
+      "steps": {
+        "processFee": {
+          "title": "Taxa do Processo Seletivo",
+          "description": "Pague apenas $350 para iniciar sua jornada de estudos nos EUA",
+          "price": "$350"
+        },
+        "scholarshipChoice": {
+          "title": "Escolha da Bolsa",
+          "description": "Nossa IA analisa seu perfil e sugere as melhores bolsas para você",
+          "price": "Grátis"
+        },
+        "application": {
+          "title": "Candidatura",
+          "description": "Enviamos sua candidatura para as universidades parceiras",
+          "price": "✓"
+        },
+        "enrollmentFee": {
+          "title": "Taxa de Matrícula",
+          "description": "Pague apenas quando for aprovado na universidade",
+          "price": "Variável"
+        },
+        "scholarshipFee": {
+          "title": "Taxa da Bolsa",
+          "description": "Valor da bolsa com desconto aplicado automaticamente",
+          "price": "Com Desconto"
+        },
+        "i20Fee": {
+          "title": "Taxa do I-20",
+          "description": "Documento oficial para seu visto de estudante",
+          "price": "Incluída"
+        },
+        "spotGuaranteed": {
+          "title": "Vaga Garantida",
+          "description": "Sua vaga está garantida na universidade escolhida",
+          "price": "✓"
+        }
+      }
+    },
+    "comparison": {
+      "title": "De gasto alto e incerteza… para economia real e aprovação garantida",
+      "subtitle": "Veja a diferença real entre estudar por conta própria vs. com o Matrícula USA",
+      "ctaButton": "QUERO ECONOMIZAR",
+      "before": {
+        "title": "Sem Matrícula USA",
+        "subtitle": "Processo tradicional",
+        "costLabel": "Custo total: $15.000 - $25.000",
+        "items": [
+          "Processo demorado e complexo",
+          "Alto risco de rejeição",
+          "Sem suporte especializado",
+          "Custos ocultos e surpresas",
+          "Dificuldade para conseguir bolsas",
+          "Processo manual e burocrático"
+        ]
+      },
+      "after": {
+        "title": "Com Matrícula USA",
+        "subtitle": "Processo otimizado com IA",
+        "savingsLabel": "Economia média: $8.000 - $15.000",
+        "items": [
+          "Processo rápido e simplificado",
+          "Aprovação garantida ou dinheiro de volta",
+          "Suporte dedicado 24/7",
+          "Transparência total nos custos",
+          "Acesso a bolsas exclusivas",
+          "Processo automatizado e eficiente"
+        ]
+      }
+    },
+    "specialOffer": {
+      "title": "Ganhe prioridade nas bolsas mais disputadas e benefícios exclusivos",
+      "subtitle": "Ao se inscrever hoje, você garante:",
+      "urgencyTitle": "Atenção: Vagas Limitadas",
+      "urgencyDescription": "As bolsas são liberadas por ordem de inscrição. <span class=\"text-[#D0151C] font-bold\">Cada dia de atraso pode significar perder a vaga dos seus sonhos.</span>",
+      "ctaButton": "QUERO MINHA BOLSA AGORA",
+      "ctaDescription": "⏰ Oferta válida por tempo limitado",
+      "benefits": [
+        {
+          "title": "Análise em 24h",
+          "description": "Análise de perfil em 24 horas para já saber suas melhores opções"
+        },
+        {
+          "title": "Prioridade nas Bolsas",
+          "description": "Prioridade nas bolsas com vagas limitadas"
+        },
+        {
+          "title": "Acesso Antecipado",
+          "description": "Acesso antecipado às bolsas híbridas (as mais procuradas)"
+        },
+        {
+          "title": "Suporte Dedicado",
+          "description": "Suporte dedicado para concluir sua inscrição sem erros"
+        }
+      ]
+    },
+    "guarantee": {
+      "title": "Aprovação garantida ou seu dinheiro de volta",
+      "subtitle": "Sabemos que investir no seu futuro exige confiança. Por isso, o Matrícula USA é o único programa que oferece:",
+      "ctaButton": "COMEÇAR SEM RISCOS",
+      "guarantees": [
+        {
+          "title": "Garantia de Aprovação",
+          "description": "Se você seguir nosso processo e não for aprovado, devolvemos o valor da Taxa do Processo Seletivo integralmente."
+        },
+        {
+          "title": "Processo Transparente",
+          "description": "Sem taxas escondidas ou custos surpresa. Você sabe exatamente quanto vai pagar do início ao fim."
+        },
+        {
+          "title": "Apoio até a Chegada",
+          "description": "Não paramos no aceite da universidade. Nossa equipe acompanha todo o processo até o embarque."
+        }
+      ],
+      "bottomMessage": "O risco é todo nosso. Para você, é só aproveitar a oportunidade."
+    },
+    "socialProof": {
+      "title": "Mais de 150 alunos aprovados só em 2024",
+      "subtitle": "Veja o que nossos alunos estão dizendo sobre sua experiência",
+      "ctaButton": "SER O PRÓXIMO APROVADO",
+      "statistics": {
+        "approved": "Alunos aprovados",
+        "approvalRate": "Taxa de aprovação",
+        "averageSavings": "Economia média",
+        "partnerUniversities": "Universidades parceiras"
+      },
+      "testimonials": [
+        {
+          "name": "Maria Silva",
+          "university": "University of California",
+          "course": "Computer Science",
+          "text": "Consegui uma bolsa de 40% e estou realizando meu sonho de estudar nos EUA. O processo foi muito mais simples do que imaginava.",
+          "savings": "$18,000"
+        },
+        {
+          "name": "João Santos",
+          "university": "Arizona State University",
+          "course": "Business Administration",
+          "text": "A modalidade híbrida foi perfeita para mim. Economizei muito em hospedagem e ainda tenho a experiência presencial.",
+          "savings": "$22,000"
+        },
+        {
+          "name": "Ana Costa",
+          "university": "Florida International University",
+          "course": "International Business",
+          "text": "Aprovada em 3 universidades diferentes! A IA realmente encontrou as melhores opções para o meu perfil.",
+          "savings": "$25,000"
+        },
+        {
+          "name": "Carlos Mendes",
+          "university": "Northern Arizona University",
+          "course": "Engineering",
+          "text": "Incrível como o processo foi rápido. Em 3 semanas já tinha 2 aprovações com bolsas excelentes!",
+          "savings": "$30,000"
+        },
+        {
+          "name": "Fernanda Lima",
+          "university": "University of South Florida",
+          "course": "Marketing",
+          "text": "O suporte foi fantástico do início ao fim. Agora estou estudando e trabalhando legalmente nos EUA!",
+          "savings": "$20,000"
+        },
+        {
+          "name": "Roberto Silva",
+          "university": "California State University",
+          "course": "Data Science",
+          "text": "Consegui uma bolsa híbrida que me permite estudar online e presencialmente. Perfeito para minha situação!",
+          "savings": "$35,000"
+        }
+      ]
+    }
   }
 }
