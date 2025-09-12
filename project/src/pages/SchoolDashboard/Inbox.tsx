@@ -17,7 +17,10 @@ import {
   FileText,
   AlertTriangle,
   Trash,
-  BookOpen
+  BookOpen,
+  Calendar,
+  Clock,
+  Send
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useGmail } from '../../hooks/useGmail';
@@ -411,9 +414,70 @@ const Inbox: React.FC = () => {
   const [replyEmail, setReplyEmail] = useState<Email | null>(null);
   const [forwardEmail, setForwardEmail] = useState<Email | null>(null);
   const [showEmailIntegration, setShowEmailIntegration] = useState(false);
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [meetingForm, setMeetingForm] = useState({
+    email: '',
+    preferredDate: '',
+    message: 'I want to automate my emails with AI to improve student communication efficiency and reduce response time.'
+  });
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [emailCounts, setEmailCounts] = useState<Record<string, number>>({});
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<any[]>([]);
+
+  // Preencher email da universidade automaticamente
+  useEffect(() => {
+    if (university?.contact?.email) {
+      setMeetingForm(prev => ({
+        ...prev,
+        email: university.contact.email
+      }));
+    }
+  }, [university]);
+
+
+
+  // Função para enviar webhook de agendamento
+  const handleSendMeetingRequest = async () => {
+    try {
+      const payload = {
+        tipo_notf: 'ai_email_activation_request',
+        email: meetingForm.email,
+        preferred_date: meetingForm.preferredDate,
+        message: meetingForm.message,
+        university_name: university?.name || 'Unknown University',
+        user_id: user?.id,
+        timestamp: new Date().toISOString(),
+        to_email: 'admin@suaiden.com',
+        to_name: 'Admin Suaiden'
+      };
+
+      // Enviar para webhook
+      const response = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        // Fechar modal silenciosamente - sucesso implícito
+        setShowMeetingModal(false);
+        setMeetingForm({
+          email: '',
+          preferredDate: '',
+          message: 'I want to automate my emails with AI to improve student communication efficiency and reduce response time.'
+        });
+      } else {
+        // Em caso de erro, apenas fechar o modal
+        setShowMeetingModal(false);
+      }
+    } catch (error) {
+      console.error('Error sending meeting request:', error);
+      // Em caso de erro, apenas fechar o modal
+      setShowMeetingModal(false);
+    }
+  };
 
   // Definição das abas disponíveis
   const emailTabs: EmailTab[] = [
@@ -722,7 +786,91 @@ const Inbox: React.FC = () => {
     }
   }, [activeConnection?.email, updateEmailCounts]);
 
-  // Development Block - Always show
+  // Renderizar modal se estiver aberto
+  if (showMeetingModal) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-slate-200">
+            <h2 className="text-2xl font-bold text-slate-800 flex items-center">
+              <Calendar className="h-6 w-6 mr-2 text-[#05294E]" />
+              Schedule AI Demo
+            </h2>
+            <button
+              onClick={() => setShowMeetingModal(false)}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="h-6 w-6 text-slate-600" />
+            </button>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleSendMeetingRequest(); }} className="p-6 space-y-6">
+            {/* University Email */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <Mail className="inline h-4 w-4 mr-2" />
+                University Email *
+              </label>
+              <input
+                type="email"
+                value={meetingForm.email}
+                onChange={(e) => setMeetingForm(prev => ({ ...prev, email: e.target.value }))}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
+                placeholder="university@example.com"
+                required
+              />
+            </div>
+
+            {/* Preferred Date */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <Calendar className="inline h-4 w-4 mr-2" />
+                Preferred Date *
+              </label>
+              <input
+                type="date"
+                value={meetingForm.preferredDate}
+                onChange={(e) => setMeetingForm(prev => ({ ...prev, preferredDate: e.target.value }))}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all"
+                required
+              />
+              <p className="mt-2 text-sm text-slate-500">
+                We'll contact you to confirm the exact time
+              </p>
+            </div>
+
+            {/* Message */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <FileText className="inline h-4 w-4 mr-2" />
+                What you want to achieve with AI
+              </label>
+              <textarea
+                value={meetingForm.message}
+                onChange={(e) => setMeetingForm(prev => ({ ...prev, message: e.target.value }))}
+                rows={4}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent transition-all resize-none"
+                placeholder="Tell us about your email automation needs..."
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full bg-[#05294E] text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-[#041f3d] transition-colors flex items-center justify-center"
+            >
+              <Send className="h-5 w-5 mr-2" />
+              Send Request
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Email AI Activation Page - Contact Required
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -730,208 +878,280 @@ const Inbox: React.FC = () => {
         {/* Header Section */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-[#05294E] rounded-full mb-6">
-            <AlertTriangle className="h-10 w-10 text-white" />
+            <Mail className="h-10 w-10 text-white" />
           </div>
           
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            Email Management{' '}
+            AI-Powered{' '}
             <span className="text-[#05294E]">
-              Coming Soon!
+              Email Management
             </span>
           </h1>
           
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            We're developing an advanced email management system that will revolutionize 
-            how universities communicate with students and manage their applications.
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
+            Transform your university's email communication with our advanced AI system that automatically 
+            processes, categorizes, and responds to student inquiries.
           </p>
+
+          {/* Contact CTA */}
+          <div className="bg-[#05294E] rounded-2xl p-8 text-white max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
+            <p className="text-white/90 mb-6">
+              Contact our team to activate AI-powered email management for your university
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button 
+                onClick={() => setShowMeetingModal(true)}
+                className="bg-white text-[#05294E] px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center"
+              >
+                <Calendar className="h-5 w-5 mr-2" />
+                Schedule Meeting
+              </button>
+              <a 
+                href="mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing."
+                className="border-2 border-white text-white px-8 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#05294E] transition-colors flex items-center justify-center"
+              >
+                <Mail className="h-5 w-5 mr-2" />
+                Contact Us
+              </a>
+            </div>
+          </div>
         </div>
 
-        {/* Benefits Grid */}
+        {/* AI Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
+            <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center mb-4">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
             <div className="text-xl font-semibold text-gray-900 mb-4">
-              Enhanced Email Management
+              AI-Powered Responses
             </div>
             <div className="text-gray-600 leading-relaxed">
-              Streamlined inbox organization and communication tools for better productivity.
+              Automatically generate intelligent responses to student inquiries using advanced AI technology.
             </div>
           </div>
 
           <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
+            <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center mb-4">
+              <CheckCircle className="h-6 w-6 text-white" />
+            </div>
             <div className="text-xl font-semibold text-gray-900 mb-4">
-              Streamlined Communication
+              Smart Categorization
             </div>
             <div className="text-gray-600 leading-relaxed">
-              Improved workflow integration and collaboration features for your team.
+              Automatically categorize and prioritize emails based on content, urgency, and student type.
             </div>
           </div>
 
           <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
+            <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center mb-4">
+              <RefreshCw className="h-6 w-6 text-white" />
+            </div>
             <div className="text-xl font-semibold text-gray-900 mb-4">
-              Advanced Features
+              Automated Workflows
             </div>
             <div className="text-gray-600 leading-relaxed">
-              Powerful tools to enhance your productivity and efficiency.
+              Set up automated email sequences and follow-ups to improve student engagement and response times.
             </div>
           </div>
         </div>
 
-        {/* How It Works Section */}
+        {/* How AI Works Section */}
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-16">
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            What to Expect
+            How AI Transforms Your Email Management
           </h2>
           
-          {/* Feature Details */}
+          {/* AI Features Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <div className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
-              <div className="text-xl font-semibold mb-4">Email Integration</div>
+            <div className="bg-[#05294E] rounded-xl p-6 text-white">
+              <div className="text-xl font-semibold mb-4 flex items-center">
+                <Shield className="h-6 w-6 mr-2" />
+                Intelligent Processing
+              </div>
               <div className="text-white">
                 <ul className="space-y-3">
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span>Seamless Gmail integration for university communications</span>
+                    <span>AI analyzes email content and context automatically</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span>Automated email categorization and filtering</span>
+                    <span>Smart categorization by application type and urgency</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span>Real-time notifications and alerts</span>
+                    <span>Automatic response suggestions based on university policies</span>
                   </li>
                 </ul>
               </div>
             </div>
             
-            <div className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
-              <div className="text-xl font-semibold mb-4">Dashboard Features</div>
+            <div className="bg-[#05294E] rounded-xl p-6 text-white">
+              <div className="text-xl font-semibold mb-4 flex items-center">
+                <CheckCircle className="h-6 w-6 mr-2" />
+                Automated Workflows
+              </div>
               <div className="text-white">
                 <ul className="space-y-3">
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span><strong>Unified inbox</strong> for all university communications</span>
+                    <span><strong>Auto-responses</strong> for common student inquiries</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span>Advanced search and filtering capabilities</span>
+                    <span>Follow-up sequences for incomplete applications</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span>Analytics and reporting tools</span>
+                    <span>Priority routing based on student status and urgency</span>
                   </li>
                 </ul>
               </div>
             </div>
           </div>
 
-          {/* How It Works for Your University */}
+          {/* AI Workflow Process */}
           <div className="mb-12">
             <h3 className="text-2xl font-semibold text-gray-900 text-center mb-8">
-              How It Works for Your University
+              AI-Powered Email Workflow
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl font-bold text-[#05294E]">1</span>
+                <div className="w-20 h-20 bg-[#05294E] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl font-bold text-white">1</span>
                 </div>
-                <div className="text-lg font-semibold text-gray-900 mb-3">Setup Integration</div>
+                <div className="text-lg font-semibold text-gray-900 mb-3">Contact & Setup</div>
                 <div className="text-gray-600">
-                  Connect your Gmail account and configure email settings for your university.
+                  Contact our team to activate AI email management and configure your university's specific needs.
                 </div>
               </div>
 
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl font-bold text-[#05294E]">2</span>
+                <div className="w-20 h-20 bg-[#05294E] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl font-bold text-white">2</span>
                 </div>
-                <div className="text-lg font-semibold text-gray-900 mb-3">Automated Processing</div>
+                <div className="text-lg font-semibold text-gray-900 mb-3">AI Processing</div>
                 <div className="text-gray-600">
-                  System automatically categorizes and processes incoming emails from students.
+                  AI automatically analyzes, categorizes, and generates intelligent responses to student emails.
                 </div>
               </div>
 
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#05294E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl font-bold text-[#05294E]">3</span>
+                <div className="w-20 h-20 bg-[#05294E] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl font-bold text-white">3</span>
                 </div>
-                <div className="text-lg font-semibold text-gray-900 mb-3">Enhanced Management</div>
+                <div className="text-lg font-semibold text-gray-900 mb-3">Smart Management</div>
                 <div className="text-gray-600">
-                  Access unified dashboard with advanced tools for communication management.
+                  Access AI-powered dashboard with automated workflows and intelligent email management.
                 </div>
               </div>
             </div>
             
-            {/* Practical Example */}
-            <div className="bg-[#05294E] rounded-xl p-6 border border-[#05294E] text-white">
-              <div className="font-semibold text-white mb-4 text-center text-lg">Practical Example</div>
+            {/* AI Example */}
+            <div className="bg-[#05294E] rounded-xl p-6 text-white">
+              <div className="font-semibold text-white mb-4 text-center text-lg flex items-center justify-center">
+                <Shield className="h-6 w-6 mr-2" />
+                AI in Action
+              </div>
               <div className="text-white">
                 <div className="text-center space-y-2">
                   <p>
-                    <strong>Student sends application email</strong>
+                    <strong>Student: "What documents do I need for admission?"</strong>
                   </p>
                   <p className="text-white/80">↓</p>
                   <p>
-                    <strong>System automatically categorizes and notifies</strong>
+                    <strong>AI analyzes request and generates personalized response</strong>
                   </p>
                   <p className="text-white/80">↓</p>
                   <p>
-                    <strong>University responds through unified dashboard</strong>
+                    <strong>University reviews and sends AI-generated response</strong>
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Detailed Benefits */}
+          {/* AI Benefits */}
           <div>
             <h3 className="text-2xl font-semibold text-gray-900 text-center mb-8">
-              Benefits for Your University
+              Why Choose AI-Powered Email Management?
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <div className="font-semibold text-white mb-2">Automated Processing</div>
+              <div className="p-6 bg-[#05294E] rounded-xl text-white">
+                <div className="font-semibold text-white mb-3 flex items-center">
+                  <Shield className="h-5 w-5 mr-2" />
+                  AI Automation
+                </div>
                 <div className="text-white text-sm">
-                  Intelligent email categorization and automated responses for efficiency.
+                  Reduce manual email handling by 80% with intelligent AI responses and automated workflows.
                 </div>
               </div>
 
-              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <div className="font-semibold text-white mb-2">Unified Dashboard</div>
+              <div className="p-6 bg-[#05294E] rounded-xl text-white">
+                <div className="font-semibold text-white mb-3 flex items-center">
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  Faster Response Times
+                </div>
                 <div className="text-white text-sm">
-                  Centralized communication hub with advanced management tools.
+                  Respond to student inquiries in minutes instead of hours with AI-generated responses.
                 </div>
               </div>
 
-              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <div className="font-semibold text-white mb-2">Enhanced Productivity</div>
+              <div className="p-6 bg-[#05294E] rounded-xl text-white">
+                <div className="font-semibold text-white mb-3 flex items-center">
+                  <RefreshCw className="h-5 w-5 mr-2" />
+                  Smart Categorization
+                </div>
                 <div className="text-white text-sm">
-                  Streamlined workflows and improved response times.
+                  Automatically prioritize and route emails based on content analysis and student status.
                 </div>
               </div>
 
-              <div className="p-4 bg-[#05294E] rounded-xl border border-[#05294E] text-white">
-                <div className="font-semibold text-white mb-2">Real-time Analytics</div>
+              <div className="p-6 bg-[#05294E] rounded-xl text-white">
+                <div className="font-semibold text-white mb-3 flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Consistent Quality
+                </div>
                 <div className="text-white text-sm">
-                  Comprehensive insights and reporting for better decision making.
+                  Maintain consistent, professional responses while reducing staff workload and training time.
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Call to Action */}
+        {/* Final CTA */}
         <div className="text-center">
-          <div className="space-y-4">
-            <div className="inline-flex items-center px-8 py-4 bg-[#05294E] text-white font-semibold text-lg rounded-xl shadow-lg">
-              <AlertTriangle className="h-5 w-5 mr-3" />
-              COMING SOON
+          <div className="space-y-6">
+            <div className="bg-[#05294E] rounded-2xl p-8 text-white max-w-4xl mx-auto">
+              <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Email Management?</h2>
+              <p className="text-white/90 mb-6 text-lg">
+                Join leading universities using AI to streamline student communication and improve response efficiency.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button 
+                  onClick={() => setShowMeetingModal(true)}
+                  className="bg-white text-[#05294E] px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
+                >
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Schedule Meeting
+                </button>
+                <a 
+                  href="mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing."
+                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-[#05294E] transition-colors flex items-center justify-center text-lg"
+                >
+                  <Mail className="h-5 w-5 mr-2" />
+                  Contact Us
+                </a>
+              </div>
             </div>
 
-            <div className="block mx-auto text-[#05294E] font-medium">
-              We'll notify you as soon as it's ready!
+            <div className="text-gray-600">
+              <p className="font-medium">Questions? Contact us at <a href="mailto:support@matricula.usa.com" className="text-[#05294E] hover:underline">support@matricula.usa.com</a></p>
             </div>
           </div>
         </div>
@@ -1293,6 +1513,7 @@ const Inbox: React.FC = () => {
               </div>
             </div>
           )}
+
           </div>
       </div>
   );
