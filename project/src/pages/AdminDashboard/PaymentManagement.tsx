@@ -1497,97 +1497,13 @@ const PaymentManagement = (): React.JSX.Element => {
       }
 
       // Se não há dados reais, vamos criar alguns dados de exemplo para testar
-      let finalPayments = paymentRecords;
-      
-      if (paymentRecords.length === 0) {
-        console.log('🔧 No real data found, creating sample data for testing...');
-        
-        finalPayments = [
-          {
-            id: 'sample-1-selection',
-            student_id: 'sample-student-1',
-            student_name: 'João Silva',
-            student_email: 'joao.silva@email.com',
-            university_id: 'sample-uni-1',
-            university_name: 'Harvard University',
-            scholarship_id: 'sample-scholarship-1',
-            scholarship_title: 'Computer Science Excellence Scholarship',
-            fee_type: 'selection_process',
-            amount: 50,
-            status: 'paid',
-            payment_date: '2024-01-15T10:30:00Z',
-            created_at: '2024-01-15T10:30:00Z'
-          },
-          {
-            id: 'sample-1-application',
-            student_id: 'sample-student-1',
-            student_name: 'João Silva',
-            student_email: 'joao.silva@email.com',
-            university_id: 'sample-uni-1',
-            university_name: 'Harvard University',
-            scholarship_id: 'sample-scholarship-1',
-            scholarship_title: 'Computer Science Excellence Scholarship',
-            fee_type: 'application',
-            amount: 100,
-            status: 'paid',
-            payment_date: '2024-01-16T14:20:00Z',
-            created_at: '2024-01-16T14:20:00Z'
-          },
-          {
-            id: 'sample-2-selection',
-            student_id: 'sample-student-2',
-            student_name: 'Maria Santos',
-            student_email: 'maria.santos@email.com',
-            university_id: 'sample-uni-2',
-            university_name: 'MIT',
-            scholarship_id: 'sample-scholarship-2',
-            scholarship_title: 'Engineering Innovation Grant',
-            fee_type: 'selection_process',
-            amount: 50,
-            status: 'pending',
-            created_at: '2024-01-20T09:15:00Z'
-          },
-          {
-            id: 'sample-2-scholarship',
-            student_id: 'sample-student-2',
-            student_name: 'Maria Santos',
-            student_email: 'maria.santos@email.com',
-            university_id: 'sample-uni-2',
-            university_name: 'MIT',
-            scholarship_id: 'sample-scholarship-2',
-            scholarship_title: 'Engineering Innovation Grant',
-            fee_type: 'scholarship',
-            amount: 200,
-            status: 'paid',
-            payment_date: '2024-01-22T16:45:00Z',
-            created_at: '2024-01-22T16:45:00Z'
-          },
-          {
-            id: 'sample-3-i20',
-            student_id: 'sample-student-3',
-            student_name: 'Carlos Rodriguez',
-            student_email: 'carlos.rodriguez@email.com',
-            university_id: 'sample-uni-3',
-            university_name: 'Stanford University',
-            scholarship_id: 'sample-scholarship-3',
-            scholarship_title: 'Business Leadership Scholarship',
-            fee_type: 'i20_control_fee',
-            amount: 99900, // $999.00 em centavos
-            status: 'pending',
-            created_at: '2024-01-25T11:00:00Z'
-          }
-        ];
-
-        console.log('✅ Sample data loaded:', finalPayments.length, 'records');
-      }
-
-      setPayments(finalPayments);
+      setPayments(paymentRecords);
 
       // Calcular estatísticas
-      const totalPayments = finalPayments.length;
-      const paidPayments = finalPayments.filter(p => p.status === 'paid').length;
-      const pendingPayments = finalPayments.filter(p => p.status === 'pending').length;
-      const totalRevenue = finalPayments
+      const totalPayments = paymentRecords.length;
+      const paidPayments = paymentRecords.filter(p => p.status === 'paid').length;
+      const pendingPayments = paymentRecords.filter(p => p.status === 'pending').length;
+      const totalRevenue = paymentRecords
         .filter(p => p.status === 'paid')
         .reduce((sum, p) => sum + p.amount, 0);
 
@@ -1596,7 +1512,7 @@ const PaymentManagement = (): React.JSX.Element => {
         totalPayments,
         paidPayments,
         pendingPayments,
-        monthlyGrowth: 15.2
+        monthlyGrowth: 0
       };
 
       console.log('📈 Stats calculated:', newStats);
