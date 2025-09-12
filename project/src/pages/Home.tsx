@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Zap, Shield, TrendingUp, Sparkles, DollarSign, Play, ChevronRight, Heart, Brain, Rocket, Clock, CreditCard, MapPin, Lock } from 'lucide-react';
+import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Shield, Sparkles, DollarSign, Play, ChevronRight, Heart, Rocket, CreditCard, MapPin, Lock, Gift } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useUniversities } from '../hooks/useUniversities';
@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 // Removido SmartChat pois não é utilizado
 import { slugify } from '../utils/slugify';
 import SEOHead from '../components/SEO/SEOHead';
+import { motion } from 'framer-motion';
 
 const Home: React.FC = () => {
   const { t } = useTranslationWithFees();
@@ -20,6 +21,7 @@ const Home: React.FC = () => {
   
   // Buscar universidades em destaque
   const [featuredSchools, setFeaturedSchools] = useState<any[]>([]);
+  
   
   useEffect(() => {
     const fetchFeaturedUniversities = async () => {
@@ -49,7 +51,7 @@ const Home: React.FC = () => {
     }
   }, [universities]);
   const { isAuthenticated, user, userProfile } = useAuth();
-  const { hasPaidProcess } = useSubscription();
+
 
   // Função para determinar o dashboard conforme a role (igual Header)
   const getDashboardPath = () => {
@@ -62,6 +64,12 @@ const Home: React.FC = () => {
       case 'seller': return '/seller/dashboard';
       default: return '/';
     }
+  };
+
+
+  // Função para redirecionar para Matricula Rewards
+  const goToMatriculaRewards = () => {
+    navigate('/student/dashboard/rewards');
   };
 
   return (
@@ -92,7 +100,7 @@ const Home: React.FC = () => {
                   {t('home.hero.description')}
                 </p>
                 
-                <div className="flex flex-col items-center sm:items-stretch sm:flex-row gap-4 mb-12 w-full">
+                <div className="flex flex-col items-center sm:items-stretch sm:flex-row gap-4 mb-6 w-full">
                   <Link
                     to="/register"
                     className={`group bg-[#D0151C] hover:bg-[#B01218] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0 ${isAuthenticated ? 'hidden' : ''}`}
@@ -140,6 +148,27 @@ const Home: React.FC = () => {
                     {t('nav.viewScholarships')}
                   </Link>
                 </div>
+
+                {/* Matricula Rewards Button - Only for Students */}
+                {isAuthenticated && user && user.role === 'student' && (
+                  // <motion.div 
+                  //   initial={{ opacity: 0, y: 20 }}
+                  //   animate={{ opacity: 1, y: 0 }}
+                  //   transition={{ duration: 0.6, delay: 0.3 }}
+                  //   className="w-full mb-6"
+                  // >
+                    <motion.button
+                      onClick={goToMatriculaRewards}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-[250px] lg:w-[520px] bg-gradient-to-r mb-6 from-slate-900 to-slate-700 text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center gap-3"
+                    >
+                      <Gift className="h-6 w-6" />
+                      {t('matriculaRewards.visitRewardsStore')}
+                      <ArrowRight className=" h-5 w-5" />
+                    </motion.button>
+                  // </motion.div>
+                )}
 
                 {/* Trust Indicators */}
                 <div className="flex flex-wrap items-center gap-8 text-slate-500">

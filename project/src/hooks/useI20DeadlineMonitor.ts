@@ -22,15 +22,16 @@ export const useI20DeadlineMonitor = ({
     try {
       console.log('🔍 [I20_DEADLINE_MONITOR] Verificando deadlines do I-20...');
       
-      // Buscar estudantes que pagaram scholarship fee mas não pagaram I-20 Control Fee
+      // Buscar estudantes que receberam carta de aceite mas não pagaram I-20 Control Fee
       const { data: studentsWithDeadline, error } = await supabase
         .from('scholarship_applications')
         .select(`
           id,
           student_id,
-          is_scholarship_fee_paid,
+          acceptance_letter_sent_at,
+          acceptance_letter_status,
+          i20_control_fee_due_date,
           has_paid_i20_control_fee,
-          updated_at,
           user_profiles!student_id (
             full_name,
             email
@@ -40,7 +41,8 @@ export const useI20DeadlineMonitor = ({
             title
           )
         `)
-        .eq('is_scholarship_fee_paid', true)
+        .not('acceptance_letter_sent_at', 'is', null)
+        .in('acceptance_letter_status', ['sent', 'approved'])
         .eq('has_paid_i20_control_fee', false);
 
       if (error) {
@@ -57,9 +59,17 @@ export const useI20DeadlineMonitor = ({
       const expiredStudents = [];
 
       for (const student of studentsWithDeadline) {
-        // Calcular deadline (10 dias após o pagamento da scholarship fee)
-        const scholarshipFeePaidDate = new Date(student.updated_at);
-        const deadline = new Date(scholarshipFeePaidDate.getTime() + 10 * 24 * 60 * 60 * 1000);
+        // Calcular deadline (10 dias após o envio da carta de aceite)
+        let deadline: Date;
+        
+        if (student.i20_control_fee_due_date) {
+          // Se já tem deadline específico do I-20, usar ele
+          deadline = new Date(student.i20_control_fee_due_date);
+        } else {
+          // Calcular deadline baseado na data de envio da carta de aceite + 10 dias
+          const acceptanceDate = new Date(student.acceptance_letter_sent_at);
+          deadline = new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000);
+        }
         
         // Verificar se o deadline expirou
         if (now > deadline) {

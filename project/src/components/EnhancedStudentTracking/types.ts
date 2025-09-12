@@ -56,6 +56,7 @@ export interface ScholarshipApplication {
   documents: any[];
   acceptance_letter_status: string;
   acceptance_letter_url: string;
+  acceptance_letter_sent_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
   paid_at: string;

@@ -43,6 +43,10 @@ interface Student {
   // Para o deadline do I-20 (agora com tipos mais precisos)
   scholarship_fee_paid_date: string | null;
   i20_deadline: string | null; // Data ISO string
+  
+  // Campos da carta de aceite
+  acceptance_letter_sent_at: string | null;
+  acceptance_letter_status: string | null;
 }
 
 interface University {
@@ -364,22 +368,16 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       return null;
     }
 
-    // Se a scholarship fee foi paga, devemos mostrar o deadline
-    if (student.is_scholarship_fee_paid) {
+    // Se a carta de aceite foi enviada, devemos mostrar o deadline
+    if (student.acceptance_letter_sent_at && (student.acceptance_letter_status === 'sent' || student.acceptance_letter_status === 'approved')) {
       // Primeiro tenta usar o deadline específico do I-20
       if (student.i20_deadline) {
         return new Date(student.i20_deadline);
       }
 
-      // Se não tiver deadline específico, usa a data de pagamento da scholarship + 10 dias
-      if (student.scholarship_fee_paid_date) {
-        const paidDate = new Date(student.scholarship_fee_paid_date);
-        return new Date(paidDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
-      }
-      
-      // Se não tiver data de pagamento da scholarship, usa a data de criação + 10 dias
-      const createdDate = new Date(student.created_at);
-      return new Date(createdDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
+      // Se não tiver deadline específico, usa a data de envio da carta de aceite + 10 dias
+      const acceptanceDate = new Date(student.acceptance_letter_sent_at);
+      return new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
     }
 
     return null;

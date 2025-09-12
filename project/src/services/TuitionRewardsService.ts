@@ -113,6 +113,35 @@ export class TuitionRewardsService {
     return data;
   }
 
+  // Resgatar desconto customizado de tuition (qualquer quantidade de coins)
+  static async redeemCustomTuitionDiscount(
+    userId: string,
+    universityId: string,
+    coinsAmount: number
+  ): Promise<TuitionRedemptionResult> {
+    const { data, error } = await supabase.rpc('redeem_custom_tuition_discount', {
+      user_id_param: userId,
+      university_id_param: universityId,
+      coins_amount: coinsAmount
+    });
+
+    if (error) {
+      console.error('Error redeeming custom tuition discount:', error);
+      throw new Error(error.message || 'Failed to redeem custom tuition discount');
+    }
+
+    // Enviar notificação para a universidade via Edge Function
+    try {
+      await this.notifyUniversityOfRedemption(data);
+      console.log('✅ University notification sent successfully');
+    } catch (notificationError) {
+      console.warn('⚠️ Failed to send university notification:', notificationError);
+      // Não falhar o resgate se a notificação falhar
+    }
+
+    return data;
+  }
+
   // Notificar universidade sobre resgate de desconto via webhook n8n
   private static async notifyUniversityOfRedemption(redemptionData: {
     user_id?: string;

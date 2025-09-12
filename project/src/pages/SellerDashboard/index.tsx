@@ -38,6 +38,9 @@ interface Student {
   // Datas auxiliares
   scholarship_fee_paid_date: string | null;
   i20_deadline: string | null;
+  // Campos da carta de aceite
+  acceptance_letter_sent_at: string | null;
+  acceptance_letter_status: string | null;
 }
 
 interface SellerProfile {
@@ -185,7 +188,9 @@ const SellerDashboard: React.FC = () => {
         is_scholarship_fee_paid: !!referral.is_scholarship_fee_paid,
         is_application_fee_paid: !!referral.is_application_fee_paid,
         scholarship_fee_paid_date: referral.scholarship_fee_paid_date || null,
-        i20_deadline: null as string | null
+        i20_deadline: null as string | null,
+        acceptance_letter_sent_at: null as string | null,
+        acceptance_letter_status: null as string | null
       }));
 
       // Buscar flags verdadeiros em user_profiles e datas em scholarship_applications_clean
@@ -202,7 +207,7 @@ const SellerDashboard: React.FC = () => {
           .in('id', profileIds),
         supabase
           .from('scholarship_applications')
-          .select('student_id, is_scholarship_fee_paid, is_application_fee_paid')
+          .select('student_id, is_scholarship_fee_paid, is_application_fee_paid, acceptance_letter_sent_at, acceptance_letter_status')
           .in('student_id', profileIds)
       ]);
 
@@ -229,7 +234,9 @@ const SellerDashboard: React.FC = () => {
       (schAppsResp.data || []).forEach((row: any) => {
         profileIdToScholarshipFlags.set(row.student_id, {
           is_scholarship_fee_paid: !!row.is_scholarship_fee_paid,
-          is_application_fee_paid: !!row.is_application_fee_paid
+          is_application_fee_paid: !!row.is_application_fee_paid,
+          acceptance_letter_sent_at: row.acceptance_letter_sent_at || null,
+          acceptance_letter_status: row.acceptance_letter_status || null
         });
       });
 
