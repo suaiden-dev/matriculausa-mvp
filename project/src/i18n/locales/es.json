@@ -2364,6 +2364,7 @@
     },
     "students": {
       "title": "Para Estudiantes",
+      "forStudents": "Para Estudiantes",
       "scholarships": "Becas",
       "matriculaRewards": "Matricula Rewards",
       "universities": "Universidades",

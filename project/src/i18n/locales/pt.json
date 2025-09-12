@@ -2243,6 +2243,7 @@
     },
     "students": {
       "title": "Para Estudantes",
+      "forStudents": "Para Estudantes",
       "scholarships": "Bolsas",
       "matriculaRewards": "Matricula Rewards",
       "universities": "Universidades",
