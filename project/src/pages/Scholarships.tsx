@@ -174,10 +174,10 @@ const Scholarships: React.FC = () => {
   });
   
   // Check if user needs to pay selection process fee (only for students)
-  if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
-    console.log('Scholarships - Showing PaymentRequiredBlocker for student');
-    return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
-  }
+  // if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
+  //   console.log('Scholarships - Showing PaymentRequiredBlocker for student');
+  //   return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
+  // }
   
   console.log('Scholarships - Showing normal page content');
 
