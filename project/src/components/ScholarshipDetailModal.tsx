@@ -1,7 +1,8 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import type { User, UserProfile } from '../hooks/useAuth';
+import type { UserProfile } from '../hooks/useAuth';
+import type { User } from '../types';
 import { 
   X, 
   Award, 
@@ -162,12 +163,29 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             <div className="relative">
               {/* Hero Image */}
               <div className="h-64 overflow-hidden relative">
-                {scholarship.image_url && (user?.role !== 'student' || (userProfile?.has_paid_selection_process_fee)) ? (
-                  <img
-                    src={scholarship.image_url}
-                    alt={scholarship.title}
-                    className="w-full h-full object-contain"
-                  />
+                {scholarship.image_url ? (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={scholarship.image_url}
+                      alt={scholarship.title}
+                      className={`w-full h-full object-contain transition-all duration-300 ${
+                        !user || user?.role !== 'student' || (userProfile?.has_paid_selection_process_fee) 
+                          ? 'blur-0 opacity-100' 
+                          : 'blur-md opacity-30'
+                      }`}
+                    />
+                    {/* Overlay para usuários não logados ou não pagos */}
+                    {(!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))) && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 via-blue-700/80 to-indigo-800/80 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <GraduationCap className="h-16 w-16 mx-auto mb-2 text-white/60" />
+                          <p className="text-sm font-medium opacity-80">
+                            {t('scholarshipsPage.modal.unlockImage')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center">
                     <GraduationCap className="h-24 w-24 text-white/30" />
@@ -202,9 +220,13 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                     <span className={`px-3 py-1 rounded-lg text-sm font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
                       {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
                     </span>
-                    <span className="text-white/80 text-sm flex items-center gap-1">
+                    <span className={`text-white/80 text-sm flex items-center gap-1 ${
+                      !user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))
+                        ? 'blur-sm opacity-50'
+                        : ''
+                    }`}>
                       <Building className="h-4 w-4" />
-                      {user?.role === 'student' && !userProfile?.has_paid_selection_process_fee
+                      {!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))
                         ? t('scholarshipsPage.modal.universityHidden')
                         : (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))}
                     </span>
@@ -412,15 +434,19 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                   </div>
 
                   {/* University Info */}
-                  <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                  <div className={`bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative ${
+                    !user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))
+                      ? 'blur-sm opacity-40' 
+                      : ''
+                  }`}>
                     <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                       <Building className="h-5 w-5 text-slate-600" />
                       {t('scholarshipsPage.modal.universityInformation')}
                     </h4>
-                    {user?.role === 'student' && !userProfile?.has_paid_selection_process_fee ? (
+                    {!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee)) ? (
                       <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                         <p className="text-blue-800 text-sm">
-                          {t('scholarshipsPage.modal.universityDetailsLocked')}
+                          {!user ? t('scholarshipsPage.modal.loginRequired') : t('scholarshipsPage.modal.universityDetailsLocked')}
                         </p>
                       </div>
                     ) : (
@@ -440,6 +466,18 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             {t('scholarshipsPage.modal.ranking')} #{scholarship.universities.ranking}
                           </p>
                         )}
+                      </div>
+                    )}
+                    
+                    {/* Overlay de bloqueio para usuários não logados ou não pagos */}
+                    {!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee)) && (
+                      <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center">
+                        <div className="text-center">
+                          <Building className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+                          <p className="text-sm font-medium text-slate-600">
+                            {t('scholarshipsPage.modal.unlockUniversityInfo')}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

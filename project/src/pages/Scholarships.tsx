@@ -554,27 +554,7 @@ const Scholarships: React.FC = () => {
                 return (
                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
                     {/* Overlay de blur quando não autenticado */}
-                    {!isAuthenticated && (
-                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
-                        <div className="text-center p-6">
-                          <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <Lock className="h-8 w-8 text-[#05294E]" />
-                          </div>
-                          <h4 className="text-lg font-bold text-slate-900 mb-2">
-                            {t('home.featuredUniversities.lockedTitle')}
-                          </h4>
-                          <p className="text-sm text-slate-600 mb-4">
-                            {t('home.featuredUniversities.lockedDescription')}
-                          </p>
-                          <button
-                            onClick={() => navigate('/login')}
-                            className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
-                          >
-                            {t('home.featuredUniversities.loginToView')}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                   
                     {/* Featured Badge - Top Right */}
                     <div className="absolute top-4 right-4 z-10">
                       <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
@@ -872,7 +852,7 @@ const Scholarships: React.FC = () => {
                  return (
                    <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
                      {/* Overlay de blur quando não autenticado */}
-                     {!isAuthenticated && (
+                     {/* {!isAuthenticated && (
                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
                          <div className="text-center p-6">
                            <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -892,7 +872,7 @@ const Scholarships: React.FC = () => {
                            </button>
                          </div>
                        </div>
-                     )}
+                     )} */}
                      {/* Deadline Urgency Indicator */}
                      {daysLeft <= 7 && daysLeft > 0 && (
                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>
