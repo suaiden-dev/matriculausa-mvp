@@ -2,15 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Mail, 
   RefreshCw,
-  Plus,
-  Settings,
-  ArrowLeft,
-  ExternalLink,
   CheckCircle,
   Shield,
   X,
   Link,
-  Unlink,
   Inbox as InboxIcon,
   Send as SendIcon,
   Star as StarIcon,
@@ -19,372 +14,20 @@ import {
   Trash,
   BookOpen,
   Calendar,
-  Clock,
   Send
 } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useGmail } from '../../hooks/useGmail';
 import { useGmailConnection } from '../../hooks/useGmailConnection';
 import { useAuth } from '../../hooks/useAuth';
-import EmailComposer from '../../components/EmailComposer';
-import ReplyComposer from '../../components/ReplyComposer';
-import ForwardComposer from '../../components/ForwardComposer';
-import EmailList from '../../components/Inbox/EmailList';
-import EmailDetail from '../../components/Inbox/EmailDetail';
-import EmailTabs from '../../components/Inbox/EmailTabs';
-import InboxHeader from '../../components/Inbox/InboxHeader';
-import SearchAndFilters from '../../components/Inbox/SearchAndFilters';
-import InboxKnowledgeUpload from '../../components/InboxKnowledgeUpload';
 import { supabase } from '../../lib/supabase';
 import { config } from '../../lib/config';
 import { formatDateUS } from '../../lib/dateUtils';
 import { Email } from '../../types';
-import GmailConnectionManager from '../../components/GmailConnectionManager';
-import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
 import { useUniversity } from '../../context/UniversityContext';
+import { AnimatedSection } from '../../components/ui/AnimatedSection';
 
 // Estilos CSS personalizados para scroll das abas e melhor legibilidade
-const tabScrollStyles = `
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  .tab-container {
-    scroll-behavior: smooth;
-  }
-  @media (max-width: 640px) {
-    .tab-container {
-      scroll-snap-type: x mandatory;
-    }
-    .tab-item {
-      scroll-snap-align: start;
-    }
-  }
-  
-  /* Melhorar legibilidade de emails grandes */
-  .email-content {
-    line-height: 1.7;
-    font-size: 16px;
-  }
-  
-  .email-content p {
-    margin-bottom: 1rem;
-  }
-  
-  .email-content h1, .email-content h2, .email-content h3 {
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-    font-weight: 600;
-  }
-  
-  .email-content ul, .email-content ol {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
-  }
-  
-  .email-content li {
-    margin-bottom: 0.25rem;
-  }
-  
-  .email-content blockquote {
-    border-left: 4px solid #e5e7eb;
-    padding-left: 1rem;
-    margin: 1rem 0;
-    font-style: italic;
-    color: #6b7280;
-  }
-  
-  .email-content a {
-    color: #05294E;
-    text-decoration: underline;
-  }
-  
-  .email-content a:hover {
-    color: #041f3f;
-  }
-  
-  /* Estilos para emails HTML - Manter formatação original */
-  .email-html-content {
-    /* Reset de estilos para não interferir com o HTML do email */
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    font-size: 14px;
-  }
-  
-  .email-html-content * {
-    /* Preservar estilos originais do email */
-    box-sizing: border-box;
-  }
-  
-  .email-html-content body {
-    /* Reset do body do email */
-    margin: 0;
-    padding: 0;
-    font-family: inherit;
-    line-height: inherit;
-    color: inherit;
-    font-size: inherit;
-  }
-  
-  .email-html-content img {
-    /* Garantir que imagens sejam responsivas */
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 0.5rem 0;
-  }
-  
-  .email-html-content table {
-    /* Estilos para tabelas em emails */
-    border-collapse: collapse;
-    width: 100%;
-    margin: 0.5rem 0;
-    font-size: inherit;
-  }
-  
-  .email-html-content table td,
-  .email-html-content table th {
-    border: 1px solid #ddd;
-    padding: 0.5rem;
-    text-align: left;
-    vertical-align: top;
-  }
-  
-  .email-html-content a {
-    /* Links em emails HTML */
-    color: #0066cc;
-    text-decoration: underline;
-  }
-  
-  .email-html-content a:hover {
-    color: #004499;
-  }
-  
-  .email-html-content p {
-    /* Parágrafos em emails */
-    margin: 0.5rem 0;
-    line-height: 1.6;
-  }
-  
-  .email-html-content h1,
-  .email-html-content h2,
-  .email-html-content h3,
-  .email-html-content h4,
-  .email-html-content h5,
-  .email-html-content h6 {
-    /* Títulos em emails */
-    margin: 1rem 0 0.5rem 0;
-    font-weight: 600;
-    line-height: 1.3;
-  }
-  
-  .email-html-content h1 { font-size: 1.5rem; }
-  .email-html-content h2 { font-size: 1.3rem; }
-  .email-html-content h3 { font-size: 1.1rem; }
-  .email-html-content h4 { font-size: 1rem; }
-  .email-html-content h5 { font-size: 0.9rem; }
-  .email-html-content h6 { font-size: 0.8rem; }
-  
-  .email-html-content ul,
-  .email-html-content ol {
-    /* Listas em emails */
-    margin: 0.5rem 0;
-    padding-left: 1.5rem;
-  }
-  
-  .email-html-content li {
-    /* Itens de lista em emails */
-    margin: 0.25rem 0;
-    line-height: 1.5;
-  }
-  
-  .email-html-content blockquote {
-    /* Citações em emails */
-    border-left: 4px solid #ddd;
-    padding-left: 1rem;
-    margin: 1rem 0;
-    font-style: italic;
-    color: #666;
-    background-color: #f9f9f9;
-    padding: 0.5rem 1rem;
-  }
-  
-  .email-html-content pre {
-    /* Código em emails */
-    background-color: #f5f5f5;
-    padding: 0.75rem;
-    border-radius: 4px;
-    overflow-x: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
-    margin: 0.5rem 0;
-    border: 1px solid #ddd;
-  }
-  
-  .email-html-content code {
-    background-color: #f5f5f5;
-    padding: 0.2rem 0.4rem;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9rem;
-    border: 1px solid #ddd;
-  }
-  
-  .email-html-content div {
-    /* Divs em emails */
-    margin: 0;
-    padding: 0;
-  }
-  
-  .email-html-content span {
-    /* Spans em emails */
-    font-size: inherit;
-    color: inherit;
-  }
-  
-  .email-html-content br {
-    /* Quebras de linha em emails */
-    display: block;
-    content: "";
-    margin: 0.25rem 0;
-  }
-  
-  /* Estilos específicos para emails de serviços populares */
-  .email-html-content .gmail_quote {
-    /* Estilo para citações do Gmail */
-    border-left: 2px solid #ccc;
-    padding-left: 1rem;
-    margin: 1rem 0;
-    color: #666;
-  }
-  
-  .email-html-content .gmail_signature {
-    /* Assinatura do Gmail */
-    border-top: 1px solid #ddd;
-    padding-top: 1rem;
-    margin-top: 1rem;
-    color: #666;
-    font-size: 0.9rem;
-  }
-  
-  /* Estilos para emails responsivos */
-  @media (max-width: 768px) {
-    .email-html-content {
-      font-size: 16px; /* Melhor legibilidade em mobile */
-    }
-    
-    .email-html-content table {
-      font-size: 14px;
-    }
-    
-    .email-html-content img {
-      max-width: 100%;
-      height: auto;
-    }
-  }
-  
-  /* Estilos para texto simples */
-  .email-text-content {
-    line-height: 1.7;
-    font-size: 16px;
-    color: #374151;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  }
-  
-  /* Wrapper para emails */
-  .email-wrapper {
-    background: white;
-    overflow: hidden;
-  }
-  
-  /* Melhorar espaçamento geral */
-  .email-wrapper .email-html-content {
-    padding: 0;
-  }
-  
-  .email-wrapper .email-text-content {
-    padding: 0;
-  }
-  
-  /* CSS global para remover bordas de emails (versão menos agressiva) */
-  .email-html-content table,
-  .email-html-content td,
-  .email-html-content th {
-    border: none !important;
-    border-collapse: collapse !important;
-    border-spacing: 0 !important;
-  }
-  
-  .email-html-content img {
-    border: none !important;
-    outline: none !important;
-    display: block !important;
-    max-width: 100% !important;
-    height: auto !important;
-  }
-  
-  .email-html-content a img {
-    border: none !important;
-    outline: none !important;
-    text-decoration: none !important;
-  }
-  
-  /* Remove apenas bordas e sombras, mantém outros estilos */
-  .email-html-content * {
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-  
-  /* Remove backgrounds apenas de elementos específicos (NÃO links) */
-  .email-html-content table,
-  .email-html-content td,
-  .email-html-content th,
-  .email-html-content div,
-  .email-html-content p,
-  .email-html-content span {
-    background: transparent !important;
-  }
-  
-  /* Garante que links sejam visíveis */
-  .email-html-content a {
-    color: inherit !important;
-    text-decoration: inherit !important;
-    display: inline-block !important;
-  }
-  
-  /* Garante que links com imagens sejam visíveis */
-  .email-html-content a img {
-    display: block !important;
-    max-width: 100% !important;
-    height: auto !important;
-    border: none !important;
-    outline: none !important;
-  }
-  
-  /* Garante que botões e elementos clicáveis sejam visíveis */
-  .email-html-content button,
-  .email-html-content input[type="button"],
-  .email-html-content input[type="submit"] {
-    background: inherit !important;
-    color: inherit !important;
-  }
-  
-  /* Fallback para imagens que falham */
-  .email-html-content .image-placeholder {
-    display: none;
-    color: #666 !important;
-    font-style: italic !important;
-    padding: 10px !important;
-    background: #f5f5f5 !important;
-    border: 1px dashed #ccc !important;
-    text-align: center !important;
-    margin: 5px 0 !important;
-  }
-`;
 
 interface EmailTab {
   id: string;
@@ -399,8 +42,8 @@ const Inbox: React.FC = () => {
   const { user } = useAuth();
   const { university } = useUniversity();
   
-  const { connections, activeConnection, loading: isConnecting, connectGmail, disconnectGmail, setActiveConnection, checkConnections } = useGmailConnection();
-  const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails, clearEmails, autoRefreshStatus, checkUnreadEmails } = useGmail();
+  const { connections, activeConnection, loading: isConnecting, connectGmail, setActiveConnection, checkConnections } = useGmailConnection();
+  const { emails, loading, error, fetchEmails, hasMoreEmails, loadMoreEmails, autoRefreshStatus, checkUnreadEmails } = useGmail();
   
   // Estados para controle do layout
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -433,8 +76,6 @@ const Inbox: React.FC = () => {
       }));
     }
   }, [university]);
-
-
 
   // Função para enviar webhook de agendamento
   const handleSendMeetingRequest = async () => {
@@ -629,16 +270,6 @@ const Inbox: React.FC = () => {
     }
   };
 
-
-
-
-
-  const handleRefresh = () => {
-    if (activeConnection) {
-      fetchEmails();
-    }
-  };
-
   const handleCheckUnreadEmails = () => {
     if (activeConnection) {
       checkUnreadEmails();
@@ -662,7 +293,7 @@ const Inbox: React.FC = () => {
     setSelectedEmail(null);
   };
 
-  const handleSendEmail = async (emailData: any) => {
+  const handleSendEmail = async () => {
     try {
       console.log('Email sent successfully!');
       setIsComposing(false);
@@ -872,651 +503,484 @@ const Inbox: React.FC = () => {
 
   // Email AI Activation Page - Contact Required
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header Section */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-[#05294E] rounded-full mb-6">
-            <Mail className="h-10 w-10 text-white" />
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            AI-Powered{' '}
-            <span className="text-[#05294E]">
-              Email Management
-            </span>
-          </h1>
-          
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
-            Transform your university's email communication with our advanced AI system that automatically 
-            processes, categorizes, and responds to student inquiries.
-          </p>
-
-          {/* Contact CTA */}
-          <div className="bg-[#05294E] rounded-2xl p-8 text-white max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="text-white/90 mb-6">
-              Contact our team to activate AI-powered email management for your university
+        {/* Hero Section */}
+        <AnimatedSection direction="up" delay={0.1}>
+          <div className="pt-20 pb-16 text-center border-b border-slate-100">
+            <motion.div 
+              className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-8"
+              whileHover={{ scale: 1.1 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            >
+              <Mail className="h-8 w-8 text-white" />
+            </motion.div>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-slate-900 mb-6 tracking-tight">
+              AI-Powered
+              <br />
+              <span className="font-bold">Email Management</span>
+            </h1>
+            
+            <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-12 font-light">
+              Transform your university's email communication with our advanced AI system that automatically 
+              processes, categorizes, and responds to student inquiries.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <motion.button
                 onClick={() => setShowMeetingModal(true)}
-                className="bg-white text-[#05294E] px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="bg-slate-900 text-white px-8 py-4 rounded-none font-medium text-lg hover:bg-slate-800 transition-colors border-2 border-slate-900 min-w-[200px]"
               >
-                <Calendar className="h-5 w-5 mr-2" />
                 Schedule Meeting
-              </button>
-              <a 
-                href="mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing."
-                className="border-2 border-white text-white px-8 py-3 rounded-xl font-semibold hover:bg-white hover:text-[#05294E] transition-colors flex items-center justify-center"
+              </motion.button>
+              <motion.button
+                onClick={() => window.open("mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing.")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="border-2 border-slate-900 text-slate-900 px-8 py-4 rounded-none font-medium text-lg hover:bg-slate-900 hover:text-white transition-colors min-w-[200px]"
               >
-                <Mail className="h-5 w-5 mr-2" />
                 Contact Us
-              </a>
+              </motion.button>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
-        {/* AI Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
-            <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center mb-4">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <div className="text-xl font-semibold text-gray-900 mb-4">
-              AI-Powered Responses
-            </div>
-            <div className="text-gray-600 leading-relaxed">
-              Automatically generate intelligent responses to student inquiries using advanced AI technology.
-            </div>
-          </div>
+        {/* Features Section */}
+        <AnimatedSection direction="up" delay={0.2}>
+          <div className="py-20 border-b border-slate-100">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16">
+              
+              <motion.div 
+                className="space-y-8"
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-4">AI-Powered Responses</h3>
+                  <p className="text-slate-600 leading-relaxed text-lg">
+                    Automatically generate intelligent responses to student inquiries using advanced AI technology.
+                  </p>
+                </div>
+              </motion.div>
 
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
-            <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-white" />
-            </div>
-            <div className="text-xl font-semibold text-gray-900 mb-4">
-              Smart Categorization
-            </div>
-            <div className="text-gray-600 leading-relaxed">
-              Automatically categorize and prioritize emails based on content, urgency, and student type.
-            </div>
-          </div>
+              <motion.div 
+                className="space-y-8"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-4">Smart Categorization</h3>
+                  <p className="text-slate-600 leading-relaxed text-lg">
+                    Automatically categorize and prioritize emails based on content, urgency, and student type.
+                  </p>
+                </div>
+              </motion.div>
 
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow hover:border-[#05294E]/20">
-            <div className="w-12 h-12 bg-[#05294E] rounded-xl flex items-center justify-center mb-4">
-              <RefreshCw className="h-6 w-6 text-white" />
-            </div>
-            <div className="text-xl font-semibold text-gray-900 mb-4">
-              Automated Workflows
-            </div>
-            <div className="text-gray-600 leading-relaxed">
-              Set up automated email sequences and follow-ups to improve student engagement and response times.
+              <motion.div 
+                className="space-y-8"
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center">
+                  <RefreshCw className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-4">Automated Workflows</h3>
+                  <p className="text-slate-600 leading-relaxed text-lg">
+                    Set up automated email sequences and follow-ups to improve student engagement and response times.
+                  </p>
+                </div>
+              </motion.div>
+
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* How AI Works Section */}
-        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            How AI Transforms Your Email Management
-          </h2>
-          
-          {/* AI Features Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-            <div className="bg-[#05294E] rounded-xl p-6 text-white">
-              <div className="text-xl font-semibold mb-4 flex items-center">
-                <Shield className="h-6 w-6 mr-2" />
-                Intelligent Processing
+        <AnimatedSection direction="up" delay={0.3}>
+          <div className="py-20 border-b border-slate-100">
+            <div className="max-w-4xl mx-auto">
+              <motion.h2 
+                className="text-3xl lg:text-4xl font-light text-slate-900 text-center mb-16 tracking-tight"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                How AI Transforms Your <span className="font-bold">Email Management</span>
+              </motion.h2>
+              
+              {/* AI Features Details */}
+              <div className="space-y-16">
+                <motion.div 
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                  <div className="order-2 lg:order-1">
+                    <h3 className="text-2xl font-bold text-slate-900 mb-6">Intelligent Processing</h3>
+                    <div className="space-y-4 text-slate-600">
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-slate-900 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                        <span>AI analyzes email content and context automatically</span>
+                      </div>
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-slate-900 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                        <span>Smart categorization by application type and urgency</span>
+                      </div>
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-slate-900 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                        <span>Automatic response suggestions based on university policies</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="order-1 lg:order-2 bg-slate-50 p-8 border-l-4 border-slate-900">
+                    <Shield className="h-8 w-8 text-slate-900 mb-4" />
+                    <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">01</div>
+                    <div className="text-lg font-medium text-slate-900">Processing Phase</div>
+                  </div>
+                </motion.div>
+                
+                <motion.div 
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <div className="bg-slate-50 p-8 border-l-4 border-slate-900">
+                    <CheckCircle className="h-8 w-8 text-slate-900 mb-4" />
+                    <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">02</div>
+                    <div className="text-lg font-medium text-slate-900">Automation Phase</div>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-900 mb-6">Automated Workflows</h3>
+                    <div className="space-y-4 text-slate-600">
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-slate-900 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                        <span><strong>Auto-responses</strong> for common student inquiries</span>
+                      </div>
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-slate-900 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                        <span>Follow-up sequences for incomplete applications</span>
+                      </div>
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-slate-900 rounded-full mt-2 mr-4 flex-shrink-0"></div>
+                        <span>Priority routing based on student status and urgency</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
-              <div className="text-white">
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <span className="text-white mr-2">•</span>
-                    <span>AI analyzes email content and context automatically</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-white mr-2">•</span>
-                    <span>Smart categorization by application type and urgency</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-white mr-2">•</span>
-                    <span>Automatic response suggestions based on university policies</span>
-                  </li>
-                </ul>
-              </div>
+
             </div>
+          </div>
+        </AnimatedSection>
+
+        {/* Workflow Process */}
+        <AnimatedSection direction="up" delay={0.4}>
+          <div className="py-20 border-b border-slate-100">
+            <motion.h3 
+              className="text-3xl lg:text-4xl font-light text-slate-900 text-center mb-16 tracking-tight"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <span className="font-bold">AI-Powered</span> Email Workflow
+            </motion.h3>
             
-            <div className="bg-[#05294E] rounded-xl p-6 text-white">
-              <div className="text-xl font-semibold mb-4 flex items-center">
-                <CheckCircle className="h-6 w-6 mr-2" />
-                Automated Workflows
-              </div>
-              <div className="text-white">
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <span className="text-white mr-2">•</span>
-                    <span><strong>Auto-responses</strong> for common student inquiries</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-white mr-2">•</span>
-                    <span>Follow-up sequences for incomplete applications</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-white mr-2">•</span>
-                    <span>Priority routing based on student status and urgency</span>
-                  </li>
-                </ul>
+            <div className="max-w-4xl mx-auto">
+              <div className="space-y-12">
+                
+                <motion.div 
+                  className="flex flex-col md:flex-row items-start gap-8"
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 bg-slate-900 text-white rounded-none flex items-center justify-center text-2xl font-bold">
+                      01
+                    </div>
+                  </div>
+                  <div className="flex-grow">
+                    <h4 className="text-xl font-bold text-slate-900 mb-3">Contact & Setup</h4>
+                    <p className="text-slate-600 leading-relaxed">
+                      Contact our team to activate AI email management and configure your university's specific needs.
+                    </p>
+                  </div>
+                </motion.div>
+
+                <div className="w-px h-12 bg-slate-200 mx-8"></div>
+
+                <motion.div 
+                  className="flex flex-col md:flex-row items-start gap-8"
+                  initial={{ opacity: 0, x: 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 bg-slate-900 text-white rounded-none flex items-center justify-center text-2xl font-bold">
+                      02
+                    </div>
+                  </div>
+                  <div className="flex-grow">
+                    <h4 className="text-xl font-bold text-slate-900 mb-3">AI Processing</h4>
+                    <p className="text-slate-600 leading-relaxed">
+                      AI automatically analyzes, categorizes, and generates intelligent responses to student emails.
+                    </p>
+                  </div>
+                </motion.div>
+
+                <div className="w-px h-12 bg-slate-200 mx-8"></div>
+
+                <motion.div 
+                  className="flex flex-col md:flex-row items-start gap-8"
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 bg-slate-900 text-white rounded-none flex items-center justify-center text-2xl font-bold">
+                      03
+                    </div>
+                  </div>
+                  <div className="flex-grow">
+                    <h4 className="text-xl font-bold text-slate-900 mb-3">Smart Management</h4>
+                    <p className="text-slate-600 leading-relaxed">
+                      Access AI-powered dashboard with automated workflows and intelligent email management.
+                    </p>
+                  </div>
+                </motion.div>
+
               </div>
             </div>
           </div>
+        </AnimatedSection>
 
-          {/* AI Workflow Process */}
-          <div className="mb-12">
-            <h3 className="text-2xl font-semibold text-gray-900 text-center mb-8">
-              AI-Powered Email Workflow
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-[#05294E] rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl font-bold text-white">1</span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 mb-3">Contact & Setup</div>
-                <div className="text-gray-600">
-                  Contact our team to activate AI email management and configure your university's specific needs.
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="w-20 h-20 bg-[#05294E] rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl font-bold text-white">2</span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 mb-3">AI Processing</div>
-                <div className="text-gray-600">
-                  AI automatically analyzes, categorizes, and generates intelligent responses to student emails.
-                </div>
-              </div>
-
-              <div className="text-center">
-                <div className="w-20 h-20 bg-[#05294E] rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl font-bold text-white">3</span>
-                </div>
-                <div className="text-lg font-semibold text-gray-900 mb-3">Smart Management</div>
-                <div className="text-gray-600">
-                  Access AI-powered dashboard with automated workflows and intelligent email management.
-                </div>
-              </div>
-            </div>
-            
-            {/* AI Example */}
-            <div className="bg-[#05294E] rounded-xl p-6 text-white">
-              <div className="font-semibold text-white mb-4 text-center text-lg flex items-center justify-center">
-                <Shield className="h-6 w-6 mr-2" />
-                AI in Action
-              </div>
-              <div className="text-white">
-                <div className="text-center space-y-2">
-                  <p>
-                    <strong>Student: "What documents do I need for admission?"</strong>
-                  </p>
-                  <p className="text-white/80">↓</p>
-                  <p>
-                    <strong>AI analyzes request and generates personalized response</strong>
-                  </p>
-                  <p className="text-white/80">↓</p>
-                  <p>
-                    <strong>University reviews and sends AI-generated response</strong>
-                  </p>
+        {/* AI Example Section */}
+        <AnimatedSection direction="up" delay={0.5}>
+          <div className="py-20 border-b border-slate-100">
+            <div className="max-w-3xl mx-auto text-center">
+              <motion.h3 
+                className="text-3xl font-light text-slate-900 mb-12 tracking-tight"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                AI in <span className="font-bold">Action</span>
+              </motion.h3>
+              
+              <div className="bg-slate-50 p-12 border-l-4 border-slate-900">
+                <div className="space-y-8">
+                  <motion.div 
+                    className="text-left"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                  >
+                    <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">Student Email</div>
+                    <div className="text-lg font-medium text-slate-900">"What documents do I need for admission?"</div>
+                  </motion.div>
+                  
+                  <div className="flex justify-center">
+                    <div className="w-px h-8 bg-slate-300"></div>
+                  </div>
+                  
+                  <motion.div 
+                    className="text-left"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                  >
+                    <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">AI Analysis</div>
+                    <div className="text-lg font-medium text-slate-900">AI analyzes request and generates personalized response</div>
+                  </motion.div>
+                  
+                  <div className="flex justify-center">
+                    <div className="w-px h-8 bg-slate-300"></div>
+                  </div>
+                  
+                  <motion.div 
+                    className="text-left"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                  >
+                    <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">University Response</div>
+                    <div className="text-lg font-medium text-slate-900">University reviews and sends AI-generated response</div>
+                  </motion.div>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* AI Benefits */}
-          <div>
-            <h3 className="text-2xl font-semibold text-gray-900 text-center mb-8">
-              Why Choose AI-Powered Email Management?
-            </h3>
+        </AnimatedSection>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-6 bg-[#05294E] rounded-xl text-white">
-                <div className="font-semibold text-white mb-3 flex items-center">
-                  <Shield className="h-5 w-5 mr-2" />
-                  AI Automation
+        {/* Benefits Section */}
+        <AnimatedSection direction="up" delay={0.6}>
+          <div className="py-20">
+            <motion.h3 
+              className="text-3xl lg:text-4xl font-light text-slate-900 text-center mb-16 tracking-tight"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              Why Choose <span className="font-bold">AI-Powered Email Management?</span>
+            </motion.h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              <motion.div 
+                className="space-y-6"
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
+                <div className="border-l-4 border-slate-900 pl-6">
+                  <h4 className="text-xl font-bold text-slate-900 mb-3 flex items-center">
+                    <Shield className="h-5 w-5 mr-3" />
+                    AI Automation
+                  </h4>
+                  <p className="text-slate-600">
+                    Reduce manual email handling by 80% with intelligent AI responses and automated workflows.
+                  </p>
                 </div>
-                <div className="text-white text-sm">
-                  Reduce manual email handling by 80% with intelligent AI responses and automated workflows.
-                </div>
-              </div>
+              </motion.div>
 
-              <div className="p-6 bg-[#05294E] rounded-xl text-white">
-                <div className="font-semibold text-white mb-3 flex items-center">
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Faster Response Times
+              <motion.div 
+                className="space-y-6"
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <div className="border-l-4 border-slate-900 pl-6">
+                  <h4 className="text-xl font-bold text-slate-900 mb-3 flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-3" />
+                    Faster Response Times
+                  </h4>
+                  <p className="text-slate-600">
+                    Respond to student inquiries in minutes instead of hours with AI-generated responses.
+                  </p>
                 </div>
-                <div className="text-white text-sm">
-                  Respond to student inquiries in minutes instead of hours with AI-generated responses.
-                </div>
-              </div>
+              </motion.div>
 
-              <div className="p-6 bg-[#05294E] rounded-xl text-white">
-                <div className="font-semibold text-white mb-3 flex items-center">
-                  <RefreshCw className="h-5 w-5 mr-2" />
-                  Smart Categorization
+              <motion.div 
+                className="space-y-6"
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <div className="border-l-4 border-slate-900 pl-6">
+                  <h4 className="text-xl font-bold text-slate-900 mb-3 flex items-center">
+                    <RefreshCw className="h-5 w-5 mr-3" />
+                    Smart Categorization
+                  </h4>
+                  <p className="text-slate-600">
+                    Automatically prioritize and route emails based on content analysis and student status.
+                  </p>
                 </div>
-                <div className="text-white text-sm">
-                  Automatically prioritize and route emails based on content analysis and student status.
-                </div>
-              </div>
+              </motion.div>
 
-              <div className="p-6 bg-[#05294E] rounded-xl text-white">
-                <div className="font-semibold text-white mb-3 flex items-center">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Consistent Quality
+              <motion.div 
+                className="space-y-6"
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <div className="border-l-4 border-slate-900 pl-6">
+                  <h4 className="text-xl font-bold text-slate-900 mb-3 flex items-center">
+                    <FileText className="h-5 w-5 mr-3" />
+                    Consistent Quality
+                  </h4>
+                  <p className="text-slate-600">
+                    Maintain consistent, professional responses while reducing staff workload and training time.
+                  </p>
                 </div>
-                <div className="text-white text-sm">
-                  Maintain consistent, professional responses while reducing staff workload and training time.
-                </div>
-              </div>
+              </motion.div>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Final CTA */}
-        <div className="text-center">
-          <div className="space-y-6">
-            <div className="bg-[#05294E] rounded-2xl p-8 text-white max-w-4xl mx-auto">
-              <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Email Management?</h2>
-              <p className="text-white/90 mb-6 text-lg">
+        <AnimatedSection direction="up" delay={0.7}>
+          <div className="py-20 bg-slate-50 border-t border-slate-100">
+            <div className="max-w-4xl mx-auto text-center">
+              <motion.h3 
+                className="text-3xl lg:text-4xl font-light text-slate-900 mb-8 tracking-tight"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                Ready to Transform Your <span className="font-bold">Email Management?</span>
+              </motion.h3>
+              
+              <motion.p 
+                className="text-xl text-slate-600 mb-12 font-light"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+              >
                 Join leading universities using AI to streamline student communication and improve response efficiency.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button 
-                  onClick={() => setShowMeetingModal(true)}
-                  className="bg-white text-[#05294E] px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
-                >
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Schedule Meeting
-                </button>
-                <a 
-                  href="mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing."
-                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-[#05294E] transition-colors flex items-center justify-center text-lg"
-                >
-                  <Mail className="h-5 w-5 mr-2" />
-                  Contact Us
-                </a>
-              </div>
-            </div>
+              </motion.p>
 
-            <div className="text-gray-600">
-              <p className="font-medium">Questions? Contact us at <a href="mailto:support@matricula.usa.com" className="text-[#05294E] hover:underline">support@matricula.usa.com</a></p>
+              <motion.div 
+                className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <motion.button
+                  onClick={() => setShowMeetingModal(true)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-slate-900 text-white px-10 py-4 rounded-none font-medium text-lg hover:bg-slate-800 transition-colors border-2 border-slate-900 min-w-[240px]"
+                >
+                  Schedule Meeting
+                </motion.button>
+                <motion.button
+                  onClick={() => window.open("mailto:support@matricula.usa.com?subject=AI Email Management Activation&body=Hi, I'm interested in activating AI-powered email management for my university. Please provide more information about setup and pricing.")}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="border-2 border-slate-900 text-slate-900 px-10 py-4 rounded-none font-medium text-lg hover:bg-slate-900 hover:text-white transition-colors min-w-[240px]"
+                >
+                  Contact Us
+                </motion.button>
+              </motion.div>
+
+              <motion.div 
+                className="border-t border-slate-200 pt-8"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <p className="text-slate-500 font-light">
+                  Questions? Contact us at{' '}
+                  <a 
+                    href="mailto:support@matricula.usa.com" 
+                    className="text-slate-900 hover:text-slate-700 underline transition-colors"
+                  >
+                    support@matricula.usa.com
+                  </a>
+                </p>
+              </motion.div>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
       </div>
     </div>
   );
-
-  // Se mostrar integração de email, renderizar a página de integração
-  if (showEmailIntegration) {
-    return (
-      <div className="h-full p-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-[#05294E] to-[#D0151C] px-6 py-4 rounded-2xl mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  <Mail className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-white">Email Integration</h1>
-                  <p className="text-white/80 text-sm">Connect your email accounts to get started</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowEmailIntegration(false)}
-                className="bg-white/20 text-white px-3 py-2 rounded-xl font-semibold hover:bg-white/30 transition-colors flex items-center space-x-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back to Inbox</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Email Provider Connections */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-[#D0151C]" />
-                <h2 className="text-lg font-semibold text-slate-900">Email Provider Connections</h2>
-        </div>
-              <button 
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                title="Email provider settings"
-                aria-label="Email provider settings"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-      </div>
-            
-            <p className="text-slate-600 mb-6">Connect your email accounts for AI-powered email features only.</p>
-            
-            <div className="space-y-4">
-              {/* Google (Gmail) Connection */}
-              <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">G</span>
-            </div>
-                              <div>
-                    <p className="font-medium text-slate-900">Google (Gmail)</p>
-                    <p className="text-sm text-slate-500">
-                      {activeConnection 
-                        ? `Connected (${connections.length} account${connections.length > 1 ? 's' : ''})`
-                        : 'Not connected'
-                      }
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  {activeConnection ? (
-                    <button
-                      onClick={() => setShowManageConnections(true)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Manage Connections</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleConnectGmail}
-                      disabled={isConnecting}
-                      className="bg-[#05294E] text-white px-4 py-2 rounded-lg hover:bg-[#041f3f] transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      <span>Connect</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Microsoft (Outlook) Connection */}
-              <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">M</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900">Microsoft (Outlook)</p>
-                    <p className="text-sm text-slate-500">Not connected</p>
-                  </div>
-                </div>
-                <button
-                  disabled
-                  className="bg-[#05294E] text-white px-4 py-2 rounded-lg opacity-50 cursor-not-allowed flex items-center space-x-2"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Connect</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Benefits of Email Integration */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <Shield className="h-5 w-5 text-slate-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Benefits of Email Integration</h2>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="text-slate-700">Centralized email management</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="text-slate-700">AI-powered response suggestions</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="text-slate-700">Automatic email categorization</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="text-slate-700">Real-time notifications</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Secure Connection */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <Shield className="h-5 w-5 text-slate-600" />
-              <h2 className="text-lg font-semibold text-slate-900">Secure Connection</h2>
-            </div>
-            
-            <p className="text-slate-700">
-              Your email credentials are securely stored and encrypted. We only access the permissions you authorize.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Se não estiver conectado, mostrar tela de conexão
-  if (!activeConnection) {
-    return (
-      <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Mail className="w-12 h-12 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Connect Your Gmail</h2>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Connect your Gmail account to send and receive emails directly from your dashboard. 
-              This will allow you to manage all your university communications in one place.
-            </p>
-            <button
-              onClick={handleConnectGmail}
-              className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
-              <Link className="w-5 h-5" />
-              Connect Gmail Account
-            </button>
-            <div className="mt-6 text-sm text-gray-500">
-              <p>🔒 Your data is secure and encrypted</p>
-              <p>📧 Only email access is requested</p>
-              <p>🔄 You can disconnect anytime</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Se chegou até aqui, o perfil está completo e a conexão Gmail está ativa
-  // Renderizar a interface principal do Inbox
-  return (
-      <div className="min-h-screen bg-gray-50 relative">
-        {/* Bloqueio de Desenvolvimento */}
-        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center border-2 border-orange-200">
-            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-orange-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Página em Desenvolvimento</h2>
-            <p className="text-gray-600 mb-6">
-              Esta funcionalidade está sendo desenvolvida e estará disponível em breve. 
-              Obrigado pela sua paciência!
-            </p>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <p className="text-sm text-orange-800">
-                <strong>Nota:</strong> A funcionalidade está funcionando em segundo plano, 
-                mas a interface ainda está sendo finalizada.
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <style>{tabScrollStyles}</style>
-        <div className="min-h-screen flex flex-col">
-          {/* Main Inbox Container - Ocupando toda a tela */}
-          <div className="flex-1 bg-white overflow-hidden flex flex-col min-h-0">
-            {/* Header */}
-            <InboxHeader
-              activeTab={activeTab}
-              loading={loading}
-              filteredEmails={filteredEmails}
-              emailCounts={emailCounts}
-              onCompose={handleCompose}
-              onShowEmailIntegration={() => setShowEmailIntegration(true)}
-              onShowManageConnections={() => setShowManageConnections(true)}
-              connection={activeConnection}
-              onAccountChange={(email) => {
-                console.log('🔄 Inbox: onAccountChange called with:', email);
-                console.log('🔄 Inbox: Current activeConnection before change:', activeConnection?.email);
-                
-                // Mudar para a nova conta
-                setActiveConnection(email);
-                
-                console.log('🔄 Inbox: Account changed to:', email);
-                console.log('🔄 Inbox: Refreshing page to load new account emails...');
-                
-                // Refresh da página para carregar os emails da nova conta
-                window.location.reload();
-              }}
-            />
-
-        {/* Search and Filters */}
-            <SearchAndFilters
-              searchTerm={searchTerm}
-              filter={filter}
-              onSearchChange={setSearchTerm}
-              onFilterChange={setFilter}
-              onSearch={handleSearch}
-            />
-
-            {/* Email Tabs Navigation */}
-            <EmailTabs
-              tabs={emailTabs}
-              activeTab={activeTab}
-              emailCounts={emailCounts}
-              loading={loading}
-              onTabChange={handleTabChange}
-              onRefresh={() => {
-                fetchEmailsForTab(activeTab);
-                updateEmailCounts(activeConnection?.email);
-              }}
-              onCheckUnread={handleCheckUnreadEmails}
-              checkUnreadStatus={autoRefreshStatus}
-            />
-
-            {/* Email Content - Layout Expandido */}
-            <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-              {/* Email List */}
-              <div className="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-y-auto bg-white flex flex-col">
-                <EmailList
-                  emails={filteredEmails}
-                  selectedEmail={selectedEmail}
-                  loading={loading}
-                  error={error}
-                  searchTerm={searchTerm}
-                  activeTab={activeTab}
-                  hasMoreEmails={hasMoreEmails}
-                  emailCounts={emailCounts}
-                  onEmailSelect={handleEmailSelect}
-                  onLoadMore={handleLoadMore}
-                  getPriorityColor={getPriorityColor}
-                  getPriorityIcon={getPriorityIcon}
-                  formatDate={formatDate}
-              />
-            </div>
-            
-              {/* Email Detail - Mais espaço para conteúdo */}
-              <div className="flex-1 flex flex-col bg-white min-h-0">
-                {activeTab === 'knowledge' ? (
-                  <div className="flex-1 p-6 overflow-y-auto">
-                    <InboxKnowledgeUpload
-                      universityId={user?.university_id || university?.id || '09a32358-9210-4da7-b465-556ed429d82a'}
-                      onDocumentsChange={setKnowledgeDocuments}
-                      existingDocuments={knowledgeDocuments}
-                    />
-                  </div>
-                ) : (
-                  <EmailDetail
-                    email={selectedEmail}
-                    onReply={handleReply}
-                    onForward={handleForwardEmail}
-                    formatDate={formatDate}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Email Composer for new emails only */}
-          <EmailComposer
-            isOpen={isComposing}
-            onClose={() => setIsComposing(false)}
-            onSend={handleSendEmail}
-            originalEmail={composerEmail}
-          />
-
-          {/* Reply Composer */}
-          <ReplyComposer
-            isOpen={isReplying}
-            onClose={() => setIsReplying(false)}
-            onSend={handleSendEmail}
-            originalEmail={replyEmail!}
-          />
-
-          {/* Forward Composer */}
-          <ForwardComposer
-            isOpen={isForwarding}
-            onClose={() => setIsForwarding(false)}
-            onSend={handleSendEmail}
-            originalEmail={forwardEmail!}
-          />
-
-                  {/* Manage Connections Modal */}
-          {showManageConnections && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-gray-900">Manage Email Connections</h3>
-                  <button
-                    onClick={() => setShowManageConnections(false)}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Close manage connections modal"
-                    aria-label="Close manage connections modal"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                
-                <GmailConnectionManager />
-                
-                <div className="flex justify-end mt-6">
-                  <button
-                    onClick={() => setShowManageConnections(false)}
-                    className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          </div>
-      </div>
-  );
 };
 
-export default Inbox; 
+export default Inbox;
