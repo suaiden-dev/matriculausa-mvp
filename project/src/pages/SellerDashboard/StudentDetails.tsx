@@ -110,6 +110,36 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Hook para configurações dinâmicas de taxas
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   
+  // Estados para taxas dinâmicas do estudante
+  const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
+  
+  // Função para buscar taxas do pacote do estudante
+  const loadStudentPackageFees = useCallback(async (studentUserId: string) => {
+    if (!studentUserId) return;
+    
+    try {
+      console.log('🔍 [STUDENT_DETAILS] Buscando taxas do pacote para estudante:', studentUserId);
+      
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: studentUserId
+      });
+      
+      if (error) {
+        console.error('❌ [STUDENT_DETAILS] Erro ao buscar taxas do pacote:', error);
+        setStudentPackageFees(null);
+      } else if (packageFees && packageFees.length > 0) {
+        console.log('✅ [STUDENT_DETAILS] Taxas do pacote encontradas:', packageFees[0]);
+        setStudentPackageFees(packageFees[0]);
+      } else {
+        console.log('ℹ️ [STUDENT_DETAILS] Estudante sem pacote, usando valores padrão');
+        setStudentPackageFees(null);
+      }
+    } catch (error) {
+      console.error('❌ [STUDENT_DETAILS] Erro ao buscar taxas do pacote:', error);
+      setStudentPackageFees(null);
+    }
+  }, []);
+
   // Debug: verificar estado inicial
   console.log('🔍 [STUDENT_DETAILS] Estado inicial - documentsLoaded:', documentsLoaded);
 
@@ -155,9 +185,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
          console.log('🔍 [STUDENT_DETAILS] Dados processados do estudante:', studentInfoData);
          console.log('🔍 [STUDENT_DETAILS] application_status:', studentInfoData.application_status);
          console.log('🔍 [STUDENT_DETAILS] student_process_type:', studentInfoData.student_process_type);
-         console.log('🔍 [STUDENT_DETAILS] Chamando setStudentInfo com:', studentInfoData);
-         setStudentInfo(studentInfoData);
-         console.log('🔍 [STUDENT_DETAILS] setStudentInfo chamado com sucesso');
+        console.log('🔍 [STUDENT_DETAILS] Chamando setStudentInfo com:', studentInfoData);
+        setStudentInfo(studentInfoData);
+        console.log('🔍 [STUDENT_DETAILS] setStudentInfo chamado com sucesso');
+        
+        // Buscar taxas do pacote do estudante
+        if (studentInfoData.student_id) {
+          loadStudentPackageFees(studentInfoData.student_id);
+        }
          // Dados do estudante carregados com sucesso
        } else {
          console.warn('⚠️ [STUDENT_DETAILS] Nenhum dado retornado da RPC');
@@ -1392,7 +1427,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentInfo?.has_paid_selection_process_fee && (
-                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
+                             <span className="text-xs text-slate-500">
+                               {studentPackageFees ? formatFeeAmount(studentPackageFees.selection_process_fee) : formatFeeAmount(getFeeAmount('selection_process'))}
+                             </span>
                            )}
                          </div>
                        </div>
@@ -1449,19 +1486,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                          </span>
                          {studentInfo?.is_scholarship_fee_paid && (
                            <span className="text-xs text-slate-500">
-                             {(() => {
-                               console.log('🔍 [STUDENT_DETAILS] Scholarship Fee Debug:', {
-                                 hasScholarship: !!studentInfo?.scholarship,
-                                 scholarshipFeeAmount: studentInfo?.scholarship?.scholarship_fee_amount,
-                                 isScholarshipFeePaid: studentInfo?.is_scholarship_fee_paid,
-                                 defaultFee: getFeeAmount('scholarship_fee')
-                               });
-                               
-                               // Scholarship Fee usa valor configurado no sistema (não valor do banco)
-                               const fixedAmount = getFeeAmount('scholarship_fee');
-                               console.log('🔍 [STUDENT_DETAILS] Using system-configured scholarship amount:', fixedAmount);
-                               return formatFeeAmount(fixedAmount);
-                             })()}
+                             {studentPackageFees ? formatFeeAmount(studentPackageFees.scholarship_fee) : formatFeeAmount(getFeeAmount('scholarship_fee'))}
                            </span>
                          )}
                        </div>
@@ -1479,7 +1504,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                              {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                            </span>
                            {studentInfo?.has_paid_i20_control_fee && (
-                             <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
+                             <span className="text-xs text-slate-500">
+                               {studentPackageFees ? formatFeeAmount(studentPackageFees.i20_control_fee) : formatFeeAmount(getFeeAmount('i-20_control_fee'))}
+                             </span>
                            )}
                          </div>
                        </div>

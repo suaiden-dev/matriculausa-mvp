@@ -144,6 +144,7 @@ Deno.serve(async (req) => {
     let universityId = null;
     let stripeConnectAccountId = null;
     
+    // Application fee sempre usa o valor da universidade (não muda com pacotes)
     console.log('[stripe-checkout-application-fee] Buscando dados da bolsa para scholarship_id:', application.scholarship_id);
     
     if (application.scholarship_id) {

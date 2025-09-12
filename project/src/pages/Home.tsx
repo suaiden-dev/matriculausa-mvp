@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Shield, Sparkles, DollarSign, Play, ChevronRight, Heart, Rocket, CreditCard, MapPin, Lock, Gift } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
+import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useUniversities } from '../hooks/useUniversities';
 import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
@@ -14,6 +15,7 @@ import { motion } from 'framer-motion';
 
 const Home: React.FC = () => {
   const { t } = useTranslationWithFees();
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const navigate = useNavigate();
   const { universities } = useUniversities();
   
@@ -630,7 +632,12 @@ const Home: React.FC = () => {
                   {t('home.faq.questions.q2.question')}
                 </h3>
                 <p className="text-slate-600 leading-relaxed pl-11">
-                  {t('home.faq.questions.q2.answer')}
+                  The Selection Process Fee ({selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.
+                  {hasSellerPackage && (
+                    <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      {packageName}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -641,7 +648,12 @@ const Home: React.FC = () => {
                   {t('home.faq.questions.q3.question')}
                 </h3>
                 <p className="text-slate-600 leading-relaxed pl-11">
-                  {t('home.faq.questions.q3.answer')}
+                  The Scholarship Fee ({scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications.
+                  {hasSellerPackage && (
+                    <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      {packageName}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -663,7 +675,12 @@ const Home: React.FC = () => {
                   {t('home.faq.questions.q5.question')}
                 </h3>
                 <p className="text-slate-600 leading-relaxed pl-11">
-                  {t('home.faq.questions.q5.answer')}
+                  The I-20 Control Fee ({i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents.
+                  {hasSellerPackage && (
+                    <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      {packageName}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
@@ -718,7 +735,12 @@ const Home: React.FC = () => {
                   {t('home.faq.questions.q10.question')}
                 </h3>
                 <p className="text-slate-600 leading-relaxed pl-11">
-                  {t('home.faq.questions.q10.answer')}
+                  No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee ({selectionProcessFee}) first, then the Scholarship Fee ({scholarshipFee}) (if applicable), followed by the Application Fee, and finally the I-20 Control Fee ({i20ControlFee}). All are mandatory for the complete flow, but do not need to be paid simultaneously.
+                  {hasSellerPackage && (
+                    <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      {packageName}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">

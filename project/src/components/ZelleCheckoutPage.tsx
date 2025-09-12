@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useDynamicFees } from '../hooks/useDynamicFees';
 
 interface ZelleCheckoutPageProps {
   feeType?: string;
@@ -44,6 +45,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig();
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,30 +95,32 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   console.log('🔍 [ZelleCheckoutPage] activeDiscount:', activeDiscount);
   console.log('🔍 [ZelleCheckoutPage] searchParams:', Object.fromEntries(searchParams.entries()));
 
-  // Informações das taxas
+  // Informações das taxas - usar valores dinâmicos se disponível
   const feeInfo: FeeInfo[] = [
     {
       type: 'selection_process',
-      amount: activeDiscount && feeType === 'selection_process' ? getFeeAmount('selection_process') - (activeDiscount.discount_amount || 0) : getFeeAmount('selection_process'),
-      description: `Selection Process Fee - Complete your application process${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
+      amount: activeDiscount && feeType === 'selection_process' ? 
+        (hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) - (activeDiscount.discount_amount || 0) : getFeeAmount('selection_process') - (activeDiscount.discount_amount || 0)) : 
+        (hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : getFeeAmount('selection_process')),
+      description: `Selection Process Fee - Complete your application process${hasSellerPackage ? ` (${packageName})` : ''}${activeDiscount && feeType === 'selection_process' ? ` ($${activeDiscount.discount_amount || 0} discount applied)` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'application_fee',
-      amount: applicationFeeAmount || getFeeAmount('application_fee'), // Usar valor dinâmico se disponível
+      amount: applicationFeeAmount || getFeeAmount('application_fee'), // Application Fee sempre usa valor da universidade
       description: 'Application Fee - Apply for a specific scholarship',
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'scholarship_fee',
-      amount: getFeeAmount('scholarship_fee'),
-      description: 'Scholarship Fee - Confirm your scholarship application',
+      amount: hasSellerPackage ? parseFloat(scholarshipFee.replace('$', '')) : getFeeAmount('scholarship_fee'),
+      description: `Scholarship Fee - Confirm your scholarship application${hasSellerPackage ? ` (${packageName})` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     },
     {
       type: 'i20_control',
-      amount: getFeeAmount('i20_control_fee'),
-      description: 'I-20 Control Fee - Document processing and validation',
+      amount: hasSellerPackage ? parseFloat(i20ControlFee.replace('$', '')) : getFeeAmount('i20_control_fee'),
+      description: `I-20 Control Fee - Document processing and validation${hasSellerPackage ? ` (${packageName})` : ''}`,
       icon: <CreditCard className="w-6 h-6" />
     }
   ];

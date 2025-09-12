@@ -611,12 +611,33 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log('✅ [approveZellePayment] has_paid_selection_process_fee marcado como true');
           console.log('🔍 [approveZellePayment] Dados atualizados:', updateData);
           
-          // Registrar no faturamento
-          console.log('💰 [approveZellePayment] Registrando selection_process no faturamento...');
+          // Buscar valor dinâmico correto baseado no pacote do usuário
+          console.log('💰 [approveZellePayment] Buscando valor dinâmico correto...');
+          let correctAmount = payment.amount; // Valor padrão
+          
+          try {
+            // Buscar taxas do pacote do usuário
+            const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
+              user_id_param: payment.user_id
+            });
+            
+            if (!packageError && userPackageFees && userPackageFees.length > 0) {
+              const packageFees = userPackageFees[0];
+              correctAmount = packageFees.selection_process_fee;
+              console.log('✅ [approveZellePayment] Valor dinâmico encontrado:', correctAmount, 'Pacote:', packageFees.package_name);
+            } else {
+              console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão:', correctAmount);
+            }
+          } catch (error) {
+            console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico, usando valor padrão:', error);
+          }
+
+          // Registrar no faturamento com valor correto
+          console.log('💰 [approveZellePayment] Registrando selection_process no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
             user_id_param: payment.user_id,
             fee_type_param: 'selection_process',
-            amount_param: payment.amount,
+            amount_param: correctAmount,
             payment_session_id_param: `zelle_${payment.id}`,
             payment_method_param: 'zelle'
           });
@@ -788,12 +809,33 @@ const PaymentManagement = (): React.JSX.Element => {
           console.log('✅ [approveZellePayment] has_paid_i20_control_fee marcado como true');
           console.log('🔍 [approveZellePayment] Dados atualizados i20_control_fee:', updateData);
           
-          // Registrar no faturamento
-          console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento...');
+          // Buscar valor dinâmico correto baseado no pacote do usuário
+          console.log('💰 [approveZellePayment] Buscando valor dinâmico correto para i20_control_fee...');
+          let correctAmount = payment.amount; // Valor padrão
+          
+          try {
+            // Buscar taxas do pacote do usuário
+            const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
+              user_id_param: payment.user_id
+            });
+            
+            if (!packageError && userPackageFees && userPackageFees.length > 0) {
+              const packageFees = userPackageFees[0];
+              correctAmount = packageFees.i20_control_fee;
+              console.log('✅ [approveZellePayment] Valor dinâmico encontrado para i20_control_fee:', correctAmount, 'Pacote:', packageFees.package_name);
+            } else {
+              console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão para i20_control_fee:', correctAmount);
+            }
+          } catch (error) {
+            console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para i20_control_fee, usando valor padrão:', error);
+          }
+
+          // Registrar no faturamento com valor correto
+          console.log('💰 [approveZellePayment] Registrando i20_control_fee no faturamento com valor:', correctAmount);
           const { error: billingError } = await supabase.rpc('register_payment_billing', {
             user_id_param: payment.user_id,
             fee_type_param: 'i20_control_fee',
-            amount_param: payment.amount,
+            amount_param: correctAmount,
             payment_session_id_param: `zelle_${payment.id}`,
             payment_method_param: 'zelle'
           });
@@ -831,11 +873,32 @@ const PaymentManagement = (): React.JSX.Element => {
           
           // Registrar no faturamento apenas para scholarship_fee (application_fee não gera faturamento)
           if (payment.fee_type === 'scholarship_fee') {
-            console.log('💰 [approveZellePayment] Registrando scholarship_fee no faturamento...');
+            // Buscar valor dinâmico correto baseado no pacote do usuário
+            console.log('💰 [approveZellePayment] Buscando valor dinâmico correto para scholarship_fee...');
+            let correctAmount = payment.amount; // Valor padrão
+            
+            try {
+              // Buscar taxas do pacote do usuário
+              const { data: userPackageFees, error: packageError } = await supabase.rpc('get_user_package_fees', {
+                user_id_param: payment.user_id
+              });
+              
+              if (!packageError && userPackageFees && userPackageFees.length > 0) {
+                const packageFees = userPackageFees[0];
+                correctAmount = packageFees.scholarship_fee;
+                console.log('✅ [approveZellePayment] Valor dinâmico encontrado para scholarship_fee:', correctAmount, 'Pacote:', packageFees.package_name);
+              } else {
+                console.log('ℹ️ [approveZellePayment] Usuário sem pacote, usando valor padrão para scholarship_fee:', correctAmount);
+              }
+            } catch (error) {
+              console.warn('⚠️ [approveZellePayment] Erro ao buscar valor dinâmico para scholarship_fee, usando valor padrão:', error);
+            }
+
+            console.log('💰 [approveZellePayment] Registrando scholarship_fee no faturamento com valor:', correctAmount);
             const { error: billingError } = await supabase.rpc('register_payment_billing', {
               user_id_param: payment.user_id,
               fee_type_param: 'scholarship_fee',
-              amount_param: payment.amount,
+              amount_param: correctAmount,
               payment_session_id_param: `zelle_${payment.id}`,
               payment_method_param: 'zelle'
             });
@@ -1497,97 +1560,13 @@ const PaymentManagement = (): React.JSX.Element => {
       }
 
       // Se não há dados reais, vamos criar alguns dados de exemplo para testar
-      let finalPayments = paymentRecords;
-      
-      if (paymentRecords.length === 0) {
-        console.log('🔧 No real data found, creating sample data for testing...');
-        
-        finalPayments = [
-          {
-            id: 'sample-1-selection',
-            student_id: 'sample-student-1',
-            student_name: 'João Silva',
-            student_email: 'joao.silva@email.com',
-            university_id: 'sample-uni-1',
-            university_name: 'Harvard University',
-            scholarship_id: 'sample-scholarship-1',
-            scholarship_title: 'Computer Science Excellence Scholarship',
-            fee_type: 'selection_process',
-            amount: 50,
-            status: 'paid',
-            payment_date: '2024-01-15T10:30:00Z',
-            created_at: '2024-01-15T10:30:00Z'
-          },
-          {
-            id: 'sample-1-application',
-            student_id: 'sample-student-1',
-            student_name: 'João Silva',
-            student_email: 'joao.silva@email.com',
-            university_id: 'sample-uni-1',
-            university_name: 'Harvard University',
-            scholarship_id: 'sample-scholarship-1',
-            scholarship_title: 'Computer Science Excellence Scholarship',
-            fee_type: 'application',
-            amount: 100,
-            status: 'paid',
-            payment_date: '2024-01-16T14:20:00Z',
-            created_at: '2024-01-16T14:20:00Z'
-          },
-          {
-            id: 'sample-2-selection',
-            student_id: 'sample-student-2',
-            student_name: 'Maria Santos',
-            student_email: 'maria.santos@email.com',
-            university_id: 'sample-uni-2',
-            university_name: 'MIT',
-            scholarship_id: 'sample-scholarship-2',
-            scholarship_title: 'Engineering Innovation Grant',
-            fee_type: 'selection_process',
-            amount: 50,
-            status: 'pending',
-            created_at: '2024-01-20T09:15:00Z'
-          },
-          {
-            id: 'sample-2-scholarship',
-            student_id: 'sample-student-2',
-            student_name: 'Maria Santos',
-            student_email: 'maria.santos@email.com',
-            university_id: 'sample-uni-2',
-            university_name: 'MIT',
-            scholarship_id: 'sample-scholarship-2',
-            scholarship_title: 'Engineering Innovation Grant',
-            fee_type: 'scholarship',
-            amount: 200,
-            status: 'paid',
-            payment_date: '2024-01-22T16:45:00Z',
-            created_at: '2024-01-22T16:45:00Z'
-          },
-          {
-            id: 'sample-3-i20',
-            student_id: 'sample-student-3',
-            student_name: 'Carlos Rodriguez',
-            student_email: 'carlos.rodriguez@email.com',
-            university_id: 'sample-uni-3',
-            university_name: 'Stanford University',
-            scholarship_id: 'sample-scholarship-3',
-            scholarship_title: 'Business Leadership Scholarship',
-            fee_type: 'i20_control_fee',
-            amount: 99900, // $999.00 em centavos
-            status: 'pending',
-            created_at: '2024-01-25T11:00:00Z'
-          }
-        ];
-
-        console.log('✅ Sample data loaded:', finalPayments.length, 'records');
-      }
-
-      setPayments(finalPayments);
+      setPayments(paymentRecords);
 
       // Calcular estatísticas
-      const totalPayments = finalPayments.length;
-      const paidPayments = finalPayments.filter(p => p.status === 'paid').length;
-      const pendingPayments = finalPayments.filter(p => p.status === 'pending').length;
-      const totalRevenue = finalPayments
+      const totalPayments = paymentRecords.length;
+      const paidPayments = paymentRecords.filter(p => p.status === 'paid').length;
+      const pendingPayments = paymentRecords.filter(p => p.status === 'pending').length;
+      const totalRevenue = paymentRecords
         .filter(p => p.status === 'paid')
         .reduce((sum, p) => sum + p.amount, 0);
 
@@ -1596,7 +1575,7 @@ const PaymentManagement = (): React.JSX.Element => {
         totalPayments,
         paidPayments,
         pendingPayments,
-        monthlyGrowth: 15.2
+        monthlyGrowth: 0
       };
 
       console.log('📈 Stats calculated:', newStats);

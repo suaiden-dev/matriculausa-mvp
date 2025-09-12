@@ -10,7 +10,7 @@ const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile, stats })
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const referralCode = sellerProfile?.referral_code || '';
-  const referralUrl = `${window.location.origin}/?ref=${referralCode}`;
+  const referralUrl = `${window.location.origin}/student/register?ref=${referralCode}`;
 
   const copyToClipboard = async (text: string, type: string) => {
     try {

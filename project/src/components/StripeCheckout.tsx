@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useDynamicFees } from '../hooks/useDynamicFees';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
@@ -63,8 +64,9 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { isAuthenticated, updateUserProfile } = useAuth();
-  const { getFeeAmount } = useFeeConfig();
+  const { isAuthenticated, updateUserProfile, user } = useAuth();
+  const { getFeeAmount } = useFeeConfig(user?.id);
+  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
 
   const product = STRIPE_PRODUCTS[productId as keyof typeof STRIPE_PRODUCTS];
   
@@ -226,13 +228,23 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       handleCheckout();
     } else if (method === 'zelle') {
       console.log('🔍 [StripeCheckout] �� Zelle selecionado, redirecionando para checkout...');
-      // Redirecionar para a página de checkout do Zelle
+      // Redirecionar para a página de checkout do Zelle com valores dinâmicos
+      const getDynamicAmount = () => {
+        if (feeType === 'selection_process') {
+          return hasSellerPackage ? selectionProcessFee.replace('$', '') : getFeeAmount('selection_process').toString();
+        } else if (feeType === 'application_fee') {
+          return getFeeAmount('application_fee').toString(); // Application Fee sempre usa valor da universidade
+        } else if (feeType === 'scholarship_fee') {
+          return hasSellerPackage ? scholarshipFee.replace('$', '') : getFeeAmount('scholarship_fee').toString();
+        } else if (feeType === 'enrollment_fee' || feeType === 'i20_control_fee') {
+          return hasSellerPackage ? i20ControlFee.replace('$', '') : getFeeAmount('i20_control_fee').toString();
+        }
+        return getFeeAmount('selection_process').toString();
+      };
+
       const params = new URLSearchParams({
         feeType: feeType,
-        amount: feeType === 'selection_process' ? getFeeAmount('selection_process').toString() : 
-                feeType === 'application_fee' ? getFeeAmount('application_fee').toString() :
-                feeType === 'scholarship_fee' ? getFeeAmount('scholarship_fee').toString() :
-                feeType === 'enrollment_fee' ? getFeeAmount('i20_control_fee').toString() : getFeeAmount('selection_process').toString(),
+        amount: getDynamicAmount(),
         scholarshipsIds: scholarshipsIds?.join(',') || ''
       });
       window.location.href = `/checkout/zelle?${params.toString()}`;

@@ -141,10 +141,6 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
             
             {selectedMethod === method.id && (
               <div className="mt-3 pt-3 border-t border-blue-200">
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Amount:</span> ${amount.toFixed(2)} USD
-                </div>
-                
                 {method.name === 'zelle' && (
                   <div className="mt-2 text-xs text-amber-700 bg-amber-50 p-2 rounded">
                     <strong>Important:</strong> After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.

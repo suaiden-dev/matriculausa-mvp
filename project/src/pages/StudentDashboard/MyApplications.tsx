@@ -35,7 +35,7 @@ type ApplicationWithScholarship = Application & {
 const MyApplications: React.FC = () => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   
   // Labels amigáveis para os documentos principais

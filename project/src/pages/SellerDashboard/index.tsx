@@ -88,6 +88,9 @@ const SellerDashboard: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Forçar refresh dos dados
+      console.log('🔄 [SELLER_DASHBOARD] Carregando dados do seller...');
 
       // Search for seller profile
       let seller: any = null;
@@ -281,6 +284,8 @@ const SellerDashboard: React.FC = () => {
 
       console.log('🔍 Performance data:', { performanceData, performanceError });
       console.log('🔍 Students data:', { studentsData: processedStudents });
+      console.log('🔍 Seller referral code:', seller.referral_code);
+      console.log('🔍 Performance data length:', performanceData?.length);
 
       // Always use RPC data if available, fallback to calculated values only if no data
       if (performanceData && performanceData.length > 0) {
@@ -299,6 +304,9 @@ const SellerDashboard: React.FC = () => {
           monthlyStudents: Number(performance.monthly_students) || 0,
           conversionRate: Number(performance.conversion_rate) || 0
         });
+        console.log('🔍 Raw performance data:', performance);
+        console.log('🔍 Total revenue raw:', performance.total_revenue);
+        console.log('🔍 Total revenue converted:', Number(performance.total_revenue));
       } else {
         console.error('Error loading performance data:', performanceError);
         // Fallback to calculated values if RPC fails
@@ -306,6 +314,7 @@ const SellerDashboard: React.FC = () => {
         const totalRevenue = processedStudents.reduce((sum: number, s: any) => sum + (s.total_paid || 0), 0);
         console.log('🔍 Fallback calculation:', { totalStudents, totalRevenue, studentsData: processedStudents });
         console.log('🔍 Individual student totals:', processedStudents.map((s: any) => ({ name: s.full_name, total_paid: s.total_paid })));
+        console.log('🔍 Using fallback calculation - RPC failed or no data');
         
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();

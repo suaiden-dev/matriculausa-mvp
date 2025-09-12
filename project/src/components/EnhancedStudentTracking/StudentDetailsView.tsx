@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, FileText } from 'lucide-react';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import { StudentInfo, ScholarshipApplication } from './types';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { supabase } from '../../lib/supabase';
 import I20DeadlineTimer from './I20DeadlineTimer';
 
 export interface StudentDetailsViewProps {
@@ -29,6 +30,36 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
 }) => {
   // Hook para configurações dinâmicas de taxas
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  
+  // Estado para armazenar as taxas do pacote do estudante
+  const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
+  
+  // Função para buscar as taxas do pacote do estudante
+  const loadStudentPackageFees = async (studentUserId: string) => {
+    if (!studentUserId) return;
+    try {
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: studentUserId
+      });
+      if (error) {
+        console.error('Error loading student package fees:', error);
+      } else if (packageFees && packageFees.length > 0) {
+        setStudentPackageFees(packageFees[0]);
+      } else {
+        setStudentPackageFees(null);
+      }
+    } catch (error) {
+      console.error('Error loading student package fees:', error);
+    }
+  };
+  
+  // Carregar as taxas do pacote quando o componente montar
+  useEffect(() => {
+    if (studentDetails?.student_id) {
+      loadStudentPackageFees(studentDetails.student_id);
+    }
+  }, [studentDetails?.student_id]);
+  
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
@@ -472,7 +503,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             {studentDetails?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
                           </span>
                           {studentDetails?.has_paid_selection_process_fee && (
-                            <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('selection_process'))}</span>
+                            <span className="text-xs text-slate-500">
+                              {studentPackageFees ? formatFeeAmount(studentPackageFees.selection_process_fee) : formatFeeAmount(getFeeAmount('selection_process'))}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -524,19 +557,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         </span>
                         {studentDetails?.is_scholarship_fee_paid && (
                           <span className="text-xs text-slate-500">
-                            {(() => {
-                              console.log('🔍 [STUDENT_DETAILS_VIEW] Scholarship Fee Debug:', {
-                                hasScholarship: !!studentDetails?.scholarship,
-                                scholarshipFeeAmount: studentDetails?.scholarship?.scholarship_fee_amount,
-                                isScholarshipFeePaid: studentDetails?.is_scholarship_fee_paid,
-                                defaultFee: getFeeAmount('scholarship_fee')
-                              });
-                              
-                              // Scholarship Fee usa valor configurado no sistema (não valor do banco)
-                              const fixedAmount = getFeeAmount('scholarship_fee');
-                              console.log('🔍 [STUDENT_DETAILS_VIEW] Using system-configured scholarship amount:', fixedAmount);
-                              return formatFeeAmount(fixedAmount);
-                            })()}
+                            {studentPackageFees ? formatFeeAmount(studentPackageFees.scholarship_fee) : formatFeeAmount(getFeeAmount('scholarship_fee'))}
                           </span>
                         )}
                       </div>
@@ -554,7 +575,9 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                             {studentDetails?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
                           </span>
                           {studentDetails?.has_paid_i20_control_fee && (
-                            <span className="text-xs text-slate-500">{formatFeeAmount(getFeeAmount('i-20_control_fee'))}</span>
+                            <span className="text-xs text-slate-500">
+                              {studentPackageFees ? formatFeeAmount(studentPackageFees.i20_control_fee) : formatFeeAmount(getFeeAmount('i-20_control_fee'))}
+                            </span>
                           )}
                         </div>
                       </div>

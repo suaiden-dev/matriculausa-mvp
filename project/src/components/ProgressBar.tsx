@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, DollarSign, Award, FileText, ArrowRight, Lock, Clock } from 'lucide-react';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useAuth } from '../hooks/useAuth';
 
 interface Step {
   label: string;
@@ -32,7 +33,8 @@ const getStepIcon = (idx: number, completed: boolean, current: boolean) => {
 };
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
-  const { getFeeAmount } = useFeeConfig();
+  const { user } = useAuth();
+  const { getFeeAmount } = useFeeConfig(user?.id);
   const currentIdx = steps.findIndex(step => step.current);
   // Valores padrão das taxas (usados quando não há valores customizados)
   const defaultFeeValues = [

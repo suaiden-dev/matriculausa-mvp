@@ -18,6 +18,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useState as useStateReact, useEffect } from 'react';
 
 interface Student {
   id: string;
@@ -79,6 +80,52 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
+  
+  // Estado para armazenar as taxas do pacote de cada estudante
+  const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
+  
+  // Função para buscar taxas do pacote de um estudante
+  const loadStudentPackageFees = async (studentUserId: string) => {
+    if (!studentUserId || studentPackageFees[studentUserId]) return;
+    
+    try {
+      console.log('🔍 [MY_STUDENTS] Buscando taxas do pacote para estudante:', studentUserId);
+      
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: studentUserId
+      });
+      
+      if (error) {
+        console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
+        return;
+      }
+      
+      if (packageFees && packageFees.length > 0) {
+        console.log('✅ [MY_STUDENTS] Taxas do pacote encontradas para', studentUserId, ':', packageFees[0]);
+        setStudentPackageFees(prev => ({
+          ...prev,
+          [studentUserId]: packageFees[0]
+        }));
+      } else {
+        console.log('ℹ️ [MY_STUDENTS] Estudante sem pacote:', studentUserId);
+        setStudentPackageFees(prev => ({
+          ...prev,
+          [studentUserId]: null
+        }));
+      }
+    } catch (error) {
+      console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
+    }
+  };
+  
+  // Carregar taxas do pacote quando os estudantes mudarem
+  useEffect(() => {
+    students.forEach(student => {
+      if (student.id && !studentPackageFees[student.id]) {
+        loadStudentPackageFees(student.id);
+      }
+    });
+  }, [students, studentPackageFees]);
   
   // Estado dos filtros
   const [filters, setFilters] = useState<FilterState>({
@@ -340,20 +387,24 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Função para calcular o total pago por um aluno
   const calculateStudentTotalPaid = (student: Student): number => {
     let total = 0;
+    
+    // Buscar taxas do pacote do estudante
+    const packageFees = studentPackageFees[student.id];
 
     if (student.has_paid_selection_process_fee) {
-      total += getFeeAmount('selection_process');
+      total += packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
     }
     
     if (student.has_paid_i20_control_fee) {
-      total += getFeeAmount('i20_control_fee');
+      total += packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
     }
     
     if (student.is_scholarship_fee_paid) {
-      total += getFeeAmount('scholarship_fee');
+      total += packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
     }
     
     if (student.is_application_fee_paid) {
+      // Application fee não tem valor dinâmico, sempre usa o valor padrão
       total += getFeeAmount('application_fee');
     }
 

@@ -2,10 +2,12 @@ import React from 'react';
 import { XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useAuth } from '../../hooks/useAuth';
 
 const I20ControlFeeError: React.FC = () => {
   console.log('🔍 [I20ControlFeeError] Componente renderizado');
-  const { formatFeeAmount } = useFeeConfig();
+  const { user } = useAuth();
+  const { formatFeeAmount } = useFeeConfig(user?.id);
   
   return (
     <div className="min-h-screen bg-red-50 flex flex-col items-center justify-center px-4">

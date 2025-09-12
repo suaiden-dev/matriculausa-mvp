@@ -72,6 +72,33 @@ Deno.serve(async (req) => {
 
     console.log('[stripe-checkout-selection-process-fee] ✅ Usuário autenticado:', user.id);
 
+    // Buscar taxas do pacote do usuário
+    let userPackageFees = null;
+    try {
+      console.log('[stripe-checkout-selection-process-fee] 🔍 Tentando buscar taxas do pacote para user_id:', user.id);
+      
+      const { data: packageData, error: packageError } = await supabase
+        .rpc('get_user_package_fees', {
+          user_id_param: user.id
+        });
+
+      console.log('[stripe-checkout-selection-process-fee] 📊 Resultado da RPC:', { packageData, packageError });
+
+      if (!packageError && packageData && packageData.length > 0) {
+        userPackageFees = packageData[0];
+        console.log('[stripe-checkout-selection-process-fee] ✅ Taxas do pacote encontradas:', userPackageFees);
+      } else {
+        console.log('[stripe-checkout-selection-process-fee] ⚠️ Usuário não tem pacote atribuído, usando taxas padrão');
+        if (packageError) {
+          console.error('[stripe-checkout-selection-process-fee] ❌ Erro na RPC:', packageError);
+        }
+      }
+    } catch (err) {
+      console.error('[stripe-checkout-selection-process-fee] ❌ Erro ao buscar taxas do pacote:', err);
+      // Continuar sem pacote se houver erro
+      userPackageFees = null;
+    }
+
     // Monta o metadata mínimo
     const sessionMetadata = {
       student_id: user.id,
@@ -79,6 +106,17 @@ Deno.serve(async (req) => {
       origem: 'site',
       ...metadata,
     };
+
+    // Adicionar informações do pacote como strings no metadata
+    if (userPackageFees) {
+      sessionMetadata.user_has_package = 'true';
+      sessionMetadata.package_name = userPackageFees.package_name;
+      sessionMetadata.package_selection_fee = userPackageFees.selection_process_fee.toString();
+      sessionMetadata.package_scholarship_fee = userPackageFees.scholarship_fee.toString();
+      sessionMetadata.package_i20_fee = userPackageFees.i20_control_fee.toString();
+    } else {
+      sessionMetadata.user_has_package = 'false';
+    }
 
     console.log('[stripe-checkout-selection-process-fee] �� Metadata da sessão:', sessionMetadata);
 
@@ -114,21 +152,48 @@ Deno.serve(async (req) => {
     }
 
     // Configuração da sessão Stripe
-    const sessionConfig: any = {
+    let sessionConfig: any = {
       payment_method_types: ['card'],
       client_reference_id: user.id,
       customer_email: user.email,
-      line_items: [
-        {
-          price: price_id,
-          quantity: 1,
-        },
-      ],
       mode: mode || 'payment',
       success_url: success_url,
       cancel_url: cancel_url,
       metadata: sessionMetadata,
     };
+
+    // Se o usuário tem pacote, usar preço dinâmico
+    if (userPackageFees) {
+      const dynamicAmount = Math.round(userPackageFees.selection_process_fee * 100); // Converter para centavos
+      sessionConfig.line_items = [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Selection Process Fee',
+              description: `Selection Process Fee - ${userPackageFees.package_name}`,
+            },
+            unit_amount: dynamicAmount,
+          },
+          quantity: 1,
+        },
+      ];
+      console.log('[stripe-checkout-selection-process-fee] 💰 USANDO PREÇO DINÂMICO DO PACOTE');
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor do pacote:', userPackageFees.selection_process_fee);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Valor em centavos:', dynamicAmount);
+      console.log('[stripe-checkout-selection-process-fee] 💰 Nome do pacote:', userPackageFees.package_name);
+    } else {
+      // Usar preço fixo do Stripe
+      sessionConfig.line_items = [
+        {
+          price: price_id,
+          quantity: 1,
+        },
+      ];
+      console.log('[stripe-checkout-selection-process-fee] ⚠️ USANDO PRICE_ID PADRÃO');
+      console.log('[stripe-checkout-selection-process-fee] ⚠️ Motivo: Usuário não tem pacote ou pacote não encontrado');
+      console.log('[stripe-checkout-selection-process-fee] ⚠️ Price ID:', price_id);
+    }
 
     console.log('[stripe-checkout-selection-process-fee] ⚙️ Configuração da sessão Stripe:', sessionConfig);
 

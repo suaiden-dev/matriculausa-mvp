@@ -45,8 +45,9 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = []
 }) => {
   const { t } = useTranslation();
+  const { user, userProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
-  const { getFeeAmount } = useFeeConfig();
+  const { getFeeAmount } = useFeeConfig(user?.id);
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
@@ -100,8 +101,6 @@ const Overview: React.FC<OverviewProps> = ({
       count: null
     }
   ];
-
-  const { user, userProfile } = useAuth();
 
   // Verificar se há application_fee ou scholarship_fee pagos nas applications
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
