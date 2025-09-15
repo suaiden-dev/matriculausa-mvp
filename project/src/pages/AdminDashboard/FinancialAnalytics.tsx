@@ -385,6 +385,11 @@ const FinancialAnalytics: React.FC = () => {
 
       if (!student || !scholarship || !university) return;
 
+      // Pular aplicações da "Current Students Scholarship" pois foram matriculadas diretamente
+      if (scholarship.title === 'Current Students Scholarship') {
+        return;
+      }
+
       const universityKey = university.id;
       if (!universityRevenue[universityKey]) {
         universityRevenue[universityKey] = {
@@ -535,6 +540,11 @@ const FinancialAnalytics: React.FC = () => {
 
     // Applications -> receita por flags pagas
     applications.forEach((app: any) => {
+      // Pular aplicações da "Current Students Scholarship" pois foram matriculadas diretamente
+      if (app.scholarships?.title === 'Current Students Scholarship') {
+        return;
+      }
+
       const createdAt = new Date(app.created_at || app.user_profiles?.created_at || app.updated_at || Date.now());
       const key = createdAt.toISOString().split('T')[0];
       
@@ -624,6 +634,11 @@ const FinancialAnalytics: React.FC = () => {
     let previousPaidPayments = 0;
 
     applicationsPrev.forEach((app: any) => {
+      // Pular aplicações da "Current Students Scholarship" pois foram matriculadas diretamente
+      if (app.scholarships?.title === 'Current Students Scholarship') {
+        return;
+      }
+
       const applicationFee = Number(app.scholarships?.application_fee_amount ?? app.application_fee_amount ?? 350);
       const scholarshipFee = Number(app.scholarships?.scholarship_fee_amount ?? app.scholarship_fee_amount ?? 400);
       if (app.user_profiles?.has_paid_selection_process_fee) previousPeriodRevenue += 999, previousPaidPayments += 1;
