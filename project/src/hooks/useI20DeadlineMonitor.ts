@@ -23,6 +23,7 @@ export const useI20DeadlineMonitor = ({
       console.log('🔍 [I20_DEADLINE_MONITOR] Verificando deadlines do I-20...');
       
       // Buscar estudantes que receberam carta de aceite mas não pagaram I-20 Control Fee
+      // CORREÇÃO: Usar scholarship_applications para dados da carta de aceite e user_profiles para dados do I-20
       const { data: studentsWithDeadline, error } = await supabase
         .from('scholarship_applications')
         .select(`
@@ -30,11 +31,13 @@ export const useI20DeadlineMonitor = ({
           student_id,
           acceptance_letter_sent_at,
           acceptance_letter_status,
-          i20_control_fee_due_date,
-          has_paid_i20_control_fee,
           user_profiles!student_id (
+            id,
+            user_id,
             full_name,
-            email
+            email,
+            i20_control_fee_due_date,
+            has_paid_i20_control_fee
           ),
           scholarships (
             id,
@@ -43,7 +46,7 @@ export const useI20DeadlineMonitor = ({
         `)
         .not('acceptance_letter_sent_at', 'is', null)
         .in('acceptance_letter_status', ['sent', 'approved'])
-        .eq('has_paid_i20_control_fee', false);
+        .eq('user_profiles.has_paid_i20_control_fee', false);
 
       if (error) {
         console.error('❌ [I20_DEADLINE_MONITOR] Erro ao buscar estudantes:', error);
@@ -58,7 +61,13 @@ export const useI20DeadlineMonitor = ({
       const now = new Date();
       const expiredStudents = [];
 
-      for (const student of studentsWithDeadline) {
+      for (const application of studentsWithDeadline) {
+        // Verificar se a aplicação tem dados do usuário
+        const student = Array.isArray(application.user_profiles) 
+          ? application.user_profiles[0] 
+          : application.user_profiles;
+        if (!student) continue;
+        
         // Calcular deadline (10 dias após o envio da carta de aceite)
         let deadline: Date;
         
@@ -67,18 +76,20 @@ export const useI20DeadlineMonitor = ({
           deadline = new Date(student.i20_control_fee_due_date);
         } else {
           // Calcular deadline baseado na data de envio da carta de aceite + 10 dias
-          const acceptanceDate = new Date(student.acceptance_letter_sent_at);
+          const acceptanceDate = new Date(application.acceptance_letter_sent_at);
           deadline = new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000);
         }
         
         // Verificar se o deadline expirou
         if (now > deadline) {
-          const studentKey = `${student.student_id}_${student.id}`;
+          const studentKey = `${student.user_id}_${application.id}`;
           
           // Verificar se já processamos este estudante
           if (!processedStudentsRef.current.has(studentKey)) {
             expiredStudents.push({
-              ...student,
+              ...application,
+              student_id: student.user_id, // Mapear user_id para student_id
+              user_profiles: student, // Manter dados do usuário
               deadline,
               daysOverdue: Math.floor((now.getTime() - deadline.getTime()) / (1000 * 60 * 60 * 24))
             });
@@ -95,27 +106,21 @@ export const useI20DeadlineMonitor = ({
         // Buscar informações do seller para cada estudante
         for (const student of expiredStudents) {
           try {
-            // Buscar seller que indicou este estudante
+            // Buscar seller que indicou este estudante usando query SQL direta
             const { data: sellerData, error: sellerError } = await supabase
-              .from('user_profiles')
-              .select(`
-                seller_referral_code,
-                sellers!seller_referral_code (
-                  name,
-                  user_id,
-                  affiliate_admin_id
-                )
-              `)
-              .eq('user_id', student.student_id)
-              .single();
+              .rpc('get_seller_info_for_student', { 
+                student_user_id: student.student_id 
+              });
 
-            if (sellerError || !sellerData?.sellers) {
+            if (sellerError || !sellerData || sellerData.length === 0) {
               console.warn(`⚠️ [I20_DEADLINE_MONITOR] Não foi possível encontrar seller para estudante ${student.student_id}`);
               continue;
             }
 
+            const seller = sellerData[0];
+            
             // Verificar se o seller pertence ao affiliate admin atual
-            if (sellerData.sellers.affiliate_admin_id !== affiliateAdminId) {
+            if (seller.affiliate_admin_id !== affiliateAdminId) {
               console.log(`🔍 [I20_DEADLINE_MONITOR] Estudante ${student.student_id} não pertence ao affiliate admin ${affiliateAdminId}`);
               continue;
             }
@@ -124,7 +129,7 @@ export const useI20DeadlineMonitor = ({
             await createI20DeadlineExpiredNotification(
               student.student_id,
               student.user_profiles?.full_name || 'Unknown Student',
-              sellerData.sellers.name || 'Unknown Seller'
+              seller.name || 'Unknown Seller'
             );
 
             console.log(`✅ [I20_DEADLINE_MONITOR] Notificação criada para estudante ${student.user_profiles?.full_name} (${student.daysOverdue} dias em atraso)`);

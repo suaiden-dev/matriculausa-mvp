@@ -1414,26 +1414,24 @@ const PaymentManagement = (): React.JSX.Element => {
     try {
       setLoading(true);
       console.log('🔍 Loading payment data...');
+      console.log('🚨 DEBUG: loadPaymentData function called');
+      console.log('🚨 DEBUG: Starting payment data load process');
 
-      // Primeiro vamos verificar se há aplicações
-      const { data: simpleApps } = await supabase
-        .from('scholarship_applications')
-        .select('*');
-
-      console.log('📊 Applications found:', simpleApps?.length || 0);
-
-      // Agora vamos tentar a consulta completa
+      // Buscar aplicações de bolsa
       const { data: applications, error: appsError } = await supabase
         .from('scholarship_applications')
         .select(`
           *,
           user_profiles!student_id (
             id,
+            user_id,
             full_name,
             email,
             has_paid_selection_process_fee,
             is_application_fee_paid,
-            is_scholarship_fee_paid
+            is_scholarship_fee_paid,
+            has_paid_i20_control_fee,
+            scholarship_package_id
           ),
           scholarships (
             id,
@@ -1448,19 +1446,154 @@ const PaymentManagement = (): React.JSX.Element => {
 
       if (appsError) throw appsError;
 
-      // Converter aplicações em registros de pagamento
+      // Buscar pagamentos Zelle aprovados (incluindo usuários sem aplicação)
+      const { data: zellePaymentsRaw, error: zelleError } = await supabase
+        .from('zelle_payments')
+        .select('*')
+        .eq('status', 'approved');
+
+      if (zelleError) {
+        console.error('Error loading Zelle payments:', zelleError);
+      }
+
+      // Buscar dados dos usuários dos pagamentos Zelle
+      let zellePayments: any[] = [];
+      if (zellePaymentsRaw && zellePaymentsRaw.length > 0) {
+        const userIds = zellePaymentsRaw.map(p => p.user_id);
+        const { data: userProfiles, error: usersError } = await supabase
+          .from('user_profiles')
+          .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, scholarship_package_id')
+          .in('user_id', userIds);
+
+        if (usersError) {
+          console.error('Error loading user profiles for Zelle payments:', usersError);
+        } else {
+          // Combinar dados dos pagamentos Zelle com os perfis dos usuários
+          zellePayments = zellePaymentsRaw.map(payment => ({
+            ...payment,
+            user_profiles: userProfiles?.find(profile => profile.user_id === payment.user_id)
+          }));
+        }
+      }
+
+      // Buscar usuários que pagaram via Stripe mas não têm aplicação
+      let stripeUsers: any[] = [];
+      const { data: stripeUsersRaw, error: stripeError } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          full_name,
+          email,
+          has_paid_selection_process_fee,
+          is_application_fee_paid,
+          is_scholarship_fee_paid,
+          has_paid_i20_control_fee,
+          scholarship_package_id,
+          created_at
+        `)
+        .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true');
+
+      if (stripeError) {
+        console.error('Error loading Stripe users:', stripeError);
+      } else if (stripeUsersRaw && stripeUsersRaw.length > 0) {
+        // Filtrar apenas usuários que NÃO têm aplicação
+        const applicationUserIds = applications?.map(app => app.user_profiles?.user_id).filter(Boolean) || [];
+        stripeUsers = stripeUsersRaw.filter(user => !applicationUserIds.includes(user.user_id));
+        console.log('💳 Stripe users found:', stripeUsers.length);
+      }
+
+      console.log('📊 Applications found:', applications?.length || 0);
+      console.log('💰 Zelle payments found:', zellePayments?.length || 0);
+      console.log('💳 Stripe users found:', stripeUsers?.length || 0);
+      console.log('🔍 DEBUG: Zelle payments data:', zellePayments);
+      if (zellePayments && zellePayments.length > 0) {
+        console.log('🔍 DEBUG: First Zelle payment:', zellePayments[0]);
+        console.log('🔍 DEBUG: First Zelle payment user_profiles:', zellePayments[0].user_profiles);
+      }
+      if (stripeUsers && stripeUsers.length > 0) {
+        console.log('🔍 DEBUG: First Stripe user:', stripeUsers[0]);
+      }
+
+      console.log('🚨 DEBUG: Applications loaded successfully:', applications?.length || 0);
+      console.log('🚨 DEBUG: First application:', applications?.[0]);
+      
+      // Buscar dados dos pacotes separadamente (aplicações, pagamentos Zelle e usuários Stripe)
+      const allPackageIds = [
+        ...(applications?.map(app => app.user_profiles?.scholarship_package_id).filter(Boolean) || []),
+        ...(zellePayments?.map(payment => payment.user_profiles?.scholarship_package_id).filter(Boolean) || []),
+        ...(stripeUsers?.map(user => user.scholarship_package_id).filter(Boolean) || [])
+      ];
+      const uniquePackageIds = [...new Set(allPackageIds)];
+      console.log('🚨 DEBUG: Package IDs found:', uniquePackageIds);
+      
+      let packageDataMap: { [key: string]: any } = {};
+      if (uniquePackageIds.length > 0) {
+        const { data: packages, error: packagesError } = await supabase
+          .from('scholarship_packages')
+          .select('id, name, selection_process_fee, i20_control_fee, scholarship_fee')
+          .in('id', uniquePackageIds);
+        
+        if (packagesError) {
+          console.error('Error loading packages:', packagesError);
+        } else {
+          console.log('🚨 DEBUG: Packages loaded:', packages);
+          packageDataMap = packages?.reduce((acc: { [key: string]: any }, pkg: any) => {
+            acc[pkg.id] = pkg;
+            return acc;
+          }, {}) || {};
+        }
+      }
+      console.log('🚨 DEBUG: First application user_profiles:', applications?.[0]?.user_profiles);
+      console.log('🚨 DEBUG: First application scholarship_packages:', applications?.[0]?.user_profiles?.scholarship_packages);
+      
+      // Debug específico para verificar se os dados dinâmicos estão sendo carregados
+      if (applications && applications.length > 0) {
+        const firstApp = applications[0];
+        if (firstApp.user_profiles?.scholarship_packages) {
+          console.log('🚨 DEBUG: Package data found:', firstApp.user_profiles.scholarship_packages);
+          console.log('🚨 DEBUG: Selection process fee:', firstApp.user_profiles.scholarship_packages.selection_process_fee);
+          console.log('🚨 DEBUG: I20 control fee:', firstApp.user_profiles.scholarship_packages.i20_control_fee);
+          console.log('🚨 DEBUG: Scholarship fee:', firstApp.user_profiles.scholarship_packages.scholarship_fee);
+        } else {
+          console.log('🚨 DEBUG: No package data found for first app');
+        }
+      }
+      
+      // Debug específico para verificar se os dados estão sendo carregados
+      if (applications && applications.length > 0) {
+        const firstApp = applications[0];
+        console.log('🚨 DEBUG: First app user_profiles:', firstApp.user_profiles);
+        console.log('🚨 DEBUG: First app scholarship_packages:', firstApp.user_profiles?.scholarship_packages);
+        
+        // Debug específico para verificar se os dados dinâmicos estão sendo carregados
+        if (firstApp.user_profiles?.scholarship_packages) {
+          console.log('🚨 DEBUG: Package data found:', firstApp.user_profiles.scholarship_packages);
+          console.log('🚨 DEBUG: Selection process fee:', firstApp.user_profiles.scholarship_packages.selection_process_fee);
+          console.log('🚨 DEBUG: I20 control fee:', firstApp.user_profiles.scholarship_packages.i20_control_fee);
+          console.log('🚨 DEBUG: Scholarship fee:', firstApp.user_profiles.scholarship_packages.scholarship_fee);
+        } else {
+          console.log('🚨 DEBUG: No package data found for first app');
+        }
+      }
+
+      // Converter aplicações e pagamentos Zelle em registros de pagamento
       const paymentRecords: PaymentRecord[] = [];
       
       console.log('🔄 Processing applications:', applications?.length || 0);
+      console.log('🔄 Processing Zelle payments:', zellePayments?.length || 0);
       
+      // Processar aplicações de bolsa
       applications?.forEach((app: any) => {
         const student = app.user_profiles;
         const scholarship = app.scholarships;
         const university = scholarship?.universities;
+        const packageData = packageDataMap[student?.scholarship_package_id];
 
         // console.log('👤 Student:', student);
         // console.log('🎓 Scholarship:', scholarship);
         // console.log('🏫 University:', university);
+        // console.log('📦 Package:', packageData);
 
         if (!student || !scholarship || !university) {
           console.log('⚠️ Skipping application due to missing data:', {
@@ -1486,7 +1619,36 @@ const PaymentManagement = (): React.JSX.Element => {
           return;
         }
 
+        // Obter valores dinâmicos do pacote ou usar valores padrão
+        const selectionProcessFee = packageData?.selection_process_fee ? 
+          Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+        const i20ControlFee = packageData?.i20_control_fee ? 
+          Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+        const scholarshipFee = packageData?.scholarship_fee ? 
+          Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
+        const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+
+        // Debug específico para verificar os valores calculados
+        console.log('🚨 DEBUG: Student:', studentName, 'Package data:', packageData);
+        console.log('🚨 DEBUG: Calculated fees:', {
+          selectionProcessFee: selectionProcessFee / 100,
+          i20ControlFee: i20ControlFee / 100,
+          scholarshipFee: scholarshipFee / 100,
+          applicationFee: applicationFee / 100
+        });
+        
+        // Debug específico para verificar se os valores dinâmicos estão sendo aplicados
+        if (packageData) {
+          console.log('🚨 DEBUG: Using dynamic values from package');
+        } else {
+          console.log('🚨 DEBUG: Using hardcoded values (no package data)');
+        }
+        
+        // Debug para verificar se os valores estão sendo aplicados corretamente
+        console.log('🚨 DEBUG: About to create payment records for:', studentName);
+        
         // Selection Process Fee
+        console.log('🚨 DEBUG: Creating selection process fee record with amount:', selectionProcessFee / 100);
         paymentRecords.push({
           id: `${app.id}-selection`,
           student_id: student.id,
@@ -1497,7 +1659,7 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'selection_process',
-          amount: 99900, // $999.00 em centavos
+          amount: selectionProcessFee,
           status: student.has_paid_selection_process_fee ? 'paid' : 'pending',
           payment_date: student.has_paid_selection_process_fee ? app.created_at : undefined,
           created_at: app.created_at
@@ -1514,7 +1676,7 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'application',
-          amount: 350, // $350.00
+          amount: applicationFee,
           status: student.is_application_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_application_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
@@ -1531,13 +1693,13 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'scholarship',
-          amount: 40000, // $400.00 em centavos
+          amount: scholarshipFee,
           status: student.is_scholarship_fee_paid ? 'paid' : 'pending',
           payment_date: student.is_scholarship_fee_paid ? app.created_at : undefined,
           created_at: app.created_at
         });
 
-        // I-20 Control Fee (sempre pendente)
+        // I-20 Control Fee
         paymentRecords.push({
           id: `${app.id}-i20`,
           student_id: student.id,
@@ -1548,8 +1710,9 @@ const PaymentManagement = (): React.JSX.Element => {
           scholarship_id: scholarship.id,
           scholarship_title: scholarshipTitle,
           fee_type: 'i20_control_fee',
-          amount: 99900, // $999.00 em centavos
-          status: 'pending',
+          amount: i20ControlFee,
+          status: student.has_paid_i20_control_fee ? 'paid' : 'pending',
+          payment_date: student.has_paid_i20_control_fee ? app.created_at : undefined,
           created_at: app.created_at
         });
       });
@@ -1559,6 +1722,237 @@ const PaymentManagement = (): React.JSX.Element => {
         console.log('✅ Payment data loaded successfully with null safety checks');
       }
 
+      // Processar pagamentos Zelle (apenas para usuários sem aplicação)
+      zellePayments?.forEach((zellePayment: any) => {
+        const student = zellePayment.user_profiles;
+        const packageData = packageDataMap[student?.scholarship_package_id];
+
+        if (!student) {
+          console.log('⚠️ Skipping Zelle payment due to missing student data');
+          return;
+        }
+
+        const studentName = student.full_name || 'Unknown Student';
+        const studentEmail = student.email || '';
+
+        if (!studentName) {
+          console.log('⚠️ Skipping Zelle payment due to missing student name');
+          return;
+        }
+
+        // Verificar se o usuário já tem uma aplicação (para evitar duplicação)
+        const hasApplication = applications?.some(app => 
+          app.user_profiles?.user_id === student.user_id
+        );
+
+        if (hasApplication) {
+          console.log('⚠️ Skipping Zelle payment for', studentName, '- user already has application');
+          return;
+        }
+
+        // Obter valores dinâmicos do pacote ou usar valores padrão
+        const i20ControlFee = packageData?.i20_control_fee ? 
+          Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+        const scholarshipFee = packageData?.scholarship_fee ? 
+          Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
+        const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+
+        console.log('💰 Processing Zelle payment for:', studentName, 'Fee type:', zellePayment.fee_type_global);
+
+        // Criar registros de pagamento baseados no tipo de taxa paga via Zelle
+        if (zellePayment.fee_type_global === 'selection_process') {
+          paymentRecords.push({
+            id: `zelle-${zellePayment.id}-selection`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000', // Placeholder para usuários sem aplicação
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000', // Placeholder
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'selection_process',
+            amount: Math.round(parseFloat(zellePayment.amount) * 100), // Converter para centavos
+            status: 'paid',
+            payment_date: zellePayment.admin_approved_at || zellePayment.created_at,
+            created_at: zellePayment.created_at,
+            payment_proof_url: zellePayment.screenshot_url,
+            admin_notes: zellePayment.admin_notes,
+            zelle_status: 'approved',
+            reviewed_by: zellePayment.admin_approved_by,
+            reviewed_at: zellePayment.admin_approved_at
+          });
+        }
+
+        // Adicionar outras taxas como pending se não foram pagas via Zelle
+        if (zellePayment.fee_type_global !== 'application') {
+          paymentRecords.push({
+            id: `zelle-${zellePayment.id}-application`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'application',
+            amount: applicationFee,
+            status: student.is_application_fee_paid ? 'paid' : 'pending',
+            payment_date: student.is_application_fee_paid ? zellePayment.created_at : undefined,
+            created_at: zellePayment.created_at
+          });
+        }
+
+        if (zellePayment.fee_type_global !== 'scholarship') {
+          paymentRecords.push({
+            id: `zelle-${zellePayment.id}-scholarship`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'scholarship',
+            amount: scholarshipFee,
+            status: student.is_scholarship_fee_paid ? 'paid' : 'pending',
+            payment_date: student.is_scholarship_fee_paid ? zellePayment.created_at : undefined,
+            created_at: zellePayment.created_at
+          });
+        }
+
+        if (zellePayment.fee_type_global !== 'i20_control_fee') {
+          paymentRecords.push({
+            id: `zelle-${zellePayment.id}-i20`,
+            student_id: student.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'i20_control_fee',
+            amount: i20ControlFee,
+            status: student.has_paid_i20_control_fee ? 'paid' : 'pending',
+            payment_date: student.has_paid_i20_control_fee ? zellePayment.created_at : undefined,
+            created_at: zellePayment.created_at
+          });
+        }
+      });
+
+      // Processar usuários Stripe (apenas para usuários sem aplicação)
+      console.log('🔄 Processing Stripe users:', stripeUsers?.length || 0);
+      stripeUsers?.forEach((stripeUser: any) => {
+        const packageData = packageDataMap[stripeUser.scholarship_package_id];
+
+        if (!stripeUser) {
+          console.log('⚠️ Skipping Stripe user due to missing data');
+          return;
+        }
+
+        const studentName = stripeUser.full_name || 'Unknown Student';
+        const studentEmail = stripeUser.email || '';
+
+        if (!studentName) {
+          console.log('⚠️ Skipping Stripe user due to missing student name');
+          return;
+        }
+
+        // Verificar se o usuário já tem uma aplicação (para evitar duplicação)
+        const hasApplication = applications?.some(app => 
+          app.user_profiles?.user_id === stripeUser.user_id
+        );
+
+        if (hasApplication) {
+          console.log('⚠️ Skipping Stripe user for', studentName, '- user already has application');
+          return;
+        }
+
+        // Obter valores dinâmicos do pacote ou usar valores padrão
+        const selectionProcessFee = packageData?.selection_process_fee ? 
+          Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+        const i20ControlFee = packageData?.i20_control_fee ? 
+          Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+        const scholarshipFee = packageData?.scholarship_fee ? 
+          Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
+        const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+
+        console.log('💳 Processing Stripe user for:', studentName);
+
+        // Selection Process Fee
+        if (stripeUser.has_paid_selection_process_fee) {
+          paymentRecords.push({
+            id: `stripe-${stripeUser.user_id}-selection`,
+            student_id: stripeUser.id,
+            student_name: studentName,
+            student_email: studentEmail,
+            university_id: '00000000-0000-0000-0000-000000000000',
+            university_name: 'No University Selected',
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
+            scholarship_title: 'No Scholarship Selected',
+            fee_type: 'selection_process',
+            amount: selectionProcessFee,
+            status: 'paid',
+            payment_date: stripeUser.created_at,
+            created_at: stripeUser.created_at,
+            payment_method: 'stripe'
+          });
+        }
+
+        // Application Fee
+        paymentRecords.push({
+          id: `stripe-${stripeUser.user_id}-application`,
+          student_id: stripeUser.id,
+          student_name: studentName,
+          student_email: studentEmail,
+          university_id: '00000000-0000-0000-0000-000000000000',
+          university_name: 'No University Selected',
+          scholarship_id: '00000000-0000-0000-0000-000000000000',
+          scholarship_title: 'No Scholarship Selected',
+          fee_type: 'application',
+          amount: applicationFee,
+          status: stripeUser.is_application_fee_paid ? 'paid' : 'pending',
+          payment_date: stripeUser.is_application_fee_paid ? stripeUser.created_at : undefined,
+          created_at: stripeUser.created_at,
+          payment_method: 'stripe'
+        });
+
+        // Scholarship Fee
+        paymentRecords.push({
+          id: `stripe-${stripeUser.user_id}-scholarship`,
+          student_id: stripeUser.id,
+          student_name: studentName,
+          student_email: studentEmail,
+          university_id: '00000000-0000-0000-0000-000000000000',
+          university_name: 'No University Selected',
+          scholarship_id: '00000000-0000-0000-0000-000000000000',
+          scholarship_title: 'No Scholarship Selected',
+          fee_type: 'scholarship',
+          amount: scholarshipFee,
+          status: stripeUser.is_scholarship_fee_paid ? 'paid' : 'pending',
+          payment_date: stripeUser.is_scholarship_fee_paid ? stripeUser.created_at : undefined,
+          created_at: stripeUser.created_at,
+          payment_method: 'stripe'
+        });
+
+        // I-20 Control Fee
+        paymentRecords.push({
+          id: `stripe-${stripeUser.user_id}-i20`,
+          student_id: stripeUser.id,
+          student_name: studentName,
+          student_email: studentEmail,
+          university_id: '00000000-0000-0000-0000-000000000000',
+          university_name: 'No University Selected',
+          scholarship_id: '00000000-0000-0000-0000-000000000000',
+          scholarship_title: 'No Scholarship Selected',
+          fee_type: 'i20_control_fee',
+          amount: i20ControlFee,
+          status: stripeUser.has_paid_i20_control_fee ? 'paid' : 'pending',
+          payment_date: stripeUser.has_paid_i20_control_fee ? stripeUser.created_at : undefined,
+          created_at: stripeUser.created_at,
+          payment_method: 'stripe'
+        });
+      });
+
       // Se não há dados reais, vamos criar alguns dados de exemplo para testar
       setPayments(paymentRecords);
 
@@ -1566,9 +1960,26 @@ const PaymentManagement = (): React.JSX.Element => {
       const totalPayments = paymentRecords.length;
       const paidPayments = paymentRecords.filter(p => p.status === 'paid').length;
       const pendingPayments = paymentRecords.filter(p => p.status === 'pending').length;
-      const totalRevenue = paymentRecords
-        .filter(p => p.status === 'paid')
-        .reduce((sum, p) => sum + p.amount, 0);
+      
+        // Debug: Mostrar pagamentos pagos
+        const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+        console.log('🚨 DEBUG: Paid records count:', paidRecords.length);
+        console.log('🚨 DEBUG: Paid records details:', paidRecords.map(p => ({
+          student: p.student_name,
+          feeType: p.fee_type,
+          amount: p.amount,
+          amountDollars: p.amount / 100
+        })));
+        
+        // Debug detalhado dos 5 pagamentos pagos
+        console.log('🔍 DEBUG: Detailed paid records:');
+        paidRecords.forEach((record, index) => {
+          console.log(`  ${index + 1}. ${record.student_name} - ${record.fee_type}: $${(record.amount / 100).toFixed(2)}`);
+        });
+      
+      const totalRevenue = paidRecords.reduce((sum, p) => sum + p.amount, 0);
+      console.log('🚨 DEBUG: Total revenue (cents):', totalRevenue);
+      console.log('🚨 DEBUG: Total revenue (dollars):', totalRevenue / 100);
 
       const newStats = {
         totalRevenue,
