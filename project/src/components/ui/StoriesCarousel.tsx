@@ -13,13 +13,15 @@ interface StoriesCarouselProps {
   autoPlay?: boolean;
   autoPlayInterval?: number;
   className?: string;
+  onImageClick?: (imageUrl: string) => void;
 }
 
 const StoriesCarousel: React.FC<StoriesCarouselProps> = ({
   stories,
   autoPlay = true,
   autoPlayInterval = 4000,
-  className = ""
+  className = "",
+  onImageClick
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -59,8 +61,9 @@ const StoriesCarousel: React.FC<StoriesCarouselProps> = ({
         <img
           src={stories[currentIndex].image}
           alt={stories[currentIndex].title}
-          className="max-h-full max-w-full object-contain bg-white p-4 rounded-2xl transition-transform duration-700 group-hover:scale-105 shadow-lg"
+          className="max-h-full max-w-full object-contain bg-white p-4 rounded-2xl transition-transform duration-700 group-hover:scale-105 shadow-lg cursor-zoom-in"
           style={{margin: 'auto'}}
+          onClick={() => onImageClick && onImageClick(stories[currentIndex].image)}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = "https://via.placeholder.com/600x400/05294E/ffffff?text=Image+Loading";
