@@ -530,28 +530,34 @@ export const useStudentDetails = () => {
         console.log('🔍 [AFFILIATE_DEBUG] Setting student details:', studentData);
         setStudentDetails(studentData);
 
-        // Buscar data limite do I-20 Control Fee (10 dias após o envio da carta de aceite)
+        // Calcular deadline do I-20 usando os dados que já vêm da função SQL
         try {
-          const { data: applicationData, error: applicationError } = await supabase
-            .from('scholarship_applications')
-            .select('acceptance_letter_sent_at, acceptance_letter_status, i20_control_fee_due_date')
-            .eq('student_id', profile_id)
-            .not('acceptance_letter_sent_at', 'is', null)
-            .in('acceptance_letter_status', ['sent', 'approved'])
-            .order('acceptance_letter_sent_at', { ascending: false })
-            .limit(1);
-          
-          if (!applicationError && applicationData && applicationData.length > 0) {
-            const application = applicationData[0];
+          console.log('🔍 [I20_DEADLINE] Calculating deadline from student data:', {
+            has_paid_i20_control_fee: studentData.has_paid_i20_control_fee,
+            acceptance_letter_sent_at: studentData.acceptance_letter_sent_at,
+            acceptance_letter_status: studentData.acceptance_letter_status,
+            i20_control_fee_due_date: studentData.i20_control_fee_due_date
+          });
+
+          // Se o I-20 já foi pago, não há deadline
+          if (studentData.has_paid_i20_control_fee) {
+            setI20ControlFeeDeadline(null);
+            console.log('🔍 [I20_DEADLINE] I-20 already paid, no deadline');
+            return;
+          }
+
+          // Se a carta de aceite foi enviada, devemos mostrar o deadline
+          if (studentData.acceptance_letter_sent_at && 
+              (studentData.acceptance_letter_status === 'sent' || studentData.acceptance_letter_status === 'approved')) {
             
             // Se já tem deadline específico do I-20, usar ele
-            if (application.i20_control_fee_due_date) {
-              const deadline = new Date(application.i20_control_fee_due_date);
+            if (studentData.i20_control_fee_due_date) {
+              const deadline = new Date(studentData.i20_control_fee_due_date);
               setI20ControlFeeDeadline(deadline);
               console.log('🔍 [I20_DEADLINE] Using specific I20 deadline:', deadline);
             } else {
               // Calcular deadline baseado na data de envio da carta de aceite + 10 dias
-              const acceptanceDate = new Date(application.acceptance_letter_sent_at);
+              const acceptanceDate = new Date(studentData.acceptance_letter_sent_at);
               const deadline = new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
               setI20ControlFeeDeadline(deadline);
               console.log('🔍 [I20_DEADLINE] Calculated deadline from acceptance letter:', deadline);
