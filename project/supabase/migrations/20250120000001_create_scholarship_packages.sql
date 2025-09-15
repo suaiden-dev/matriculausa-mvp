@@ -39,8 +39,8 @@ INSERT INTO scholarship_packages (
   scholarship_amount
 ) VALUES 
 (
-  'Pacote 1',
-  'Pacote com maior investimento inicial e menor valor de bolsa',
+  'Package 1',
+  'Package with highest initial investment and lowest scholarship value',
   1,
   1299.00,
   1299.00,
@@ -49,8 +49,8 @@ INSERT INTO scholarship_packages (
   3800.00
 ),
 (
-  'Pacote 2',
-  'Pacote com investimento médio-alto e bolsa intermediária',
+  'Package 2',
+  'Package with medium-high investment and intermediate scholarship',
   2,
   999.00,
   999.00,
@@ -59,8 +59,8 @@ INSERT INTO scholarship_packages (
   4200.00
 ),
 (
-  'Pacote 3',
-  'Pacote com investimento médio e bolsa intermediária',
+  'Package 3',
+  'Package with medium investment and intermediate scholarship',
   3,
   900.00,
   900.00,
@@ -69,8 +69,8 @@ INSERT INTO scholarship_packages (
   4500.00
 ),
 (
-  'Pacote 4',
-  'Pacote com investimento baixo-médio e bolsa alta',
+  'Package 4',
+  'Package with low-medium investment and high scholarship',
   4,
   700.00,
   700.00,
@@ -79,8 +79,8 @@ INSERT INTO scholarship_packages (
   5000.00
 ),
 (
-  'Pacote 5',
-  'Pacote com menor investimento inicial e maior valor de bolsa',
+  'Package 5',
+  'Package with lowest initial investment and highest scholarship value',
   5,
   500.00,
   500.00,

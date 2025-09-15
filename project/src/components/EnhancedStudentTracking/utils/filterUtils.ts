@@ -39,9 +39,9 @@ export const getFilteredAndSortedData = (
     }
     
     // Filtro por universidade - corrigido para tratar valores null
-    if (filters.universityFilter !== 'all' && student.university_id !== filters.universityFilter) {
-      // Se o filtro não é 'all' e o student.university_id é null, não filtrar
-      if (student.university_id !== null) {
+    if (filters.universityFilter !== 'all') {
+      // Se o filtro não é 'all' e o student.university_id é null/undefined, não filtrar
+      if (student.university_id !== null && student.university_id !== undefined && student.university_id !== filters.universityFilter) {
         console.log(`🔍 Student ${student.full_name} filtered out by university filter: ${student.university_id} !== ${filters.universityFilter}`);
         return false;
       }

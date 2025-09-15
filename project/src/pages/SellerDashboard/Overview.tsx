@@ -36,6 +36,13 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     }).format(amount);
   };
 
+  const handleViewAllStudents = () => {
+    // Usar o sistema de views interno em vez de navegação por URL
+    if (onNavigate) {
+      onNavigate('students');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
   };
@@ -194,7 +201,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                   Ranking of your top performing students by revenue
                 </p>
               </div>
-              <div className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center cursor-pointer">
+              <div 
+                onClick={handleViewAllStudents}
+                className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center cursor-pointer"
+              >
                 View All
                 <ArrowUpRight className="h-4 w-4 ml-1" />
               </div>

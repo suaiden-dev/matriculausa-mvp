@@ -94,12 +94,16 @@ const SellersList: React.FC<SellersListProps> = ({
     );
   }
 
+  console.log('🔍 SellersList - filteredSellers:', filteredSellers);
+  console.log('🔍 SellersList - filteredStudents:', filteredStudents);
+  
   return (
     <div className="space-y-4">
       {filteredSellers.map((seller) => {
         const sellerStudents = filteredStudents.filter((student: any) => 
           student.referred_by_seller_id === seller.id
         );
+        console.log(`🔍 SellersList - Seller ${seller.name} (${seller.id}) has ${sellerStudents.length} students:`, sellerStudents.map(s => s.full_name));
 
         return (
           <div key={seller.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

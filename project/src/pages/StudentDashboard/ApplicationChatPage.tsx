@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
@@ -34,7 +35,7 @@ const ApplicationChatPage: React.FC = () => {
   const { t } = useTranslation();
   const { applicationId } = useParams<{ applicationId: string }>();
   const { user, userProfile, refetchUserProfile } = useAuth();
-
+  const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
 
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
@@ -793,7 +794,7 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                   <h5 className="font-semibold text-blue-900 mb-2">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentInformation')}</h5>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.amountPaid')}</strong> $900</div>
+                    <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.amountPaid')}</strong> {formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
                     <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.paymentDate')}</strong> {paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
                     <div><strong>{t('studentDashboard.applicationChatPage.i20ControlFee.status')}</strong> <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t('studentDashboard.applicationChatPage.i20ControlFee.completed')}</span></div>
                   </div>

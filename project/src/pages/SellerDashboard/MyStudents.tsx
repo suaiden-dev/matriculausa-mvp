@@ -403,10 +403,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       total += packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
     }
     
-    if (student.is_application_fee_paid) {
-      // Application fee não tem valor dinâmico, sempre usa o valor padrão
-      total += getFeeAmount('application_fee');
-    }
+    // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
 
     return total;
   };
