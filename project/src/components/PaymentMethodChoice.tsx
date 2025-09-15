@@ -19,13 +19,14 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
 }) => {
   const { t } = useTranslation();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [processingSelection, setProcessingSelection] = useState(false);
 
   const paymentMethods = [
     {
       id: 'stripe',
       name: 'stripe',
-      display_name: 'Credit Card',
-      description: 'Pay securely with credit or debit card via Stripe',
+      display_name: t('paymentChoice.methods.stripe.title'),
+      description: t('paymentChoice.methods.stripe.description'),
       icon: CreditCard,
       is_active: true,
       requires_verification: false
@@ -33,34 +34,53 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
     {
       id: 'zelle',
       name: 'zelle',
-      display_name: 'Zelle',
-      description: 'Pay via Zelle transfer (requires manual verification)',
+      display_name: t('paymentChoice.methods.zelle.title'),
+      description: t('paymentChoice.methods.zelle.description'),
       icon: Smartphone,
       is_active: true,
       requires_verification: true
     }
   ];
 
-  const handleMethodSelect = (methodId: string) => {
+  const handleMethodSelect = async (methodId: string) => {
+    if (processingSelection) return;
+    
+    setProcessingSelection(true);
     setSelectedMethod(methodId);
     
-    if (methodId === 'stripe') {
-      onStripeSelected();
-    } else if (methodId === 'zelle') {
-      onZelleSelected();
+    try {
+      if (methodId === 'stripe') {
+        onStripeSelected();
+      } else if (methodId === 'zelle') {
+        onZelleSelected();
+      }
+    } catch (error) {
+      console.error('Error selecting payment method:', error);
+      setProcessingSelection(false);
     }
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Choose Payment Method
-        </h3>
-        <p className="text-sm text-gray-600">
-          Select how you would like to pay your {feeType.replace('_', ' ')} fee
-        </p>
-      </div>
+    <div className={`relative ${className}`}>
+      {/* Overlay de processamento quando selecionando método */}
+      {processingSelection && (
+        <div className="absolute inset-0 z-10 rounded-xl bg-white/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex items-center gap-3 text-blue-700">
+            <div className="h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-medium">{t('paymentChoice.loading.processing')}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {t('paymentChoice.title')}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {t('paymentChoice.subtitle', { feeType: t(`paymentChoice.feeTypes.${feeType}`) })}
+          </p>
+        </div>
 
       <div className="grid gap-4">
         {paymentMethods.map((method) => {
@@ -72,7 +92,7 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
                 selectedMethod === method.id
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              }`}
+              } ${processingSelection ? 'pointer-events-none opacity-60' : ''}`}
               onClick={() => handleMethodSelect(method.id)}
             >
               <div className="flex items-start space-x-3">
@@ -93,7 +113,7 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
                       </p>
                     </div>
                     
-                    {selectedMethod === method.id && (
+                    {selectedMethod === method.id && !processingSelection && (
                       <CheckCircle className="w-5 h-5 text-blue-600" />
                     )}
                   </div>
@@ -102,7 +122,7 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
                     <div className="mt-2 flex items-center space-x-1">
                       <AlertCircle className="w-4 h-4 text-amber-500" />
                       <span className="text-xs text-amber-700">
-                        Manual verification required
+                        {t('paymentChoice.manualVerification')}
                       </span>
                     </div>
                   )}
@@ -112,12 +132,12 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
               {selectedMethod === method.id && (
                 <div className="mt-3 pt-3 border-t border-blue-200">
                   <div className="text-sm text-gray-600">
-                    <span className="font-medium">Amount:</span> ${amount.toFixed(2)} USD
+                    <span className="font-medium">{t('paymentChoice.amount')}:</span> ${amount.toFixed(2)} USD
                   </div>
                   
                   {method.name === 'zelle' && (
                     <div className="mt-2 text-xs text-amber-700 bg-amber-50 p-2 rounded">
-                      <strong>Important:</strong> After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.
+                      <strong>{t('paymentChoice.important')}:</strong> {t('paymentChoice.zelleUploadNote')}
                     </div>
                   )}
                 </div>
@@ -125,6 +145,7 @@ export const PaymentMethodChoice: React.FC<PaymentMethodChoiceProps> = ({
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

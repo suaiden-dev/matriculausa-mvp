@@ -2273,6 +2273,35 @@
       "loadingRewardsStore": "Carregando Loja de Recompensas...",
       "errorLoadingRewardsStore": "Erro ao carregar Loja de Recompensas",
       "tryAgain": "Tentar Novamente"
+    },
+    "paymentSelector": {
+      "title": "Escolha o Método de Pagamento",
+      "subtitle": "Selecione como você deseja pagar a taxa de {{feeType}}",
+      "manualVerification": "Verificação manual necessária",
+      "important": "Importante:",
+      "zelleUploadNote": "Após realizar o pagamento via Zelle, será necessário enviar um print da confirmação mostrando o código, data, valor e destinatário.",
+    "loading": {
+      "message": "Carregando métodos de pagamento...",
+      "processing": "Processando..."
+    },
+      "feeTypes": {
+        "selection_process": "processo seletivo",
+        "application_fee": "candidatura",
+        "enrollment_fee": "matrícula",
+        "scholarship_fee": "bolsa",
+        "i20_control_fee": "controle do I-20"
+      },
+      "methods": {
+        "stripe": {
+          "title": "Stripe",
+          "description": "Pague com segurança com cartão de crédito ou débito via Stripe"
+        },
+        "zelle": {
+          "title": "Zelle",
+          "description": "Pague via transferência Zelle",
+          "descriptionDetailed": "Pague via Zelle e envie o comprovante. Verificação manual necessária."
+        }
+      }
     }
   },
   "preCheckoutModal": {
@@ -2828,5 +2857,78 @@
         }
       ]
     }
+  },
+  "paymentChoice": {
+    "title": "Escolha o Método de Pagamento",
+    "subtitle": "Selecione como você deseja pagar a taxa de {{feeType}}",
+    "manualVerification": "Verificação manual necessária",
+    "important": "Importante",
+    "amount": "Valor",
+    "zelleUploadNote": "Após realizar o pagamento via Zelle, será necessário enviar um print da confirmação mostrando o código, data, valor e destinatário.",
+    "loading": {
+      "processing": "Processando..."
+    },
+    "feeTypes": {
+      "application_fee": "candidatura",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "bolsa",
+      "selection_process": "processo seletivo"
+    },
+    "methods": {
+      "stripe": {
+        "title": "Cartão de Crédito",
+        "description": "Pague com segurança com cartão de crédito ou débito via Stripe"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pague via transferência Zelle (requer verificação manual)"
+      }
+    }
+  },
+  "scholarshipConfirmationModal": {
+    "applicationFee": {
+      "title": "Confirme sua Seleção de Bolsa",
+      "subtitle": "Escolha o método de pagamento e garanta sua bolsa",
+      "feeLabel": "Taxa de Candidatura:",
+      "feeDescription": "Taxa para garantir sua vaga aprovada",
+      "buttonText": "Sim, Garantir Minha Bolsa (${{amount}})",
+      "warningText": "Ao prosseguir com este pagamento, você confirma esta como sua escolha final de bolsa. Esta ação não pode ser desfeita."
+    },
+    "scholarshipFee": {
+      "title": "Pagamento da Taxa da Bolsa",
+      "subtitle": "Escolha o método de pagamento para concluir sua matrícula",
+      "feeLabel": "Taxa da Bolsa:",
+      "feeDescription": "Taxa final para concluir sua matrícula na bolsa",
+      "buttonText": "Pagar Taxa da Bolsa (${{amount}})",
+      "warningText": "Ao prosseguir com este pagamento, você está concluindo sua matrícula."
+    },
+    "labels": {
+      "selectedScholarship": "Bolsa Selecionada",
+      "scholarship": "Bolsa",
+      "university": "Universidade",
+      "choosePaymentMethod": "Escolha o Método de Pagamento",
+      "importantDecision": "Decisão Importante",
+      "thinkAboutIt": "Vou pensar melhor"
+    },
+    "payment": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Pague com cartão de crédito ou débito com segurança"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pague via transferência Zelle",
+        "descriptionDetailed": "Pague via Zelle (requer verificação manual)"
+      }
+    },
+    "loading": {
+      "processing": "Processando pagamento...",
+      "redirecting": "Aguarde, estamos redirecionando para o checkout"
+    }
+  },
+  "common": {
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "processing": "Processando..."
   }
 }
