@@ -221,8 +221,11 @@ const Scholarships: React.FC = () => {
 
   const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
 
-  // Verificar se deve aplicar blur (usuário não logado)
-  const shouldApplyBlur = !isAuthenticated;
+  // Regras de visibilidade (replicadas do ScholarshipBrowser)
+  const canViewSensitive = isAuthenticated
+    ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
+    : false;
+  const shouldApplyBlur = !canViewSensitive;
 
   // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
   useEffect(() => {
@@ -573,13 +576,11 @@ const Scholarships: React.FC = () => {
 
                     {/* Scholarship Image */}
                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center ">
-                      {scholarship.image_url && (user?.role !== 'student' || (isAuthenticated && userProfile?.has_paid_selection_process_fee)) ? (
+                      {scholarship.image_url && canViewSensitive ? (
                         <img
                           src={scholarship.image_url}
                           alt={scholarship.title}
-                          className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 ${
-                            !isAuthenticated ? 'blur-lg' : ''
-                          }`}
+                          className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700`}
                         />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
@@ -606,16 +607,12 @@ const Scholarships: React.FC = () => {
                     <div className="p-6 flex-1 flex flex-col">
                       {/* Header Section */}
                       <div className="mb-4 flex-1">
-                        <h3 id={`featured-scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300 ${
-                          !isAuthenticated ? 'blur-sm' : ''
-                        }`}>
+                        <h3 id={`featured-scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
                           {scholarship.title}
                         </h3>
                         
                         {/* Field and Level Badges */}
-                        <div className={`flex flex-wrap items-center gap-2 mb-3 ${
-                          !isAuthenticated ? 'blur-sm' : ''
-                        }`}>
+                        <div className={`flex flex-wrap items-center gap-2 mb-3`}>
                           <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
                             <GraduationCap className="h-3 w-3 flex-shrink-0" />
                             <span className="hidden sm:inline">{scholarship.field_of_study || t('scholarshipsPage.filters.anyField')}</span>
@@ -629,15 +626,13 @@ const Scholarships: React.FC = () => {
                         </div>
                         
                         {/* University Info */}
-                        <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 ${
-                          !isAuthenticated ? 'blur-sm' : ''
-                        }`}>
+                        <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                           <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                          <span className={`text-sm font-medium ${user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee) ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                            {user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee)
-                              ? '********'
-                              : (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')}
+                          <span className={`text-sm font-medium ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                            {canViewSensitive
+                              ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
+                              : '********'}
                           </span>
                         </div>
                         
@@ -887,9 +882,7 @@ const Scholarships: React.FC = () => {
                          <img
                            src={scholarship.image_url}
                            alt={scholarship.title}
-                           className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 ${
-                             !isAuthenticated ? 'blur-lg' : ''
-                           }`}
+                           className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700`}
                          />
                        ) : (
                          <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
@@ -924,16 +917,12 @@ const Scholarships: React.FC = () => {
                      <div className="p-6 flex-1 flex flex-col">
                        {/* Header Section */}
                        <div className="mb-4 flex-1">
-                         <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300 ${
-                           !isAuthenticated ? 'blur-sm' : ''
-                         }`}>
+                         <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
                            {scholarship.title}
                          </h3>
                          
                          {/* Field and Level Badges */}
-                         <div className={`flex flex-wrap items-center gap-2 mb-3 ${
-                           !isAuthenticated ? 'blur-sm' : ''
-                         }`}>
+                         <div className={`flex flex-wrap items-center gap-2 mb-3`}>
                            <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
                              <GraduationCap className="h-3 w-3 flex-shrink-0" />
                              <span className="hidden sm:inline">{scholarship.field_of_study || 'Any Field'}</span>
@@ -947,15 +936,13 @@ const Scholarships: React.FC = () => {
                          </div>
                          
                          {/* University Info */}
-                         <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 ${
-                           !isAuthenticated ? 'blur-sm' : ''
-                         }`}>
+                         <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
                            <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
                            <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                           <span className={`text-sm font-medium ${user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee) ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                             {user?.role === 'student' && (!isAuthenticated || !userProfile?.has_paid_selection_process_fee)
-                               ? '********'
-                               : (scholarship.university_name || scholarship.universities?.name || 'Unknown University')}
+                           <span className={`text-sm font-medium ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                             {canViewSensitive
+                               ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
+                               : '********'}
                            </span>
                          </div>
                          {/* Program Details */}
@@ -1180,7 +1167,8 @@ const Scholarships: React.FC = () => {
         isOpen={isModalOpen}
         onClose={closeScholarshipModal}
         userProfile={userProfile}
-        user={user}
+        user={user as any}
+        userRole={user?.role || null}
       />
       
       <SmartChat />
