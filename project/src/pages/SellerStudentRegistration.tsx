@@ -366,7 +366,7 @@ const SellerStudentRegistration: React.FC = () => {
                       <div className="text-center mb-4">
                         <h3 className="font-bold text-xl text-gray-900 mb-2">{pkg.name}</h3>
                         <div className="text-3xl font-bold text-blue-600 mb-1">${pkg.scholarship_amount}</div>
-                        <p className="text-sm text-gray-500">Scholarship Value</p>
+                        <p className="text-sm text-gray-500">Scholarships starting from</p>
                       </div>
                       
                       <div className="space-y-3 text-sm">
@@ -402,7 +402,7 @@ const SellerStudentRegistration: React.FC = () => {
                   <div className="space-y-1 text-sm">
                     <p><strong>Package:</strong> {selectedPackage.name}</p>
                     <p><strong>Total Investment:</strong> ${selectedPackage.total_paid}</p>
-                    <p><strong>Scholarship Value:</strong> ${selectedPackage.scholarship_amount}</p>
+                    <p><strong>Scholarships starting from:</strong> ${selectedPackage.scholarship_amount}</p>
                     <p><strong>Net Savings:</strong> ${selectedPackage.scholarship_amount - selectedPackage.total_paid}</p>
                   </div>
                 </div>

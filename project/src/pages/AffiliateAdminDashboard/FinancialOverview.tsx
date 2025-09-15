@@ -321,54 +321,71 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     // Criar atividade recente (últimos 10 eventos)
     const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
 
-    // Montar eventos por taxa paga (evitar "pending" quando já há pagamento confirmado)
-    const SELECTION_FEE_AMOUNT = getFeeAmount('selection_process');
-    const I20_CONTROL_FEE_AMOUNT = getFeeAmount('i20_control_fee');
-    const SCHOLARSHIP_FEE_AMOUNT = getFeeAmount('scholarship_fee');
-
+    // Montar eventos por taxa paga usando taxas dinâmicas dos pacotes
     referralsData?.slice(0, 10).forEach((row: any) => {
       const totalPaid = Number(row.total_paid) || 0;
-      const paidSelection: boolean = !!row.has_paid_selection_process_fee || totalPaid >= SELECTION_FEE_AMOUNT;
-      const paidI20Control: boolean = !!row.has_paid_i20_control_fee || totalPaid >= (SELECTION_FEE_AMOUNT + I20_CONTROL_FEE_AMOUNT);
-      const paidScholarship: boolean = !!row.is_scholarship_fee_paid || totalPaid >= (SELECTION_FEE_AMOUNT + I20_CONTROL_FEE_AMOUNT + SCHOLARSHIP_FEE_AMOUNT);
+      
+      // Usar flags de pagamento para determinar quais taxas foram pagas
+      const paidSelection = !!row.has_paid_selection_process_fee;
+      const paidI20Control = !!row.has_paid_i20_control_fee;
+      const paidScholarship = !!row.is_scholarship_fee_paid;
+      const paidApplication = !!row.is_application_fee_paid;
 
-      // Se pagou selection, registrar evento específico
+      // Calcular valores baseados nas taxas do pacote ou valores padrão
+      let selectionFeeAmount = 0;
+      let i20ControlFeeAmount = 0;
+      let scholarshipFeeAmount = 0;
+      let applicationFeeAmount = 0;
+
+      // Usar taxas do pacote se disponíveis, senão usar valores padrão
+      selectionFeeAmount = row.selection_process_fee || getFeeAmount('selection_process');
+      i20ControlFeeAmount = row.i20_control_fee || getFeeAmount('i20_control_fee');
+      scholarshipFeeAmount = row.scholarship_fee || getFeeAmount('scholarship_fee');
+      applicationFeeAmount = 300; // Application fee fixo
+
+      // Registrar eventos baseados nos flags de pagamento
       if (paidSelection) {
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
-          amount: SELECTION_FEE_AMOUNT,
+          amount: selectionFeeAmount,
           description: 'Selection Process Fee paid'
         });
       }
 
-      // Se pagou I20 Control, registrar evento específico
       if (paidI20Control) {
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
-          amount: I20_CONTROL_FEE_AMOUNT,
+          amount: i20ControlFeeAmount,
           description: 'I20 Control Fee paid'
         });
       }
 
-      // Se pagou scholarship, registrar evento específico
       if (paidScholarship) {
         recentActivity.push({
           date: row.created_at,
           type: 'commission',
-          amount: SCHOLARSHIP_FEE_AMOUNT,
+          amount: scholarshipFeeAmount,
           description: 'Scholarship Fee paid'
         });
       }
 
+      if (paidApplication) {
+        recentActivity.push({
+          date: row.created_at,
+          type: 'commission',
+          amount: applicationFeeAmount,
+          description: 'Application Fee paid'
+        });
+      }
+
       // Se nenhum fee pago ainda, manter como pendente
-      if (!paidSelection && !paidI20Control && !paidScholarship) {
-        const totalPotential = totalPaid;
+      if (!paidSelection && !paidI20Control && !paidScholarship && !paidApplication) {
         recentActivity.push({
           date: row.created_at,
           type: 'pending',
-          amount: totalPotential,
+          amount: totalPaid,
           description: 'Pending student fees'
         });
       }
