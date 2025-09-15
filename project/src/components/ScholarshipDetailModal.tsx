@@ -30,6 +30,7 @@ interface ScholarshipDetailModalProps {
   onClose: () => void;
   userProfile?: UserProfile | null;
   user?: User | null;
+  userRole?: string | null;
 }
 
 const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
@@ -37,7 +38,8 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   isOpen,
   onClose,
   userProfile,
-  user
+  user,
+  userRole
 }) => {
   const { t } = useTranslation();
   
@@ -61,6 +63,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   }, [isOpen]);
 
   if (!scholarship) return null;
+  const canViewSensitive = !!((userRole && userRole !== 'student') || userProfile?.has_paid_selection_process_fee);
 
   const formatAmount = (amount: any) => {
     if (typeof amount === 'string') return amount;
@@ -169,13 +172,13 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                       src={scholarship.image_url}
                       alt={scholarship.title}
                       className={`w-full h-full object-contain transition-all duration-300 ${
-                        !user || user?.role !== 'student' || (userProfile?.has_paid_selection_process_fee) 
+                        canViewSensitive 
                           ? 'blur-0 opacity-100' 
                           : 'blur-md opacity-30'
                       }`}
                     />
                     {/* Overlay para usuários não logados ou não pagos */}
-                    {(!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))) && (
+                    {(!canViewSensitive) && (
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 via-blue-700/80 to-indigo-800/80 flex items-center justify-center">
                         <div className="text-center text-white">
                           <GraduationCap className="h-16 w-16 mx-auto mb-2 text-white/60" />
@@ -221,14 +224,12 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                       {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
                     </span>
                     <span className={`text-white/80 text-sm flex items-center gap-1 ${
-                      !user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))
-                        ? 'blur-sm opacity-50'
-                        : ''
+                      !canViewSensitive ? 'blur-sm opacity-50' : ''
                     }`}>
                       <Building className="h-4 w-4" />
-                      {!user || (user?.role === 'student' && (!userProfile || !userProfile?.has_paid_selection_process_fee))
-                        ? t('scholarshipsPage.modal.universityHidden')
-                        : (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))}
+                      {canViewSensitive
+                        ? (scholarship.universities?.name || t('scholarshipsPage.modal.universityInfoAvailable'))
+                        : t('scholarshipsPage.modal.universityHidden')}
                     </span>
                   </div>
                 </div>

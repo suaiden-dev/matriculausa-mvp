@@ -734,6 +734,7 @@ const SelectionProcess: React.FC = () => {
 
   // Acceptance Letter Upload State
   const [acceptanceLetterFile, setAcceptanceLetterFile] = useState<File | null>(null);
+  const [acceptanceLetterUploaded, setAcceptanceLetterUploaded] = useState<boolean>(false);
 
   // State para documentos enviados pelo aluno
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);

@@ -6,6 +6,7 @@ const ForUniversitiesProcess: React.FC = () => {
   // Estado para controlar quais esferas estão animadas
   const [animatedSpheres, setAnimatedSpheres] = useState<boolean[]>(new Array(5).fill(false));
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Hook para observar scroll e animar esferas
   useEffect(() => {
@@ -38,6 +39,15 @@ const ForUniversitiesProcess: React.FC = () => {
         if (ref) observer.unobserve(ref);
       });
     };
+  }, []);
+
+  // Fechar preview com ESC
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewImage(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   // Carousel data for step 1
@@ -220,6 +230,7 @@ const ForUniversitiesProcess: React.FC = () => {
                       autoPlay={true}
                       autoPlayInterval={3000}
                       className="w-full"
+                      onImageClick={(url) => setPreviewImage(url)}
                     />
                   ) : index === 3 ? (
                     /* Fourth step with carousel */
@@ -228,17 +239,19 @@ const ForUniversitiesProcess: React.FC = () => {
                       autoPlay={true}
                       autoPlayInterval={4000}
                       className="w-full"
+                      onImageClick={(url) => setPreviewImage(url)}
                     />
                   ) : (
                     /* Other steps with regular image */
                     <div className="relative group">
                       {/* Main Image Container */}
-                      <div className={`relative overflow-hidden rounded-3xl shadow-2xl ${(index === 2 || index === 4) ? 'bg-slate-100 h-80 md:h-96 flex items-center justify-center' : 'bg-slate-100'}`}>
+                      <div className={`relative overflow-hidden rounded-3xl shadow-2xl ${(index === 1 || index === 2 || index === 4) ? 'bg-slate-100 h-80 md:h-96 flex items-center justify-center' : 'bg-slate-100'}`}>
                         <img
                           src={step.imagePlaceholder}
                           alt={step.imageAlt}
-                          className={`${(index === 2 || index === 4) ? 'max-h-full max-w-full object-contain bg-white p-4 rounded-2xl shadow-lg' : 'w-full h-80 md:h-96 object-cover'} transition-transform duration-700 group-hover:scale-105`}
-                          style={(index === 2 || index === 4) ? {margin: 'auto'} : {}}
+                          className={`${(index === 1 || index === 2 || index === 4) ? 'max-h-full max-w-full object-contain bg-white p-4 rounded-2xl shadow-lg cursor-zoom-in' : 'w-full h-80 md:h-96 object-cover cursor-zoom-in'} transition-transform duration-700 group-hover:scale-105`}
+                          style={(index === 1 || index === 2 || index === 4) ? {margin: 'auto'} : {}}
+                          onClick={() => setPreviewImage(step.imagePlaceholder)}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.src = `https://via.placeholder.com/600x400/${step.side === 'left' ? '05294E' : 'D0151C'}/ffffff?text=Step+${step.number}`;
@@ -246,7 +259,7 @@ const ForUniversitiesProcess: React.FC = () => {
                         />
                         
                         {/* Overlay */}
-                        <div className={`absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${(index === 2 || index === 4) ? 'pointer-events-none' : ''}`}></div>
+                        <div className={`absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${(index === 1 || index === 2 || index === 4) ? 'pointer-events-none' : ''}`}></div>
                       </div>
                       
                       {/* Floating Element */}
@@ -263,16 +276,6 @@ const ForUniversitiesProcess: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Mobile Timeline Connection */}
-                {index < steps.length - 1 && (
-                  <div className="lg:hidden flex items-center justify-center mt-16 mb-16">
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="w-px h-12 bg-gradient-to-b from-[#05294E] to-slate-300"></div>
-                      <div className="w-4 h-4 bg-[#05294E] rounded-full"></div>
-                      <div className="w-px h-12 bg-gradient-to-b from-slate-300 to-[#D0151C]"></div>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -294,6 +297,28 @@ const ForUniversitiesProcess: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Preview de Imagem */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={previewImage}
+              alt="Preview"
+              className="w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+            />
+            <button
+              className="absolute top-3 right-3 bg-white/90 hover:bg-white text-slate-900 text-sm font-semibold px-3 py-1.5 rounded-lg shadow"
+              onClick={() => setPreviewImage(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
