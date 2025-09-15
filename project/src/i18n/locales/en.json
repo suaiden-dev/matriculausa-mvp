@@ -2647,6 +2647,37 @@
       ],
       "bottomMessage": "The risk is all ours. For you, it's just taking advantage of the opportunity."
     },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Find answers to the most common questions about our selection process",
+      "contact": "Still have questions? Contact our support team",
+      "items": [
+        {
+          "question": "What is included in the selection process fee?",
+          "answer": "$350 includes a complete profile analysis, AI-powered personalized scholarship matching, applications to multiple universities, process tracking, and support until approval."
+        },
+        {
+          "question": "Can I apply to as many scholarships as I want?",
+          "answer": "Yes! With a single fee you can apply to all scholarships compatible with your profile. Our AI identifies the best opportunities and you choose how many you want to try."
+        },
+        {
+          "question": "How does the guarantee work?",
+          "answer": "If you follow our complete process and are not approved at any university, we refund 100% of the selection process fee."
+        },
+        {
+          "question": "Which universities participate?",
+          "answer": "We work with more than 45 accredited American universities, including Arizona State University, Florida International University, University of California and many others."
+        },
+        {
+          "question": "Do I need to speak English?",
+          "answer": "Yes, a basic level of English is required. Some universities accept an internal proficiency test or offer preparatory programs for those who need to improve the language."
+        },
+        {
+          "question": "How long does it take to know if I was approved?",
+          "answer": "The universities' analysis and response process varies between 2 to 8 weeks. You will receive constant updates on the status of your application."
+        }
+      ]
+    },
     "socialProof": {
       "title": "More than 150 students approved in 2024 alone",
       "subtitle": "See what our students are saying about their experience",
