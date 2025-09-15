@@ -216,18 +216,27 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     console.log('🔍 [StripeCheckout] ⏳ Aguardando usuário selecionar método de pagamento...');
   };
 
-  const handlePaymentMethodSelect = (method: string) => {
+  const handlePaymentMethodSelect = async (method: string) => {
     console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method);
     console.log('🔍 [StripeCheckout] Estado anterior - selectedPaymentMethod:', selectedPaymentMethod);
     setSelectedPaymentMethod(method as 'stripe' | 'zelle');
     console.log('🔍 [StripeCheckout] ✅ selectedPaymentMethod definido como:', method);
+    
+    // Aguarda um frame para permitir o paint do overlay de loading do selector
+    await new Promise<void>((resolve) => {
+      if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+        window.requestAnimationFrame(() => resolve());
+      } else {
+        setTimeout(() => resolve(), 0);
+      }
+    });
     
     if (method === 'stripe') {
       // Para Stripe, continuar com o fluxo normal
       console.log('🔍 [StripeCheckout] 🚀 Iniciando checkout Stripe...');
       handleCheckout();
     } else if (method === 'zelle') {
-      console.log('🔍 [StripeCheckout] �� Zelle selecionado, redirecionando para checkout...');
+      console.log('🔍 [StripeCheckout]  Zelle selecionado, redirecionando para checkout...');
       // Redirecionar para a página de checkout do Zelle com valores dinâmicos
       const getDynamicAmount = () => {
         if (feeType === 'selection_process') {

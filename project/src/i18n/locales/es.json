@@ -562,6 +562,7 @@
       "anyField": "Cualquier Campo",
       "universityHidden": "Universidad Oculta - Desbloquea con el Proceso de Selección",
       "universityInfoAvailable": "Información de la Universidad Disponible",
+      "loginRequired": "Inicia sesión para ver los detalles de la universidad",
       "financialBreakdown": "Desglose Financiero",
       "originalAnnualCost": "Costo Anual Original",
       "withScholarship": "Con Beca",
@@ -2392,6 +2393,35 @@
       "loadingRewardsStore": "Cargando Tienda de Recompensas...",
       "errorLoadingRewardsStore": "Error al cargar Tienda de Recompensas",
       "tryAgain": "Intentar de Nuevo"
+    },
+    "paymentSelector": {
+      "title": "Elige el Método de Pago",
+      "subtitle": "Selecciona cómo deseas pagar la tarifa de {{feeType}}",
+      "manualVerification": "Se requiere verificación manual",
+      "important": "Importante:",
+      "zelleUploadNote": "Después de realizar el pago vía Zelle, deberás subir una captura de pantalla de la confirmación mostrando el código, fecha, monto y destinatario.",
+    "loading": {
+      "message": "Cargando métodos de pago...",
+      "processing": "Procesando..."
+    },
+      "feeTypes": {
+        "selection_process": "proceso de selección",
+        "application_fee": "solicitud",
+        "enrollment_fee": "matrícula",
+        "scholarship_fee": "beca",
+        "i20_control_fee": "control I-20"
+      },
+      "methods": {
+        "stripe": {
+          "title": "Stripe",
+          "description": "Paga de forma segura con tarjeta de crédito o débito vía Stripe"
+        },
+        "zelle": {
+          "title": "Zelle",
+          "description": "Paga vía transferencia Zelle",
+          "descriptionDetailed": "Paga vía Zelle y sube el comprobante. Se requiere verificación manual."
+        }
+      }
     }
   },
   "preCheckoutModal": {
@@ -2861,6 +2891,37 @@
       ],
       "bottomMessage": "El riesgo es todo nuestro. Para ti, es solo aprovechar la oportunidad."
     },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "subtitle": "Resuelve las dudas más comunes sobre nuestro proceso de selección",
+      "contact": "¿Aún tienes dudas? Ponte en contacto con nuestro equipo de soporte",
+      "items": [
+        {
+          "question": "¿Qué incluye la tasa del proceso de selección?",
+          "answer": "$350 incluye un análisis completo de tu perfil, coincidencia personalizada de becas con IA, postulaciones a múltiples universidades, seguimiento del proceso y soporte hasta la aprobación."
+        },
+        {
+          "question": "¿Puedo postularme a tantas becas como quiera?",
+          "answer": "¡Sí! Con una sola tasa puedes postularte a todas las becas compatibles con tu perfil. Nuestra IA identifica las mejores oportunidades y tú eliges a cuántas quieres postularte."
+        },
+        {
+          "question": "¿Cómo funciona la garantía?",
+          "answer": "Si sigues nuestro proceso completo y no eres aprobado en ninguna universidad, devolvemos el 100% de la tasa del proceso de selección."
+        },
+        {
+          "question": "¿Qué universidades participan?",
+          "answer": "Trabajamos con más de 45 universidades estadounidenses acreditadas, incluyendo Arizona State University, Florida International University, University of California y muchas más."
+        },
+        {
+          "question": "¿Necesito hablar inglés?",
+          "answer": "Sí, se requiere un nivel básico de inglés. Algunas universidades aceptan una prueba interna de competencia u ofrecen programas preparatorios para quienes necesitan mejorar el idioma."
+        },
+        {
+          "question": "¿Cuánto tiempo tarda en saber si fui aprobado?",
+          "answer": "El proceso de análisis y respuesta de las universidades varía entre 2 y 8 semanas. Recibirás actualizaciones constantes sobre el estado de tu postulación."
+        }
+      ]
+    },
     "socialProof": {
       "title": "Más de 150 estudiantes aprobados solo en 2024",
       "subtitle": "Ve lo que nuestros estudiantes están diciendo sobre su experiencia",
@@ -2916,5 +2977,78 @@
         }
       ]
     }
+  },
+  "paymentChoice": {
+    "title": "Elige el Método de Pago",
+    "subtitle": "Selecciona cómo deseas pagar la tarifa de {{feeType}}",
+    "manualVerification": "Se requiere verificación manual",
+    "important": "Importante",
+    "amount": "Monto",
+    "zelleUploadNote": "Después de realizar el pago vía Zelle, deberás subir una captura de pantalla de la confirmación mostrando el código, fecha, monto y destinatario.",
+    "loading": {
+      "processing": "Procesando..."
+    },
+    "feeTypes": {
+      "application_fee": "solicitud",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "beca",
+      "selection_process": "proceso de selección"
+    },
+    "methods": {
+      "stripe": {
+        "title": "Tarjeta de Crédito",
+        "description": "Paga de forma segura con tarjeta de crédito o débito vía Stripe"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Paga vía transferencia Zelle (requiere verificación manual)"
+      }
+    }
+  },
+  "scholarshipConfirmationModal": {
+    "applicationFee": {
+      "title": "Confirma tu Selección de Beca",
+      "subtitle": "Elige el método de pago y asegura tu beca",
+      "feeLabel": "Tasa de Solicitud:",
+      "feeDescription": "Tasa para asegurar tu plaza aprobada",
+      "buttonText": "Sí, Asegurar mi Beca (${{amount}})",
+      "warningText": "Al continuar con este pago, estás realizando tu elección final de beca. Esta acción no se puede deshacer."
+    },
+    "scholarshipFee": {
+      "title": "Pago de la Tasa de Beca",
+      "subtitle": "Elige el método de pago para completar tu inscripción",
+      "feeLabel": "Tasa de Beca:",
+      "feeDescription": "Tasa final para completar tu inscripción en la beca",
+      "buttonText": "Pagar Tasa de Beca (${{amount}})",
+      "warningText": "Al continuar con este pago, estás completando tu inscripción."
+    },
+    "labels": {
+      "selectedScholarship": "Beca Seleccionada",
+      "scholarship": "Beca",
+      "university": "Universidad",
+      "choosePaymentMethod": "Elige el Método de Pago",
+      "importantDecision": "Decisión Importante",
+      "thinkAboutIt": "Déjame pensarlo"
+    },
+    "payment": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Paga de forma segura con tarjeta de crédito o débito"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Paga vía transferencia Zelle",
+        "descriptionDetailed": "Paga vía Zelle (requiere verificación manual)"
+      }
+    },
+    "loading": {
+      "processing": "Procesando el pago...",
+      "redirecting": "Por favor espera, redirigiendo al checkout"
+    }
+  },
+  "common": {
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "processing": "Procesando..."
   }
 }}

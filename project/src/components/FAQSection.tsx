@@ -2,8 +2,10 @@ import React, { useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const FAQSection: React.FC = () => {
+  const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true });
   const [openItems, setOpenItems] = React.useState<number[]>([]);
@@ -44,32 +46,10 @@ const FAQSection: React.FC = () => {
     );
   };
 
-  const faqs = [
-    {
-      question: "O que está incluso na taxa de processo seletivo?",
-      answer: "A taxa de $350 inclui análise completa do seu perfil, seleção personalizada de bolsas via IA, aplicação em múltiplas universidades, acompanhamento do processo e suporte até a aprovação."
-    },
-    {
-      question: "Posso me inscrever em quantas bolsas quiser?",
-      answer: "Sim! Com uma única taxa você pode aplicar para todas as bolsas compatíveis com seu perfil. Nossa IA identifica as melhores oportunidades e você escolhe quantas quer tentar."
-    },
-    {
-      question: "Como funciona a garantia?",
-      answer: "Se você seguir nosso processo completo e não for aprovado em nenhuma universidade, devolvemos 100% da taxa do processo seletivo. É nossa garantia de confiança no sistema."
-    },
-    {
-      question: "Quais universidades participam?",
-      answer: "Trabalhamos com mais de 45 universidades americanas credenciadas, incluindo Arizona State University, Florida International University, University of California e muitas outras."
-    },
-    {
-      question: "Preciso falar inglês?",
-      answer: "Sim, é necessário um nível básico de inglês. Algumas universidades aceitam teste de proficiência interno ou oferecem programas preparatórios para quem precisa melhorar o idioma."
-    },
-    {
-      question: "Quanto tempo demora para saber se fui aprovado?",
-      answer: "O processo de análise e resposta das universidades varia entre 2 a 8 semanas. Você receberá atualizações constantes sobre o status da sua aplicação."
-    }
-  ];
+  const faqs = t('forStudents.faq.items', { returnObjects: true }) as Array<{
+    question: string;
+    answer: string;
+  }>;
 
   return (
     <section ref={ref} className="py-20 bg-slate-50">
@@ -81,10 +61,10 @@ const FAQSection: React.FC = () => {
         >
           <motion.div variants={itemVariants} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">
-              Perguntas Frequentes
+              {t('forStudents.faq.title')}
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              Tire suas principais dúvidas sobre nosso processo seletivo
+              {t('forStudents.faq.subtitle')}
             </p>
           </motion.div>
 
@@ -119,7 +99,7 @@ const FAQSection: React.FC = () => {
 
           <motion.div variants={itemVariants} className="text-center mt-12">
             <p className="text-lg text-slate-500">
-              Ainda tem dúvidas? Entre em contato com nosso time de suporte
+              {t('forStudents.faq.contact')}
             </p>
           </motion.div>
         </motion.div>

@@ -582,15 +582,15 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         </div>
                       </div>
                     </div>
+
+                    {/* I-20 Control Fee Deadline Timer */}
+                    <I20DeadlineTimer 
+                      deadline={i20ControlFeeDeadline} 
+                      hasPaid={studentDetails?.has_paid_i20_control_fee || false} 
+                    />
                   </div>
                 </div>
               </div>
-
-              {/* I-20 Control Fee Deadline Timer */}
-              <I20DeadlineTimer 
-                deadline={i20ControlFeeDeadline} 
-                hasPaid={studentDetails?.has_paid_i20_control_fee || false} 
-              />
             </div>
           </div>
         )}

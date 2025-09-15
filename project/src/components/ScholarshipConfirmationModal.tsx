@@ -5,6 +5,7 @@ import { AlertTriangle, CreditCard, Smartphone, CheckCircle, X } from 'lucide-re
 import { Scholarship } from '../types';
 import { formatCentsToDollars } from '../utils/currency';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { useTranslation } from 'react-i18next';
 
 interface ScholarshipConfirmationModalProps {
   isOpen: boolean;
@@ -26,6 +27,22 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   const navigate = useNavigate();
   const { getFeeAmount: getFeeAmountFromConfig, formatFeeAmount } = useFeeConfig();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
+  const { t } = useTranslation();
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false);
+
+  // Evitar flicker: só mostra spinner após pequeno atraso
+  useEffect(() => {
+    let timeout: number | undefined;
+    if (isProcessing || submitting) {
+      timeout = window.setTimeout(() => setSpinnerVisible(true), 250);
+    } else {
+      setSpinnerVisible(false);
+    }
+    return () => {
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [isProcessing, submitting]);
 
   // Hide floating elements when modal is open
   useEffect(() => {
@@ -72,22 +89,22 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   const getModalContent = () => {
     if (feeType === 'scholarship_fee') {
       return {
-        title: 'Scholarship Fee Payment',
-        subtitle: 'Choose your payment method to complete your enrollment',
-        feeLabel: 'Scholarship Fee:',
-        feeDescription: 'Final fee to complete your scholarship enrollment',
-        buttonText: `Pay Scholarship Fee ($${getFeeAmountFromConfig('scholarship_fee')})`,
-        warningText: 'By proceeding with this payment, you\'re completing your scholarship enrollment.'
+        title: t('scholarshipConfirmationModal.scholarshipFee.title'),
+        subtitle: t('scholarshipConfirmationModal.scholarshipFee.subtitle'),
+        feeLabel: t('scholarshipConfirmationModal.scholarshipFee.feeLabel'),
+        feeDescription: t('scholarshipConfirmationModal.scholarshipFee.feeDescription'),
+        buttonText: t('scholarshipConfirmationModal.scholarshipFee.buttonText', { amount: getFeeAmountFromConfig('scholarship_fee') }),
+        warningText: t('scholarshipConfirmationModal.scholarshipFee.warningText')
       };
     }
     
     return {
-      title: 'Confirm Your Scholarship Selection',
-      subtitle: 'Choose your payment method and secure your scholarship',
-      feeLabel: 'Application Fee:',
-      feeDescription: 'Fee to secure your approved scholarship spot',
-      buttonText: `Yes, Secure My Scholarship ($${feeAmount.toFixed(2)})`,
-      warningText: 'By proceeding with this payment, you\'re making this your final scholarship choice. This action cannot be undone.'
+      title: t('scholarshipConfirmationModal.applicationFee.title'),
+      subtitle: t('scholarshipConfirmationModal.applicationFee.subtitle'),
+      feeLabel: t('scholarshipConfirmationModal.applicationFee.feeLabel'),
+      feeDescription: t('scholarshipConfirmationModal.applicationFee.feeDescription'),
+      buttonText: t('scholarshipConfirmationModal.applicationFee.buttonText', { amount: feeAmount.toFixed(2) }),
+      warningText: t('scholarshipConfirmationModal.applicationFee.warningText')
     };
   };
 
@@ -101,9 +118,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     if (!selectedPaymentMethod) return;
 
     try {
+      setSubmitting(true);
       if (selectedPaymentMethod === 'stripe') {
         onStripeCheckout();
-        onClose();
       } else if (selectedPaymentMethod === 'zelle') {
         const params = new URLSearchParams({
           feeType: feeType,
@@ -119,10 +136,11 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         }
         
         navigate(`/checkout/zelle?${params.toString()}`);
-        onClose();
       }
     } catch (error) {
       console.error('Erro ao processar pagamento:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -138,13 +156,13 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         {/* Modal */}
         <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
           <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0">
-            {/* Loading Overlay */}
-            {isProcessing && (
+            {/* Loading Overlay (anti-flicker) */}
+            {(isProcessing || submitting) && spinnerVisible && (
               <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-lg font-semibold text-gray-900">Processando Pagamento...</p>
-                  <p className="text-sm text-gray-600 mt-2">Aguarde, estamos redirecionando para o Stripe</p>
+                  <p className="text-lg font-semibold text-gray-900">{t('scholarshipConfirmationModal.loading.processing')}</p>
+                  <p className="text-sm text-gray-600 mt-2">{t('scholarshipConfirmationModal.loading.redirecting')}</p>
                 </div>
               </div>
             )}
@@ -153,8 +171,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
               <button
                 onClick={onClose}
+                disabled={isProcessing || submitting}
                 className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
-                title="Fechar modal"
+                title={t('common.close')}
               >
                 <X className="w-6 h-6" />
               </button>
@@ -178,14 +197,14 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             <div className="p-6 space-y-6">
               {/* Scholarship Info */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Selected Scholarship</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Scholarship:</span>
+                    <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.scholarship')}:</span>
                     <span className="font-medium text-gray-900">{scholarship.title}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">University:</span>
+                    <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.university')}:</span>
                     <span className="font-medium text-gray-900">{universityName}</span>
                   </div>
                   <div className="flex justify-between">
@@ -197,7 +216,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
               {/* Payment Method Selection */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Choose Payment Method</h3>
+                <h3 className="font-semibold text-gray-900">{t('scholarshipConfirmationModal.labels.choosePaymentMethod')}</h3>
                 
                 <div className="grid gap-3">
                   {/* Stripe Option */}
@@ -225,8 +244,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                         <CreditCard className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">Stripe</div>
-                        <div className="text-sm text-gray-600">Pay securely with credit or debit card</div>
+                        <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
+                        <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
                       </div>
                     </div>
                   </label>
@@ -256,8 +275,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                         <Smartphone className="w-5 h-5 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">Zelle</div>
-                        <div className="text-sm text-gray-600">Pay via Zelle transfer</div>
+                        <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.zelle.title')}</div>
+                        <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.zelle.description')}</div>
                       </div>
                     </div>
                   </label>
@@ -269,20 +288,21 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
             <div className="bg-gray-50 px-6 py-4 flex gap-3">
               <button
                 onClick={onClose}
+                disabled={isProcessing || submitting}
                 className="flex-1 bg-white text-gray-700 py-3 px-6 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               
               <button
                 onClick={handleProceed}
-                disabled={!canProceed || isProcessing}
+                disabled={!canProceed || isProcessing || submitting}
                 className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
-                {isProcessing ? (
+                {isProcessing || submitting ? (
                   <div className="flex items-center justify-center">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Processing...
+                    {t('common.processing')}
                   </div>
                 ) : (
                   modalContent.buttonText
@@ -304,13 +324,12 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
       {/* Modal */}
       <div className="fixed inset-0 flex items-end sm:items-center justify-center z-30">
         <Dialog.Panel className="w-full h-full sm:h-auto sm:max-w-2xl bg-white  md:rounded-2xl shadow-2xl overflow-hidden relative border-0 sm:max-h-[90vh] flex flex-col">
-          {/* Loading Overlay */}
-          {isProcessing && (
+          {(isProcessing || submitting) && spinnerVisible && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-lg font-semibold text-gray-900">Processando Pagamento...</p>
-                <p className="text-sm text-gray-600 mt-2">Aguarde, estamos redirecionando para o Stripe</p>
+                <p className="text-lg font-semibold text-gray-900">{t('scholarshipConfirmationModal.loading.processing')}</p>
+                <p className="text-sm text-gray-600 mt-2">{t('scholarshipConfirmationModal.loading.redirecting')}</p>
               </div>
             </div>
           )}
@@ -319,8 +338,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-3 sm:p-6 flex-shrink-0">
             <button
               onClick={onClose}
+              disabled={isProcessing || submitting}
               className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
-              title="Fechar modal"
+              title={t('common.close')}
             >
               <X className="w-6 h-6" />
             </button>
@@ -344,14 +364,14 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-6">
             {/* Scholarship Info */}
             <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
-              <h3 className="font-semibold text-gray-900 mb-2">Selected Scholarship</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">{t('scholarshipConfirmationModal.labels.selectedScholarship')}</h3>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Scholarship:</span>
+                  <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.scholarship')}:</span>
                   <span className="font-medium text-gray-900">{scholarship.title}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">University:</span>
+                  <span className="text-gray-600">{t('scholarshipConfirmationModal.labels.university')}:</span>
                   <span className="font-medium text-gray-900">{universityName}</span>
                 </div>
                 <div className="flex justify-between">
@@ -369,7 +389,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h4 className="font-semibold text-yellow-800 mb-1">Important Decision</h4>
+                  <h4 className="font-semibold text-yellow-800 mb-1">{t('scholarshipConfirmationModal.labels.importantDecision')}</h4>
                   <p className="text-sm text-yellow-700">
                     {modalContent.warningText}
                   </p>
@@ -379,7 +399,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
             {/* Payment Method Selection */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900">Choose Payment Method</h3>
+              <h3 className="font-semibold text-gray-900">{t('scholarshipConfirmationModal.labels.choosePaymentMethod')}</h3>
               
               <div className="grid gap-3">
                 {/* Stripe Option */}
@@ -407,8 +427,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                       <CreditCard className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">Stripe</div>
-                      <div className="text-sm text-gray-600">Pay securely with credit or debit card</div>
+                      <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.stripe.title')}</div>
+                      <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.stripe.description')}</div>
                     </div>
                   </div>
                 </label>
@@ -438,8 +458,8 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                       <Smartphone className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">Zelle</div>
-                      <div className="text-sm text-gray-600">Pay via Zelle transfer (requires manual verification)</div>
+                      <div className="font-medium text-gray-900">{t('scholarshipConfirmationModal.payment.zelle.title')}</div>
+                      <div className="text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.zelle.descriptionDetailed')}</div>
                     </div>
                   </div>
                 </label>
@@ -451,20 +471,21 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
           <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-4 flex gap-2 sm:gap-3 flex-shrink-0">
             <button
               onClick={onClose}
+              disabled={isProcessing || submitting}
               className="flex-1 bg-white text-gray-700 py-2 px-3 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition-colors text-sm"
             >
-              Let me think about it
+              {t('scholarshipConfirmationModal.labels.thinkAboutIt')}
             </button>
             
             <button
               onClick={handleProceed}
-              disabled={!canProceed || isProcessing}
+              disabled={!canProceed || isProcessing || submitting}
               className="flex-1 bg-green-600 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm"
             >
-              {isProcessing ? (
+              {(isProcessing || submitting) ? (
                 <div className="flex items-center justify-center">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Processing...
+                  {t('common.processing')}
                 </div>
               ) : (
                 modalContent.buttonText
