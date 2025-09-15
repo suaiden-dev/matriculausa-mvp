@@ -92,6 +92,7 @@ export const useStudentData = (userId?: string) => {
                 application_status: student.application_status,
                 scholarship_title: student.scholarship_title,
                 university_name: student.university_name,
+                university_id: student.university_id, // Adicionar university_id
                 // Flags de pagamento necessários para a visualização das taxas faltantes
                 has_paid_selection_process_fee: student.has_paid_selection_process_fee,
                 has_paid_i20_control_fee: student.has_paid_i20_control_fee,
