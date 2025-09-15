@@ -111,7 +111,7 @@ const I20DeadlineTimer: React.FC<I20DeadlineTimerProps> = ({ deadline, hasPaid }
   const getIcon = () => {
     const now = new Date();
     const timeDiff = deadline.getTime() - now.getTime();
-    const daysLeft = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.floor(timeDiff / (1000 * 60 * 60 * 24)); 
 
     if (timeDiff <= 0) {
       return <AlertTriangle className="w-5 h-5" />;
