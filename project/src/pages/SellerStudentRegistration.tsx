@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, UserCheck, GraduationCap, CheckCircle, X, Target, Package } from 'lucide-react';
+import { UserCheck, CheckCircle, X, Target, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useScholarshipPackages } from '../hooks/useScholarshipPackages';
 import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
-import { ScholarshipPackage } from '../types';
 
 const SellerStudentRegistration: React.FC = () => {
-  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const sellerCode = searchParams.get('ref') || '';
   
@@ -27,9 +24,12 @@ const SellerStudentRegistration: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [sellerReferralCodeValid, setSellerReferralCodeValid] = useState<boolean | null>(null);
-  const [sellerReferralCodeLoading, setSellerReferralCodeLoading] = useState(false);
+  const [, setSellerReferralCodeLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showPackageDetails, setShowPackageDetails] = useState<ScholarshipPackage | null>(null);
+  
+  // Multi-step form states
+  const [currentStep, setCurrentStep] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { register } = useAuth();
   const { packages, loading: packagesLoading } = useScholarshipPackages();
@@ -37,7 +37,6 @@ const SellerStudentRegistration: React.FC = () => {
 
   // Validar código do vendedor ao carregar a página
   useEffect(() => {
-    console.log('🔍 [SellerStudentRegistration] sellerCode capturado:', sellerCode);
     if (sellerCode) {
       validateSellerReferralCode(sellerCode);
     }
@@ -80,43 +79,64 @@ const SellerStudentRegistration: React.FC = () => {
     setFormData(prev => ({ ...prev, selectedPackage: packageNumber.toString() }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validation function for each step
+  const validateStep = (step: number) => {
+    const newErrors: Record<string, string> = {};
+
+    switch (step) {
+      case 1:
+        if (!formData.full_name.trim()) newErrors.full_name = 'Full name is required';
+        if (!formData.email.trim()) newErrors.email = 'Email is required';
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Please enter a valid email';
+        if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+        if (!formData.password.trim()) newErrors.password = 'Password is required';
+        else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters long';
+        if (!formData.confirmPassword.trim()) newErrors.confirmPassword = 'Please confirm your password';
+        else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+        if (!termsAccepted) newErrors.terms = 'You must accept the terms and conditions';
+        if (!sellerReferralCodeValid) newErrors.sellerCode = 'Invalid seller referral code';
+        break;
+      case 2:
+        if (!formData.selectedPackage) newErrors.package = 'Please select a scholarship package';
+        break;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Navigation functions
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => prev + 1);
+      setError(''); // Clear any previous errors
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setError(''); // Clear any previous errors
+  };
+
+  const handleSubmit = async () => {
+    // Final validation for step 2
+    if (!validateStep(2)) return;
+    
     setLoading(true);
     setError('');
 
     try {
-      // Validar se o pacote foi selecionado
-      if (!formData.selectedPackage) {
-        throw new Error('Please select a scholarship package');
-      }
-
-      // Validar se o código do vendedor é válido
-      if (!sellerReferralCodeValid) {
-        throw new Error('Invalid seller referral code');
-      }
-
-      // Validar senhas
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error('Passwords do not match');
-      }
-
-      if (formData.password.length < 8) {
-        throw new Error('Password must be at least 8 characters long');
-      }
-
       // Usar o hook useAuth para registrar o usuário
       const userData = {
         full_name: formData.full_name,
         email: formData.email,
         phone: formData.phone,
-        role: 'student',
+        role: 'student' as const,
         status: 'active',
         seller_referral_code: formData.sellerReferralCode,
         scholarship_package_id: packages.find(p => p.package_number === parseInt(formData.selectedPackage))?.id
       };
 
-      console.log('🔍 [REGISTER] userData:', userData);
       
       await register(formData.email, formData.password, userData);
       
@@ -135,7 +155,7 @@ const SellerStudentRegistration: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header Section */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-6">
             <UserCheck className="h-12 w-12 text-blue-600 mr-4" />
             <h1 className="text-4xl font-bold text-gray-900">Student Registration</h1>
@@ -153,10 +173,38 @@ const SellerStudentRegistration: React.FC = () => {
           )}
         </div>
 
-        {/* Registration Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Personal Information</h2>
+        {/* Progress Steps */}
+        <div className="mb-8">
+          <div className="flex items-center justify-center space-x-4">
+            <div className={`flex items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                currentStep >= 1 ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-gray-400'
+              }`}>
+                {currentStep > 1 ? <CheckCircle className="w-5 h-5" /> : '1'}
+              </div>
+              <span className="ml-2 text-sm font-medium">Personal Info</span>
+            </div>
+            
+            <div className={`w-16 h-0.5 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            
+            <div className={`flex items-center ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                currentStep >= 2 ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-gray-400'
+              }`}>
+                {currentStep > 2 ? <CheckCircle className="w-5 h-5" /> : '2'}
+              </div>
+              <span className="ml-2 text-sm font-medium">Package Selection</span>
+            </div>
+          </div>
+        </div>
 
+        {/* Step Content */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+          {/* Step 1: Personal Information */}
+          {currentStep === 1 && (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Personal Information</h2>
+              
               {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
                   <X className="w-5 h-5 text-red-500" />
@@ -164,7 +212,7 @@ const SellerStudentRegistration: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
                 {/* Personal Information */}
                 <div className="space-y-4">
                   {/* Seller Referral Code Display */}
@@ -204,9 +252,14 @@ const SellerStudentRegistration: React.FC = () => {
                       value={formData.full_name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.full_name ? 'border-red-300' : 'border-gray-300'
+                      }`}
                       placeholder="Enter your full name"
                     />
+                    {errors.full_name && (
+                      <p className="mt-1 text-sm text-red-600">{errors.full_name}</p>
+                    )}
                   </div>
 
                   <div>
@@ -219,9 +272,14 @@ const SellerStudentRegistration: React.FC = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.email ? 'border-red-300' : 'border-gray-300'
+                      }`}
                       placeholder="Enter your email"
                     />
+                    {errors.email && (
+                      <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                    )}
                   </div>
 
                   <div>
@@ -245,12 +303,16 @@ const SellerStudentRegistration: React.FC = () => {
                           '--PhoneInputCountrySelectArrow-opacity': '0.8',
                           '--PhoneInput-color--focus': '#3B82F6'
                         }}
-                        className="w-full pl-4 pr-4 py-3 bg-white border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 text-base"
+                        className={`w-full pl-4 pr-4 py-3 bg-white placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-base ${
+                          errors.phone ? 'border border-red-300' : 'border border-gray-300'
+                        }`}
                         placeholder="Enter your phone number"
                       />
                     </div>
+                    {errors.phone && (
+                      <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                    )}
                   </div>
-
                 </div>
 
                 {/* Password Fields */}
@@ -266,9 +328,14 @@ const SellerStudentRegistration: React.FC = () => {
                       onChange={handleInputChange}
                       required
                       autoComplete="new-password"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.password ? 'border-red-300' : 'border-gray-300'
+                      }`}
                       placeholder="Create a password"
                     />
+                    {errors.password && (
+                      <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                    )}
                   </div>
 
                   <div>
@@ -282,9 +349,14 @@ const SellerStudentRegistration: React.FC = () => {
                       onChange={handleInputChange}
                       required
                       autoComplete="new-password"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                      }`}
                       placeholder="Confirm your password"
                     />
+                    {errors.confirmPassword && (
+                      <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                    )}
                   </div>
                 </div>
 
@@ -295,10 +367,12 @@ const SellerStudentRegistration: React.FC = () => {
                     id="terms-acceptance"
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                    className={`h-4 w-4 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0 ${
+                      errors.terms ? 'text-red-600 border-red-300' : 'text-blue-600'
+                    }`}
                   />
                   <label htmlFor="terms-acceptance" className="text-sm text-gray-600 cursor-pointer leading-relaxed">
-                    By clicking Create Account, you agree to our{' '}
+                    By clicking Next, you agree to our{' '}
                     <a 
                       href="/terms-of-service" 
                       target="_blank" 
@@ -319,32 +393,45 @@ const SellerStudentRegistration: React.FC = () => {
                     .
                   </label>
                 </div>
+                {errors.terms && (
+                  <p className="text-sm text-red-600">{errors.terms}</p>
+                )}
+                {errors.sellerCode && (
+                  <p className="text-sm text-red-600">{errors.sellerCode}</p>
+                )}
 
-                <button
-                  type="submit"
-                  disabled={loading || !termsAccepted || !selectedPackage}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {loading ? 'Creating Account...' : 'Create Account'}
-                </button>
-              </form>
+                {/* Step 1 Navigation */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    className="bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    Next Step
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:underline">
-                Sign in
-              </Link>
-            </p>
-          </div>
-        </div>
-
-        {/* Package Selection */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Package</h2>
-            <p className="text-xl text-gray-600">Select the scholarship package that best fits your needs</p>
-          </div>
+          {/* Step 2: Package Selection */}
+          {currentStep === 2 && (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Your Package</h2>
+              <p className="text-lg text-gray-600 mb-6">Select the scholarship package that best fits your needs</p>
+              
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                  <X className="w-5 h-5 text-red-500" />
+                  <p className="text-red-700">{error}</p>
+                </div>
+              )}
+              {errors.package && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700">{errors.package}</p>
+                </div>
+              )}
 
               {packagesLoading ? (
                 <div className="text-center py-8">
@@ -352,7 +439,7 @@ const SellerStudentRegistration: React.FC = () => {
                   <p className="mt-2 text-gray-600">Loading packages...</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                   {packages.map((pkg) => (
                     <div
                       key={pkg.id}
@@ -375,12 +462,12 @@ const SellerStudentRegistration: React.FC = () => {
                           <span className="font-semibold">${pkg.selection_process_fee}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">I-20 Control Fee:</span>
-                          <span className="font-semibold">${pkg.i20_control_fee}</span>
-                        </div>
-                        <div className="flex justify-between">
                           <span className="text-gray-600">Scholarship Fee:</span>
                           <span className="font-semibold">${pkg.scholarship_fee}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">I-20 Control Fee:</span>
+                          <span className="font-semibold">${pkg.i20_control_fee}</span>
                         </div>
                         <div className="border-t pt-2 flex justify-between">
                           <span className="text-gray-600 font-medium">Total Paid:</span>
@@ -397,7 +484,7 @@ const SellerStudentRegistration: React.FC = () => {
               )}
 
               {selectedPackage && (
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <h4 className="font-semibold text-blue-900 mb-2">Selected Package Summary</h4>
                   <div className="space-y-1 text-sm">
                     <p><strong>Package:</strong> {selectedPackage.name}</p>
@@ -407,6 +494,38 @@ const SellerStudentRegistration: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Step 2 Navigation */}
+              <div className="flex justify-between">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="bg-gray-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-600 transition-colors flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading || !selectedPackage}
+                  className="bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {loading ? 'Creating Account...' : 'Create Account'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Login Link */}
+        <div className="mt-6 text-center">
+          <p className="text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="text-blue-600 hover:underline">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
 
