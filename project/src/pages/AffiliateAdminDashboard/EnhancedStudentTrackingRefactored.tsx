@@ -65,7 +65,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
   // Se um estudante está selecionado, mostrar detalhes
   if (selectedStudent && studentDetails) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen">
         {/* Header Section */}
         <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -168,19 +168,39 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
 
   // Lista principal de vendedores e estudantes
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header Section */}
-      <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
-              <div className="min-w-0 w-full">
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">
+    <div className="min-h-screen">
+      {/* Header + Tabs Section */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
                   Student Tracking Dashboard
                 </h1>
-                <p className="mt-1 text-sm text-slate-600 break-words">
-                  Monitor and manage students referred by your affiliate sellers
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Monitor and manage students referred by your affiliate sellers.
                 </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  Track student applications, documents, and progress through the scholarship process.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons Section */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Student Management
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Comprehensive tracking and management of student applications and progress
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -188,7 +208,7 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Stats Cards */}
           <StatsCards filteredStudents={filteredStudents} />

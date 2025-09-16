@@ -98,8 +98,46 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
     calculateSafeGrowth(Number(currentMonthData.total_revenue), Number(lastMonthData.total_revenue)) : 0;
 
   return (
-    <div className="space-y-8">
-      {/* KPI Cards */}
+    <div className="min-h-screen">
+      {/* Header + Tabs Section */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                  Analytics Dashboard
+                </h1>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Comprehensive analytics and performance insights for your affiliate program.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons Section */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Performance Analytics
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Real-time insights and performance metrics for data-driven decisions
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
@@ -272,6 +310,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         <p className="text-xs text-slate-500 mt-1">
           All data is sourced from real-time database queries using optimized SQL functions
         </p>
+      </div>
+        </div>
       </div>
     </div>
   );

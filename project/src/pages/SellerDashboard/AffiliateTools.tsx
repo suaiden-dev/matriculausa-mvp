@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Copy, Check, Link2 } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 
 interface AffiliateToolsProps {
   sellerProfile: any;
-  stats: any;
 }
 
-const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile, stats }) => {
+const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile }) => {
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const referralCode = sellerProfile?.referral_code || '';
@@ -23,15 +22,46 @@ const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile, stats })
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <p className="mt-1 text-sm text-slate-600">
-          Share your affiliate code to earn commissions from student registrations
-        </p>
+    <div className="min-h-screen">
+      {/* Header + Tabs Section */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                  Affiliate Tools
+                </h1>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Share your affiliate code to earn commissions from student registrations.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons Section */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Referral Management
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Tools and resources to maximize your affiliate marketing success
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Affiliate Code and Link */}
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8">
+          {/* Affiliate Code and Link */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">Affiliate Code</h3>
@@ -103,6 +133,8 @@ const AffiliateTools: React.FC<AffiliateToolsProps> = ({ sellerProfile, stats })
             <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">3</div>
             <p className="text-slate-700">When students register using your code, you'll earn commissions automatically</p>
           </div>
+        </div>
+      </div>
         </div>
       </div>
     </div>
