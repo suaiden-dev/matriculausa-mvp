@@ -34,7 +34,7 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
   
   // Função para selecionar o método de pagamento (não processa automaticamente)
   const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
-    console.log('🔍 [I20ControlFeeModal] Método selecionado:', method);
+    console.log('🔍 [I20ControlFeeModal] Método selecionado:', method); 
     onPaymentMethodSelect(method);
   };
 
