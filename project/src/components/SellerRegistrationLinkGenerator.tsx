@@ -242,7 +242,7 @@ const SellerRegistrationLinkGenerator: React.FC = () => {
 
               <div className="mb-4">
                 <div className="text-sm text-gray-600 mb-2">Registration link:</div>
-                <div className="font-mono text-sm text-gray-800 bg-gray-50 p-3 rounded border">
+                <div className="font-mono text-sm overflow-x-auto text-gray-800 bg-gray-50 p-3 rounded border">
                   {getRegistrationUrl(code.code)}
                 </div>
               </div>

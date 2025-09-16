@@ -6,7 +6,6 @@ import { useFeeConfig } from '../hooks/useFeeConfig';
 interface I20ControlFeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProceed: () => void;
   selectedPaymentMethod: 'stripe' | 'zelle' | null;
   onPaymentMethodSelect: (method: 'stripe' | 'zelle') => void;
 }
@@ -14,7 +13,6 @@ interface I20ControlFeeModalProps {
 export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
   isOpen,
   onClose,
-  onProceed,
   selectedPaymentMethod,
   onPaymentMethodSelect,
 }) => {
@@ -34,8 +32,9 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
     };
   }, [isOpen]);
   
-  // Função para selecionar o método de pagamento (sem processar imediatamente)
+  // Função para selecionar o método de pagamento (não processa automaticamente)
   const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
+    console.log('🔍 [I20ControlFeeModal] Método selecionado:', method);
     onPaymentMethodSelect(method);
   };
 
@@ -90,17 +89,10 @@ export const I20ControlFeeModal: React.FC<I20ControlFeeModalProps> = ({
               amount={getFeeAmount('i20_control_fee')}
             />
 
-            {/* Botão de Confirmação - só aparece quando um método é selecionado */}
-            {selectedPaymentMethod && (
-              <div className="pt-4 border-t border-gray-200">
-                <button
-                  onClick={onProceed}
-                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200"
-                >
-                  Proceed with {selectedPaymentMethod === 'stripe' ? 'Card Payment' : 'Zelle Transfer'}
-                </button>
-              </div>
-            )}
+            {/* Info sobre processamento automático */}
+            <div className="text-center text-sm text-gray-600">
+              <p>Select a payment method to proceed automatically to checkout</p>
+            </div>
           </div>
         </Dialog.Panel>
       </div>

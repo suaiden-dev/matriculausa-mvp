@@ -199,17 +199,17 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
       {/* Top Sellers Section */}
       {sellers && sellers.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="p-6 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
+          <div className="p-4 sm:p-6 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
                 <h3 className="text-xl font-bold text-slate-900">Top Sellers</h3>
-                <p className="text-slate-500 text-sm">
+                <p className="text-slate-500 text-sm break-words">
                   Ranking of top performing sellers based on performance
                 </p>
               </div>
               <div 
                 onClick={() => navigate('/affiliate-admin/dashboard/analytics')}
-                className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer"
+                className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer self-start sm:self-auto"
               >
                 View All
                 <ArrowUpRight className="h-4 w-4 ml-1" />
@@ -217,7 +217,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
             </div>
           </div>
           
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="space-y-4">
               {/* Top 3 Sellers */}
               {sellers
@@ -234,22 +234,22 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
                     key={seller.id} 
                     className="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:bg-slate-100 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center space-x-3 min-w-0">
                         {/* Ranking Number */}
                         <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-700">
                           {index + 1}
                         </div>
                         
                         {/* Seller Info */}
-                        <div>
-                          <p className="font-semibold text-slate-900">{seller.name}</p>
-                          <p className="text-sm text-slate-600">{seller.email}</p>
-                          <div className="flex items-center space-x-3 mt-1">
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 break-words">{seller.name}</p>
+                          <p className="text-sm text-slate-600 break-words">{seller.email}</p>
+                          <div className="flex items-center flex-wrap gap-2 mt-1">
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full whitespace-nowrap">
                               {seller.referral_code}
                             </span>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
+                            <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
                               seller.is_active 
                                 ? 'bg-green-100 text-green-700' 
                                 : 'bg-red-100 text-red-700'
@@ -261,10 +261,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
                       </div>
                       
                       {/* Performance Metrics */}
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <div className="space-y-1">
-                          <div className="flex items-center justify-end space-x-2">
-                            <span className="text-lg font-bold text-slate-900">
+                          <div className="flex items-center sm:justify-end space-x-2">
+                            <span className="text-lg font-bold text-slate-900 whitespace-nowrap">
                               {seller.students_count || 0}
                             </span>
                             <span className="text-sm text-slate-500">students</span>
@@ -299,22 +299,22 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
                           key={seller.id} 
                           className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:bg-slate-100 transition-colors"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center space-x-3 min-w-0">
                               <div className="w-6 h-6 bg-slate-300 rounded flex items-center justify-center text-white text-xs font-medium">
                                 {index + 4}
                               </div>
-                              <div>
-                                <p className="font-medium text-slate-900">{seller.name}</p>
-                                <p className="text-xs text-slate-500">{seller.email}</p>
+                              <div className="min-w-0">
+                                <p className="font-medium text-slate-900 break-words">{seller.name}</p>
+                                <p className="text-xs text-slate-500 break-words">{seller.email}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="flex items-center space-x-4">
-                                <span className="text-sm text-slate-700">
+                            <div className="text-left sm:text-right">
+                              <div className="flex items-center sm:justify-end space-x-4">
+                                <span className="text-sm text-slate-700 whitespace-nowrap">
                                   {seller.students_count || 0} students
                                 </span>
-                                <span className="text-sm text-slate-700">
+                                <span className="text-sm text-slate-700 whitespace-nowrap">
                                   {formatCurrency(seller.total_revenue || 0)}
                                 </span>
                               </div>
@@ -336,22 +336,22 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
           {/* Recent Sellers */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-              <div className="p-6 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div>
+              <div className="p-4 sm:p-6 border-b border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <h3 className="text-xl font-bold text-slate-900">Recent Sellers</h3>
-                    <p className="text-slate-500 text-sm">
+                    <p className="text-slate-500 text-sm break-words">
                       {recentSellers.length} seller{recentSellers.length !== 1 ? 's' : ''} registered
                     </p>
                   </div>
-                  <div className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer">
+                  <div className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer self-start sm:self-auto">
                     View All
                     <ArrowUpRight className="h-4 w-4 ml-1" />
                   </div>
                 </div>
               </div>
               
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {recentSellers.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
@@ -364,20 +364,20 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
                   <div className="space-y-4">
                     {recentSellers.map((seller) => (
                       <div key={seller.id} className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-4 border border-slate-200 hover:shadow-lg transition-all duration-300 group">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center space-x-3 min-w-0">
                             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                               <span className="text-sm font-bold text-white">
                                 {seller.name?.charAt(0)?.toUpperCase()}
                               </span>
                             </div>
-                            <div>
-                              <p className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition-colors">{seller.name}</p>
-                              <p className="text-xs text-slate-500">{seller.email}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition-colors break-words">{seller.name}</p>
+                              <p className="text-xs text-slate-500 break-words">{seller.email}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-slate-900">
+                          <div className="text-left sm:text-right">
+                            <p className="text-sm font-bold text-slate-900 whitespace-nowrap">
                               {seller.students_count || 0} students
                             </p>
                             <p className="text-xs text-slate-500">{formatDate(seller.created_at)}</p>
