@@ -35,6 +35,13 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     loadPaymentMethods();
   }, []);
 
+  // Reset processing state when component unmounts
+  useEffect(() => {
+    return () => {
+      setProcessingSelection(false);
+    };
+  }, []);
+
   const loadPaymentMethods = async () => {
     try {
       setLoading(true);
@@ -73,16 +80,23 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   const handleMethodSelect = async (method: 'stripe' | 'zelle') => {
     if (processingSelection) return;
     
+    console.log('🔍 [PaymentMethodSelector] Iniciando seleção:', method);
     setProcessingSelection(true);
+    
     try {
+      // Mostrar feedback visual
       await new Promise<void>((resolve) => {
-        if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
-          window.requestAnimationFrame(() => resolve());
-        } else {
-          setTimeout(() => resolve(), 0);
-        }
+        setTimeout(() => resolve(), method === 'stripe' ? 800 : 200); // Mais tempo para Stripe
       });
+      
+      console.log('🔍 [PaymentMethodSelector] Chamando callback onMethodSelect');
       onMethodSelect(method);
+      
+      // Reset após o callback ser chamado - tempo maior para Stripe
+      setTimeout(() => {
+        setProcessingSelection(false);
+      }, method === 'stripe' ? 2500 : 300); // 2.5s para Stripe, 300ms para Zelle
+      
     } catch (error) {
       console.error('Error selecting payment method:', error);
       setProcessingSelection(false);

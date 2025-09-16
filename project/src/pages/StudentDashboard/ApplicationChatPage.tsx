@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -166,7 +166,9 @@ const ApplicationChatPage: React.FC = () => {
 
   // Função para lidar com a seleção do método de pagamento
   const handlePaymentMethodSelect = (method: 'stripe' | 'zelle') => {
+    console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method);
     setSelectedPaymentMethod(method);
+    console.log('🔍 [ApplicationChatPage] Estado setSelectedPaymentMethod atualizado para:', method);
   };
 
   // Função para fechar o modal
@@ -176,8 +178,13 @@ const ApplicationChatPage: React.FC = () => {
   };
 
   // Função para processar o pagamento
-  const handleProceedPayment = async () => {
-    if (!selectedPaymentMethod) return;
+  const handleProceedPayment = useCallback(async () => {
+    console.log('🔍 [ApplicationChatPage] handleProceedPayment chamado. selectedPaymentMethod:', selectedPaymentMethod);
+    
+    if (!selectedPaymentMethod) {
+      console.log('❌ [ApplicationChatPage] Nenhum método de pagamento selecionado. Abortando.');
+      return;
+    }
     
     setI20Loading(true);
     setI20Error(null);
@@ -211,7 +218,7 @@ const ApplicationChatPage: React.FC = () => {
         const params = new URLSearchParams({
           feeType: 'i20_control_fee',
           amount: '1250',
-          scholarshipsIds: applicationDetails.scholarships?.id || ''
+          scholarshipsIds: applicationDetails?.scholarships?.id || ''
         });
         
         // Adicionar campo específico para I-20 Control Fee
@@ -219,13 +226,30 @@ const ApplicationChatPage: React.FC = () => {
         
         window.location.href = `/checkout/zelle?${params.toString()}`;
       }
+      
+      // Se chegou até aqui sem erro, não fechar o modal ainda (redirecionamento está acontecendo)
+      console.log('🔍 [ApplicationChatPage] Redirecionamento iniciado, mantendo modal aberto');
+      
     } catch (err) {
+      console.error('🔍 [ApplicationChatPage] Erro no pagamento:', err);
       setI20Error(t('studentDashboard.applicationChatPage.errors.paymentRedirectError'));
-    } finally {
       setI20Loading(false);
       handleCloseI20Modal();
     }
-  };
+  }, [selectedPaymentMethod, applicationDetails?.scholarships?.id, t]);
+
+  // Auto-processar pagamento quando método é selecionado
+  useEffect(() => {
+    if (selectedPaymentMethod && showI20ControlFeeModal) {
+      console.log('🔍 [ApplicationChatPage] Auto-processando pagamento para método:', selectedPaymentMethod);
+      // Aguardar um frame para garantir que o estado seja propagado
+      const timer = setTimeout(() => {
+        handleProceedPayment();
+      }, 50); // Reduzido para 50ms para ser mais responsivo
+      
+      return () => clearTimeout(timer);
+    }
+  }, [selectedPaymentMethod, showI20ControlFeeModal, handleProceedPayment]);
 
   // AGORA podemos ter o return condicional - todos os hooks já foram chamados
   if (!user) {
@@ -833,7 +857,6 @@ const ApplicationChatPage: React.FC = () => {
         <I20ControlFeeModal
           isOpen={showI20ControlFeeModal}
           onClose={handleCloseI20Modal}
-          onProceed={handleProceedPayment}
           selectedPaymentMethod={selectedPaymentMethod}
           onPaymentMethodSelect={handlePaymentMethodSelect}
         />
