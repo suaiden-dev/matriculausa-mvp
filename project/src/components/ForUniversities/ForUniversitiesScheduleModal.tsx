@@ -63,7 +63,7 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
 
   // Available time slots - US format (12-hour AM/PM)
   const availableTimeSlots = [
-    '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
+    '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'
   ];
 
   // Major time zones for selection - US Only
@@ -125,16 +125,6 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
       const offset = getTimezoneOffset(timezone);
       const brazilHour = parseInt(time24Hour.split(':')[0]) + offset;
       
-      // Enhanced debug log to see exactly what's happening
-      console.log('=== TIME VALIDATION DEBUG ===');
-      console.log(`User timezone: ${timezone}`);
-      console.log(`User time: ${time} (${time24Hour})`);
-      console.log(`User hours: ${parseInt(time24Hour.split(':')[0])}`);
-      console.log(`Timezone offset: +${offset}h`);
-      console.log(`Brazil time calculation: ${parseInt(time24Hour.split(':')[0])} + ${offset} = ${brazilHour}h`);
-      console.log(`Business hours range: 13h - 21h`);
-      console.log(`Valid for business: ${brazilHour >= 13 && brazilHour <= 21}`);
-      console.log('=============================');
       
       // Check if between 13h and 21h (Brazil time)
       const isValid = brazilHour >= 13 && brazilHour <= 21;
@@ -151,14 +141,12 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
     if (isOpen) {
       // Detect user's timezone automatically with fallback
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      console.log('Detected timezone:', userTimezone);
       
       // If UTC is detected, it might be wrong - try to get a better default
       let defaultTimezone = timeZones.find(tz => tz.value === userTimezone)?.value;
       
       // If no match found or UTC detected, use a sensible default
       if (!defaultTimezone || userTimezone === 'UTC') {
-        console.log('UTC detected or no match found, using Eastern Time as default');
         defaultTimezone = 'America/New_York'; // Sensible default for US users
       }
       
@@ -171,13 +159,6 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
         preferred_date: defaultDate,
         preferred_time: '9:00 AM'
       }));
-      
-      // Debug: Log the initialization
-      console.log('=== INITIALIZATION DEBUG ===');
-      console.log('Default timezone:', defaultTimezone);
-      console.log('Default date:', defaultDate);
-      console.log('Default time: 9:00 AM');
-      console.log('================================');
     }
   }, [isOpen]);
 
@@ -198,16 +179,6 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Debug: Log form data before validation
-    console.log('=== FORM VALIDATION DEBUG ===');
-    console.log('Form data before validation:', formData);
-    console.log('University name:', formData.university_name);
-    console.log('Contact email:', formData.contact_email);
-    console.log('Preferred date:', formData.preferred_date);
-    console.log('Preferred time:', formData.preferred_time);
-    console.log('Meeting type:', formData.meeting_type);
-    console.log('User timezone:', formData.user_timezone);
-    console.log('================================');
     
     if (!formData.university_name || !formData.contact_email || !formData.preferred_date || !formData.preferred_time || !formData.meeting_type || !formData.user_timezone) {
       setSubmitStatus('error');
@@ -262,15 +233,6 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
           const offset = getTimezoneOffset(formData.user_timezone);
           const brazilHour = parseInt(hours) + offset;
           
-          // Debug logs for timezone conversion
-          console.log('=== TIMEZONE CONVERSION DEBUG ===');
-          console.log(`User timezone: ${formData.user_timezone}`);
-          console.log(`User time: ${formData.preferred_time} (${time24Hour})`);
-          console.log(`User hours: ${hours}, minutes: ${minutes}`);
-          console.log(`Timezone offset: +${offset}h`);
-          console.log(`Brazil time: ${brazilHour}:${minutes}`);
-          console.log(`Final datetime: ${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${brazilHour.toString().padStart(2, '0')}:${minutes}:00-03:00`);
-          console.log('================================');
           
           // Since N8N converts to UTC anyway, send UTC directly to avoid compensation
           // Convert Brazil time to UTC (Brazil UTC-3, so +3 hours)
@@ -278,7 +240,6 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
           const utcDate = new Date(date);
           utcDate.setHours(utcHour, parseInt(minutes), 0, 0);
           
-          console.log(`Sending UTC time: ${utcDate.toISOString()} (${utcHour}:${minutes} UTC)`);
           
           // Return UTC time to avoid N8N compensation
           return utcDate.toISOString();
@@ -341,12 +302,6 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
         }
       };
 
-      // Log the final payload for debugging
-      console.log('=== FINAL PAYLOAD DEBUG ===');
-      console.log('Payload being sent to webhook:');
-      console.log(JSON.stringify(payload, null, 2));
-      console.log('Meeting type value:', formData.meeting_type);
-      console.log('===========================');
 
       // Send request to webhook
       const response = await fetch('https://nwh.suaiden.com/webhook/university-schedule', {
@@ -362,7 +317,6 @@ const ForUniversitiesScheduleModal: React.FC<ScheduleModalProps> = ({ isOpen, on
       }
 
       const result = await response.json();
-      console.log('Webhook response:', result);
       
       // ✅ USAR A RESPOSTA REAL DO WEBHOOK
       if (result.response) {

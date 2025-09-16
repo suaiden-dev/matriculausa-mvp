@@ -50,12 +50,9 @@ export const useApplicationFeeStatus = (): ApplicationFeeStatus => {
           .eq('is_application_fee_paid', true);
 
         if (fetchError) {
-          console.error('❌ [useApplicationFeeStatus] Erro ao buscar aplicações:', fetchError);
           setError('Erro ao verificar status do pagamento');
           return;
         }
-
-        console.log('🔍 [useApplicationFeeStatus] Aplicações com application fee paga:', applications);
 
         if (applications && applications.length > 0) {
           setHasPaidApplicationFee(true);
@@ -65,18 +62,12 @@ export const useApplicationFeeStatus = (): ApplicationFeeStatus => {
           setCommittedUniversity(firstApplication.scholarships?.universities?.name || null);
           setCommittedScholarship(firstApplication.scholarships?.title || null);
           
-          console.log('✅ [useApplicationFeeStatus] Usuário já tem application fee paga para:', {
-            university: firstApplication.scholarships?.universities?.name,
-            scholarship: firstApplication.scholarships?.title
-          });
         } else {
           setHasPaidApplicationFee(false);
           setCommittedUniversity(null);
           setCommittedScholarship(null);
-          console.log('ℹ️ [useApplicationFeeStatus] Usuário não tem application fee paga');
         }
       } catch (err) {
-        console.error('❌ [useApplicationFeeStatus] Erro inesperado:', err);
         setError('Erro inesperado ao verificar status');
       } finally {
         setLoading(false);

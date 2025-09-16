@@ -58,7 +58,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     // Páginas públicas que não precisam de verificação
     const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];
     if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) {
-      console.log('🔀 [AUTHREDIRECT] Rota pública detectada:', currentPath);
       return;
     }
     
@@ -127,8 +126,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
         
         // Fallback para roles não reconhecidos ou casos inesperados
-        console.log('⚠️ [AUTHREDIRECT] Role não reconhecido ou fallback necessário:', user.role);
-        console.log('⚠️ [AUTHREDIRECT] Redirecionando para home');
         navigate('/', { replace: true });
         return;
       }
@@ -151,21 +148,18 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       
       // Se usuário é admin e está tentando acessar áreas restritas de outros roles
       if (user.role === 'admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
-        console.log('🔀 [AUTHREDIRECT] Admin tentando acessar área restrita, redirecionando');
         navigate('/admin/dashboard', { replace: true });
         return;
       }
       
       // Se usuário é affiliate_admin e está tentando acessar áreas restritas de outros roles
       if (user.role === 'affiliate_admin' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/dashboard'))) {
-        console.log('🔀 [AUTHREDIRECT] Affiliate admin tentando acessar área restrita, redirecionando');
         navigate('/affiliate-admin/dashboard', { replace: true });
         return;
       }
       
       // Se usuário é seller e está tentando acessar áreas restritas de outros roles
       if (user.role === 'seller' && (currentPath.startsWith('/student/') || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
-        console.log('🔀 [AUTHREDIRECT] Seller tentando acessar área restrita, redirecionando');
         navigate('/seller/dashboard', { replace: true });
         return;
       }
