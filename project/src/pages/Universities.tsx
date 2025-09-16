@@ -85,9 +85,7 @@ const Universities: React.FC = () => {
   }, [page, searchTerm, hasLoadedData, selectedLocation]);
 
   useEffect(() => {
-    console.log('Universidades carregadas:', realUniversities);
-    console.log('Locations carregados:', realUniversities.map(u => u.location));
-    console.log('Addresses carregados:', realUniversities.map(u => u.address));
+    // Effect for when realUniversities change
   }, [realUniversities]);
 
   // Buscar todas as universidades aprovadas para montar o filtro de estados
@@ -121,26 +119,16 @@ const Universities: React.FC = () => {
         if (error) throw error;
         setFeaturedUniversities(data || []);
       } catch (error) {
-        console.error('Error loading featured universities:', error);
+        // Error loading featured universities
       }
     };
 
     fetchFeaturedUniversities();
   }, []);
   
-  // Debug logs para verificar os valores
-  console.log('Universities - Debug Info:', {
-    loading,
-    isAuthenticated,
-    userProfile,
-    hasPaidFee: userProfile?.has_paid_selection_process_fee,
-    shouldShowBlocker: isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee,
-    userProfileKeys: userProfile ? Object.keys(userProfile) : 'No profile'
-  });
   
   // Se ainda está carregando, mostrar loading ou nada
   if (loading) {
-    console.log('Universities - Still loading, showing loading state');
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -153,18 +141,14 @@ const Universities: React.FC = () => {
   
   // Check if user needs to pay selection process fee (only for students)
   if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
-    console.log('Universities - Showing PaymentRequiredBlocker for student');
     return <PaymentRequiredBlocker pageType="universities" />;
   }
-  
-  console.log('Universities - Showing normal page content');
 
   // Get unique states for filter a partir de allUniversities
   const states = Array.from(new Set(allUniversities.map(school => {
     // Usar o campo address.state que já está padronizado
     return school.address?.state || null;
   }))).filter(Boolean).sort();
-  console.log('Estados disponíveis para filtro:', states);
 
   // Função para filtrar universidades (aplicável tanto para normais quanto featured)
   const filterUniversities = (universities: any[]) => {
@@ -249,7 +233,6 @@ const Universities: React.FC = () => {
               value={selectedLocation}
               onChange={(e) => {
                 setSelectedLocation(e.target.value);
-                console.log('Estado selecionado:', e.target.value);
               }}
               className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
               title="Filtrar por estado da universidade"

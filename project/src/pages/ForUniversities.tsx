@@ -33,8 +33,6 @@ const ForUniversities: React.FC = () => {
       setTimeout(() => {
         window.scrollBy(0, -100);
       }, 100);
-    } else {
-      console.error('Elemento não encontrado com ID:', sectionId);
     }
   };
 
