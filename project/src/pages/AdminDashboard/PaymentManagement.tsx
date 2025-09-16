@@ -152,6 +152,10 @@ const PaymentManagement = (): React.JSX.Element => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20); // 20 itens por página para melhor visualização
 
+  // Estados para ordenação
+  const [sortBy, setSortBy] = useState<keyof PaymentRecord>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
   const hasLoadedPayments = useRef(false);
   const hasLoadedUniversities = useRef(false);
   const hasLoadedUniversityRequests = useRef(false);
@@ -1989,7 +1993,6 @@ const PaymentManagement = (): React.JSX.Element => {
         monthlyGrowth: 0
       };
 
-      console.log('📈 Stats calculated:', newStats);
       setStats(newStats);
 
     } catch (error) {
@@ -2018,6 +2021,9 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // Calcular paginação
   const filteredPayments = payments.filter(payment => {
+    // Excluir sempre a bolsa especial de alunos atuais
+    if (payment.scholarship_title === 'Current Students Scholarship') return false;
+
     const searchTerm = filters.search.toLowerCase();
     const matchesSearch = 
       (payment.student_name || '').toLowerCase().includes(searchTerm) ||
@@ -2043,10 +2049,41 @@ const PaymentManagement = (): React.JSX.Element => {
     return matchesSearch && matchesUniversity && matchesFeeType && matchesStatus && matchesDate;
   });
 
-  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  // Aplicar ordenação aos dados filtrados
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    let aValue = a[sortBy];
+    let bValue = b[sortBy];
+
+    // Tratamento especial para diferentes tipos de dados
+    if (sortBy === 'amount') {
+      aValue = Number(aValue) || 0;
+      bValue = Number(bValue) || 0;
+    } else if (sortBy === 'created_at' || sortBy === 'payment_date') {
+      aValue = new Date(aValue as string).getTime();
+      bValue = new Date(bValue as string).getTime();
+    } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+
+    // Verificar se os valores são undefined
+    if (aValue === undefined || bValue === undefined) {
+      return 0;
+    }
+
+    if (aValue < bValue) {
+      return sortOrder === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortOrder === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+  
+  const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentPayments = filteredPayments.slice(startIndex, endIndex);
+  const currentPayments = sortedPayments.slice(startIndex, endIndex);
 
   // Funções de navegação
   const goToPage = (page: number) => {
@@ -2104,7 +2141,7 @@ const PaymentManagement = (): React.JSX.Element => {
   const handleExport = () => {
     const csvContent = [
       ['Student Name', 'Email', 'University', 'Scholarship', 'Fee Type', 'Amount', 'Status', 'Payment Date'].join(','),
-      ...filteredPayments.map(payment => [
+      ...sortedPayments.map(payment => [
         payment.student_name,
         payment.student_email,
         payment.university_name,
@@ -2132,6 +2169,7 @@ const PaymentManagement = (): React.JSX.Element => {
     setShowDetails(true);
   };
 
+
   const resetFilters = () => {
     setFilters({
       search: '',
@@ -2142,6 +2180,17 @@ const PaymentManagement = (): React.JSX.Element => {
       dateTo: ''
     });
     setCurrentPage(1); // Reset para primeira página
+  };
+
+  // Função para alterar ordenação
+  const handleSort = (field: keyof PaymentRecord) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+    setCurrentPage(1); // Reset para primeira página ao ordenar
   };
 
   if (loading) {
@@ -2333,6 +2382,39 @@ const PaymentManagement = (): React.JSX.Element => {
         {/* Advanced Filters */}
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-gray-200">
+            {/* Sort Controls */}
+            <div className="lg:col-span-5 mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Ordenação</h3>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Ordenar por:</label>
+                  <select
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as keyof PaymentRecord)}
+                  >
+                    <option value="created_at">Data de Criação</option>
+                    <option value="student_name">Nome do Estudante</option>
+                    <option value="university_name">Universidade</option>
+                    <option value="amount">Valor</option>
+                    <option value="status">Status</option>
+                    <option value="fee_type">Tipo de Taxa</option>
+                    <option value="payment_date">Data de Pagamento</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Ordem:</label>
+                  <select
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                  >
+                    <option value="desc">Decrescente</option>
+                    <option value="asc">Crescente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">University</label>
               <select
@@ -2418,7 +2500,7 @@ const PaymentManagement = (): React.JSX.Element => {
         )}
 
         <div className="mt-4 text-sm text-gray-600">
-          Showing {filteredPayments.length} of {payments.length} payments
+          Showing {sortedPayments.length} of {payments.length} payments
           {totalPages > 1 && (
             <>
               <span className="mx-2">•</span>
@@ -2437,23 +2519,83 @@ const PaymentManagement = (): React.JSX.Element => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Student
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('student_name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Student
+                      {sortBy === 'student_name' && (
+                        <span className="text-blue-600">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    University
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('university_name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      University
+                      {sortBy === 'university_name' && (
+                        <span className="text-blue-600">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fee Type
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('fee_type')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Fee Type
+                      {sortBy === 'fee_type' && (
+                        <span className="text-blue-600">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('amount')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Amount
+                      {sortBy === 'amount' && (
+                        <span className="text-blue-600">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Status
+                      {sortBy === 'status' && (
+                        <span className="text-blue-600">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Date
+                      {sortBy === 'created_at' && (
+                        <span className="text-blue-600">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -2584,13 +2726,13 @@ const PaymentManagement = (): React.JSX.Element => {
       )}
 
       {/* Paginação */}
-      {filteredPayments.length > 0 && totalPages > 1 && (
+      {sortedPayments.length > 0 && totalPages > 1 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Informações da paginação */}
             <div className="text-sm text-gray-600">
               <span className="font-medium">
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredPayments.length)} of {filteredPayments.length}
+                Showing {startIndex + 1} to {Math.min(endIndex, sortedPayments.length)} of {sortedPayments.length}
               </span>
               <span className="ml-2">
                 payments
