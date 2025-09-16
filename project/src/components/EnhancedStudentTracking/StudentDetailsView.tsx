@@ -71,6 +71,31 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header Section */}
+        <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl mb-6">
+          <div className="px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
+                <div className="min-w-0 w-full">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">
+                    Student Details
+                  </h1>
+                  <p className="mt-1 text-sm text-slate-600 break-words">
+                    Review and manage student application details
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 sm:justify-end flex-wrap">
+                <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 whitespace-nowrap shrink-0">
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {studentDetails?.application_status === 'enrolled' ? 'Enrolled' : 'Active'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         {activeTab === 'details' && (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
             <div className="xl:col-span-8 space-y-6">
@@ -82,7 +107,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     Student Information
                   </h2>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Personal Information */}
                     <div className="space-y-4">
@@ -349,22 +374,22 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                   </h2>
                   <p className="text-slate-200 text-sm mt-1">View student submitted documents and their current status</p>
                 </div>
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {studentDocuments && studentDocuments.length > 0 ? (
                     <div className="space-y-2">
                       {studentDocuments.map((doc: any, index: number) => (
-                        <div key={doc.id || index}>
-                          <div className="bg-white p-4">
-                            <div className="flex items-start space-x-4">
+                        <div key={doc.id || index} className="mb-4 last:mb-0">
+                          <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200">
+                            <div className="flex flex-col sm:flex-row items-start gap-4">
                               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-3 mb-1">
+                                <div className="flex flex-wrap gap-2 mb-1">
                                   <p className="text-sm font-medium text-slate-600 capitalize">{doc.type || 'Document'}</p>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                                     doc.status === 'approved' ? 'bg-green-100 text-green-800' :
                                     doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
                                     doc.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -381,11 +406,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                 )}
                                 
                                 {/* Botões de visualização e download */}
-                                <div className="flex items-center space-x-2 mt-3">
+                                <div className="flex flex-col sm:flex-row gap-2 mt-3">
                                   {doc.url && (
                                     <button 
                                       onClick={() => onViewDocument(doc)}
-                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                      className="bg-[#05294E] hover:bg-[#041f38] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                                     >
                                       View Document
                                     </button>
@@ -393,7 +418,7 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                                   {doc.url && (
                                     <button 
                                       onClick={() => onDownloadDocument(doc)}
-                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                      className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                                     >
                                       Download
                                     </button>

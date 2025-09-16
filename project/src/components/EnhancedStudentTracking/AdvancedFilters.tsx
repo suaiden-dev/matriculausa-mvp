@@ -63,7 +63,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="flex flex-col lg:flex-row gap-4 mb-4">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
             <input
@@ -76,11 +76,11 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           </div>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <select
             value={filters.sellerFilter}
             onChange={(e) => handleFilterChange('sellerFilter', e.target.value)}
-            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+            className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 w-full sm:w-auto"
           >
             <option value="all">All Sellers</option>
             {sellers.map((seller) => (
@@ -92,7 +92,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
           <button
             onClick={onToggleAdvancedFilters}
-            className={`px-4 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center gap-2 ${
+            className={`px-4 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2 w-full sm:w-auto ${
               showAdvancedFilters 
                 ? 'bg-[#05294E] text-white' 
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -107,7 +107,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
       {/* Filtros Avançados Expandidos */}
       {showAdvancedFilters && (
         <div className="border-t border-slate-200 pt-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Filtro por Universidade */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">University</label>
@@ -169,7 +169,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           </div>
 
           {/* Ordenação */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
               <select
@@ -186,10 +186,10 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Order</label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full">
                 <button
                   onClick={() => handleFilterChange('sortOrder', 'desc')}
-                  className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-lg font-medium transition-colors flex-1 sm:flex-none ${
                     filters.sortOrder === 'desc' 
                       ? 'bg-[#05294E] text-white' 
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -199,7 +199,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 </button>
                 <button
                   onClick={() => handleFilterChange('sortOrder', 'asc')}
-                  className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-lg font-medium transition-colors flex-1 sm:flex-none ${
                     filters.sortOrder === 'asc' 
                       ? 'bg-[#05294E] text-white' 
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -213,7 +213,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             <div className="flex items-end">
               <button
                 onClick={onResetFilters}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors w-full sm:w-auto"
               >
                 Reset Filters
               </button>
