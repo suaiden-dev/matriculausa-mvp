@@ -190,16 +190,49 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Performance & Metrics</h2>
-          <p className="text-gray-600">Analyze your performance and revenue</p>
+    <div className="min-h-screen">
+      {/* Header + Tabs Section */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                  Performance & Metrics
+                </h1>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Analyze your performance and revenue metrics.
+                </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  Track your progress, achievements, and ranking among sellers.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons Section */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Performance Analytics
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Comprehensive insights into your selling performance and achievements
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* KPIs Principais */}
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          {/* KPIs Principais */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
           <div className="flex items-center">
@@ -411,6 +444,8 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
         }
         return null;
       })()}
+        </div>
+      </div>
     </div>
   );
 };

@@ -197,7 +197,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                 <Menu className="h-5 w-5" />
               </button>
               
-              <div className="hidden md:block">
+              {/* <div className="hidden md:block">
                 <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Seller Dashboard'}
                   {activeTab === 'students' && 'My Students'}
@@ -212,7 +212,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
                   {activeTab === 'performance' && 'Analyze your performance and revenue'}
                   {activeTab === 'profile' && 'Manage your seller settings'}
                 </p>
-              </div>
+              </div> */}
             </div>
 
             <div className="flex items-center space-x-4">

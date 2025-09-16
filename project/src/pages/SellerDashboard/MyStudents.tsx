@@ -425,23 +425,62 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   }, [filteredStudents, availableUniversities]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="mt-1 text-sm text-slate-600">
-            Track the students you have referenced
-          </p>
+    <div className="min-h-screen">
+      {/* Header + Tabs Section */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + note + counter */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                  My Students
+                </h1>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Track and manage the students you have successfully referred.
+                </p>
+                <p className="mt-3 text-sm text-slate-500">
+                  Monitor their progress, payment status, and application journey.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons Section */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Student Management
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Comprehensive tracking and management of your referred students
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={onRefresh}
+                      className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="w-4 h-4 mr-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={onRefresh}
-          className="bg-[#3B82F6] hover:bg-[#365d9b] text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-        >
-          Refresh
-        </button>
       </div>
 
-      {/* Stats */}
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
@@ -893,6 +932,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
             </div>
           </div>
         )}
+      </div>
+        </div>
       </div>
     </div>
   );
