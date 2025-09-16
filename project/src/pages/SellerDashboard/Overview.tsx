@@ -193,17 +193,17 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       {/* Top Sales Performance */}
       {students.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="p-6 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <div>
+          <div className="p-4 sm:p-6 border-b border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-slate-900">Top Sales Performance</h2>
-                <p className="text-slate-500 text-sm">
+                <p className="text-slate-500 text-sm break-words">
                   Ranking of your top performing students by revenue
                 </p>
               </div>
               <div 
                 onClick={handleViewAllStudents}
-                className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center cursor-pointer"
+                className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center cursor-pointer self-start sm:self-auto"
               >
                 View All
                 <ArrowUpRight className="h-4 w-4 ml-1" />
@@ -211,7 +211,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
             </div>
           </div>
           
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="space-y-4">
               {/* Top 3 Students by Revenue */}
               {students
@@ -222,26 +222,26 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                     key={student.id || index} 
                     className="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:bg-slate-100 transition-all duration-300 group"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center space-x-3 min-w-0">
                         {/* Ranking Number */}
-                        <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-700">
+                        <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-700 flex-shrink-0">
                           {index + 1}
                         </div>
                         
                         {/* Student Info */}
-                        <div>
-                          <p className="font-semibold text-slate-900 text-lg">{student.full_name}</p>
-                          <p className="text-sm text-slate-600">{student.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 text-lg break-words">{student.full_name}</p>
+                          <p className="text-sm text-slate-600 break-words">{student.email}</p>
                           
                         </div>
                       </div>
                       
                       {/* Revenue Metrics */}
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <div className="space-y-1">
-                          <div className="flex items-center justify-end space-x-2">
-                            <span className="text-2xl font-bold text-slate-900">
+                          <div className="flex items-center sm:justify-end space-x-2">
+                            <span className="text-2xl font-bold text-slate-900 whitespace-nowrap">
                               {formatCurrency(student.total_paid || 0)}
                             </span>
                             <span className="text-sm text-slate-500">revenue</span>
@@ -268,19 +268,19 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                           key={student.id || index + 3} 
                           className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:bg-slate-100 transition-colors"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center space-x-3 min-w-0">
                               <div className="w-8 h-8 bg-slate-300 rounded-lg flex items-center justify-center text-white text-xs font-medium">
                                 {index + 4}
                               </div>
-                              <div>
-                                <p className="font-medium text-slate-900">{student.full_name}</p>
-                                <p className="text-xs text-slate-500">{student.email}</p>
+                              <div className="min-w-0">
+                                <p className="font-medium text-slate-900 break-words">{student.full_name}</p>
+                                <p className="text-xs text-slate-500 break-words">{student.email}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="flex items-center space-x-4">
-                                <span className="text-sm text-slate-700 font-medium">
+                            <div className="text-left sm:text-right">
+                              <div className="flex items-center sm:justify-end space-x-4">
+                                <span className="text-sm text-slate-700 font-medium whitespace-nowrap">
                                   {formatCurrency(student.total_paid || 0)}
                                 </span>
                                 <span className="text-xs text-slate-500">
