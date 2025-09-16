@@ -179,7 +179,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
               </button>
               
               {/* Refresh Button */}
-              {onRefresh && (
+              {/* {onRefresh && (
                 <button
                   onClick={() => onRefresh()}
                   className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -188,10 +188,10 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                 >
                   <Activity className="h-5 w-5" />
                 </button>
-              )}
+              )} */}
               
               <div className="hidden md:block">
-                <h1 className="text-2xl font-bold text-slate-900">
+                {/* <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Affiliate Admin Overview'}
                   {activeTab === 'users' && 'Seller Management'}
                   {activeTab === 'payments' && 'Payment Management'}
@@ -206,7 +206,7 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
                   {activeTab === 'students' && 'Track student referrals and conversions'}
                   {activeTab === 'analytics' && 'Analyze affiliate performance and revenue metrics'}
                   {activeTab === 'profile' && 'Manage your affiliate admin settings'}
-                </p>
+                </p> */}
               </div>
             </div>
 
