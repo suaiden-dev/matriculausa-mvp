@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { formatCentsToDollars } from '../../utils/currency';
 import {
   TrendingUp,
   DollarSign,
@@ -29,6 +30,9 @@ import {
 } from 'recharts';
 // Utilitário local para formatar dólares
 const formatUSD = (v: number) => v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Utilitário para formatar valores em centavos para dólares
+const formatCentsToUSD = (cents: number) => formatUSD(Number(formatCentsToDollars(cents)));
 
 interface FinancialMetrics {
   totalRevenue: number;
@@ -116,18 +120,17 @@ const FinancialAnalytics: React.FC = () => {
       );
     }
 
-    const dollars2 = (v: number) => formatUSD(v);
 
     return (
       <ResponsiveContainer width="100%" height={256}>
         <ReLineChart data={revenueData} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="#eee" strokeDasharray="3 3" />
           <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-          <YAxis yAxisId="left" tickFormatter={(v) => `$${dollars2(Number(v))}`} tick={{ fontSize: 12 }} />
+          <YAxis yAxisId="left" tickFormatter={(v) => `$${formatCentsToUSD(Number(v))}`} tick={{ fontSize: 12 }} />
           <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
           <Tooltip formatter={(value: any, name: string) => {
             const num = Number(value);
-            if (name === 'revenue') return `$${dollars2(num)}`;
+            if (name === 'revenue') return `$${formatCentsToUSD(num)}`;
             return formatUSD(num);
           }} />
           <Legend />
@@ -214,11 +217,14 @@ const FinancialAnalytics: React.FC = () => {
           *,
           user_profiles!student_id (
             id,
+            user_id,
             full_name,
             email,
             has_paid_selection_process_fee,
             is_application_fee_paid,
             is_scholarship_fee_paid,
+            has_paid_i20_control_fee,
+            scholarship_package_id,
             created_at
           ),
           scholarships (
@@ -243,9 +249,12 @@ const FinancialAnalytics: React.FC = () => {
           *,
           user_profiles!student_id (
             id,
+            user_id,
             has_paid_selection_process_fee,
             is_application_fee_paid,
             is_scholarship_fee_paid,
+            has_paid_i20_control_fee,
+            scholarship_package_id,
             created_at
           ),
           scholarships (
@@ -377,7 +386,17 @@ const FinancialAnalytics: React.FC = () => {
       }
     });
     
-    // Processar applications para extrair pagamentos
+    // Carregar dados de pacotes para valores dinâmicos (igual ao PaymentManagement)
+    const { data: packagesData } = await supabase
+      .from('scholarship_packages')
+      .select('*');
+    
+    const packageDataMap: { [key: string]: any } = {};
+    packagesData?.forEach((pkg: any) => {
+      packageDataMap[pkg.id] = pkg;
+    });
+
+    // Processar applications para extrair pagamentos (usando valores dinâmicos como PaymentManagement)
     applications.forEach((app: any) => {
       const student = app.user_profiles;
       const scholarship = app.scholarships;
@@ -401,16 +420,21 @@ const FinancialAnalytics: React.FC = () => {
       }
       universityRevenue[universityKey].students++;
 
-      // Valores variáveis das taxas (em dólares)
-      const applicationFee = Number(scholarship?.application_fee_amount ?? app.application_fee_amount ?? feeConfig.application_fee_default);
-      const scholarshipFee = Number(scholarship?.scholarship_fee_amount ?? app.scholarship_fee_amount ?? feeConfig.scholarship_fee_default);
+      // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
+      const packageData = packageDataMap[student?.scholarship_package_id];
+      const selectionProcessFee = packageData?.selection_process_fee ? 
+        Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+      const i20ControlFee = packageData?.i20_control_fee ? 
+        Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+      const scholarshipFee = packageData?.scholarship_fee ? 
+        Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
+      const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
 
-      // Incrementar total de pagamentos uma vez por application
-      totalPayments += 4; // 4 tipos de taxa por application
+      // Contar apenas os pagamentos reais (não incrementar totalPayments aqui)
 
-      // Selection Process Fee (valor do useFeeConfig)
+      // Selection Process Fee (valor dinâmico em centavos)
       if (student.has_paid_selection_process_fee && !zelleApprovedSet.has(zellePaidKey(student.id, 'selection_process'))) {
-        const revenue = feeConfig.selection_process_fee;
+        const revenue = selectionProcessFee;
         paidPayments++;
         paymentsByMethod.stripe.count++;
         paymentsByMethod.stripe.revenue += revenue;
@@ -421,7 +445,7 @@ const FinancialAnalytics: React.FC = () => {
         pendingPayments++;
       }
 
-      // Application Fee (valor variável em dólares)
+      // Application Fee (valor fixo em centavos)
       if (student.is_application_fee_paid && !zelleApprovedSet.has(zellePaidKey(student.id, 'application'))) {
         const revenue = applicationFee;
         paidPayments++;
@@ -434,7 +458,7 @@ const FinancialAnalytics: React.FC = () => {
         pendingPayments++;
       }
 
-      // Scholarship Fee (valor variável em dólares)
+      // Scholarship Fee (valor dinâmico em centavos)
       if (student.is_scholarship_fee_paid && !zelleApprovedSet.has(zellePaidKey(student.id, 'scholarship'))) {
         const revenue = scholarshipFee;
         paidPayments++;
@@ -447,9 +471,9 @@ const FinancialAnalytics: React.FC = () => {
         pendingPayments++;
       }
 
-      // I-20 Control Fee (valor do useFeeConfig)
+      // I-20 Control Fee (valor dinâmico em centavos)
       if (student.has_paid_i20_control_fee && !zelleApprovedSet.has(zellePaidKey(student.id, 'i20_control_fee'))) {
-        const i20Revenue = feeConfig.i20_control_fee;
+        const i20Revenue = i20ControlFee;
         paidPayments++;
         paymentsByMethod.manual.count++;
         paymentsByMethod.manual.revenue += i20Revenue;
@@ -470,11 +494,24 @@ const FinancialAnalytics: React.FC = () => {
       }
     });
 
-    // Processar pagamentos Zelle (valores em dólares)
+    // Processar pagamentos Zelle (valores em centavos como PaymentManagement)
     zellePayments.forEach((payment: any) => {
       const s = (payment.status || payment.zelle_status || '').toString();
       if (s === 'approved') {
-        const revenue = Number(payment.amount); // dólares
+        // Verificar se o usuário já tem uma aplicação (para evitar duplicação - igual ao PaymentManagement)
+        const hasApplication = applications?.some(app => 
+          app.user_profiles?.user_id === payment.user_id
+        );
+
+        console.log('🔍 Zelle payment user_id:', payment.user_id, 'hasApplication:', hasApplication, 'amount:', payment.amount, 'fee_type:', payment.fee_type);
+
+        if (hasApplication) {
+          console.log('⚠️ Skipping Zelle payment for user', payment.user_id, '- user already has application');
+          return;
+        }
+
+        // Converter para centavos como no PaymentManagement
+        const revenue = Math.round(parseFloat(payment.amount) * 100);
         paidPayments++;
         paymentsByMethod.zelle.count++;
         paymentsByMethod.zelle.revenue += revenue;
@@ -490,6 +527,9 @@ const FinancialAnalytics: React.FC = () => {
       totalPayments++;
     });
 
+    // Calcular total de pagamentos (igual ao PaymentManagement)
+    totalPayments = paidPayments + pendingPayments;
+    
     // Calcular dados de pagamento por método
     const totalMethodRevenue = Object.values(paymentsByMethod).reduce((sum, method) => sum + method.revenue, 0);
     const paymentMethodData: PaymentMethodData[] = Object.entries(paymentsByMethod).map(([method, data]) => ({
@@ -503,6 +543,14 @@ const FinancialAnalytics: React.FC = () => {
     const totalFeeRevenue = Object.values(paymentsByFeeType).reduce((sum, fee) => sum + fee.revenue, 0);
     console.log('📊 Revenue by Fee Type:', paymentsByFeeType);
     console.log('💰 Total Fee Revenue:', totalFeeRevenue);
+    console.log('🔍 DEBUG: Applications count:', applications.length);
+    console.log('🔍 DEBUG: Application user_ids:', applications.map((app: any) => app.user_profiles?.user_id).filter(Boolean));
+    console.log('🔍 DEBUG: Zelle payments count:', zellePayments.length);
+    console.log('🔍 DEBUG: Paid payments count:', paidPayments);
+    console.log('🔍 DEBUG: Pending payments count:', pendingPayments);
+    console.log('🔍 DEBUG: Total payments count:', totalPayments);
+    console.log('🔍 DEBUG: Total method revenue (cents):', totalMethodRevenue);
+    console.log('🔍 DEBUG: Total method revenue (dollars):', totalMethodRevenue / 100);
     
     const feeTypeData: FeeTypeData[] = Object.entries(paymentsByFeeType).map(([feeType, data]) => ({
       feeType: feeType === 'selection_process' ? 'Selection Process' :
@@ -538,7 +586,7 @@ const FinancialAnalytics: React.FC = () => {
       dayBuckets[key] = { revenue: 0, payments: 0, students: 0 };
     }
 
-    // Applications -> receita por flags pagas
+    // Applications -> receita por flags pagas (usando valores dinâmicos como PaymentManagement)
     applications.forEach((app: any) => {
       // Pular aplicações da "Current Students Scholarship" pois foram matriculadas diretamente
       if (app.scholarships?.title === 'Current Students Scholarship') {
@@ -557,37 +605,42 @@ const FinancialAnalytics: React.FC = () => {
         }
       }
 
-      const applicationFee = Number(
-        app.scholarships?.application_fee_amount ?? app.application_fee_amount ?? feeConfig.application_fee_default
-      );
-      const scholarshipFee = Number(
-        app.scholarships?.scholarship_fee_amount ?? app.scholarship_fee_amount ?? feeConfig.scholarship_fee_default
-      );
+      const student = app.user_profiles;
+      const packageData = packageDataMap[student?.scholarship_package_id];
 
-      // Selection Process Fee (valor do useFeeConfig)
+      // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
+      const selectionProcessFee = packageData?.selection_process_fee ? 
+        Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+      const i20ControlFee = packageData?.i20_control_fee ? 
+        Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+      const scholarshipFee = packageData?.scholarship_fee ? 
+        Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
+      const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+
+      // Selection Process Fee (valor dinâmico em centavos)
       if (app.user_profiles?.has_paid_selection_process_fee) {
-        dayBuckets[key].revenue += feeConfig.selection_process_fee;
+        dayBuckets[key].revenue += selectionProcessFee;
         dayBuckets[key].payments += 1;
       }
-      // Application Fee (variável em dólares)
+      // Application Fee (valor fixo em centavos)
       if (app.user_profiles?.is_application_fee_paid) {
         dayBuckets[key].revenue += applicationFee;
         dayBuckets[key].payments += 1;
       }
-      // Scholarship Fee (variável em dólares)
+      // Scholarship Fee (valor dinâmico em centavos)
       if (app.user_profiles?.is_scholarship_fee_paid) {
         dayBuckets[key].revenue += scholarshipFee;
         dayBuckets[key].payments += 1;
       }
-      // I-20 Control Fee (valor do useFeeConfig)
+      // I-20 Control Fee (valor dinâmico em centavos)
       if (app.user_profiles?.has_paid_i20_control_fee) {
-        dayBuckets[key].revenue += feeConfig.i20_control_fee;
+        dayBuckets[key].revenue += i20ControlFee;
         dayBuckets[key].payments += 1;
       }
       dayBuckets[key].students += 1;
     });
 
-    // Zelle payments aprovados contam receita
+    // Zelle payments aprovados contam receita (usando valores em centavos como PaymentManagement)
     zellePayments.forEach((zp: any) => {
       const createdAt = new Date(zp.created_at);
       const key = createdAt.toISOString().split('T')[0];
@@ -603,7 +656,18 @@ const FinancialAnalytics: React.FC = () => {
 
       const s = (zp.status || zp.zelle_status || '').toString();
       if (s === 'approved') {
-        const revenue = Number(zp.amount);
+        // Verificar se o usuário já tem uma aplicação (para evitar duplicação - igual ao PaymentManagement)
+        const hasApplication = applications?.some(app => 
+          app.user_profiles?.user_id === zp.user_id
+        );
+
+        if (hasApplication) {
+          console.log('⚠️ Skipping Zelle payment in buckets for user', zp.user_id, '- user already has application');
+          return;
+        }
+
+        // Converter para centavos como no PaymentManagement
+        const revenue = Math.round(parseFloat(zp.amount) * 100);
         const feeType = normalizeFeeType(zp.fee_type, revenue);
         dayBuckets[key].revenue += revenue;
         dayBuckets[key].payments += 1;
@@ -698,12 +762,12 @@ const FinancialAnalytics: React.FC = () => {
   const handleExportData = () => {
     const csvContent = [
       ['Metric', 'Value'],
-      ['Total Revenue', `$${formatUSD(metrics.totalRevenue)}`],
+      ['Total Revenue', `$${formatCentsToUSD(metrics.totalRevenue)}`],
       ['Total Payments', metrics.totalPayments.toString()],
       ['Paid Payments', metrics.paidPayments.toString()],
       ['Pending Payments', metrics.pendingPayments.toString()],
       ['Conversion Rate', `${metrics.conversionRate.toFixed(2)}%`],
-      ['Average Transaction Value', `$${formatUSD(metrics.averageTransactionValue)}`],
+      ['Average Transaction Value', `$${formatCentsToUSD(metrics.averageTransactionValue)}`],
       ['Total Students', metrics.totalStudents.toString()],
       ['Revenue Growth', `${metrics.revenueGrowth.toFixed(2)}%`]
     ].map(row => row.join(',')).join('\n');
@@ -847,7 +911,7 @@ const FinancialAnalytics: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">Total Revenue</p>
-              <p className="text-2xl font-bold">${formatUSD(metrics.totalRevenue)}</p>
+              <p className="text-2xl font-bold">${formatCentsToUSD(metrics.totalRevenue)}</p>
               <div className="flex items-center mt-2">
                 {metrics.revenueGrowth >= 0 ? (
                   <ArrowUpRight className="h-4 w-4 text-green-300 mr-1" />
@@ -885,7 +949,7 @@ const FinancialAnalytics: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">Avg Transaction Value</p>
-              <p className="text-2xl font-bold">${formatUSD(metrics.averageTransactionValue)}</p>
+              <p className="text-2xl font-bold">${formatCentsToUSD(metrics.averageTransactionValue)}</p>
               
             </div>
             <CreditCard size={32} className="text-purple-200" />
@@ -955,7 +1019,7 @@ const FinancialAnalytics: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-gray-900">
-                    ${formatUSD(method.revenue)}
+                    ${formatCentsToUSD(method.revenue)}
                   </div>
                   <div className="text-sm text-gray-500">
                     {method.count} payments ({method.percentage.toFixed(1)}%)
@@ -986,7 +1050,7 @@ const FinancialAnalytics: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-gray-900">
-                    ${formatUSD(fee.revenue)}
+                    ${formatCentsToUSD(fee.revenue)}
                   </div>
                   <div className="text-sm text-gray-500">
                     {fee.count} payments ({fee.percentage.toFixed(1)}%)
@@ -1032,7 +1096,7 @@ const FinancialAnalytics: React.FC = () => {
                     {uni.students}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${formatUSD(uni.revenue)}
+                    ${formatCentsToUSD(uni.revenue)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

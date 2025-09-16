@@ -1448,7 +1448,7 @@ const PaymentManagement = (): React.JSX.Element => {
           )
         `);
 
-      if (usersError) throw usersError;
+      if (appsError) throw appsError;
 
       // Buscar pagamentos Zelle aprovados (incluindo usuários sem aplicação)
       const { data: zellePaymentsRaw, error: zelleError } = await supabase
@@ -1958,7 +1958,7 @@ const PaymentManagement = (): React.JSX.Element => {
       });
 
       // Se não há dados reais, vamos criar alguns dados de exemplo para testar
-      setPayments(visiblePayments);
+      setPayments(paymentRecords);
 
       // Calcular estatísticas
       const totalPayments = paymentRecords.length;
