@@ -33,6 +33,7 @@ import FavoritesFilter from '../../components/FavoritesFilter';
 import PaymentRequiredBlocker from '../../components/PaymentRequiredBlocker';
 import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../../hooks/useApplicationFeeStatus';
+import { usePackageScholarshipFilter } from '../../hooks/usePackageScholarshipFilter';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
@@ -52,6 +53,15 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     committedScholarship, 
     loading: applicationFeeLoading 
   } = useApplicationFeeStatus();
+  
+  // Hook para filtro automático baseado no pacote do usuário
+  const { 
+    minScholarshipValue, 
+    userPackage, 
+    hasPackage, 
+    loading: packageFilterLoading 
+  } = usePackageScholarshipFilter();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedField, setSelectedField] = useState('all');
@@ -465,11 +475,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
       const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
       
+      // Filtro automático baseado no pacote do usuário
+      // Se usuário tem pacote, só mostrar bolsas >= valor mínimo do pacote
+      const matchesPackageFilter = minScholarshipValue === null || 
+        (scholarshipValue >= minScholarshipValue);
+      
   // Exclude scholarships from universities that are not approved (if we have an approved set)
   const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
   const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
 
-  const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && fromApprovedUniversity;
+  const passes = matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesPackageFilter && fromApprovedUniversity;
       
       // Log detalhado para a primeira bolsa que não passa nos filtros (debug)
       if (!passes && scholarships.indexOf(scholarship) === 0) {
@@ -506,7 +521,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     });
     
     return sorted;
-  }, [scholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, sortBy]);
+  }, [scholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, sortBy, minScholarshipValue]);
 
   // Memoização dos IDs aplicados e no carrinho
   const appliedScholarshipIds = useMemo(() => new Set(applications.map(app => app.scholarship_id)), [applications]);
@@ -548,12 +563,16 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       const deadlineDaysNum = appliedDeadlineDays && appliedDeadlineDays !== '' && !isNaN(Number(appliedDeadlineDays)) ? Number(appliedDeadlineDays) : null;
   const matchesDeadline = deadlineDaysNum === null || daysLeft >= deadlineDaysNum;
 
+      // Filtro automático baseado no pacote do usuário (mesmo filtro das bolsas normais)
+      const matchesPackageFilter = minScholarshipValue === null || 
+        (scholarshipValue >= minScholarshipValue);
+
   const universityId = scholarship.universities?.id ?? scholarship.university_id ?? null;
   const fromApprovedUniversity = approvedUniversityIds.size === 0 ? true : (universityId !== null && approvedUniversityIds.has(universityId));
 
-  return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && fromApprovedUniversity;
+  return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesPackageFilter && fromApprovedUniversity;
     });
-  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, showOnlyFavorites, isFavorite]);
+  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, showOnlyFavorites, isFavorite, minScholarshipValue]);
 
 
 

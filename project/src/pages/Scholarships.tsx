@@ -12,6 +12,7 @@ import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
 import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 import { ApplicationFeeBlockedMessage } from '../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
+import { usePackageScholarshipFilter } from '../hooks/usePackageScholarshipFilter';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
@@ -24,6 +25,14 @@ const Scholarships: React.FC = () => {
     committedScholarship, 
     loading: applicationFeeLoading 
   } = useApplicationFeeStatus();
+  
+  // Hook para filtro automático baseado no pacote do usuário
+  const { 
+    minScholarshipValue, 
+    userPackage, 
+    hasPackage, 
+    loading: packageFilterLoading 
+  } = usePackageScholarshipFilter();
   
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,7 +96,7 @@ const Scholarships: React.FC = () => {
         if (filters.minPrice !== undefined) setMinPrice(filters.minPrice);
         // maxPrice será definido pelo useEffect do maxScholarshipValue
       } catch (error) {
-        console.log('Error loading saved filters:', error);
+        // Error loading saved filters
       }
     }
   }, []);
@@ -108,7 +117,6 @@ const Scholarships: React.FC = () => {
           .order('featured_order', { ascending: true });
         
         if (!scholarshipsError && scholarshipsData) {
-          console.log('Featured Scholarships:', scholarshipsData);
           setFeaturedScholarships(scholarshipsData);
           
           // Fetch universities of featured scholarships to display information
@@ -125,7 +133,7 @@ const Scholarships: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('Error loading featured scholarships:', error);
+        // Error loading featured scholarships
       }
     };
 
@@ -146,7 +154,7 @@ const Scholarships: React.FC = () => {
           setApprovedUniversityIds(ids);
         }
       } catch (err) {
-        console.error('Error loading approved universities:', err);
+        // Error loading approved universities
       }
     };
 
@@ -163,15 +171,6 @@ const Scholarships: React.FC = () => {
   const { refetchUserProfile } = useAuth();
   const navigate = useNavigate();
   
-  // Debug logs para verificar os valores
-  console.log('Scholarships - Debug Info:', {
-    loading,
-    isAuthenticated,
-    userProfile,
-    hasPaidFee: userProfile?.has_paid_selection_process_fee,
-    shouldShowBlocker: isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee,
-    userProfileKeys: userProfile ? Object.keys(userProfile) : 'No profile'
-  });
   
   // Check if user needs to pay selection process fee (only for students)
   // if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
@@ -179,7 +178,6 @@ const Scholarships: React.FC = () => {
   //   return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
   // }
   
-  console.log('Scholarships - Showing normal page content');
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
     // Exclude featured scholarships from the general list to avoid duplication
@@ -199,7 +197,12 @@ const Scholarships: React.FC = () => {
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
     const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
+    
+    // Filtro automático baseado no pacote do usuário
+    const matchesPackageFilter = minScholarshipValue === null || 
+      (value >= minScholarshipValue);
+    
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesPackageFilter;
   });
 
   // Apply the same filter logic to featured scholarships so the featureds respect the page filters
@@ -216,7 +219,12 @@ const Scholarships: React.FC = () => {
     const matchesField = selectedField === 'all' || (scholarship.field_of_study && scholarship.field_of_study.toLowerCase().includes(selectedField.toLowerCase()));
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
     const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission;
+    
+    // Filtro automático baseado no pacote do usuário (mesmo filtro das bolsas normais)
+    const matchesPackageFilter = minScholarshipValue === null || 
+      (value >= minScholarshipValue);
+    
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesPackageFilter;
   };
 
   const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);

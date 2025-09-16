@@ -207,7 +207,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
                   Ranking of top performing sellers based on performance
                 </p>
               </div>
-              <div className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer">
+              <div 
+                onClick={() => navigate('/affiliate-admin/dashboard/analytics')}
+                className="text-[#05294E] hover:text-[#05294E] font-medium text-sm flex items-center cursor-pointer"
+              >
                 View All
                 <ArrowUpRight className="h-4 w-4 ml-1" />
               </div>
