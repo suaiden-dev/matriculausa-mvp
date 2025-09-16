@@ -328,7 +328,7 @@ const ApplicationChatPage: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl p-0 overflow-hidden border border-blue-100 flex flex-col">
             {/* Header Welcome + Next Steps (layout visual anterior) */}
             <div className="flex items-center gap-4 px-8 pt-8 pb-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-blue-100">
-              <div className="flex-shrink-0 flex items-center justify-center w-16 h-16 bg-white rounded-full border border-blue-100">
+              <div className="flex-shrink-0 hidden sm:flex items-center justify-center w-16 h-16 bg-white rounded-full border border-blue-100">
                 {applicationDetails.scholarships?.universities?.logo_url ? (
                   <img
                     src={applicationDetails.scholarships.universities.logo_url || ''}
@@ -340,16 +340,21 @@ const ApplicationChatPage: React.FC = () => {
                   <GraduationCap className="w-8 h-8 text-blue-400" />
                 )}
               </div>
-              <div className="flex-1">
-                <h1 className="text-xl md:text-2xl font-bold text-[#05294E] mb-1">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-[#05294E] mb-1 leading-tight">
                   {t('studentDashboard.applicationChatPage.welcome.welcomeMessage', { firstName: applicationDetails.user_profiles?.full_name?.split(' ')[0] || 'Student' })}
                 </h1>
-                <div className="text-base text-slate-700">
+                <div className="text-sm sm:text-base text-slate-700 leading-relaxed">
                   {t('studentDashboard.applicationChatPage.welcome.applicationInProgress', { universityName: applicationDetails.scholarships?.universities?.name || 'your university' })}
                 </div>
                 {applicationDetails.scholarships?.title && (
-                  <div className="text-xs text-slate-600 mt-1">
-                    {t('studentDashboard.applicationChatPage.welcome.scholarship')} <span className="font-semibold">{applicationDetails.scholarships.title}</span>
+                  <div className="text-xs sm:text-sm text-slate-600 mt-2 leading-tight">
+                    <span className="block sm:inline">
+                      {t('studentDashboard.applicationChatPage.welcome.scholarship')}
+                    </span>
+                    <span className="font-semibold block sm:inline sm:ml-1">
+                      {applicationDetails.scholarships.title}
+                    </span>
                   </div>
                 )}
               </div>

@@ -812,7 +812,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
                                 className="hidden"
                               />
                             </label>
-                            <span className="text-sm text-slate-500">
+                            <span className="text-sm overflow-hidden text-ellipsis whitespace-nowrap text-slate-500">
                               {hasFile ? hasFile.name : t('studentDashboard.documentsAndScholarshipChoice.noFileChosen')}
                             </span>
                           </div>
