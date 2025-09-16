@@ -554,7 +554,7 @@ const SellerManagement: React.FC = () => {
     <React.Fragment>
     <div className="min-h-screen">
       {/* Header + Tabs Section */}
-      <div className="w-full">
+      <div className="px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
           <div className="max-w-full mx-auto bg-slate-50">
             {/* Header: title + note + counter */}
