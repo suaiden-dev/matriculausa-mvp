@@ -920,26 +920,26 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       {/* Header Section */}
       <div className="bg-white shadow-sm border-b border-slate-200 rounded-t-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 min-w-0 w-full">
               <button
                 onClick={() => onBack ? onBack() : navigate(-1)}
-                className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100"
+                className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 transition-colors py-2 px-3 rounded-lg hover:bg-slate-100 mb-4 sm:mb-0 w-full sm:w-auto "
               >
                 <ArrowLeft className="h-5 w-5" />
                 <span className="text-sm md:text-base">Back to list</span>
               </button>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              <div className="min-w-0 w-full">
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight break-words">
                   Student Application
                 </h1>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate-600 break-words">
                   Review and manage {studentInfo.full_name}'s application details
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200">
+            <div className="flex items-center space-x-3 sm:justify-end flex-wrap">
+              <div className="flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 whitespace-nowrap shrink-0">
                 <CheckCircle2 className="w-4 h-4 mr-1.5" />
                 {scholarshipApplication?.status === 'enrolled' ? 'Enrolled' : 'Active'}
               </div>
@@ -1521,12 +1521,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         {activeTab === 'documents' && (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
             <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center min-w-0">
                   <FileText className="w-6 text-white h-6 mr-3" />
                   <div>
-                    <h2 className="text-xl font-semibold text-white">Document Management</h2>
-                    <p className="text-slate-200 text-sm mt-1">View student submitted documents and their current status</p>
+                    <h2 className="text-xl font-semibold text-white break-words">Document Management</h2>
+                    <p className="text-slate-200 text-sm mt-1 break-words">View student submitted documents and their current status</p>
                   </div>
                 </div>
               </div>
@@ -1547,28 +1547,28 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                   {documentRequests && documentRequests.length > 0 ? (
                     <div className="space-y-4">
                       {documentRequests.map((request) => (
-                        <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-6">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <div key={request.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-4 sm:p-6 overflow-hidden">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start sm:items-center space-x-3 mb-3 min-w-0">
+                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                   <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                   </svg>
                                 </div>
-                                <div>
-                                  <h4 className="text-lg font-semibold text-slate-900">
+                                <div className="min-w-0">
+                                  <h4 className="text-lg font-semibold text-slate-900 break-words">
                                     {request.title || 'Document Request'}
                                   </h4>
                                   {request.description && (
-                                    <p className="text-sm text-slate-600 mt-1">
+                                    <p className="text-sm text-slate-600 mt-1 break-words">
                                       {request.description}
-                                </p>
-                              )}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               
-                              <div className="flex items-center space-x-4 text-sm text-slate-500">
+                              <div className="flex flex-wrap gap-2 text-sm text-slate-500">
                                 {request.due_date && (
                                   <span className="flex items-center">
                                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -1577,7 +1577,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                     Due: {formatDate(request.due_date)}
                                   </span>
                                 )}
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                                   request.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
                                 }`}>
                                   {request.is_global ? 'Global Request' : 'Individual Request'}
@@ -1587,10 +1587,10 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             
                             {/* University Template */}
                             {request.attachment_url && (
-                              <div className="ml-4">
+                              <div className="ml-0 sm:ml-4">
                                 <button
                                   onClick={() => handleViewDocument({ file_url: request.attachment_url, type: 'template' })}
-                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center space-x-2"
+                                  className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center space-x-2 w-full sm:w-auto"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1611,64 +1611,63 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                               Student Response:
                             </h5>
                             
-                            <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                            <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4">
                               {request.uploads?.map((upload: any) => {
                                 const { filename, fullUrl } = getDocumentInfo(upload);
                                 return (
-                                  <div key={upload.id} className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-4">
+                                  <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 last:mb-0">
+                                    <div className="flex items-start sm:items-center space-x-4 min-w-0">
                                       <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                      </svg>
-                                    </div>
+                                        </svg>
+                                      </div>
                                       <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-slate-900">{filename}</p>
+                                        <p className="font-medium text-slate-900 break-words">{filename}</p>
                                         <p className="text-sm text-slate-500">
                                           Submitted on {formatDate(upload.uploaded_at)}
                                         </p>
-                                    <p className="text-xs text-slate-400 mt-1">
+                                        <p className="text-xs text-slate-400 mt-1 break-words">
                                           Response to: {request.title || 'Document Request'}
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                    <div className="flex items-center space-x-3">
-                                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-3 sm:self-auto self-start mt-3 sm:mt-0">
+                                      <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
                                         upload.status === 'approved' ? 'bg-green-100 text-green-800' :
                                         upload.status === 'rejected' ? 'bg-red-100 text-red-800' :
                                         upload.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-slate-100 text-slate-800'
-                                  }`}>
+                                        'bg-slate-100 text-slate-800'
+                                      }`}>
                                         {upload.status === 'approved' ? 'Approved' :
                                          upload.status === 'rejected' ? 'Rejected' :
                                          upload.status === 'under_review' ? 'Under Review' :
-                                     'Pending'}
-                                  </span>
-                                  
-                                  <button
-                                    onClick={() => handleViewDocument({
+                                         'Pending'}
+                                      </span>
+                                      
+                                      <button
+                                        onClick={() => handleViewDocument({
                                           ...upload,
                                           file_url: fullUrl,
                                           filename
                                         })}
-                                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                  >
-                                    View
-                                  </button>
-                                  
-                                  <button
-                                    onClick={() => handleDownloadDocument({
+                                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
+                                      >
+                                        View
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => handleDownloadDocument({
                                           ...upload,
                                           file_url: fullUrl,
                                           filename
                                         })}
-                                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                  >
-                                    Download
-                                  </button>
-                                </div>
-                              </div>
+                                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
+                                      >
+                                        Download
+                                      </button>
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </div>
@@ -1690,21 +1689,21 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
               {/* Acceptance Letter Section */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
-                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg">
+                <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-4 sm:px-6 py-5 rounded-t-3xl">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 gap-3">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
                       <svg className="w-6 h-6 text-[#05294E]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                      </svg>
                     </div>
-                    <div>
-                      <h4 className="text-xl font-bold text-white">Acceptance Letter</h4>
-                      <p className="text-blue-100 text-sm">View student acceptance letter and enrollment status</p>
+                    <div className="min-w-0">
+                      <h4 className="text-xl font-bold text-white break-words">Acceptance Letter</h4>
+                      <p className="text-blue-100 text-sm break-words">View student acceptance letter and enrollment status</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {loadingApplication && !currentApplication?.acceptance_letter_url ? (
                     <div className="bg-white rounded-3xl p-8">
                       <div className="text-center">
@@ -1716,16 +1715,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                       </div>
                     </div>
                   ) : currentApplication && currentApplication.acceptance_letter_url ? (
-                    <div className="bg-white rounded-3xl p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-900">
+                    <div className="bg-white rounded-3xl p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex items-start space-x-4 min-w-0">
+                          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-900 break-words">
                               {(() => {
                                 const url = getAcceptanceLetterUrl(currentApplication);
                                 return url ? (url.split('/').pop() || 'Acceptance Letter') : 'Acceptance Letter';
@@ -1734,38 +1733,45 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             <p className="text-sm text-slate-500">
                               {currentApplication.acceptance_letter_sent_at ? `Sent on ${formatDate(currentApplication.acceptance_letter_sent_at)}` : 'Available'}
                             </p>
-                                  <p className="text-xs text-slate-400 mt-1">
+                            <p className="text-xs text-slate-400 mt-1">
                               Official university acceptance document
-                                  </p>
-                              </div>
-                            </div>
-                            
-                        <div className="flex items-center space-x-3">
-                          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                            Available
+                            </p>
+                            <div className="flex items-center mt-2 sm:hidden">
+                              <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                Available
                               </span>
-                              
-                                 <button 
-                            onClick={() => handleViewDocument({
-                              file_url: getAcceptanceLetterUrl(currentApplication),
-                              filename: 'Acceptance Letter'
-                            })}
-                            className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            View
-                                 </button>
-                          
-                                 <button 
-                            onClick={() => handleDownloadDocument({
-                              file_url: getAcceptanceLetterUrl(currentApplication),
-                              filename: 'Acceptance Letter'
-                            })}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            Download
-                                 </button>
                             </div>
                           </div>
+                        </div>
+                            
+                        <div className="flex flex-col sm:flex-row gap-2 sm:items-start sm:ml-auto">
+                          <span className="hidden sm:inline-block px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                            Available
+                          </span>
+                          
+                          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                            <button 
+                              onClick={() => handleViewDocument({
+                                file_url: getAcceptanceLetterUrl(currentApplication),
+                                filename: 'Acceptance Letter'
+                              })}
+                              className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                            >
+                              View
+                            </button>
+                            
+                            <button 
+                              onClick={() => handleDownloadDocument({
+                                file_url: getAcceptanceLetterUrl(currentApplication),
+                                filename: 'Acceptance Letter'
+                              })}
+                              className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
+                            >
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="bg-white rounded-3xl p-8">
