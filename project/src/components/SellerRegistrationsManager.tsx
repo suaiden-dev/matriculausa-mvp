@@ -102,7 +102,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         // Don't fail completely, just log the error
       }
 
-      let sellers = [];
+      let sellers: { user_id: string; name: string; email: string; created_at: string }[] = [];
       if (affiliateAdmin) {
         const { data: sellersData, error: sellersError } = await supabase
           .from('sellers')
@@ -163,7 +163,15 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
         .filter(record => record.status === 'rejected')
         .map(record => record.user_id);
 
-      let rejectedUsers = [];
+      let rejectedUsers: {
+        user_id: string;
+        full_name: string;
+        email: string;
+        phone: string | null;
+        created_at: string;
+        role: string;
+        seller_referral_code: string | null;
+      }[] = [];
       if (rejectedUserIds.length > 0) {
         const { data: rejectedUsersData, error: rejectedError } = await supabase
           .from('user_profiles')
@@ -188,42 +196,39 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
       }
 
       // Transform current pending users into registration format
-      const currentRegistrations = (users || []).map(user => {
+      const currentRegistrations: SellerRegistration[] = (users || []).map(user => {
         const isApproved = approvedSellers.has(user.user_id);
-        const status = isApproved ? 'approved' : 'pending';
-        
-        
+        const status: SellerRegistration['status'] = isApproved ? 'approved' : 'pending';
+
         return {
           id: user.user_id,
-          user_id: user.user_id,
           email: user.email,
           full_name: user.full_name,
           phone: user.phone,
-          status: status,
+          status,
           created_at: user.created_at,
           registration_code: user.seller_referral_code || 'Unknown',
-          approved_at: isApproved ? approvedSellers.get(user.user_id)?.created_at : null
+          approved_at: isApproved ? approvedSellers.get(user.user_id)?.created_at : undefined,
         };
       });
 
       // Transform rejected users into registration format
-      const rejectedRegistrations = rejectedUsers.map(user => {
+      const rejectedRegistrations: SellerRegistration[] = rejectedUsers.map(user => {
         const historyRecord = registrationHistory.get(user.user_id);
         return {
           id: user.user_id,
-          user_id: user.user_id,
           email: user.email,
           full_name: user.full_name,
           phone: user.phone,
           status: 'rejected',
           created_at: user.created_at,
           registration_code: historyRecord?.registration_code || 'Unknown',
-          approved_at: historyRecord?.action_taken_at || null
+          approved_at: historyRecord?.action_taken_at || undefined
         };
       });
 
       // Combine all registrations
-      const registrations = [...currentRegistrations, ...rejectedRegistrations];
+      const registrations: SellerRegistration[] = [...currentRegistrations, ...rejectedRegistrations];
 
 
       setRegistrations(registrations);
@@ -504,21 +509,21 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
     switch (status) {
       case 'pending':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 whitespace-nowrap shrink-0">
             <Clock className="w-3 h-3 mr-1" />
             Pending
           </span>
         );
       case 'approved':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 whitespace-nowrap shrink-0">
             <UserCheck className="w-3 h-3 mr-1" />
             Approved
           </span>
         );
       case 'rejected':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 whitespace-nowrap shrink-0">
             <UserX className="w-3 h-3 mr-1" />
             Rejected
           </span>
@@ -591,21 +596,27 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
           {registrations.map((registration) => (
             <div
               key={registration.id}
-              className="border border-gray-200 rounded-lg p-4 bg-white"
+              className="border border-gray-200 rounded-lg p-4 bg-white overflow-hidden"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-3 mb-2">
                     <h4 className="font-medium text-gray-900">
                       {registration.full_name}
                     </h4>
-                    {getStatusBadge(registration.status)}
+                    {/* {getStatusBadge(registration.status)} */}
                   </div>
                   
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>Email: {registration.email}</p>
-                    {registration.phone && <p>Phone: {registration.phone}</p>}
-                    <p>Code: <span className="font-mono">{registration.registration_code}</span></p>
+                  <div className="text-sm text-gray-600 space-y-1 break-words">
+                    <p className="whitespace-normal break-words">
+                      Email: <span className="break-all">{registration.email}</span>
+                    </p>
+                    {registration.phone && (
+                      <p className="whitespace-normal break-words">Phone: {registration.phone}</p>
+                    )}
+                    <p>
+                      Code: <span className="font-mono break-all">{registration.registration_code}</span>
+                    </p>
                     <p>Registered on: {new Date(registration.created_at).toLocaleDateString('en-US')}</p>
                     {registration.approved_at && (
                       <p>
@@ -616,7 +627,7 @@ const SellerRegistrationsManager: React.FC<SellerRegistrationsManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 ml-4">
+                <div className="flex items-center space-x-2 ml-0 sm:ml-4 self-end sm:self-auto">
                   <button
                     onClick={() => openDetailsModal(registration)}
                     className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
