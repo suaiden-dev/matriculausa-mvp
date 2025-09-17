@@ -185,8 +185,16 @@ export const useFeeConfig = (userId?: string) => {
     }
   };
 
-  const formatFeeAmount = (amount: number): string => {
-    return `$${amount.toFixed(2)}`;
+  const formatFeeAmount = (amount: number | string): string => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    
+    // Se o valor for maior ou igual a 10000, está em centavos (ex: 70000 = $700.00)
+    if (numAmount >= 10000) {
+      const dollars = numAmount / 100;
+      return `$${dollars.toFixed(2)}`;
+    }
+    // Se o valor for menor que 10000, já está em dólares (ex: 350 = $350.00)
+    return `$${numAmount.toFixed(2)}`;
   };
 
   const processTranslation = (text: any): string => {

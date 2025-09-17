@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useDynamicFees } from '../hooks/useDynamicFees';
+import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
@@ -64,9 +66,11 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { t } = useTranslation();
   const { isAuthenticated, updateUserProfile, user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
+  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
 
   const product = STRIPE_PRODUCTS[productId as keyof typeof STRIPE_PRODUCTS];
   
@@ -351,11 +355,14 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   return (
     <>
       <button
-        onClick={checkActiveDiscount}
-        disabled={disabled || loading}
-        className={`${className} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        onClick={isBlocked && pendingPayment ? undefined : checkActiveDiscount}
+        disabled={disabled || loading || paymentBlockedLoading || (isBlocked && pendingPayment)}
+        className={`${className} ${(loading || paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        {loading ? 'Processing...' : buttonText}
+        {loading ? t('zelleCheckout.processing') : 
+         paymentBlockedLoading ? 'Checking...' : 
+         (isBlocked && pendingPayment) ? t('zelleCheckout.processing') : 
+         buttonText}
       </button>
 
       {/* Pre-Checkout Modal para Selection Process e Application Fee */}
