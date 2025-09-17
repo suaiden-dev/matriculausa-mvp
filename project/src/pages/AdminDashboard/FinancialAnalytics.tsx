@@ -231,6 +231,7 @@ const FinancialAnalytics: React.FC = () => {
             id,
             title,
             amount,
+            application_fee_amount,
             universities (
               id,
               name
@@ -423,12 +424,20 @@ const FinancialAnalytics: React.FC = () => {
       // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
       const packageData = packageDataMap[student?.scholarship_package_id];
       const selectionProcessFee = packageData?.selection_process_fee ? 
-        Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+        Math.round(packageData.selection_process_fee * 100) : Math.round(feeConfig.selection_process_fee * 100);
       const i20ControlFee = packageData?.i20_control_fee ? 
-        Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+        Math.round(packageData.i20_control_fee * 100) : Math.round(feeConfig.i20_control_fee * 100);
       const scholarshipFee = packageData?.scholarship_fee ? 
-        Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
-      const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100);
+      // Application Fee dinâmico baseado na bolsa específica
+      let applicationFee: number;
+      if (app.scholarships?.application_fee_amount) {
+        // O valor no banco está em centavos, usar diretamente
+        applicationFee = app.scholarships.application_fee_amount;
+      } else {
+        // Fallback para valor padrão do sistema (converter dólares para centavos)
+        applicationFee = Math.round(feeConfig.application_fee_default * 100);
+      }
 
       // Contar apenas os pagamentos reais (não incrementar totalPayments aqui)
 
@@ -610,12 +619,20 @@ const FinancialAnalytics: React.FC = () => {
 
       // Obter valores dinâmicos do pacote ou usar valores padrão (igual ao PaymentManagement)
       const selectionProcessFee = packageData?.selection_process_fee ? 
-        Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+        Math.round(packageData.selection_process_fee * 100) : Math.round(feeConfig.selection_process_fee * 100);
       const i20ControlFee = packageData?.i20_control_fee ? 
-        Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+        Math.round(packageData.i20_control_fee * 100) : Math.round(feeConfig.i20_control_fee * 100);
       const scholarshipFee = packageData?.scholarship_fee ? 
-        Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
-      const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+        Math.round(packageData.scholarship_fee * 100) : Math.round(feeConfig.scholarship_fee_default * 100);
+      // Application Fee dinâmico baseado na bolsa específica
+      let applicationFee: number;
+      if (app.scholarships?.application_fee_amount) {
+        // O valor no banco está em centavos, usar diretamente
+        applicationFee = app.scholarships.application_fee_amount;
+      } else {
+        // Fallback para valor padrão do sistema (converter dólares para centavos)
+        applicationFee = Math.round(feeConfig.application_fee_default * 100);
+      }
 
       // Selection Process Fee (valor dinâmico em centavos)
       if (app.user_profiles?.has_paid_selection_process_fee) {
