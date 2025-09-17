@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { UniversityPaymentRequestService, type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
 import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
 import { formatCentsToDollars } from '../../utils/currency';
@@ -78,6 +79,7 @@ const STATUS_OPTIONS = [
 
 const PaymentManagement = (): React.JSX.Element => {
   const { user } = useAuth();
+  const { getFeeAmount } = useFeeConfig();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [universities, setUniversities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -519,14 +521,14 @@ const PaymentManagement = (): React.JSX.Element => {
   };
 
   const addAdminNotes = async (id: string) => {
-      try {
+    try {
       setActionLoading(true);
       await UniversityPaymentRequestService.adminAddNotes(id, adminNotes);
-        await loadUniversityPaymentRequests();
+      await loadUniversityPaymentRequests();
       setShowAddNotesModal(false);
       setAdminNotes('');
-      } catch (error: any) {
-        console.error('Error adding notes:', error);
+    } catch (error: any) {
+      console.error('Error adding notes:', error);
     } finally {
       setActionLoading(false);
     }
@@ -1418,8 +1420,6 @@ const PaymentManagement = (): React.JSX.Element => {
     try {
       setLoading(true);
       console.log('🔍 Loading payment data...');
-      console.log('🚨 DEBUG: loadPaymentData function called');
-      console.log('🚨 DEBUG: Starting payment data load process');
 
       // Buscar aplicações de bolsa
       const { data: applications, error: appsError } = await supabase
@@ -1441,6 +1441,7 @@ const PaymentManagement = (): React.JSX.Element => {
             id,
             title,
             amount,
+            application_fee_amount,
             universities (
               id,
               name
@@ -1510,17 +1511,7 @@ const PaymentManagement = (): React.JSX.Element => {
       console.log('📊 Applications found:', applications?.length || 0);
       console.log('💰 Zelle payments found:', zellePayments?.length || 0);
       console.log('💳 Stripe users found:', stripeUsers?.length || 0);
-      console.log('🔍 DEBUG: Zelle payments data:', zellePayments);
-      if (zellePayments && zellePayments.length > 0) {
-        console.log('🔍 DEBUG: First Zelle payment:', zellePayments[0]);
-        console.log('🔍 DEBUG: First Zelle payment user_profiles:', zellePayments[0].user_profiles);
-      }
-      if (stripeUsers && stripeUsers.length > 0) {
-        console.log('🔍 DEBUG: First Stripe user:', stripeUsers[0]);
-      }
 
-      console.log('🚨 DEBUG: Applications loaded successfully:', applications?.length || 0);
-      console.log('🚨 DEBUG: First application:', applications?.[0]);
       
       // Buscar dados dos pacotes separadamente (aplicações, pagamentos Zelle e usuários Stripe)
       const allPackageIds = [
@@ -1529,7 +1520,6 @@ const PaymentManagement = (): React.JSX.Element => {
         ...(stripeUsers?.map(user => user.scholarship_package_id).filter(Boolean) || [])
       ];
       const uniquePackageIds = [...new Set(allPackageIds)];
-      console.log('🚨 DEBUG: Package IDs found:', uniquePackageIds);
       
       let packageDataMap: { [key: string]: any } = {};
       if (uniquePackageIds.length > 0) {
@@ -1541,7 +1531,6 @@ const PaymentManagement = (): React.JSX.Element => {
         if (packagesError) {
           console.error('Error loading packages:', packagesError);
         } else {
-          console.log('🚨 DEBUG: Packages loaded:', packages);
           packageDataMap = packages?.reduce((acc: { [key: string]: any }, pkg: any) => {
             acc[pkg.id] = pkg;
             return acc;
@@ -1625,34 +1614,21 @@ const PaymentManagement = (): React.JSX.Element => {
 
         // Obter valores dinâmicos do pacote ou usar valores padrão
         const selectionProcessFee = packageData?.selection_process_fee ? 
-          Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+          Math.round(packageData.selection_process_fee * 100) : Math.round(getFeeAmount('selection_process') * 100);
         const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+          Math.round(packageData.i20_control_fee * 100) : Math.round(getFeeAmount('i20_control_fee') * 100);
         const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
-        const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
-
-        // Debug específico para verificar os valores calculados
-        console.log('🚨 DEBUG: Student:', studentName, 'Package data:', packageData);
-        console.log('🚨 DEBUG: Calculated fees:', {
-          selectionProcessFee: selectionProcessFee / 100,
-          i20ControlFee: i20ControlFee / 100,
-          scholarshipFee: scholarshipFee / 100,
-          applicationFee: applicationFee / 100
-        });
-        
-        // Debug específico para verificar se os valores dinâmicos estão sendo aplicados
-        if (packageData) {
-          console.log('🚨 DEBUG: Using dynamic values from package');
+          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100);
+        // Application Fee dinâmico baseado na bolsa específica
+        let applicationFee: number;
+        if (scholarship?.application_fee_amount) {
+          // O valor no banco está em centavos, usar diretamente
+          applicationFee = scholarship.application_fee_amount;
         } else {
-          console.log('🚨 DEBUG: Using hardcoded values (no package data)');
+          // Fallback para valor padrão do sistema (converter dólares para centavos)
+          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
         }
-        
-        // Debug para verificar se os valores estão sendo aplicados corretamente
-        console.log('🚨 DEBUG: About to create payment records for:', studentName);
-        
-        // Selection Process Fee
-        console.log('🚨 DEBUG: Creating selection process fee record with amount:', selectionProcessFee / 100);
+
         paymentRecords.push({
           id: `${app.id}-selection`,
           student_id: student.id,
@@ -1754,12 +1730,20 @@ const PaymentManagement = (): React.JSX.Element => {
           return;
         }
 
-        // Obter valores dinâmicos do pacote ou usar valores padrão
+        // Obter valores dinâmicos do pacote ou usar valores padrão do sistema
         const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+          Math.round(packageData.i20_control_fee * 100) : Math.round(getFeeAmount('i20_control_fee') * 100);
         const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
-        const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100);
+        // Application Fee dinâmico baseado na bolsa específica
+        let applicationFee: number;
+        if (scholarship?.application_fee_amount) {
+          // O valor no banco está em centavos, usar diretamente
+          applicationFee = scholarship.application_fee_amount;
+        } else {
+          // Fallback para valor padrão do sistema (converter dólares para centavos)
+          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+        }
 
         console.log('💰 Processing Zelle payment for:', studentName, 'Fee type:', zellePayment.fee_type_global);
 
@@ -1873,12 +1857,20 @@ const PaymentManagement = (): React.JSX.Element => {
 
         // Obter valores dinâmicos do pacote ou usar valores padrão
         const selectionProcessFee = packageData?.selection_process_fee ? 
-          Math.round(packageData.selection_process_fee * 100) : 99900; // $999.00 em centavos
+          Math.round(packageData.selection_process_fee * 100) : Math.round(getFeeAmount('selection_process') * 100);
         const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round(packageData.i20_control_fee * 100) : 99900; // $999.00 em centavos
+          Math.round(packageData.i20_control_fee * 100) : Math.round(getFeeAmount('i20_control_fee') * 100);
         const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : 40000; // $400.00 em centavos
-        const applicationFee = 20000; // Application fee é fixo em $200 (20,000 centavos)
+          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100);
+        // Application Fee dinâmico baseado na bolsa específica
+        let applicationFee: number;
+        if (scholarship?.application_fee_amount) {
+          // O valor no banco está em centavos, usar diretamente
+          applicationFee = scholarship.application_fee_amount;
+        } else {
+          // Fallback para valor padrão do sistema (converter dólares para centavos)
+          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
+        }
 
         console.log('💳 Processing Stripe user for:', studentName);
 
@@ -1984,6 +1976,7 @@ const PaymentManagement = (): React.JSX.Element => {
       const totalRevenue = paidRecords.reduce((sum, p) => sum + p.amount, 0);
       console.log('🚨 DEBUG: Total revenue (cents):', totalRevenue);
       console.log('🚨 DEBUG: Total revenue (dollars):', totalRevenue / 100);
+      
 
       const newStats = {
         totalRevenue,
