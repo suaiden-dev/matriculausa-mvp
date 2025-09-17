@@ -9,7 +9,7 @@ import {
   XCircleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
-import { emailService } from '../../services/emailServiceClient';
+// emailService removido - funcionalidade desabilitada
 import { supabase } from '../../lib/supabase';
 
 const EmailManagement = () => {
@@ -41,61 +41,29 @@ const EmailManagement = () => {
   };
 
   const loadConfigurations = async () => {
-    try {
-      const configurations = await emailService.getConfigurations();
-      setConfigurations(configurations);
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Interface apenas - funcionalidade removida
+    setConfigurations([]);
+    setLoading(false);
   };
 
   const loadStats = async () => {
-    try {
-      const stats = await emailService.getEmailStats();
-      setStats(stats);
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
-    }
+    // Interface apenas - funcionalidade removida
+    setStats({});
   };
 
   const handleSync = async (configId) => {
-    setSyncing(prev => ({ ...prev, [configId]: true }));
-    
-    try {
-      await emailService.syncEmails(configId);
-      loadStats(); // Reload stats after sync
-    } catch (error) {
-      console.error('Erro na sincronização:', error);
-    } finally {
-      setSyncing(prev => ({ ...prev, [configId]: false }));
-    }
+    // Interface apenas - funcionalidade removida
+    alert('Funcionalidade de sincronização foi removida. Esta é apenas uma interface visual.');
   };
 
   const handleDelete = async (configId) => {
-    if (!confirm('Tem certeza que deseja excluir esta configuração de email?')) {
-      return;
-    }
-
-    try {
-      await emailService.deleteConfiguration(configId);
-      loadConfigurations();
-      loadStats();
-    } catch (error) {
-      console.error('Erro ao excluir configuração:', error);
-    }
+    // Interface apenas - funcionalidade removida
+    alert('Funcionalidade de exclusão foi removida. Esta é apenas uma interface visual.');
   };
 
   const toggleSync = async (configId, currentStatus) => {
-    try {
-      await emailService.updateConfiguration(configId, {
-        sync_enabled: !currentStatus
-      });
-      loadConfigurations();
-    } catch (error) {
-      console.error('Erro ao alterar sincronização:', error);
-    }
+    // Interface apenas - funcionalidade removida
+    alert('Funcionalidade de alteração foi removida. Esta é apenas uma interface visual.');
   };
 
   if (loading) {
@@ -197,7 +165,7 @@ const EmailManagement = () => {
             </p>
             <div className="mt-6">
               <button
-                onClick={() => navigate('/email/new')}
+                onClick={() => navigate('/email/config')}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 mx-auto transition-colors"
               >
                 <PlusIcon className="h-5 w-5" />

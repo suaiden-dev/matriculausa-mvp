@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { emailServiceClient as emailService } from '../../services/emailServiceClient';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeftIcon,
@@ -37,43 +36,13 @@ const EmailCompose = () => {
   }, []);
 
   const loadConfigurations = async () => {
-    try {
-      const configurations = await emailService.getConfigurations();
-      const activeConfigs = configurations.filter(c => c.is_active);
-      setConfigurations(activeConfigs);
-      
-      if (!selectedConfig && activeConfigs.length > 0) {
-        setSelectedConfig(activeConfigs[0].id);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-    }
+    // Interface apenas - funcionalidade removida
+    setConfigurations([]);
   };
 
   const loadOriginalEmail = async () => {
-    if (!replyToId) return;
-    
-    try {
-      const emails = await emailService.getReceivedEmails({ 
-        configId: configId,
-        page: 1,
-        limit: 100
-      });
-      
-      const email = emails.find(e => e.id === replyToId);
-      
-      if (email) {
-        setOriginalEmail(email);
-        setFormData(prev => ({
-          ...prev,
-          to_addresses: [email.from_address],
-          subject: email.subject?.startsWith('Re: ') ? email.subject : `Re: ${email.subject || ''}`,
-          reply_to: email.from_address
-        }));
-      }
-    } catch (error) {
-      console.error('Erro ao carregar email original:', error);
-    }
+    // Interface apenas - funcionalidade removida
+    setOriginalEmail(null);
   };
 
   const handleChange = (e) => {
@@ -145,7 +114,8 @@ const EmailCompose = () => {
     setLoading(true);
 
     try {
-      const emailData = {
+      // Interface apenas - funcionalidade de envio removida
+      console.log('Email data:', {
         config_id: selectedConfig,
         to_addresses: toEmails,
         cc_addresses: ccEmails.length > 0 ? ccEmails : undefined,
@@ -154,10 +124,9 @@ const EmailCompose = () => {
         text_content: formData.text_content,
         html_content: formData.html_content || undefined,
         reply_to: formData.reply_to || undefined
-      };
-
-      await emailService.sendEmail(emailData);
-      alert('Email enviado com sucesso!');
+      });
+      
+      alert('Funcionalidade de envio de email foi removida. Esta é apenas uma interface visual.');
       navigate('/email');
     } catch (error) {
       console.error('Erro ao enviar email:', error);

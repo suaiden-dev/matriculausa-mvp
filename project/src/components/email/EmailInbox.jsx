@@ -10,7 +10,7 @@ import {
   PencilSquareIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
-import { emailService } from '../../services/emailServiceClient';
+// emailService removido - funcionalidade desabilitada
 
 const EmailInbox = () => {
   const [searchParams] = useSearchParams();
@@ -34,91 +34,33 @@ const EmailInbox = () => {
     if (selectedConfig) {
       loadEmails();
       
-      // Setup real-time subscription for new emails
-      const subscription = emailService.subscribeToEmails(selectedConfig, (payload) => {
-        console.log('New email received:', payload);
-        if (payload.eventType === 'INSERT') {
-          setEmails(prev => [payload.new, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setEmails(prev => prev.map(email => 
-            email.id === payload.new.id ? payload.new : email
-          ));
-        } else if (payload.eventType === 'DELETE') {
-          setEmails(prev => prev.filter(email => email.id !== payload.old.id));
-        }
-      });
+      // Interface apenas - funcionalidade removida
 
       return () => {
-        subscription?.unsubscribe();
+        // Interface apenas - funcionalidade removida
       };
     }
   }, [selectedConfig, filter, page]);
 
   const loadConfigurations = async () => {
-    try {
-      const configurations = await emailService.getConfigurations();
-      const activeConfigs = configurations.filter(c => c.is_active);
-      setConfigurations(activeConfigs);
-      
-      // Set default selected config
-      if (!selectedConfig && activeConfigs.length > 0) {
-        setSelectedConfig(activeConfigs[0].id);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-    }
+    // Interface apenas - funcionalidade removida
+    setConfigurations([]);
   };
 
   const loadEmails = async () => {
-    if (!selectedConfig) return;
-    
-    setLoading(true);
-    
-    try {
-      const emails = await emailService.getReceivedEmails({
-        configId: selectedConfig,
-        page,
-        limit: 20,
-        unreadOnly: filter === 'unread'
-      });
-      
-      if (page === 1) {
-        setEmails(emails);
-      } else {
-        setEmails(prev => [...prev, ...emails]);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar emails:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Interface apenas - funcionalidade removida
+    setEmails([]);
+    setLoading(false);
   };
 
   const handleSync = async () => {
-    if (!selectedConfig) return;
-    
-    setSyncing(true);
-    
-    try {
-      await emailService.syncEmails(selectedConfig);
-      setPage(1);
-      loadEmails();
-    } catch (error) {
-      console.error('Erro na sincronização:', error);
-    } finally {
-      setSyncing(false);
-    }
+    // Interface apenas - funcionalidade removida
+    alert('Funcionalidade de sincronização foi removida. Esta é apenas uma interface visual.');
   };
 
   const markAsRead = async (emailId, isRead = true) => {
-    try {
-      await emailService.markEmailAsRead(emailId, isRead);
-      setEmails(prev => prev.map(email => 
-        email.id === emailId ? { ...email, is_read: isRead } : email
-      ));
-    } catch (error) {
-      console.error('Erro ao marcar email:', error);
-    }
+    // Interface apenas - funcionalidade removida
+    alert('Funcionalidade de marcação foi removida. Esta é apenas uma interface visual.');
   };
 
   const formatDate = (dateString) => {

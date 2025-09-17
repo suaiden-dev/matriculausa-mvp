@@ -7,7 +7,7 @@ import {
   EyeIcon,
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
-import { emailService } from '../../services/emailServiceClient';
+// emailService removido - funcionalidade desabilitada
 import { supabase } from '../../lib/supabase';
 
 const EmailConfiguration = () => {
@@ -97,8 +97,8 @@ const EmailConfiguration = () => {
     setTestResults(null);
     
     try {
-      const result = await emailService.testConfiguration(formData);
-      setTestResults(result.results);
+      // Interface apenas - funcionalidade removida
+      setTestResults({ success: false, message: 'Funcionalidade de teste foi removida' });
       
     } catch (error) {
       console.error('Erro no teste:', error);
@@ -119,7 +119,8 @@ const EmailConfiguration = () => {
     setLoading(true);
     
     try {
-      await emailService.createConfiguration(formData);
+      // Interface apenas - funcionalidade removida
+      alert('Funcionalidade de criação foi removida. Esta é apenas uma interface visual.');
       navigate('/email');
       
     } catch (error) {
