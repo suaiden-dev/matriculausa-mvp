@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import { useApplicationChat } from '../../hooks/useApplicationChat';
+import ApplicationChat from '../../components/ApplicationChat';
 import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen } from 'lucide-react';
+import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MessageCircle } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
 // Remover os imports das imagens
 // import WelcomeImg from '../../assets/page 7.png';
@@ -46,8 +48,11 @@ const ApplicationChatPage: React.FC = () => {
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | null>(null);
-  // Ajustar tipo de activeTab para incluir 'welcome'
-  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
+  // Ajustar tipo de activeTab para incluir 'welcome' e 'chat'
+  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents' | 'chat'>('welcome');
+  
+  // Hook do chat com tempo real e persistência
+  const chat = useApplicationChat(applicationId);
 
   // useEffect também deve vir antes de qualquer return condicional
   useEffect(() => {
@@ -280,19 +285,12 @@ const ApplicationChatPage: React.FC = () => {
     }
   };
 
-  // Função utilitária para garantir que a URL seja completa
-  const ensureCompleteUrl = (url: string) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    // ✅ CORREÇÃO: Usar a URL correta do Supabase
-    return `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/student-documents/${url}`;
-  };
 
   // Montar as abas dinamicamente com ícones distintos
   const tabs = [
     { id: 'welcome', label: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
     { id: 'details', label: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
+    { id: 'chat', label: t('studentDashboard.applicationChatPage.tabs.chat'), icon: MessageCircle },
     ...(applicationDetails && applicationDetails.status === 'enrolled' ? [
       { id: 'i20', label: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck }
     ] : []),
@@ -379,6 +377,16 @@ const ApplicationChatPage: React.FC = () => {
                   <div className="font-bold text-blue-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.title')}</div>
                   <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.description')}</div>
                   <button onClick={() => setActiveTab('details')} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.applicationDetails.button')}</button>
+                </div>
+              </div>
+
+              {/* Passo 4: Chat com Universidade */}
+              <div className="w-full bg-green-50 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 shadow">
+                <MessageCircle className="w-10 h-10 text-green-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-bold text-green-900 text-lg mb-1">{t('studentDashboard.applicationChatPage.welcome.chat.title')}</div>
+                  <div className="text-base text-slate-700 mb-2">{t('studentDashboard.applicationChatPage.welcome.chat.description')}</div>
+                  <button onClick={() => setActiveTab('chat')} className="bg-green-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-green-700 transition-all duration-200">{t('studentDashboard.applicationChatPage.welcome.chat.button')}</button>
                 </div>
               </div>
               {/* Passo 4: I-20 Control Fee (só se liberado) */}
@@ -740,6 +748,7 @@ const ApplicationChatPage: React.FC = () => {
                   <div className="space-y-3">
                                          {[
                        { label: t('studentDashboard.applicationChatPage.details.manageDocuments'), tab: 'documents', icon: FileText },
+                       { label: t('studentDashboard.applicationChatPage.details.chat'), tab: 'chat', icon: MessageCircle },
                       ...(applicationDetails.status === 'enrolled' ? [{ label: 'I-20 Control Fee', tab: 'i20', icon: Award }] : [])
                     ].map((action) => (
                       <button
@@ -753,6 +762,35 @@ const ApplicationChatPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'chat' && applicationDetails && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
+              <h2 className="text-xl font-semibold text-white flex items-center">
+                <MessageCircle className="w-6 h-6 mr-3" />
+                {t('studentDashboard.applicationChatPage.chat.title')}
+              </h2>
+              <p className="text-slate-200 text-sm mt-1">
+                {t('studentDashboard.applicationChatPage.chat.subtitle', { 
+                  universityName: applicationDetails.scholarships?.universities?.name || 'University Staff' 
+                })}
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="flex-1 flex flex-col">
+              <ApplicationChat
+                messages={chat.messages}
+                onSend={(text: string, file?: File) => chat.sendMessage(text, file || null)}
+                loading={chat.loading}
+                isSending={chat.isSending}
+                error={chat.error}
+                currentUserId={user?.id || ''}
+                messageContainerClassName="gap-6 py-4"
+                onMarkAllAsRead={chat.markAllAsRead}
+              />
               </div>
             </div>
           </div>

@@ -1834,6 +1834,7 @@
       "tabs": {
         "welcome": "Bem-vindo",
         "details": "Detalhes",
+        "chat": "Chat",
         "i20": "Taxa de Controle I-20",
         "documents": "Documentos"
       },
@@ -1851,6 +1852,11 @@
           "title": "Ver Detalhes da Aplicação",
           "description": "Veja todas as informações da sua bolsa, documentos enviados e seu status atual (aguardando carta de aceitação, matriculado, etc). Mantenha-se atualizado com seu processo a qualquer momento.",
           "button": "Ver Detalhes da Aplicação"
+        },
+        "chat": {
+          "title": "Chat com a Universidade",
+          "description": "Comunique-se diretamente com a equipe da universidade para tirar dúvidas e acompanhar seu processo.",
+          "button": "Abrir Chat"
         },
         "i20ControlFee": {
           "title": "Pagar Taxa de Controle I-20",
@@ -1908,7 +1914,12 @@
         "applicationSubmitted": "Aplicação enviada",
         "applicationUpdated": "Aplicação atualizada",
         "quickActions": "Ações Rápidas",
-        "manageDocuments": "Gerenciar Documentos"
+        "manageDocuments": "Gerenciar Documentos",
+        "chat": "Chat"
+      },
+      "chat": {
+        "title": "Centro de Comunicação",
+        "subtitle": "Chat com {{universityName}}"
       },
       "i20ControlFee": {
         "title": "Taxa de Controle I-20",
