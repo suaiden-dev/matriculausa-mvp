@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { ZelleCheckout } from './ZelleCheckout';
@@ -26,7 +28,9 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
   metadata = {},
   studentProcessType,
 }) => {
+  const { t } = useTranslation();
   const { getFeeAmount } = useFeeConfig();
+  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [loading] = useState(false);
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
@@ -163,11 +167,14 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
     <>
       {/* Botão Principal */}
       <button
-        onClick={handleStartPayment}
-        disabled={loading}
-        className={`${className} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        onClick={isBlocked && pendingPayment ? undefined : handleStartPayment}
+        disabled={loading || paymentBlockedLoading || (isBlocked && pendingPayment)}
+        className={`${className} ${(loading || paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        {loading ? 'Processing...' : buttonText}
+        {loading ? t('zelleCheckout.processing') : 
+         paymentBlockedLoading ? 'Checking...' : 
+         (isBlocked && pendingPayment) ? t('zelleCheckout.processing') : 
+         buttonText}
       </button>
 
       {/* Modal Pré-Checkout (Termos + Códigos) */}

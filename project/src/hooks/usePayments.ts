@@ -71,7 +71,7 @@ export const usePayments = (universityId: string | undefined) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<PaymentFilters>({
-    status_filter: 'all',
+    status_filter: 'succeeded', // Padrão: mostrar apenas pagamentos aprovados
     payment_type_filter: 'all',
     application_status_filter: 'all',
     date_from: '',

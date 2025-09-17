@@ -178,26 +178,26 @@ const HowItWorks: React.FC = () => {
       <section className="bg-gradient-to-br from-slate-50 to-blue-50 py-20">
         <div className="max-w-5xl mx-auto px-4">
           <h2 className="text-4xl font-black text-center mb-12 text-[#05294E]">{t('howItWorks.whyUs.title')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300 flex flex-col h-full">
               <Sparkles className="h-8 w-8 text-[#05294E] mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.smartDiscovery.title')}</h3>
-              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.smartDiscovery.description')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight">{t('howItWorks.whyUs.smartDiscovery.title')}</h3>
+              <p className="text-slate-600 text-lg mt-auto">{t('howItWorks.whyUs.smartDiscovery.description')}</p>
             </div>
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
+            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300 flex flex-col h-full">
               <FileText className="h-8 w-8 text-blue-600 mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.documentManagement.title')}</h3>
-              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.documentManagement.description')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight">{t('howItWorks.whyUs.documentManagement.title')}</h3>
+              <p className="text-slate-600 text-lg mt-auto">{t('howItWorks.whyUs.documentManagement.description')}</p>
             </div>
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
+            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300 flex flex-col h-full">
               <MessageCircle className="h-8 w-8 text-purple-600 mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.personalSupport.title')}</h3>
-              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.personalSupport.description')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight">{t('howItWorks.whyUs.personalSupport.title')}</h3>
+              <p className="text-slate-600 text-lg mt-auto">{t('howItWorks.whyUs.personalSupport.description')}</p>
             </div>
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300">
+            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 group hover:-translate-y-2 transition-transform duration-300 flex flex-col h-full">
               <Star className="h-8 w-8 text-yellow-400 mb-4" />
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">{t('howItWorks.whyUs.successTracking.title')}</h3>
-              <p className="text-slate-600 text-lg">{t('howItWorks.whyUs.successTracking.description')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2 leading-tight">{t('howItWorks.whyUs.successTracking.title')}</h3>
+              <p className="text-slate-600 text-lg mt-auto">{t('howItWorks.whyUs.successTracking.description')}</p>
             </div>
           </div>
         </div>

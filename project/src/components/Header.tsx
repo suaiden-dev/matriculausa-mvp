@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, BookOpen, Zap, Shield, ChevronDown, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { usePageTranslationStatus } from '../hooks/usePageTranslationStatus';
 import { supabase } from '../lib/supabase';
 import StepByStepButton from './OnboardingTour/StepByStepButton';
 import LanguageSelector from './LanguageSelector';
@@ -13,6 +14,7 @@ const Header: React.FC = () => {
   const { user, userProfile, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { hasTranslation } = usePageTranslationStatus();
   const [schoolImageUrl, setSchoolImageUrl] = useState<string | null>(null);
 
   // Garantir imagem da universidade quando usuário é "school"
@@ -137,8 +139,8 @@ const Header: React.FC = () => {
 
           {/* User Menu / Auth Buttons */}
           <div className="hidden lg:flex items-center space-x-4">
-            {/* Language Selector */}
-            <LanguageSelector variant="header" />
+            {/* Language Selector - Only show on pages with translations */}
+            {hasTranslation && <LanguageSelector variant="header" />}
             
             {isAuthenticated && user ? (
               <div className="relative flex items-center gap-2">
@@ -235,10 +237,12 @@ const Header: React.FC = () => {
       {isMenuOpen && (
         <div className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/50">
           <div className="px-4 pt-4 pb-6 space-y-2">
-            {/* Language Selector for Mobile */}
-            <div className="flex justify-center pb-4 border-b border-slate-200">
-              <LanguageSelector variant="compact" />
-            </div>
+            {/* Language Selector for Mobile - Only show on pages with translations */}
+            {hasTranslation && (
+              <div className="flex justify-center pb-4 border-b border-slate-200">
+                <LanguageSelector variant="compact" />
+              </div>
+            )}
             
             <Link to="/" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.home')}</Link>
             <Link 
