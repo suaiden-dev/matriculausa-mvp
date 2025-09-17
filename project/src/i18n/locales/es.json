@@ -2428,7 +2428,7 @@
     "securePayment": "Pago Seguro",
     "redirectToStripe": "Redirigiendo a Stripe",
     "closeModal": "Cerrar modal",
-    "securePaymentViaStripe": "Pago seguro vía Stripe",
+    "securePaymentViaStripe": "Pago seguro",
     "referralCode": "Código de Referencia",
     "yourReferralCode": "Tu Código de Referencia",
     "enterReferralCode": "Ingresa tu código de referencia para obtener descuento",
@@ -2461,7 +2461,18 @@
     "readingTerms": "Por favor, lee los términos antes de aceptar",
     "acceptContractTerms": "Acepto los términos y condiciones del contrato",
     "cancel": "Cancelar",
-    "acceptTerms": "Aceptar Términos"
+    "acceptTerms": "Aceptar Términos",
+    "proceedWithPayment": "Seguir con el pago",
+    "iHaveACode": "Tengo un código",
+    "back": "Volver",
+    "mustEnterValidCode": "Debes ingresar un código válido para continuar",
+    "selectionProcessPayment": "Pago del Proceso de Selección",
+    "stepByStepGuide": {
+      "step1": "Lee y acepta los términos y condiciones del contrato.",
+      "step2": "Si tienes un código, toca \"Tengo un código\" para ingresar y validar.",
+      "step3": "Toca ‘Seguir con el pago’ para elegir método y completar.",
+      "step4": "Después del pago, explora becas y universidades y aplica fácilmente al proceso de selección."
+    }
   },
   "footer": {
     "company": {

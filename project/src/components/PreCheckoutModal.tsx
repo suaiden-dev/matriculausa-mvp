@@ -52,6 +52,8 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   } | null>(null);
   const [hasUsedReferralCode, setHasUsedReferralCode] = useState(false);
   const [codeApplied, setCodeApplied] = useState(false);
+  // Novo: etapa separada para inserir código quando feeType === 'selection_process'
+  const [showCodeStep, setShowCodeStep] = useState(false);
   
   // Terms acceptance states
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -93,6 +95,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setValidationResult(null);
       setIsValidating(false);
       setCodeApplied(false);
+      setShowCodeStep(false);
       setTermsAccepted(false);
       setHasScrolledToBottom(false);
       setShowTermsModal(false); // Reset terms modal state
@@ -610,17 +613,14 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                 <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
               
-              <div className="flex items-center gap-3 mb-2 sm:mb-4 pr-12">
-                <div className="p-2 bg-white/20 rounded-lg">
+              <div className="flex items-start gap-3 mb-2 sm:mb-4 pr-12">
+                <div className="p-2 bg-white/20 rounded-lg mt-0.5">
                   <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Dialog.Title className="text-xl sm:text-2xl font-bold">
                     {t('preCheckoutModal.securePayment')}
                   </Dialog.Title>
-                  <p className="text-blue-100 text-sm sm:text-base">
-                    {t('preCheckoutModal.redirectToStripe')}
-                  </p>
                 </div>
               </div>
             </div>
@@ -630,17 +630,48 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
               {/* Product Info */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 sm:p-6 border-0">
                 <div className="text-center">
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
-                  <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full">
-                    <Lock className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentViaStripe')}</span>
-                  </div>
+                  
+                  {
+                    feeType !== 'selection_process' && (
+                      <div>
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
+                        <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full">
+                          <Lock className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentViaStripe')}</span>
+                        </div>
+                      </div>
+                  )}
+                  
+                  {/* Step by step guide for Selection Process */}
+                  {feeType === 'selection_process' && (
+                    <div className="mt-4 p-4 bg-white/60 rounded-lg border border-blue-200">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">{t('preCheckoutModal.selectionProcessPayment')}</h4>
+                      <div className="space-y-2 text-left">
+                        <div className="flex items-start gap-2">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-semibold flex-shrink-0">1</span>
+                          <span className="text-xs text-gray-700">{t('preCheckoutModal.stepByStepGuide.step1')}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-semibold flex-shrink-0">2</span>
+                          <span className="text-xs text-gray-700">{t('preCheckoutModal.stepByStepGuide.step2')}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-semibold flex-shrink-0">3</span>
+                          <span className="text-xs text-gray-700">{t('preCheckoutModal.stepByStepGuide.step3')}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-semibold flex-shrink-0">4</span>
+                          <span className="text-xs text-gray-700">{t('preCheckoutModal.stepByStepGuide.step4')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
 
-              {/* Discount Code Input - Apenas para usuários sem seller_referral_code */}
-              {!hasUsedReferralCode && !hasSellerReferralCode ? (
+              {/* Discount Code Input - Somente na etapa de código para Selection Process e sem seller_referral_code */}
+              {feeType === 'selection_process' && showCodeStep && !hasUsedReferralCode && !hasSellerReferralCode ? (
                 <div className="space-y-4">
                   <div className="text-center">
                     <label className="block text-lg font-semibold text-gray-900 mb-2">
@@ -705,19 +736,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                     </div>
                   )}
                 </div>
-              ) : !hasSellerReferralCode && (
-                <div className="bg-green-50 rounded-xl p-6 text-center border-0">
-                  <div className="flex items-center justify-center space-x-3 mb-3">
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                    <span className="text-xl font-bold text-green-800">
-                      {t('preCheckoutModal.codeAlreadyUsed')}
-                    </span>
-                  </div>
-                  <p className="text-green-700 text-base">
-                    {t('preCheckoutModal.discountAlreadyApplied')}
-                  </p>
-                </div>
-              )}
+              ) : null}
             </div>
             <div className="flex items-start space-x-3 p-3 sm:p-4 mx-4 sm:mx-6 mb-4 sm:mb-6 bg-slate-100 rounded-2xl flex-shrink-0">
                 <input
@@ -738,12 +757,12 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
 
             {/* Footer */}
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-              {/* Para usuários COM seller_referral_code: apenas um botão */}
               {hasSellerReferralCode ? (
+                // Com seller_referral_code: segue direto ao pagamento
                 <button
                   onClick={handleProceed}
                   disabled={isLoading || !termsAccepted}
-                  className="flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:opacity-75 disabled:cursor-not-allowed text-sm sm:text-base"
+                  className="flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform  bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 disabled:opacity-75 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center space-x-2">
@@ -754,8 +773,59 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                     t('preCheckoutModal.goToPayment')
                   )}
                 </button>
+              ) : feeType === 'selection_process' ? (
+                // Sem seller_referral_code e Selection Process: fluxo em duas etapas
+                !showCodeStep ? (
+                  <>
+                    <button
+                      onClick={handleSkip}
+                      disabled={!termsAccepted}
+                      className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-white text-sm sm:text-base ${
+                        termsAccepted
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
+                          : 'bg-slate-300 cursor-not-allowed'
+                      }`}
+                    >
+                      {t('preCheckoutModal.proceedWithPayment')}
+                    </button>
+                    <button
+                      onClick={() => setShowCodeStep(true)}
+                      className="flex-1 px-4 sm:px-6 py-3 sm:py-4 border-2 rounded-xl font-semibold transition-all text-sm sm:text-base border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                    >
+                      {t('preCheckoutModal.iHaveACode')}
+                    </button>
+                  </>
+                ) : (
+                  // Etapa de código: habilita o continuar somente com código válido aplicado
+                  <>
+                    <button
+                      onClick={() => setShowCodeStep(false)}
+                      className="flex-1 px-4 sm:px-6 py-3 sm:py-4 border-2 rounded-xl font-semibold transition-all text-sm sm:text-base border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                    >
+                      {t('preCheckoutModal.back')}
+                    </button>
+                    <button
+                      onClick={handleProceed}
+                      disabled={isLoading || !termsAccepted || !(validationResult?.isValid && codeApplied)}
+                      className={`flex-1 px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base ${
+                        validationResult?.isValid && codeApplied
+                          ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
+                          : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                      } ${isLoading || !termsAccepted || !(validationResult?.isValid && codeApplied) ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>{t('preCheckoutModal.openingStripe')}</span>
+                        </div>
+                      ) : (
+                        t('preCheckoutModal.applyCodeAndContinue')
+                      )}
+                    </button>
+                  </>
+                )
               ) : (
-                /* Para usuários SEM seller_referral_code: dois botões (comportamento original) */
+                // Demais taxas, comportamento original com dois botões
                 <>
                   <button
                     onClick={handleSkip}
@@ -766,7 +836,7 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
-                    {t('preCheckoutModal.continueWithoutCode')}
+                    {t('preCheckoutModal.proceedWithPayment')}
                   </button>
                   <button
                     onClick={handleProceed}

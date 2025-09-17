@@ -2180,7 +2180,7 @@
     "securePayment": "Secure Payment",
     "redirectToStripe": "Redirecting to Stripe",
     "closeModal": "Close modal",
-    "securePaymentViaStripe": "Secure payment via Stripe",
+    "securePaymentViaStripe": "Secure payment",
     "referralCode": "Referral Code",
     "yourReferralCode": "Your Referral Code",
     "enterReferralCode": "Enter your referral code to get a discount",
@@ -2218,7 +2218,18 @@
     "readingTerms": "Please read the terms before accepting",
     "acceptContractTerms": "I accept the contract terms and conditions",
     "cancel": "Cancel",
-    "acceptTerms": "Accept Terms"
+    "acceptTerms": "Accept Terms",
+    "proceedWithPayment": "Proceed with payment",
+    "iHaveACode": "I have a code",
+    "back": "Back",
+    "mustEnterValidCode": "You must enter a valid code to continue",
+    "selectionProcessPayment": "Selection Process Payment",
+    "stepByStepGuide": {
+      "step1": "Read and accept the contract terms and conditions.",
+      "step2": "If you have a code, tap \"I have a code\" to enter and validate it.",
+      "step3": "Tap ‘Proceed with payment’ to choose a method and complete.",
+      "step4": "After payment, explore scholarships and universities and easily apply to the selection process."
+    }
   },
   "footer": {
     "company": {
