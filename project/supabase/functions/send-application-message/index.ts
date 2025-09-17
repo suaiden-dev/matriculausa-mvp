@@ -109,23 +109,33 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to send message: ${msgError?.message}`);
     }
 
+    let attachments = [];
     if (file_url) {
-      const { error: attachError } = await supabase
+      const { data: attachmentData, error: attachError } = await supabase
         .from('application_message_attachments')
         .insert({
           message_id: newMessage.id,
           file_url,
           file_name: file_name || null,
-        });
+        })
+        .select()
+        .single();
       if (attachError) {
         // Log the error, but don't fail the whole request
         console.error('[send-application-message] Falha ao salvar anexo:', attachError.message);
+      } else {
+        attachments = [attachmentData];
       }
     }
     
     // The client expects the full message object for optimistic updates
-    console.log('[send-application-message] Mensagem enviada com sucesso', newMessage);
-    return new Response(JSON.stringify(newMessage), {
+    const responseMessage = {
+      ...newMessage,
+      attachments: attachments
+    };
+    
+    console.log('[send-application-message] Mensagem enviada com sucesso', responseMessage);
+    return new Response(JSON.stringify(responseMessage), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
