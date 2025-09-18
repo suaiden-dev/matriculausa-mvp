@@ -1,19 +1,62 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Users, Clock, CheckCircle, FileText, Globe, Phone } from 'lucide-react';
+import { Search, Users, Clock, CheckCircle, FileText, Globe, MessageCircle } from 'lucide-react';
 import type { Scholarship } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
+import MessagesDashboard from '../../components/MessagesDashboard';
+import { useUniversityMessages } from '../../hooks/useUniversityMessages';
 
 const StudentManagement: React.FC = () => {
   const { applications, university } = useUniversity();
+  const { conversations, loading: messagesLoading, isUpdating: messagesUpdating, markAsRead, sendQuickReply } = useUniversityMessages();
   
   // States para filtros e pesquisa
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
-  // Removido o activeTab pois agora só mostra "All Students" (exceto os em processo de seleção)
+  // Toggle e estados de filtros avançados
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [advancedAcademicLevel, setAdvancedAcademicLevel] = useState<string>('');
+  const [advancedFieldOfInterest, setAdvancedFieldOfInterest] = useState<string>('');
+  const [advancedEnglishProficiency, setAdvancedEnglishProficiency] = useState<string>('');
+  // Document Requests
+  const [docRequestTitle, setDocRequestTitle] = useState<string>('');
+  const [docRequestState, setDocRequestState] = useState<string>(''); // any | has_requests | has_uploads | missing_uploads
+  const [advancedDateFrom, setAdvancedDateFrom] = useState<string>('');
+  const [advancedDateTo, setAdvancedDateTo] = useState<string>('');
+
+  // Contador de filtros avançados ativos
+  const advancedActiveCount = useMemo(() => {
+    let count = 0;
+    if (advancedAcademicLevel) count++;
+    if (advancedFieldOfInterest) count++;
+    if (advancedEnglishProficiency) count++;
+    if (docRequestTitle) count++;
+    if (docRequestState) count++;
+    if (advancedDateFrom || advancedDateTo) count++;
+    return count;
+  }, [
+    advancedAcademicLevel,
+    advancedFieldOfInterest,
+    advancedEnglishProficiency,
+    docRequestTitle,
+    docRequestState,
+    advancedDateFrom,
+    advancedDateTo,
+  ]);
+
+  const clearAdvancedFilters = () => {
+    setAdvancedAcademicLevel('');
+    setAdvancedFieldOfInterest('');
+    setAdvancedEnglishProficiency('');
+    setDocRequestTitle('');
+    setDocRequestState('');
+    setAdvancedDateFrom('');
+    setAdvancedDateTo('');
+  };
+  const [activeTab, setActiveTab] = useState<'students' | 'messages'>('students');
 
   // Extrai bolsas únicas das aplicações
   const scholarships: Scholarship[] = Array.from(
@@ -34,6 +77,32 @@ const StudentManagement: React.FC = () => {
       if (country) countrySet.add(country);
     });
     return Array.from(countrySet).sort();
+  }, [applications]);
+
+  // Opções únicas para filtros avançados
+  const {
+    academicLevels,
+    fieldsOfInterest,
+    englishProficiencies,
+  } = useMemo(() => {
+    const academic = new Set<string>();
+    const fields = new Set<string>();
+    const english = new Set<string>();
+    // outros filtros removidos por solicitação
+
+    applications.forEach(app => {
+      const student = (app as any).user_profiles;
+      if (!student) return;
+      if (student.academic_level) academic.add(student.academic_level);
+      if (student.field_of_interest) fields.add(student.field_of_interest);
+      if (student.english_proficiency) english.add(student.english_proficiency);
+    });
+
+    return {
+      academicLevels: Array.from(academic).sort(),
+      fieldsOfInterest: Array.from(fields).sort(),
+      englishProficiencies: Array.from(english).sort(),
+    };
   }, [applications]);
 
   // Filtra aplicações baseado no status de pagamento das taxas
@@ -94,6 +163,59 @@ const StudentManagement: React.FC = () => {
       filtered = filtered.filter(app => (app as any).user_profiles?.country === selectedCountry);
     }
 
+    // Filtros avançados
+    if (advancedAcademicLevel) {
+      filtered = filtered.filter(app => (app as any).user_profiles?.academic_level === advancedAcademicLevel);
+    }
+
+    if (advancedFieldOfInterest) {
+      filtered = filtered.filter(app => (app as any).user_profiles?.field_of_interest === advancedFieldOfInterest);
+    }
+
+    if (advancedEnglishProficiency) {
+      filtered = filtered.filter(app => (app as any).user_profiles?.english_proficiency === advancedEnglishProficiency);
+    }
+
+    // Document Requests: assumimos que application pode conter arrays agregados (requests/uploads) via contexto
+    if (docRequestTitle) {
+      const term = docRequestTitle.toLowerCase();
+      filtered = filtered.filter(app => {
+        const requests = (app as any).document_requests as Array<any> | undefined;
+        if (!requests || requests.length === 0) return false;
+        return requests.some(r => (r?.title || '').toLowerCase().includes(term));
+      });
+    }
+
+    if (docRequestState) {
+      filtered = filtered.filter(app => {
+        const requests = (app as any).document_requests as Array<any> | undefined;
+        const uploads = (app as any).document_request_uploads as Array<any> | undefined;
+        const hasRequests = !!requests && requests.length > 0;
+        const hasUploads = !!uploads && uploads.length > 0;
+
+        if (docRequestState === 'has_requests') return hasRequests;
+        if (docRequestState === 'has_uploads') return hasUploads;
+        if (docRequestState === 'missing_uploads') return hasRequests && !hasUploads;
+        return true;
+      });
+    }
+
+    // Faixa de data por created_at do application
+    if (advancedDateFrom || advancedDateTo) {
+      const from = advancedDateFrom ? new Date(advancedDateFrom) : null;
+      const to = advancedDateTo ? new Date(advancedDateTo) : null;
+      filtered = filtered.filter(app => {
+        const createdAt = new Date((app as any).created_at || 0);
+        if (from && createdAt < from) return false;
+        if (to) {
+          const toEnd = new Date(to);
+          toEnd.setHours(23, 59, 59, 999);
+          if (createdAt > toEnd) return false;
+        }
+        return true;
+      });
+    }
+
     // Filtro por termo de pesquisa
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -109,7 +231,20 @@ const StudentManagement: React.FC = () => {
     }
 
     return filtered;
-  }, [applications, selectedScholarship, selectedStatus, selectedCountry, searchTerm]);
+  }, [
+    applications,
+    selectedScholarship,
+    selectedStatus,
+    selectedCountry,
+    searchTerm,
+    advancedAcademicLevel,
+    advancedFieldOfInterest,
+    advancedEnglishProficiency,
+    docRequestTitle,
+    docRequestState,
+    advancedDateFrom,
+    advancedDateTo,
+  ]);
 
   // Função para obter status e badge baseado no pagamento das taxas
   const getStudentStatus = (app: any) => {
@@ -129,6 +264,10 @@ const StudentManagement: React.FC = () => {
     }
   };
 
+  // Handlers para o MessagesDashboard (usando funções reais do hook)
+  const handleMarkAsRead = markAsRead;
+  const handleQuickReply = sendQuickReply;
+
   return (
     <ProfileCompletionGuard 
       isProfileCompleted={university?.profile_completed}
@@ -136,7 +275,7 @@ const StudentManagement: React.FC = () => {
       description="Finish setting up your university profile to view and manage student applications"
     >
       <div className="min-h-screen">
-        {/* Header + Filters Section */}
+        {/* Header + Tabs Section */}
         <div className="w-full">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="max-w-full mx-auto bg-slate-50">
@@ -147,89 +286,275 @@ const StudentManagement: React.FC = () => {
                     Student Management
                   </h1>
                   <p className="mt-2 text-sm sm:text-base text-slate-600">
-                    Students who have completed both fee payments and are ready for enrollment.
+                    {activeTab === 'students' 
+                      ? 'Students who have completed both fee payments and are ready for enrollment.'
+                      : 'Manage student conversations and messages in one place.'
+                    }
                   </p>
                   <p className="mt-3 text-sm text-slate-500">
-                    These students have paid both the application fee and scholarship fee, and are now enrolled students.
+                    {activeTab === 'students'
+                      ? 'These students have paid both the application fee and scholarship fee, and are now enrolled students.'
+                      : 'View, filter, and respond to student messages efficiently.'
+                    }
                   </p>
                 </div>
 
                 <div className="flex items-center space-x-3">
                   <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
-                    <Users className="w-5 h-5 mr-2" />
-                    {filteredApplications.length} Students
+                    {activeTab === 'students' ? (
+                      <>
+                        <Users className="w-5 h-5 mr-2" />
+                        {filteredApplications.length} Students
+                      </>
+                    ) : (
+                      <>
+                        <MessageCircle className="w-5 h-5 mr-2" />
+                        {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)} Unread
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Separation and Filters row */}
+              {/* Tabs */}
               <div className="border-t border-slate-200 bg-white">
-                <div className="px-4 sm:px-6 lg:px-8 py-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {/* Search Bar */}
-                    <div className="lg:col-span-2">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                        <input
-                          type="text"
-                          placeholder="Search enrolled students..."
-                          className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                <div className="px-4 sm:px-6 lg:px-8">
+                  <div className="flex space-x-8">
+                    <button
+                      onClick={() => setActiveTab('students')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'students'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4" />
+                        <span>Students ({filteredApplications.length})</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('messages')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'messages'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Messages ({conversations.length})</span>
+                        {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0) > 0 && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Separation and Filters row - Only show for students tab */}
+              {activeTab === 'students' && (
+                <div className="border-t border-slate-200 bg-white">
+                  <div className="px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                      {/* Search Bar */}
+                      <div className="lg:col-span-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                          <input
+                            type="text"
+                            placeholder="Search enrolled students..."
+                            className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Scholarship Filter */}
+                      <div>
+                        <select
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={selectedScholarship}
+                          onChange={(e) => setSelectedScholarship(e.target.value)}
+                        >
+                          <option value="">All Scholarships</option>
+                          {scholarships.map(s => (
+                            <option key={s.id} value={s.id}>{s.title}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Status Filter */}
+                      <div>
+                        <select
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={selectedStatus}
+                          onChange={(e) => setSelectedStatus(e.target.value)}
+                        >
+                          <option value="">All Fee Status</option>
+                          <option value="both_paid">Both Fees Paid</option>
+                          <option value="application_paid">Application Fee Paid</option>
+                          <option value="scholarship_paid">Scholarship Fee Paid</option>
+                          <option value="pending">Fees Pending</option>
+                        </select>
+                      </div>
+
+                      {/* Country Filter */}
+                      <div>
+                        <select
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={selectedCountry}
+                          onChange={(e) => setSelectedCountry(e.target.value)}
+                        >
+                          <option value="">All Countries</option>
+                          {countries.map(country => (
+                            <option key={country} value={country}>{country}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
-                    {/* Scholarship Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedScholarship}
-                        onChange={(e) => setSelectedScholarship(e.target.value)}
-                      >
-                        <option value="">All Scholarships</option>
-                        {scholarships.map(s => (
-                          <option key={s.id} value={s.id}>{s.title}</option>
-                        ))}
-                      </select>
+                  {/* Toggle Advanced */}
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="text-xs text-slate-500">
+                      Advanced filters help refine enrolled students.
                     </div>
-
-                    {/* Status Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                      >
-                        <option value="">All Fee Status</option>
-                        <option value="both_paid">Both Fees Paid</option>
-                        <option value="application_paid">Application Fee Paid</option>
-                        <option value="scholarship_paid">Scholarship Fee Paid</option>
-                        <option value="pending">Fees Pending</option>
-                      </select>
-                    </div>
-
-                    {/* Country Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedCountry}
-                        onChange={(e) => setSelectedCountry(e.target.value)}
-                      >
-                        <option value="">All Countries</option>
-                        {countries.map(country => (
-                          <option key={country} value={country}>{country}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                      onClick={() => setShowAdvanced(v => !v)}
+                    >
+                      {showAdvanced ? 'Hide Advanced' : 'Advanced Filters'}
+                      {advancedActiveCount > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+                          {advancedActiveCount}
+                        </span>
+                      )}
+                    </button>
                   </div>
+
+                  {showAdvanced && (
+                    <div className="mt-4">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                      {/* Academic Level */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Academic Level</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={advancedAcademicLevel}
+                              onChange={(e) => setAdvancedAcademicLevel(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              {academicLevels.map(level => (
+                                <option key={level} value={level}>{level}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                      {/* Field of Interest */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Field of Interest</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={advancedFieldOfInterest}
+                              onChange={(e) => setAdvancedFieldOfInterest(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              {fieldsOfInterest.map(field => (
+                                <option key={field} value={field}>{field}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                      {/* English Proficiency */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">English Proficiency</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={advancedEnglishProficiency}
+                              onChange={(e) => setAdvancedEnglishProficiency(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              {englishProficiencies.map(level => (
+                                <option key={level} value={level}>{level}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                      {/* Document Requests - título */}
+                          <div className="lg:col-span-2">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Document Request Title</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Passport, Diploma, I-20"
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={docRequestTitle}
+                              onChange={(e) => setDocRequestTitle(e.target.value)}
+                            />
+                          </div>
+
+                      {/* Document Requests - estado */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Document Request State</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={docRequestState}
+                              onChange={(e) => setDocRequestState(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              <option value="has_requests">Has Requests</option>
+                              <option value="has_uploads">Has Uploads</option>
+                              <option value="missing_uploads">Missing Uploads</option>
+                            </select>
+                          </div>
+
+                      {/* Date range */}
+                          <div className="lg:col-span-2">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Application Date Range</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="date"
+                                className="w-full px-3 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                                value={advancedDateFrom}
+                                onChange={(e) => setAdvancedDateFrom(e.target.value)}
+                              />
+                              <input
+                                type="date"
+                                className="w-full px-3 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                                value={advancedDateTo}
+                                onChange={(e) => setAdvancedDateTo(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-end gap-3">
+                          {advancedActiveCount > 0 && (
+                            <button
+                              type="button"
+                              className="text-sm text-slate-600 hover:text-slate-800 underline underline-offset-4"
+                              onClick={clearAdvancedFilters}
+                            >
+                              Clear advanced filters
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+              )}
             </div>
           </div>
 
-          {/* Students Summary */}
-          {filteredApplications.length > 0 && (
+          {/* Students Summary - Only show for students tab */}
+          {activeTab === 'students' && filteredApplications.length > 0 && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center space-x-3 sm:space-x-4">
@@ -254,7 +579,8 @@ const StudentManagement: React.FC = () => {
           )}
 
           {/* Main Content */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {activeTab === 'students' ? (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
             {/* Students Grid */}
             <div className="p-6">
@@ -336,6 +662,16 @@ const StudentManagement: React.FC = () => {
               </div>
             </div>
           </div>
+          ) : (
+            /* Messages Dashboard */
+            <MessagesDashboard
+              conversations={conversations}
+              onMarkAsRead={handleMarkAsRead}
+              onQuickReply={handleQuickReply}
+              loading={messagesLoading}
+              isUpdating={messagesUpdating}
+            />
+          )}
         </div>
       </div>
     </ProfileCompletionGuard>

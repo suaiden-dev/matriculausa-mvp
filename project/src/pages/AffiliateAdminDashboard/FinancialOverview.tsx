@@ -137,7 +137,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         document.head.appendChild(script);
         
         script.onload = () => {
-          console.log('Chart.js loaded successfully');
         };
       }
     };
@@ -167,7 +166,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         .rpc('get_admin_students_analytics', { admin_user_id: userId });
 
       if (studentsError) {
-        console.error('Error fetching students analytics for affiliate overview:', studentsError);
         return;
       }
 
@@ -222,7 +220,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
         availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved - totalPending);
       } catch (err) {
-        console.error('Error loading affiliate payment requests for balance:', err);
       }
 
       // No cartão principal, exibiremos Total Revenue usando o campo totalCredits para manter layout
@@ -244,7 +241,6 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       lastUserIdRef.current = userId;
       lastFetchAtRef.current = Date.now();
     } catch (error: any) {
-      console.error('Error loading affiliate financial data:', error);
     } finally {
       setLoading(false);
       isLoadingRef.current = false;

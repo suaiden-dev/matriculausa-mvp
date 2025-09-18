@@ -71,7 +71,6 @@ const AffiliateAdminDashboardLayout: React.FC<AffiliateAdminDashboardLayoutProps
       await logout();
       // O logout já faz o redirecionamento, não precisamos fazer nada aqui
     } catch (error) {
-      console.error('Error during logout:', error);
       // Mesmo com erro, fechar sidebar
       setSidebarOpen(false);
     }

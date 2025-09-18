@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
@@ -47,13 +47,24 @@ const TABS = [
 
 const StudentDetails: React.FC = () => {
   const { applicationId } = useParams<{ applicationId: string }>();
+  const location = useLocation();
   const [application, setApplication] = useState<ApplicationDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  
+  // Detectar se deve fazer scroll automático para o final
+  const shouldAutoScrollToBottom = new URLSearchParams(location.search).get('scrollToBottom') === 'true';
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents'>('details');
+
+  // Mudar para aba de chat se scrollToBottom for true
+  useEffect(() => {
+    if (shouldAutoScrollToBottom) {
+      setActiveTab('chat');
+    }
+  }, [shouldAutoScrollToBottom]);
 
   // Documentos básicos do aluno (passport, diploma, funds_proof) para a aba Documents
   const [studentDocs, setStudentDocs] = useState<any[]>([]);
@@ -2025,6 +2036,7 @@ const StudentDetails: React.FC = () => {
                 currentUserId={user?.id || ''}
                 messageContainerClassName="gap-6 py-4"
                 onMarkAllAsRead={chat.markAllAsRead}
+                autoScrollToBottom={shouldAutoScrollToBottom}
               />
             </div>
           </div>

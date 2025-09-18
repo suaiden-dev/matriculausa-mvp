@@ -27,6 +27,7 @@ interface ApplicationChatProps {
   currentUserId: string;
   messageContainerClassName?: string;
   onMarkAllAsRead?: () => void;
+  autoScrollToBottom?: boolean;
 }
 
 interface I20ControlFeeCardProps {
@@ -127,6 +128,7 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   i20ControlFee,
   messageContainerClassName,
   onMarkAllAsRead: _onMarkAllAsRead,
+  autoScrollToBottom = false,
 }) => {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -135,20 +137,58 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll inteligente: só rola se o usuário já estiver perto do final
+  // Auto-scroll sempre para o final quando:
+  // 1. Uma nova mensagem for adicionada
+  // 2. O chat for aberto (autoScrollToBottom = true)
+  // 3. O componente for montado pela primeira vez
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-    const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
-    if (isNearBottom) {
-      container.scrollTop = container.scrollHeight;
+    
+    // Sempre rola para o final quando há mensagens
+    if (messages.length > 0) {
+      // Usar setTimeout para garantir que o DOM foi atualizado
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 100);
     }
-  }, [messages.length]);
+  }, [messages.length, autoScrollToBottom]);
 
-  // Focus no input quando o chat é aberto
+  // Scroll adicional quando mensagens mudarem (para capturar mensagens recebidas)
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container && messages.length > 0) {
+      // Scroll mais rápido para mensagens recebidas
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 50);
+    }
+  }, [messages]);
+
+  // Scroll adicional quando autoScrollToBottom for ativado
+  useEffect(() => {
+    if (autoScrollToBottom) {
+      const container = messagesContainerRef.current;
+      if (container) {
+        setTimeout(() => {
+          container.scrollTop = container.scrollHeight;
+        }, 200);
+      }
+    }
+  }, [autoScrollToBottom]);
+
+  // Focus no input e scroll inicial quando o chat é aberto
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
+    }
+    
+    // Scroll inicial para o final quando o componente é montado
+    const container = messagesContainerRef.current;
+    if (container && messages.length > 0) {
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 300);
     }
   }, []);
 
@@ -158,6 +198,14 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
       onSend(text.trim(), file || undefined);
       setText('');
       setFile(null);
+      
+      // Scroll para o final após enviar mensagem
+      setTimeout(() => {
+        const container = messagesContainerRef.current;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      }, 150);
     }
   };
 
