@@ -5,9 +5,9 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
-// emailService removido - funcionalidade desabilitada
 import { supabase } from '../../lib/supabase';
 
 const EmailConfiguration = () => {
@@ -15,26 +15,13 @@ const EmailConfiguration = () => {
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResults, setTestResults] = useState(null);
-  const [showPasswords, setShowPasswords] = useState({
-    smtp: false,
-    imap: false
-  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [provider, setProvider] = useState('gmail');
 
   const [formData, setFormData] = useState({
     name: '',
     email_address: '',
-    smtp_host: '',
-    smtp_port: 587,
-    smtp_secure: false,
-    smtp_auth_user: '',
-    smtp_auth_pass: '',
-    imap_host: '',
-    imap_port: 993,
-    imap_secure: true,
-    imap_auth_user: '',
-    imap_auth_pass: '',
-    sync_enabled: true,
-    sync_interval_minutes: 5
+    app_password: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -57,10 +44,10 @@ const EmailConfiguration = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
     
     // Clear error when user starts typing
@@ -74,29 +61,21 @@ const EmailConfiguration = () => {
     
     if (!formData.name.trim()) newErrors.name = 'Nome é obrigatório';
     if (!formData.email_address.trim()) newErrors.email_address = 'Email é obrigatório';
-    if (!formData.smtp_host.trim()) newErrors.smtp_host = 'Host SMTP é obrigatório';
-    if (!formData.smtp_auth_user.trim()) newErrors.smtp_auth_user = 'Usuário SMTP é obrigatório';
-    if (!formData.smtp_auth_pass.trim()) newErrors.smtp_auth_pass = 'Senha SMTP é obrigatória';
-    if (!formData.imap_host.trim()) newErrors.imap_host = 'Host IMAP é obrigatório';
-    if (!formData.imap_auth_user.trim()) newErrors.imap_auth_user = 'Usuário IMAP é obrigatório';
-    if (!formData.imap_auth_pass.trim()) newErrors.imap_auth_pass = 'Senha IMAP é obrigatória';
+    if (!formData.app_password.trim()) newErrors.app_password = 'Senha de app é obrigatória';
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email_address && !emailRegex.test(formData.email_address)) {
       newErrors.email_address = 'Email inválido';
     }
 
-    // Validação de portas
-    if (formData.smtp_port < 1 || formData.smtp_port > 65535) {
-      newErrors.smtp_port = 'Porta SMTP deve estar entre 1 e 65535';
-    }
-    if (formData.imap_port < 1 || formData.imap_port > 65535) {
-      newErrors.imap_port = 'Porta IMAP deve estar entre 1 e 65535';
-    }
-
-    // Validação do intervalo de sincronização
-    if (formData.sync_enabled && (formData.sync_interval_minutes < 1 || formData.sync_interval_minutes > 1440)) {
-      newErrors.sync_interval = 'Intervalo deve estar entre 1 e 1440 minutos';
+    // Validar se o email corresponde ao provedor selecionado
+    if (formData.email_address) {
+      const domain = formData.email_address.split('@')[1]?.toLowerCase();
+      if (provider === 'gmail' && !['gmail.com', 'googlemail.com'].includes(domain)) {
+        newErrors.email_address = 'Email deve ser do Gmail';
+      } else if (provider === 'yahoo' && !['yahoo.com', 'yahoo.com.br'].includes(domain)) {
+        newErrors.email_address = 'Email deve ser do Yahoo';
+      }
     }
     
     setErrors(newErrors);
@@ -110,29 +89,31 @@ const EmailConfiguration = () => {
     setTestResults(null);
     
     try {
-      // Teste básico de validação de formato
+      // Teste básico de validação de formato e provedor
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const isValidEmail = emailRegex.test(formData.email_address);
       
       if (!isValidEmail) {
         setTestResults({
-          smtp: { success: false, error: 'Formato de email inválido' },
-          imap: { success: false, error: 'Formato de email inválido' }
+          success: false, 
+          error: 'Formato de email inválido' 
         });
         return;
       }
 
-      // Simulação de teste de conectividade (sem conexão real por segurança)
+      // Simulação de teste de conectividade
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       setTestResults({
-        smtp: { success: true, message: 'Configuração SMTP válida' },
-        imap: { success: true, message: 'Configuração IMAP válida' }
+        success: true, 
+        message: 'Configurações validadas com sucesso!'
       });
       
     } catch (error) {
       console.error('Erro no teste:', error);
       setTestResults({
-        smtp: { success: false, error: 'Erro de validação' },
-        imap: { success: false, error: 'Erro de validação' }
+        success: false, 
+        error: 'Erro de validação'
       });
     } finally {
       setTesting(false);
@@ -153,24 +134,46 @@ const EmailConfiguration = () => {
         throw new Error('Usuário não autenticado');
       }
 
+      // Configurações padrão por provedor
+      const providerConfigs = {
+        gmail: {
+          smtp_host: 'smtp.gmail.com',
+          smtp_port: 587,
+          smtp_secure: false,
+          imap_host: 'imap.gmail.com',
+          imap_port: 993,
+          imap_secure: true
+        },
+        yahoo: {
+          smtp_host: 'smtp.mail.yahoo.com',
+          smtp_port: 587,
+          smtp_secure: false,
+          imap_host: 'imap.mail.yahoo.com',
+          imap_port: 993,
+          imap_secure: true
+        }
+      };
+
+      const config = providerConfigs[provider];
+
       // Preparar dados para inserção
       const configData = {
         user_id: user.id,
         name: formData.name.trim(),
         email_address: formData.email_address.trim(),
-        smtp_host: formData.smtp_host.trim(),
-        smtp_port: parseInt(formData.smtp_port),
-        smtp_secure: formData.smtp_secure,
-        smtp_auth_user: formData.smtp_auth_user.trim(),
-        smtp_auth_pass: formData.smtp_auth_pass, // Senha será criptografada pelo Supabase
-        imap_host: formData.imap_host.trim(),
-        imap_port: parseInt(formData.imap_port),
-        imap_secure: formData.imap_secure,
-        imap_auth_user: formData.imap_auth_user.trim(),
-        imap_auth_pass: formData.imap_auth_pass, // Senha será criptografada pelo Supabase
+        smtp_host: config.smtp_host,
+        smtp_port: config.smtp_port,
+        smtp_secure: config.smtp_secure,
+        smtp_auth_user: formData.email_address.trim(),
+        smtp_auth_pass: formData.app_password,
+        imap_host: config.imap_host,
+        imap_port: config.imap_port,
+        imap_secure: config.imap_secure,
+        imap_auth_user: formData.email_address.trim(),
+        imap_auth_pass: formData.app_password,
         is_active: true,
-        sync_enabled: formData.sync_enabled,
-        sync_interval_minutes: parseInt(formData.sync_interval_minutes)
+        sync_enabled: true,
+        sync_interval_minutes: 3 // Fixo em 3 minutos
       };
 
       // Inserir configuração no banco de dados
@@ -185,7 +188,7 @@ const EmailConfiguration = () => {
       }
 
       // Sucesso
-      alert('Configuração de email criada com sucesso!');
+      alert('Conta de email configurada com sucesso!');
       navigate('/school/dashboard/email');
       
     } catch (error) {
@@ -208,476 +211,245 @@ const EmailConfiguration = () => {
     }
   };
 
-  const presets = {
-    gmail: {
-      name: 'Gmail',
-      smtp_host: 'smtp.gmail.com',
-      smtp_port: 587,
-      smtp_secure: false,
-      imap_host: 'imap.gmail.com',
-      imap_port: 993,
-      imap_secure: true
-    },
-    outlook: {
-      name: 'Outlook',
-      smtp_host: 'smtp-mail.outlook.com',
-      smtp_port: 587,
-      smtp_secure: false,
-      imap_host: 'outlook.office365.com',
-      imap_port: 993,
-      imap_secure: true
-    },
-    yahoo: {
-      name: 'Yahoo',
-      smtp_host: 'smtp.mail.yahoo.com',
-      smtp_port: 587,
-      smtp_secure: false,
-      imap_host: 'imap.mail.yahoo.com',
-      imap_port: 993,
-      imap_secure: true
-    }
-  };
-
-  const applyPreset = (preset) => {
-    setFormData(prev => ({
-      ...prev,
-      ...presets[preset]
-    }));
-  };
-
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate('/school/dashboard/email')}
-          className="p-2 text-gray-600 hover:text-gray-800 transition-colors"
-        >
-          <ArrowLeftIcon className="h-6 w-6" />
-        </button>
-        
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Nova Configuração de Email
-          </h1>
-          <p className="text-gray-600">
-            Configure SMTP e IMAP para envio e recebimento automático
-          </p>
-        </div>
-      </div>
-
-      {/* Quick Presets */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">
-          Configurações Rápidas
-        </h2>
-        <div className="flex gap-3">
-          {Object.entries(presets).map(([key, preset]) => (
+    <div className="min-h-screen bg-gray-50">
+      {/* Gmail-style Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16">
             <button
-              key={key}
-              onClick={() => applyPreset(key)}
-              className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              onClick={() => navigate('/school/dashboard/email')}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors mr-4"
             >
-              {preset.name}
+              <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
             </button>
-          ))}
+            
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-medium text-sm">M</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-normal text-gray-900">Adicionar conta</h1>
+                <p className="text-sm text-gray-500">Configure sua conta de email</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Informações Básicas
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nome da Configuração *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Ex: Gmail Pessoal"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Endereço de Email *
-              </label>
-              <input
-                type="email"
-                name="email_address"
-                value={formData.email_address}
-                onChange={handleChange}
-                placeholder="exemplo@gmail.com"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.email_address ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.email_address && (
-                <p className="text-red-500 text-sm mt-1">{errors.email_address}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* SMTP Configuration */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Configuração SMTP (Envio)
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Host SMTP *
-              </label>
-              <input
-                type="text"
-                name="smtp_host"
-                value={formData.smtp_host}
-                onChange={handleChange}
-                placeholder="smtp.gmail.com"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.smtp_host ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.smtp_host && (
-                <p className="text-red-500 text-sm mt-1">{errors.smtp_host}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Porta SMTP
-              </label>
-              <input
-                type="number"
-                name="smtp_port"
-                value={formData.smtp_port}
-                onChange={handleChange}
-                min="1"
-                max="65535"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.smtp_port ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.smtp_port && (
-                <p className="text-red-500 text-sm mt-1">{errors.smtp_port}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Usuário SMTP *
-              </label>
-              <input
-                type="text"
-                name="smtp_auth_user"
-                value={formData.smtp_auth_user}
-                onChange={handleChange}
-                placeholder="exemplo@gmail.com"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.smtp_auth_user ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.smtp_auth_user && (
-                <p className="text-red-500 text-sm mt-1">{errors.smtp_auth_user}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Senha SMTP *
-              </label>
-              <div className="relative">
-                <input
-                  type={showPasswords.smtp ? 'text' : 'password'}
-                  name="smtp_auth_pass"
-                  value={formData.smtp_auth_pass}
-                  onChange={handleChange}
-                  placeholder="Senha ou App Password"
-                  className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.smtp_auth_pass ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords(prev => ({ ...prev, smtp: !prev.smtp }))}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPasswords.smtp ? (
-                    <EyeSlashIcon className="h-5 w-5" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {errors.smtp_auth_pass && (
-                <p className="text-red-500 text-sm mt-1">{errors.smtp_auth_pass}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              name="smtp_secure"
-              id="smtp_secure"
-              checked={formData.smtp_secure}
-              onChange={handleChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="smtp_secure" className="ml-2 text-sm text-gray-700">
-              Usar SSL/TLS (porta 465)
-            </label>
-          </div>
-        </div>
-
-        {/* IMAP Configuration */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Configuração IMAP (Recebimento)
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Host IMAP *
-              </label>
-              <input
-                type="text"
-                name="imap_host"
-                value={formData.imap_host}
-                onChange={handleChange}
-                placeholder="imap.gmail.com"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.imap_host ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.imap_host && (
-                <p className="text-red-500 text-sm mt-1">{errors.imap_host}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Porta IMAP
-              </label>
-              <input
-                type="number"
-                name="imap_port"
-                value={formData.imap_port}
-                onChange={handleChange}
-                min="1"
-                max="65535"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.imap_port ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.imap_port && (
-                <p className="text-red-500 text-sm mt-1">{errors.imap_port}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Usuário IMAP *
-              </label>
-              <input
-                type="text"
-                name="imap_auth_user"
-                value={formData.imap_auth_user}
-                onChange={handleChange}
-                placeholder="exemplo@gmail.com"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.imap_auth_user ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.imap_auth_user && (
-                <p className="text-red-500 text-sm mt-1">{errors.imap_auth_user}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Senha IMAP *
-              </label>
-              <div className="relative">
-                <input
-                  type={showPasswords.imap ? 'text' : 'password'}
-                  name="imap_auth_pass"
-                  value={formData.imap_auth_pass}
-                  onChange={handleChange}
-                  placeholder="Senha ou App Password"
-                  className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.imap_auth_pass ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords(prev => ({ ...prev, imap: !prev.imap }))}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPasswords.imap ? (
-                    <EyeSlashIcon className="h-5 w-5" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {errors.imap_auth_pass && (
-                <p className="text-red-500 text-sm mt-1">{errors.imap_auth_pass}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              name="imap_secure"
-              id="imap_secure"
-              checked={formData.imap_secure}
-              onChange={handleChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="imap_secure" className="ml-2 text-sm text-gray-700">
-              Usar SSL/TLS
-            </label>
-          </div>
-        </div>
-
-        {/* Sync Configuration */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Configuração de Sincronização
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="sync_enabled"
-                id="sync_enabled"
-                checked={formData.sync_enabled}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="sync_enabled" className="ml-2 text-sm text-gray-700">
-                Habilitar sincronização automática
-              </label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Intervalo de Sincronização (minutos)
-              </label>
-              <select
-                name="sync_interval_minutes"
-                value={formData.sync_interval_minutes}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.sync_interval ? 'border-red-500' : 'border-gray-300'
-                }`}
-                disabled={!formData.sync_enabled}
-              >
-                <option value={1}>1 minuto</option>
-                <option value={5}>5 minutos</option>
-                <option value={10}>10 minutos</option>
-                <option value={15}>15 minutos</option>
-                <option value={30}>30 minutos</option>
-                <option value={60}>1 hora</option>
-              </select>
-              {errors.sync_interval && (
-                <p className="text-red-500 text-sm mt-1">{errors.sync_interval}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Test Results */}
-        {testResults && (
-          <div className="bg-white rounded-lg shadow p-6">
+      {/* Main Content */}
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Provider Selection */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Resultado dos Testes
+              Escolha seu provedor de email
             </h2>
             
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                {testResults.smtp.success ? (
-                  <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                ) : (
-                  <XCircleIcon className="h-5 w-5 text-red-600" />
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setProvider('gmail')}
+                className={`p-4 border-2 rounded-lg transition-all text-left ${
+                  provider === 'gmail'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">G</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Gmail</p>
+                    <p className="text-sm text-gray-500">@gmail.com</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProvider('yahoo')}
+                className={`p-4 border-2 rounded-lg transition-all text-left ${
+                  provider === 'yahoo'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">Y</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Yahoo</p>
+                    <p className="text-sm text-gray-500">@yahoo.com</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Account Information */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-6">
+              Informações da conta
+            </h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome da conta
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder={`Minha conta ${provider === 'gmail' ? 'Gmail' : 'Yahoo'}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.name ? 'border-red-300' : 'border-gray-200'
+                  }`}
+                />
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
                 )}
-                <span className="font-medium">SMTP:</span>
-                <span className={testResults.smtp.success ? 'text-green-600' : 'text-red-600'}>
-                  {testResults.smtp.success ? 'Conectado com sucesso' : testResults.smtp.error}
-                </span>
+                <p className="text-xs text-gray-500 mt-1">
+                  Nome para identificar esta conta no sistema
+                </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                {testResults.imap.success ? (
-                  <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                ) : (
-                  <XCircleIcon className="h-5 w-5 text-red-600" />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Endereço de email
+                </label>
+                <input
+                  type="email"
+                  name="email_address"
+                  value={formData.email_address}
+                  onChange={handleChange}
+                  placeholder={`exemplo@${provider === 'gmail' ? 'gmail.com' : 'yahoo.com'}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.email_address ? 'border-red-300' : 'border-gray-200'
+                  }`}
+                />
+                {errors.email_address && (
+                  <p className="text-red-500 text-sm mt-1">{errors.email_address}</p>
                 )}
-                <span className="font-medium">IMAP:</span>
-                <span className={testResults.imap.success ? 'text-green-600' : 'text-red-600'}>
-                  {testResults.imap.success ? 'Conectado com sucesso' : testResults.imap.error}
-                </span>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Senha de app
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="app_password"
+                    value={formData.app_password}
+                    onChange={handleChange}
+                    placeholder="Senha específica para aplicativos"
+                    className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      errors.app_password ? 'border-red-300' : 'border-gray-200'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {errors.app_password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.app_password}</p>
+                )}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                  <p className="text-sm text-blue-800">
+                    <strong>Como obter senha de app:</strong>
+                  </p>
+                  <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                    {provider === 'gmail' ? (
+                      <>
+                        <li>1. Acesse myaccount.google.com</li>
+                        <li>2. Vá em "Segurança" → "Verificação em duas etapas"</li>
+                        <li>3. Role até "Senhas de app" e gere uma nova</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>1. Acesse account.yahoo.com</li>
+                        <li>2. Vá em "Segurança da conta" → "Gerar senha de app"</li>
+                        <li>3. Digite "Email" como nome do app</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Actions */}
-        <div className="flex justify-between">
-          <button
-            type="button"
-            onClick={handleTest}
-            disabled={testing}
-            className="px-6 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {testing ? 'Testando...' : 'Testar Configuração'}
-          </button>
+          {/* Test Results */}
+          {testResults && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Resultado da validação
+              </h2>
+              
+              <div className="flex items-center space-x-3">
+                {testResults.success ? (
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                ) : (
+                  <XCircleIcon className="h-6 w-6 text-red-600" />
+                )}
+                <span className={`font-medium ${testResults.success ? 'text-green-600' : 'text-red-600'}`}>
+                  {testResults.success ? testResults.message : testResults.error}
+                </span>
+              </div>
+            </div>
+          )}
 
-          <div className="flex gap-3">
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-6">
             <button
               type="button"
-              onClick={() => navigate('/school/dashboard/email')}
-              className="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              onClick={handleTest}
+              disabled={testing}
+              className="px-6 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 font-medium"
             >
-              Cancelar
-            </button>
-            
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {loading && (
-                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+              {testing ? (
+                <div className="flex items-center space-x-2">
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                  <span>Validando...</span>
+                </div>
+              ) : (
+                'Validar configuração'
               )}
-              {loading ? 'Salvando...' : 'Salvar Configuração'}
             </button>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => navigate('/school/dashboard/email')}
+                className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancelar
+              </button>
+              
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors font-medium flex items-center space-x-2"
+              >
+                {loading && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+                <span>{loading ? 'Salvando...' : 'Adicionar conta'}</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };

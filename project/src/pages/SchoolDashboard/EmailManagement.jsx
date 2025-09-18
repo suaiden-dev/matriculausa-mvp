@@ -287,269 +287,298 @@ const EmailManagement = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <EnvelopeIcon className="h-8 w-8 text-blue-600" />
-            Gerenciamento de Emails
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Configure suas contas de email para envio e recebimento automático
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={async () => {
-              console.log('🔄 Recarregamento manual iniciado...');
-              setLoading(true);
-              await loadConfigurations();
-              await loadStats();
-            }}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <ArrowPathIcon className="h-5 w-5" />
-            Recarregar
-          </button>
-          
-        <button
-          onClick={() => navigate('/school/dashboard/email/config')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Nova Configuração
-        </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <EnvelopeIcon className="h-8 w-8 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Emails Recebidos</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {stats.total_received || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <span className="text-orange-600 font-bold">!</span>
+    <div className="min-h-screen bg-gray-50">
+      {/* Gmail-style Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-medium text-sm">M</span>
               </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Não Lidos</p>
-              <p className="text-2xl font-semibold text-orange-600">
-                {stats.unread_count || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-green-600 font-bold">↗</span>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Emails Enviados</p>
-              <p className="text-2xl font-semibold text-green-600">
-                {stats.total_sent || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Configurations List */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Configurações de Email
-          </h2>
-        </div>
-
-        {configurations.length === 0 ? (
-          <div className="text-center py-12">
-            <EnvelopeIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">
-              Nenhuma configuração encontrada
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Comece criando sua primeira configuração de email.
-            </p>
-            
-            {/* Debug info - apenas em desenvolvimento */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left">
-                <h4 className="text-sm font-medium text-yellow-800 mb-2">Debug Info:</h4>
-                <p className="text-xs text-yellow-700">
-                  Verifique o console do navegador para logs detalhados sobre a busca de configurações.
+              <div>
+                <h1 className="text-xl font-normal text-gray-900">Email</h1>
+                <p className="text-sm text-gray-500">
+                  Gerencie suas contas de email
                 </p>
-                <p className="text-xs text-yellow-700 mt-1">
-                  Se você criou uma configuração mas ela não aparece aqui, pode ser um problema de autenticação ou RLS.
-                </p>
-                <button
-                  onClick={async () => {
-                    console.log('🔧 Teste de debug iniciado...');
-                    const { data: { user } } = await supabase.auth.getUser();
-                    console.log('👤 Usuário atual:', user);
-                    
-                    // Testar consulta direta
-                    const { data, error } = await supabase
-                      .from('email_configurations')
-                      .select('*');
-                    console.log('📊 Todas as configurações:', { data, error });
-                    
-                    // Testar consulta por user_id
-                    if (user) {
-                      const { data: userConfigs, error: userError } = await supabase
-                        .from('email_configurations')
-                        .select('*')
-                        .eq('user_id', user.id);
-                      console.log('👤 Configurações do usuário:', { userConfigs, userError });
-                    }
-                  }}
-                  className="mt-2 px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
-                >
-                  Teste de Debug
-                </button>
               </div>
-            )}
+            </div>
             
-            <div className="mt-6">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={async () => {
+                  console.log('🔄 Recarregamento manual iniciado...');
+                  setLoading(true);
+                  await loadConfigurations();
+                  await loadStats();
+                }}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                title="Atualizar"
+              >
+                <ArrowPathIcon className="h-5 w-5 text-gray-600" />
+              </button>
+              
               <button
                 onClick={() => navigate('/school/dashboard/email/config')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 mx-auto transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center space-x-2"
               >
-                <PlusIcon className="h-5 w-5" />
-                Nova Configuração
+                <PlusIcon className="h-4 w-4" />
+                <span>Adicionar conta</span>
               </button>
             </div>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {configurations.map((config) => (
-              <div key={config.id} className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {config.name}
-                      </h3>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Gmail-style Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <EnvelopeIcon className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.total_received || 0}
+                </p>
+                <p className="text-sm text-gray-600">Emails recebidos</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.unread_count || 0}
+                </p>
+                <p className="text-sm text-gray-600">Não lidos</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.total_sent || 0}
+                </p>
+                <p className="text-sm text-gray-600">Emails enviados</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Gmail-style Configurations List */}
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="border-b border-gray-200 px-6 py-4">
+            <h2 className="text-lg font-medium text-gray-900">
+              Contas de email
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Configure e gerencie suas contas de email
+            </p>
+          </div>
+
+          {configurations.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <EnvelopeIcon className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Nenhuma conta configurada
+              </h3>
+              <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+                Adicione sua primeira conta de email para começar a enviar e receber mensagens.
+              </p>
+              
+              {/* Debug info - apenas em desenvolvimento */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left max-w-lg mx-auto">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Debug Info:</h4>
+                  <p className="text-xs text-yellow-700">
+                    Verifique o console do navegador para logs detalhados sobre a busca de configurações.
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Se você criou uma configuração mas ela não aparece aqui, pode ser um problema de autenticação ou RLS.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      console.log('🔧 Teste de debug iniciado...');
+                      const { data: { user } } = await supabase.auth.getUser();
+                      console.log('👤 Usuário atual:', user);
                       
-                      {config.is_active ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <CheckCircleIcon className="h-3 w-3 mr-1" />
-                          Ativo
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          <XCircleIcon className="h-3 w-3 mr-1" />
-                          Inativo
-                        </span>
-                      )}
-
-                      {config.sync_enabled && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Sync Ativo
-                        </span>
-                      )}
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 mt-1">
-                      {config.email_address}
-                    </p>
-                    
-                    <div className="mt-2 text-xs text-gray-500">
-                      <p>SMTP: {config.smtp_host}:{config.smtp_port}</p>
-                      <p>IMAP: {config.imap_host}:{config.imap_port}</p>
-                      {config.last_sync_at && (
-                        <p className="mt-1">
-                          Última sincronização: {new Date(config.last_sync_at).toLocaleString('pt-BR')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Quick Actions */}
-                    <div className="flex gap-2 mr-4">
-                      <button
-                        onClick={() => navigate(`/school/dashboard/email/inbox?config=${config.id}`)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        Ver Emails
-                      </button>
+                      // Testar consulta direta
+                      const { data, error } = await supabase
+                        .from('email_configurations')
+                        .select('*');
+                      console.log('📊 Todas as configurações:', { data, error });
                       
-                      <button
-                        onClick={() => navigate(`/school/dashboard/email/compose?config=${config.id}`)}
-                        className="text-green-600 hover:text-green-800 text-sm font-medium"
-                      >
-                        Compor
-                      </button>
-                    </div>
-
-                    {/* Sync Button */}
-                    <button
-                      onClick={() => handleSync(config.id)}
-                      disabled={syncing[config.id]}
-                      className="p-2 text-gray-600 hover:text-blue-600 transition-colors disabled:opacity-50"
-                      title="Sincronizar agora"
-                    >
-                      <ArrowPathIcon 
-                        className={`h-5 w-5 ${syncing[config.id] ? 'animate-spin' : ''}`} 
-                      />
-                    </button>
-
-                    {/* Sync Toggle */}
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={config.sync_enabled}
-                        onChange={() => toggleSync(config.id, config.sync_enabled)}
-                        className="sr-only"
-                      />
-                      <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.sync_enabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${config.sync_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      // Testar consulta por user_id
+                      if (user) {
+                        const { data: userConfigs, error: userError } = await supabase
+                          .from('email_configurations')
+                          .select('*')
+                          .eq('user_id', user.id);
+                        console.log('� Configurações do usuário:', { userConfigs, userError });
+                      }
+                    }}
+                    className="mt-2 px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
+                  >
+                    Teste de Debug
+                  </button>
+                </div>
+              )}
+              
+              <button
+                onClick={() => navigate('/school/dashboard/email/config')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-medium transition-colors flex items-center space-x-2 mx-auto"
+              >
+                <PlusIcon className="h-5 w-5" />
+                <span>Adicionar conta</span>
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {configurations.map((config) => (
+                <div key={config.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4 flex-1">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-medium text-sm">
+                          {config.name.charAt(0).toUpperCase()}
+                        </span>
                       </div>
-                    </label>
+                      
+                      {/* Account Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-3 mb-1">
+                          <h3 className="text-base font-medium text-gray-900 truncate">
+                            {config.name}
+                          </h3>
+                          
+                          {/* Status badges */}
+                          <div className="flex items-center space-x-2">
+                            {config.is_active ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                Ativa
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                Inativa
+                              </span>
+                            )}
 
-                    {/* Settings Button */}
-                    <button
-                      onClick={() => navigate(`/school/dashboard/email/config/${config.id}`)}
-                      className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                      title="Configurações"
-                    >
-                      <Cog6ToothIcon className="h-5 w-5" />
-                    </button>
+                            {config.sync_enabled && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                Sincronização ativa
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 mb-2">
+                          {config.email_address}
+                        </p>
+                        
+                        {/* Technical details */}
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <div className="flex items-center space-x-4">
+                            <span>SMTP: {config.smtp_host}:{config.smtp_port}</span>
+                            <span>IMAP: {config.imap_host}:{config.imap_port}</span>
+                          </div>
+                          {config.last_sync_at && (
+                            <p>
+                              Última sincronização: {new Date(config.last_sync_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                    {/* Delete Button */}
-                    <button
-                      onClick={() => handleDelete(config.id)}
-                      className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-                      title="Excluir"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
+                    {/* Actions */}
+                    <div className="flex items-center space-x-2 ml-4">
+                      {/* Quick Actions */}
+                      <div className="hidden sm:flex items-center space-x-2 mr-4">
+                        <button
+                          onClick={() => navigate(`/school/dashboard/email/inbox?config=${config.id}`)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium py-1 px-2 rounded hover:bg-blue-50 transition-colors"
+                        >
+                          Caixa de entrada
+                        </button>
+                        
+                        <button
+                          onClick={() => navigate(`/school/dashboard/email/compose?config=${config.id}`)}
+                          className="text-green-600 hover:text-green-800 text-sm font-medium py-1 px-2 rounded hover:bg-green-50 transition-colors"
+                        >
+                          Escrever
+                        </button>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <button
+                        onClick={() => handleSync(config.id)}
+                        disabled={syncing[config.id]}
+                        className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
+                        title="Sincronizar agora"
+                      >
+                        <ArrowPathIcon 
+                          className={`h-4 w-4 text-gray-600 ${syncing[config.id] ? 'animate-spin' : ''}`} 
+                        />
+                      </button>
+
+                      {/* Sync Toggle */}
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={config.sync_enabled}
+                          onChange={() => toggleSync(config.id, config.sync_enabled)}
+                          className="sr-only"
+                        />
+                        <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${config.sync_enabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${config.sync_enabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </div>
+                      </label>
+
+                      {/* Settings Button */}
+                      <button
+                        onClick={() => navigate(`/school/dashboard/email/config/${config.id}`)}
+                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Configurações"
+                      >
+                        <Cog6ToothIcon className="h-4 w-4 text-gray-600" />
+                      </button>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDelete(config.id)}
+                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Excluir"
+                      >
+                        <TrashIcon className="h-4 w-4 text-gray-600 hover:text-red-600" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
