@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, Mail, Phone, Calendar, ArrowRight, Briefcase } from 'lucide-react';
 
 const EB3SuccessPage: React.FC = () => {
+  const { t } = useTranslation();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
@@ -47,8 +49,8 @@ const EB3SuccessPage: React.FC = () => {
           className="text-center"
         >
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Verificando seu pagamento...</h2>
-          <p className="text-gray-600">Por favor, aguarde um momento.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('eb3Success.loading.title')}</h2>
+          <p className="text-gray-600">{t('eb3Success.loading.description')}</p>
         </motion.div>
       </div>
     );
@@ -79,11 +81,10 @@ const EB3SuccessPage: React.FC = () => {
 
           {/* Success Message */}
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Pré-candidatura EB-3 Processada!
+            {t('eb3Success.success.title')}
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Sua pré-candidatura para vagas EB-3 foi processada com sucesso. 
-            Nossa equipe especializada entrará em contato em breve para dar continuidade ao seu processo.
+            {t('eb3Success.success.description')}
           </p>
 
         </motion.div>
@@ -96,39 +97,27 @@ const EB3SuccessPage: React.FC = () => {
           className="bg-white rounded-2xl shadow-xl p-8 mb-8"
         >
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-            Próximos Passos
+            {t('eb3Success.nextSteps.title')}
           </h2>
           
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Mail className="h-8 w-8 text-blue-600" />
+            {t('eb3Success.nextSteps.steps', { returnObjects: true }).map((step: any, index: number) => (
+              <div key={index} className="text-center">
+                <div className={`rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center ${
+                  index === 0 ? 'bg-blue-100' : 
+                  index === 1 ? 'bg-green-100' : 
+                  'bg-purple-100'
+                }`}>
+                  {index === 0 ? <Mail className="h-8 w-8 text-blue-600" /> :
+                   index === 1 ? <Phone className="h-8 w-8 text-green-600" /> :
+                   <Calendar className="h-8 w-8 text-purple-600" />}
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{step.title}</h3>
+                <p className="text-gray-600 text-sm">
+                  {step.description}
+                </p>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Confirmação por Email</h3>
-              <p className="text-gray-600 text-sm">
-                Você receberá um email de confirmação com todos os detalhes da sua pré-candidatura.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-green-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Phone className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Contato da Equipe</h3>
-              <p className="text-gray-600 text-sm">
-                Nossa equipe entrará em contato em até 24 horas para agendar uma conversa.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Calendar className="h-8 w-8 text-purple-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Processo de Candidatura</h3>
-              <p className="text-gray-600 text-sm">
-                Iniciaremos o processo completo de candidatura para as vagas EB-3 disponíveis.
-              </p>
-            </div>
+            ))}
           </div>
         </motion.div>
 
@@ -140,38 +129,26 @@ const EB3SuccessPage: React.FC = () => {
           className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white mb-8"
         >
           <h2 className="text-2xl font-bold mb-4 text-center">
-            O que você ganha com sua pré-candidatura EB-3?
+            {t('eb3Success.benefits.title')}
           </h2>
           
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
-                <span>Acesso exclusivo a vagas EB-3</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
-                <span>Suporte especializado da nossa equipe</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
-                <span>Orientação completa no processo</span>
-              </div>
+              {t('eb3Success.benefits.items', { returnObjects: true }).slice(0, 3).map((benefit: string, index: number) => (
+                <div key={index} className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
+                  <span>{benefit}</span>
+                </div>
+              ))}
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
-                <span>Documentação necessária organizada</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
-                <span>Acompanhamento personalizado</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
-                <span>Garantia de qualidade no processo</span>
-              </div>
+              {t('eb3Success.benefits.items', { returnObjects: true }).slice(3, 6).map((benefit: string, index: number) => (
+                <div key={index + 3} className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-300 mr-3 flex-shrink-0" />
+                  <span>{benefit}</span>
+                </div>
+              ))}
             </div>
           </div>
         </motion.div>
@@ -188,7 +165,7 @@ const EB3SuccessPage: React.FC = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold transition-colors flex items-center justify-center"
           >
             <Briefcase className="h-5 w-5 mr-2" />
-            Ver Mais Vagas EB-3
+            {t('eb3Success.actions.viewMoreJobs')}
             <ArrowRight className="h-5 w-5 ml-2" />
           </button>
           
@@ -196,7 +173,7 @@ const EB3SuccessPage: React.FC = () => {
             onClick={() => navigate('/')}
             className="bg-white hover:bg-gray-50 text-gray-700 px-8 py-4 rounded-lg font-semibold transition-colors border border-gray-300 flex items-center justify-center"
           >
-            Voltar ao Início
+            {t('eb3Success.actions.backToHome')}
           </button>
         </motion.div>
 
@@ -208,10 +185,10 @@ const EB3SuccessPage: React.FC = () => {
           className="text-center mt-12 text-gray-600"
         >
           <p className="mb-2">
-            <strong>Dúvidas?</strong> Entre em contato conosco:
+            <strong>{t('eb3Success.contact.title')}</strong> {t('eb3Success.contact.description')}
           </p>
           <p className="text-sm">
-            Email: info@matriculausa.com | WhatsApp: +1 (213) 676-2544
+            {t('eb3Success.contact.email')} | {t('eb3Success.contact.whatsapp')}
           </p>
         </motion.div>
       </div>
