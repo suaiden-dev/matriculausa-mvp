@@ -16,6 +16,46 @@ const StudentManagement: React.FC = () => {
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
+  // Toggle e estados de filtros avançados
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [advancedAcademicLevel, setAdvancedAcademicLevel] = useState<string>('');
+  const [advancedFieldOfInterest, setAdvancedFieldOfInterest] = useState<string>('');
+  const [advancedEnglishProficiency, setAdvancedEnglishProficiency] = useState<string>('');
+  // Document Requests
+  const [docRequestTitle, setDocRequestTitle] = useState<string>('');
+  const [docRequestState, setDocRequestState] = useState<string>(''); // any | has_requests | has_uploads | missing_uploads
+  const [advancedDateFrom, setAdvancedDateFrom] = useState<string>('');
+  const [advancedDateTo, setAdvancedDateTo] = useState<string>('');
+
+  // Contador de filtros avançados ativos
+  const advancedActiveCount = useMemo(() => {
+    let count = 0;
+    if (advancedAcademicLevel) count++;
+    if (advancedFieldOfInterest) count++;
+    if (advancedEnglishProficiency) count++;
+    if (docRequestTitle) count++;
+    if (docRequestState) count++;
+    if (advancedDateFrom || advancedDateTo) count++;
+    return count;
+  }, [
+    advancedAcademicLevel,
+    advancedFieldOfInterest,
+    advancedEnglishProficiency,
+    docRequestTitle,
+    docRequestState,
+    advancedDateFrom,
+    advancedDateTo,
+  ]);
+
+  const clearAdvancedFilters = () => {
+    setAdvancedAcademicLevel('');
+    setAdvancedFieldOfInterest('');
+    setAdvancedEnglishProficiency('');
+    setDocRequestTitle('');
+    setDocRequestState('');
+    setAdvancedDateFrom('');
+    setAdvancedDateTo('');
+  };
   const [activeTab, setActiveTab] = useState<'students' | 'messages'>('students');
 
   // Extrai bolsas únicas das aplicações
@@ -37,6 +77,32 @@ const StudentManagement: React.FC = () => {
       if (country) countrySet.add(country);
     });
     return Array.from(countrySet).sort();
+  }, [applications]);
+
+  // Opções únicas para filtros avançados
+  const {
+    academicLevels,
+    fieldsOfInterest,
+    englishProficiencies,
+  } = useMemo(() => {
+    const academic = new Set<string>();
+    const fields = new Set<string>();
+    const english = new Set<string>();
+    // outros filtros removidos por solicitação
+
+    applications.forEach(app => {
+      const student = (app as any).user_profiles;
+      if (!student) return;
+      if (student.academic_level) academic.add(student.academic_level);
+      if (student.field_of_interest) fields.add(student.field_of_interest);
+      if (student.english_proficiency) english.add(student.english_proficiency);
+    });
+
+    return {
+      academicLevels: Array.from(academic).sort(),
+      fieldsOfInterest: Array.from(fields).sort(),
+      englishProficiencies: Array.from(english).sort(),
+    };
   }, [applications]);
 
   // Filtra aplicações baseado no status de pagamento das taxas
@@ -97,6 +163,59 @@ const StudentManagement: React.FC = () => {
       filtered = filtered.filter(app => (app as any).user_profiles?.country === selectedCountry);
     }
 
+    // Filtros avançados
+    if (advancedAcademicLevel) {
+      filtered = filtered.filter(app => (app as any).user_profiles?.academic_level === advancedAcademicLevel);
+    }
+
+    if (advancedFieldOfInterest) {
+      filtered = filtered.filter(app => (app as any).user_profiles?.field_of_interest === advancedFieldOfInterest);
+    }
+
+    if (advancedEnglishProficiency) {
+      filtered = filtered.filter(app => (app as any).user_profiles?.english_proficiency === advancedEnglishProficiency);
+    }
+
+    // Document Requests: assumimos que application pode conter arrays agregados (requests/uploads) via contexto
+    if (docRequestTitle) {
+      const term = docRequestTitle.toLowerCase();
+      filtered = filtered.filter(app => {
+        const requests = (app as any).document_requests as Array<any> | undefined;
+        if (!requests || requests.length === 0) return false;
+        return requests.some(r => (r?.title || '').toLowerCase().includes(term));
+      });
+    }
+
+    if (docRequestState) {
+      filtered = filtered.filter(app => {
+        const requests = (app as any).document_requests as Array<any> | undefined;
+        const uploads = (app as any).document_request_uploads as Array<any> | undefined;
+        const hasRequests = !!requests && requests.length > 0;
+        const hasUploads = !!uploads && uploads.length > 0;
+
+        if (docRequestState === 'has_requests') return hasRequests;
+        if (docRequestState === 'has_uploads') return hasUploads;
+        if (docRequestState === 'missing_uploads') return hasRequests && !hasUploads;
+        return true;
+      });
+    }
+
+    // Faixa de data por created_at do application
+    if (advancedDateFrom || advancedDateTo) {
+      const from = advancedDateFrom ? new Date(advancedDateFrom) : null;
+      const to = advancedDateTo ? new Date(advancedDateTo) : null;
+      filtered = filtered.filter(app => {
+        const createdAt = new Date((app as any).created_at || 0);
+        if (from && createdAt < from) return false;
+        if (to) {
+          const toEnd = new Date(to);
+          toEnd.setHours(23, 59, 59, 999);
+          if (createdAt > toEnd) return false;
+        }
+        return true;
+      });
+    }
+
     // Filtro por termo de pesquisa
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -112,9 +231,20 @@ const StudentManagement: React.FC = () => {
     }
 
     return filtered;
-  }, [applications, selectedScholarship, selectedStatus, selectedCountry, searchTerm]);
-
-  // Dados reais das conversas vêm do hook useUniversityMessages
+  }, [
+    applications,
+    selectedScholarship,
+    selectedStatus,
+    selectedCountry,
+    searchTerm,
+    advancedAcademicLevel,
+    advancedFieldOfInterest,
+    advancedEnglishProficiency,
+    docRequestTitle,
+    docRequestState,
+    advancedDateFrom,
+    advancedDateTo,
+  ]);
 
   // Função para obter status e badge baseado no pagamento das taxas
   const getStudentStatus = (app: any) => {
@@ -287,8 +417,138 @@ const StudentManagement: React.FC = () => {
                         </select>
                       </div>
                     </div>
+
+                  {/* Toggle Advanced */}
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="text-xs text-slate-500">
+                      Advanced filters help refine enrolled students.
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                      onClick={() => setShowAdvanced(v => !v)}
+                    >
+                      {showAdvanced ? 'Hide Advanced' : 'Advanced Filters'}
+                      {advancedActiveCount > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+                          {advancedActiveCount}
+                        </span>
+                      )}
+                    </button>
                   </div>
+
+                  {showAdvanced && (
+                    <div className="mt-4">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                      {/* Academic Level */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Academic Level</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={advancedAcademicLevel}
+                              onChange={(e) => setAdvancedAcademicLevel(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              {academicLevels.map(level => (
+                                <option key={level} value={level}>{level}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                      {/* Field of Interest */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Field of Interest</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={advancedFieldOfInterest}
+                              onChange={(e) => setAdvancedFieldOfInterest(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              {fieldsOfInterest.map(field => (
+                                <option key={field} value={field}>{field}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                      {/* English Proficiency */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">English Proficiency</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={advancedEnglishProficiency}
+                              onChange={(e) => setAdvancedEnglishProficiency(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              {englishProficiencies.map(level => (
+                                <option key={level} value={level}>{level}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                      {/* Document Requests - título */}
+                          <div className="lg:col-span-2">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Document Request Title</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Passport, Diploma, I-20"
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={docRequestTitle}
+                              onChange={(e) => setDocRequestTitle(e.target.value)}
+                            />
+                          </div>
+
+                      {/* Document Requests - estado */}
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Document Request State</label>
+                            <select
+                              className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                              value={docRequestState}
+                              onChange={(e) => setDocRequestState(e.target.value)}
+                            >
+                              <option value="">Any</option>
+                              <option value="has_requests">Has Requests</option>
+                              <option value="has_uploads">Has Uploads</option>
+                              <option value="missing_uploads">Missing Uploads</option>
+                            </select>
+                          </div>
+
+                      {/* Date range */}
+                          <div className="lg:col-span-2">
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Application Date Range</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="date"
+                                className="w-full px-3 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                                value={advancedDateFrom}
+                                onChange={(e) => setAdvancedDateFrom(e.target.value)}
+                              />
+                              <input
+                                type="date"
+                                className="w-full px-3 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent bg-white"
+                                value={advancedDateTo}
+                                onChange={(e) => setAdvancedDateTo(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-end gap-3">
+                          {advancedActiveCount > 0 && (
+                            <button
+                              type="button"
+                              className="text-sm text-slate-600 hover:text-slate-800 underline underline-offset-4"
+                              onClick={clearAdvancedFilters}
+                            >
+                              Clear advanced filters
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </div>
               )}
             </div>
           </div>
