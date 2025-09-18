@@ -10,6 +10,7 @@ export interface ChatMessage {
   isOwn: boolean;
   status?: 'pending' | 'sent' | 'error';
   readAt?: string | null;
+  updatedAt?: string | null;
   attachments?: { 
     file_url: string; 
     file_name?: string; 
@@ -21,6 +22,8 @@ export interface ChatMessage {
 interface ApplicationChatProps {
   messages: ChatMessage[];
   onSend: (text: string, file?: File) => void;
+  onEdit?: (messageId: string, newText: string) => void;
+  onDelete?: (messageId: string) => void;
   loading?: boolean;
   isSending?: boolean;
   error?: string | null;
@@ -121,6 +124,8 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
 }> = ({
   messages,
   onSend,
+  onEdit,
+  onDelete,
   loading = false,
   isSending = false,
   error = null,
@@ -133,9 +138,13 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll sempre para o final quando:
   // 1. Uma nova mensagem for adicionada
@@ -215,10 +224,68 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
     }
   };
 
+  const handleEditMessage = (messageId: string, currentText: string) => {
+    setEditingMessageId(messageId);
+    setEditingText(currentText);
+    setTimeout(() => {
+      editInputRef.current?.focus();
+    }, 100);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingMessageId && editingText.trim() && onEdit) {
+      onEdit(editingMessageId, editingText.trim());
+      setEditingMessageId(null);
+      setEditingText('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    setDeletingMessageId(messageId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingMessageId && onDelete) {
+      onDelete(deletingMessageId);
+      setDeletingMessageId(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeletingMessageId(null);
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
+
   const isImage = (fileName?: string) => {
     if (!fileName) return false;
     const extension = fileName.split('.').pop()?.toLowerCase();
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '');
+  };
+
+  const canEditOrDelete = (message: ChatMessage) => {
+    if (!message.isOwn) return false;
+    
+    const messageTime = new Date(message.sentAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - messageTime.getTime()) / (1000 * 60 * 60);
+    
+    // Pode editar até 24 horas, deletar até 1 hora
+    return {
+      canEdit: hoursDiff <= 24,
+      canDelete: hoursDiff <= 1
+    };
   };
 
   // Count unread messages (removed unused variable)
@@ -259,23 +326,29 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
             </div>
           )}
           
-          {messages.map((msg, index) => (
-            <div
-              key={msg.id}
-              className={`max-w-[85%] transform transition-all duration-500 ease-out ${
-                msg.isOwn 
-                  ? 'self-end ml-auto animate-slide-in-right' 
-                  : 'self-start animate-slide-in-left'
-              }`}
-              style={{
-                animationDelay: `${index * 0.1}s`
-              }}
-            >
-              <div className={`p-3 rounded-2xl shadow-lg border ${
-                msg.isOwn 
-                  ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
-                  : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
-              } transition-all duration-300 hover:shadow-xl`}>
+          {messages.map((msg, index) => {
+            const editDeleteStatus = canEditOrDelete(msg);
+            const canEdit = editDeleteStatus ? editDeleteStatus.canEdit : false;
+            const canDelete = editDeleteStatus ? editDeleteStatus.canDelete : false;
+            const isEditing = editingMessageId === msg.id;
+            
+            return (
+              <div
+                key={msg.id}
+                className={`max-w-[85%] transform transition-all duration-500 ease-out ${
+                  msg.isOwn 
+                    ? 'self-end ml-auto animate-slide-in-right' 
+                    : 'self-start animate-slide-in-left'
+                }`}
+                style={{
+                  animationDelay: `${index * 0.1}s`
+                }}
+              >
+                <div className={`p-3 rounded-2xl shadow-lg border ${
+                  msg.isOwn 
+                    ? 'bg-[#05294E] text-white shadow-[#05294E]/20' 
+                    : 'bg-white text-gray-800 border-gray-200 shadow-gray-100'
+                } transition-all duration-300 hover:shadow-xl`}>
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                     msg.isOwn 
@@ -357,23 +430,95 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                   </div>
                 )}
                 
-                <div className="text-sm leading-relaxed break-words whitespace-pre-line">
-                  {msg.message}
-                </div>
+                {isEditing ? (
+                  <div className="mb-3">
+                    <input
+                      ref={editInputRef}
+                      type="text"
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      onKeyDown={handleEditKeyDown}
+                      className="w-full px-3 py-2 bg-white text-gray-800 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Edit your message..."
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        onClick={handleSaveEdit}
+                        disabled={!editingText.trim()}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm leading-relaxed break-words whitespace-pre-line">
+                    {msg.message}
+                    {msg.updatedAt && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-xs text-gray-400 italic">
+                          (edited)
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(msg.updatedAt).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
-                {/* Status indicators */}
+                {/* Status indicators and action buttons */}
                 {msg.isOwn && (
-                  <div className="flex items-center justify-end gap-1 mt-2">
-                    {msg.status === 'pending' && <ClockIcon />}
-                    {msg.status === 'error' && <ErrorIcon />}
-                    {msg.status === 'sent' && !msg.readAt && <SentIcon />}
-                    {msg.status === 'sent' && msg.readAt && <ReadIcon />}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-1">
+                      {msg.status === 'pending' && <ClockIcon />}
+                      {msg.status === 'error' && <ErrorIcon />}
+                      {msg.status === 'sent' && !msg.readAt && <SentIcon />}
+                      {msg.status === 'sent' && msg.readAt && <ReadIcon />}
+                    </div>
+                    
+                    {/* Action buttons */}
+                    {!isEditing && (canEdit || canDelete) && (
+                      <div className="flex items-center gap-1">
+                        {canEdit && (
+                          <button
+                            onClick={() => handleEditMessage(msg.id, msg.message)}
+                            className="p-1 text-white/70 hover:text-white hover:bg-white/20 rounded transition-colors"
+                            title="Edit message"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="p-1 text-white/70 hover:text-red-300 hover:bg-red-500/20 rounded transition-colors"
+                            title="Delete message"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
-          ))}
-          
+            );
+          })}
           
           <div ref={messagesEndRef} />
       </div>
@@ -443,6 +588,32 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
 
       {selectedImage && (
         <ImagePreviewModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingMessageId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Message</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this message? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={handleCancelDelete}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Estilos CSS para animações */}

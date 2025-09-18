@@ -23,6 +23,7 @@ interface ApiMessage {
   message: string;
   sent_at: string;
   read_at?: string | null;
+  updated_at?: string | null;
   application_id: string;
   attachments?: {
     id: string;
@@ -50,6 +51,7 @@ export const useUniversityMessages = () => {
       isOwn: msg.sender_id === user?.id,
       status: 'sent',
       readAt: msg.read_at,
+      updatedAt: msg.updated_at,
       attachments: msg.attachments?.map(att => ({
         file_url: att.file_url,
         file_name: att.file_name,

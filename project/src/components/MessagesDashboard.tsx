@@ -18,6 +18,7 @@ export interface ChatMessage {
   isOwn: boolean;
   status?: 'pending' | 'sent' | 'error';
   readAt?: string | null;
+  updatedAt?: string | null;
   attachments?: { 
     file_url: string; 
     file_name?: string; 
@@ -311,9 +312,21 @@ const MessagesDashboard: React.FC<MessagesDashboardProps> = ({
                           <>
                             <span className="text-blue-600 font-medium">You: </span>
                             {truncateMessage(conversation.lastMessage.message)}
+                            {conversation.lastMessage.updatedAt && (
+                              <span className="text-xs text-slate-400 italic ml-1">
+                                (edited)
+                              </span>
+                            )}
                           </>
                         ) : (
-                          truncateMessage(conversation.lastMessage.message)
+                          <>
+                            {truncateMessage(conversation.lastMessage.message)}
+                            {conversation.lastMessage.updatedAt && (
+                              <span className="text-xs text-slate-400 italic ml-1">
+                                (edited)
+                              </span>
+                            )}
+                          </>
                         )}
                       </p>
                     </div>
