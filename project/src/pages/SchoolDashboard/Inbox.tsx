@@ -276,7 +276,7 @@ const Inbox = () => {
                       className="p-2 text-gray-600 hover:text-red-600 transition-colors"
                       title="Excluir"
                     >
-                      <TrashIcon className="h-5 w-5" />
+                      <TrashIcon className="h-5 w-5" /> 
                     </button>
                   </div>
           </div>
