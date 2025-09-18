@@ -1,19 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Users, Clock, CheckCircle, FileText, Globe, Phone } from 'lucide-react';
+import { Search, Users, Clock, CheckCircle, FileText, Globe, MessageCircle } from 'lucide-react';
 import type { Scholarship } from '../../types';
 import { useUniversity } from '../../context/UniversityContext';
 import ProfileCompletionGuard from '../../components/ProfileCompletionGuard';
+import MessagesDashboard from '../../components/MessagesDashboard';
+import { useUniversityMessages } from '../../hooks/useUniversityMessages';
 
 const StudentManagement: React.FC = () => {
   const { applications, university } = useUniversity();
+  const { conversations, loading: messagesLoading, isUpdating: messagesUpdating, markAsRead, sendQuickReply } = useUniversityMessages();
   
   // States para filtros e pesquisa
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScholarship, setSelectedScholarship] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
-  // Removido o activeTab pois agora só mostra "All Students" (exceto os em processo de seleção)
+  const [activeTab, setActiveTab] = useState<'students' | 'messages'>('students');
 
   // Extrai bolsas únicas das aplicações
   const scholarships: Scholarship[] = Array.from(
@@ -111,6 +114,8 @@ const StudentManagement: React.FC = () => {
     return filtered;
   }, [applications, selectedScholarship, selectedStatus, selectedCountry, searchTerm]);
 
+  // Dados reais das conversas vêm do hook useUniversityMessages
+
   // Função para obter status e badge baseado no pagamento das taxas
   const getStudentStatus = (app: any) => {
     const student = app.user_profiles;
@@ -129,6 +134,10 @@ const StudentManagement: React.FC = () => {
     }
   };
 
+  // Handlers para o MessagesDashboard (usando funções reais do hook)
+  const handleMarkAsRead = markAsRead;
+  const handleQuickReply = sendQuickReply;
+
   return (
     <ProfileCompletionGuard 
       isProfileCompleted={university?.profile_completed}
@@ -136,7 +145,7 @@ const StudentManagement: React.FC = () => {
       description="Finish setting up your university profile to view and manage student applications"
     >
       <div className="min-h-screen">
-        {/* Header + Filters Section */}
+        {/* Header + Tabs Section */}
         <div className="w-full">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div className="max-w-full mx-auto bg-slate-50">
@@ -147,89 +156,145 @@ const StudentManagement: React.FC = () => {
                     Student Management
                   </h1>
                   <p className="mt-2 text-sm sm:text-base text-slate-600">
-                    Students who have completed both fee payments and are ready for enrollment.
+                    {activeTab === 'students' 
+                      ? 'Students who have completed both fee payments and are ready for enrollment.'
+                      : 'Manage student conversations and messages in one place.'
+                    }
                   </p>
                   <p className="mt-3 text-sm text-slate-500">
-                    These students have paid both the application fee and scholarship fee, and are now enrolled students.
+                    {activeTab === 'students'
+                      ? 'These students have paid both the application fee and scholarship fee, and are now enrolled students.'
+                      : 'View, filter, and respond to student messages efficiently.'
+                    }
                   </p>
                 </div>
 
                 <div className="flex items-center space-x-3">
                   <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 border border-slate-300 shadow-sm">
-                    <Users className="w-5 h-5 mr-2" />
-                    {filteredApplications.length} Students
+                    {activeTab === 'students' ? (
+                      <>
+                        <Users className="w-5 h-5 mr-2" />
+                        {filteredApplications.length} Students
+                      </>
+                    ) : (
+                      <>
+                        <MessageCircle className="w-5 h-5 mr-2" />
+                        {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)} Unread
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Separation and Filters row */}
+              {/* Tabs */}
               <div className="border-t border-slate-200 bg-white">
-                <div className="px-4 sm:px-6 lg:px-8 py-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {/* Search Bar */}
-                    <div className="lg:col-span-2">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                        <input
-                          type="text"
-                          placeholder="Search enrolled students..."
-                          className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                <div className="px-4 sm:px-6 lg:px-8">
+                  <div className="flex space-x-8">
+                    <button
+                      onClick={() => setActiveTab('students')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'students'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4" />
+                        <span>Students ({filteredApplications.length})</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('messages')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'messages'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Messages ({conversations.length})</span>
+                        {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0) > 0 && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Separation and Filters row - Only show for students tab */}
+              {activeTab === 'students' && (
+                <div className="border-t border-slate-200 bg-white">
+                  <div className="px-4 sm:px-6 lg:px-8 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                      {/* Search Bar */}
+                      <div className="lg:col-span-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                          <input
+                            type="text"
+                            placeholder="Search enrolled students..."
+                            className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Scholarship Filter */}
+                      <div>
+                        <select
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={selectedScholarship}
+                          onChange={(e) => setSelectedScholarship(e.target.value)}
+                        >
+                          <option value="">All Scholarships</option>
+                          {scholarships.map(s => (
+                            <option key={s.id} value={s.id}>{s.title}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Status Filter */}
+                      <div>
+                        <select
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={selectedStatus}
+                          onChange={(e) => setSelectedStatus(e.target.value)}
+                        >
+                          <option value="">All Fee Status</option>
+                          <option value="both_paid">Both Fees Paid</option>
+                          <option value="application_paid">Application Fee Paid</option>
+                          <option value="scholarship_paid">Scholarship Fee Paid</option>
+                          <option value="pending">Fees Pending</option>
+                        </select>
+                      </div>
+
+                      {/* Country Filter */}
+                      <div>
+                        <select
+                          className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
+                          value={selectedCountry}
+                          onChange={(e) => setSelectedCountry(e.target.value)}
+                        >
+                          <option value="">All Countries</option>
+                          {countries.map(country => (
+                            <option key={country} value={country}>{country}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-
-                    {/* Scholarship Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedScholarship}
-                        onChange={(e) => setSelectedScholarship(e.target.value)}
-                      >
-                        <option value="">All Scholarships</option>
-                        {scholarships.map(s => (
-                          <option key={s.id} value={s.id}>{s.title}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Status Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                      >
-                        <option value="">All Fee Status</option>
-                        <option value="both_paid">Both Fees Paid</option>
-                        <option value="application_paid">Application Fee Paid</option>
-                        <option value="scholarship_paid">Scholarship Fee Paid</option>
-                        <option value="pending">Fees Pending</option>
-                      </select>
-                    </div>
-
-                    {/* Country Filter */}
-                    <div>
-                      <select
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
-                        value={selectedCountry}
-                        onChange={(e) => setSelectedCountry(e.target.value)}
-                      >
-                        <option value="">All Countries</option>
-                        {countries.map(country => (
-                          <option key={country} value={country}>{country}</option>
-                        ))}
-                      </select>
-                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Students Summary */}
-          {filteredApplications.length > 0 && (
+          {/* Students Summary - Only show for students tab */}
+          {activeTab === 'students' && filteredApplications.length > 0 && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center space-x-3 sm:space-x-4">
@@ -254,7 +319,8 @@ const StudentManagement: React.FC = () => {
           )}
 
           {/* Main Content */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {activeTab === 'students' ? (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
             {/* Students Grid */}
             <div className="p-6">
@@ -336,6 +402,16 @@ const StudentManagement: React.FC = () => {
               </div>
             </div>
           </div>
+          ) : (
+            /* Messages Dashboard */
+            <MessagesDashboard
+              conversations={conversations}
+              onMarkAsRead={handleMarkAsRead}
+              onQuickReply={handleQuickReply}
+              loading={messagesLoading}
+              isUpdating={messagesUpdating}
+            />
+          )}
         </div>
       </div>
     </ProfileCompletionGuard>
