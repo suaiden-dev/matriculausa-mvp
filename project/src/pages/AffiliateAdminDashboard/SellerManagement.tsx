@@ -80,7 +80,6 @@ const SellerManagement: React.FC = () => {
         });
 
       if (sellersError) {
-        console.error('❌ Error loading sellers:', sellersError);
         throw new Error(`Failed to load sellers: ${sellersError.message}`);
       }
 
@@ -109,7 +108,7 @@ const SellerManagement: React.FC = () => {
       // Set sellers in local state
       setSellers(activeSellersFromDB);
     } catch (error: any) {
-      console.error('❌ Error loading sellers:', error);
+      // Error handling without logging
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -169,7 +168,6 @@ const SellerManagement: React.FC = () => {
         });
 
       if (error) {
-        console.error('Error loading deactivated sellers:', error);
         return;
       }
 
@@ -191,7 +189,7 @@ const SellerManagement: React.FC = () => {
 
       setDeactivatedSellersList(processedDeactivated);
     } catch (error) {
-      console.error('Error loading deactivated sellers:', error);
+      // Error handling without logging
     }
   };
 
@@ -206,7 +204,6 @@ const SellerManagement: React.FC = () => {
         .single();
 
       if (sellerError || !sellerData) {
-        console.error('Error fetching seller:', sellerError);
         return { hasStudents: false, students: [] };
       }
 
@@ -218,7 +215,6 @@ const SellerManagement: React.FC = () => {
         .eq('role', 'student');
 
       if (studentsError) {
-        console.error('Error checking linked students:', studentsError);
         return { hasStudents: false, students: [] };
       }
 
@@ -227,7 +223,6 @@ const SellerManagement: React.FC = () => {
         students: students || []
       };
     } catch (error) {
-      console.error('Error checking seller students:', error);
       return { hasStudents: false, students: [] };
     }
   };
@@ -236,7 +231,6 @@ const SellerManagement: React.FC = () => {
   const reactivateSeller = async (sellerId: string, userName: string) => {
     try {
       setDemotingUser(sellerId);
-      console.log('🔄 Starting reactivation for seller:', sellerId, userName);
 
       // Step 1: Get the user_id from the seller
       const { data: sellerData, error: sellerError } = await supabase
@@ -246,11 +240,8 @@ const SellerManagement: React.FC = () => {
         .single();
 
       if (sellerError || !sellerData) {
-        console.error('Error fetching seller data:', sellerError);
         throw new Error(`Failed to fetch seller data: ${sellerError?.message || 'Seller not found'}`);
       }
-
-      console.log('✅ Seller data fetched:', sellerData);
 
       // Step 2: Reactivate the seller by updating is_active to true
       const { error: updateError } = await supabase
@@ -259,11 +250,8 @@ const SellerManagement: React.FC = () => {
         .eq('id', sellerId);
 
       if (updateError) {
-        console.error('Error reactivating seller:', updateError);
         throw new Error(`Failed to reactivate seller: ${updateError.message}`);
       }
-
-      console.log('✅ Seller reactivated in database');
 
       // Step 3: Update user role back to seller using RPC function to avoid RLS recursion
       const { data: roleUpdateResult, error: roleUpdateError } = await supabase
@@ -273,15 +261,12 @@ const SellerManagement: React.FC = () => {
         });
 
       if (roleUpdateError) {
-        console.error('Error updating user role:', roleUpdateError);
         throw new Error(`Failed to update user role: ${roleUpdateError.message}`);
       }
 
       if (!roleUpdateResult) {
         throw new Error('Failed to update user role - insufficient permissions');
       }
-
-      console.log('✅ User role updated to seller');
 
       // Step 4: Remove from deactivated list FIRST
       setDeactivatedSellersList(prev => prev.filter(seller => seller.id !== sellerId));
@@ -291,21 +276,15 @@ const SellerManagement: React.FC = () => {
         return newSet;
       });
 
-      console.log('✅ Removed from deactivated lists');
-
       // Step 5: Clear local modifications to ensure fresh data load
       setLocalModifications(new Set());
 
       // Step 6: Refresh sellers data to show updated list
-      console.log('🔄 Refreshing sellers list...');
       await loadSellers(true);
-
-      console.log('✅ Seller reactivation completed successfully');
       setSuccessMessage(`${userName} was reactivated successfully!`);
       setTimeout(() => setSuccessMessage(''), 3000);
 
     } catch (error: any) {
-      console.error('❌ Error reactivating seller:', error);
       setErrorMessage(`Error reactivating seller: ${error.message}`);
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
@@ -316,7 +295,6 @@ const SellerManagement: React.FC = () => {
     const deactivateSeller = async (sellerId: string, userName: string) => {
     try {
       setDemotingUser(sellerId);
-      console.log('🔄 Starting deactivation for seller:', userName);
 
       // Step 1: Deactivate the seller using the new SQL function that bypasses RLS
       const { data: deactivateResult, error: updateError } = await supabase
@@ -326,12 +304,10 @@ const SellerManagement: React.FC = () => {
         });
 
       if (updateError) {
-        console.error('❌ Error calling deactivate_seller_by_admin:', updateError);
         throw new Error(`Failed to deactivate seller in database: ${updateError.message}`);
       }
 
       if (!deactivateResult) {
-        console.error('❌ deactivate_seller_by_admin returned false');
         throw new Error('Failed to deactivate seller - function returned false');
       }
 
@@ -358,10 +334,7 @@ const SellerManagement: React.FC = () => {
       // Step 7: Show success message
       setSuccessMessage(`${userName} was deactivated successfully!`);
       setTimeout(() => setSuccessMessage(''), 3000);
-
-      console.log('✅ Seller deactivation completed successfully');
     } catch (error: any) {
-      console.error('❌ Error during seller deactivation:', error);
       setErrorMessage(`Error deactivating seller: ${error.message}`);
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
@@ -373,13 +346,11 @@ const SellerManagement: React.FC = () => {
   const removeSeller = async (sellerId: string, userName: string) => {
     try {
       setDemotingUser(sellerId);
-      console.log('🗑️ Starting complete removal for seller:', sellerId, userName);
 
       // Step 1: Check if seller has linked students
       const { hasStudents, students } = await checkSellerHasStudents(sellerId);
       
       if (hasStudents) {
-        console.log('❌ Cannot remove seller - has linked students:', students);
         setErrorMessage(
           `Cannot remove ${userName}. This seller has ${students.length} linked student(s). ` +
           `Please reassign the students to another seller first, or deactivate instead of removing.`
@@ -397,7 +368,6 @@ const SellerManagement: React.FC = () => {
         .eq('id', sellerId);
 
       if (deleteError) {
-        console.error('❌ Error deleting seller:', deleteError);
         throw new Error(`Failed to delete seller: ${deleteError.message}`);
       }
 
@@ -409,8 +379,7 @@ const SellerManagement: React.FC = () => {
         .single();
 
       if (sellerError || !sellerData) {
-        console.error('❌ Error fetching seller user_id:', sellerError);
-        console.warn('⚠️ Seller deleted but could not fetch user_id for role update');
+        // Seller deleted but could not fetch user_id for role update
       } else {
         // Step 4: Update user role to 'student' using RPC function to avoid RLS recursion
         const { data: roleUpdateResult, error: roleUpdateError } = await supabase
@@ -420,10 +389,9 @@ const SellerManagement: React.FC = () => {
           });
 
         if (roleUpdateError) {
-          console.error('❌ Error updating user role:', roleUpdateError);
-          console.warn('⚠️ Seller deleted but role update failed');
+          // Seller deleted but role update failed
         } else if (!roleUpdateResult) {
-          console.warn('⚠️ Seller deleted but role update failed - insufficient permissions');
+          // Seller deleted but role update failed - insufficient permissions
         }
       }
 
@@ -449,10 +417,7 @@ const SellerManagement: React.FC = () => {
       // Step 8: Show success message
       setSuccessMessage(`${userName} was completely removed from the system!`);
       setTimeout(() => setSuccessMessage(''), 3000);
-
-      console.log('✅ Seller removal completed successfully');
     } catch (error: any) {
-      console.error('❌ Error during seller removal:', error);
       setErrorMessage(`Error removing seller: ${error.message}`);
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
@@ -535,12 +500,6 @@ const SellerManagement: React.FC = () => {
       return 'Invalid Date';
     }
   };
-
-
-
-  // Debug log for render
-  
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
