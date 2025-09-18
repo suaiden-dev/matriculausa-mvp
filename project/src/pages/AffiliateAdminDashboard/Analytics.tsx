@@ -43,7 +43,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
   // Carregar dados de performance mensal
   const loadMonthlyPerformance = async () => {
     if (!userId) {
-      console.warn('No user ID provided for analytics');
       return;
     }
 
@@ -56,13 +55,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         });
 
       if (error) {
-        console.error('Error loading monthly performance:', error);
         return;
       }
 
       setMonthlyData(data || []);
     } catch (error) {
-      console.error('Error loading monthly performance:', error);
     } finally {
       setLoadingMonthly(false);
     }

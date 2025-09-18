@@ -77,7 +77,6 @@ const PaymentManagement: React.FC = () => {
         .rpc('get_admin_students_analytics', { admin_user_id: uid });
 
       if (studentsError) {
-        console.error('Error fetching affiliate revenue (RPC):', studentsError);
         hasLoadedBalanceForUser.current = uid; // evita looping
         setAffiliateBalance(0);
         setTotalEarned(0);
@@ -86,12 +85,6 @@ const PaymentManagement: React.FC = () => {
 
       const rows = studentsAnalytics || [];
       const totalRevenue = rows.reduce((sum: number, r: any) => sum + (Number(r.total_paid) || 0), 0);
-      console.groupCollapsed('🔎 [Affiliate][RPC] get_admin_students_analytics');
-      console.log('userId:', uid);
-      console.log('rows.length:', rows.length);
-      console.log('sampleRow:', rows[0]);
-      console.log('computed.totalRevenue:', totalRevenue);
-      console.groupEnd();
 
       // Derivar pendências (sem pagamento) para estimar pending credits, se necessário
       let derivedPending = 0;
@@ -107,11 +100,6 @@ const PaymentManagement: React.FC = () => {
 
       // 2) Requests do afiliado para calcular Available Balance
       const affiliateRequests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
-      console.groupCollapsed('🔎 [Affiliate][Requests] affiliate_payment_requests');
-      console.log('userId:', uid);
-      console.log('requests.length:', affiliateRequests.length);
-      console.log('sampleRequest:', affiliateRequests[0]);
-      console.groupEnd();
       const totalPaidOut = affiliateRequests
         .filter((r: any) => r.status === 'paid')
         .reduce((sum: number, r: any) => sum + (Number(r.amount_usd) || 0), 0);
@@ -124,13 +112,12 @@ const PaymentManagement: React.FC = () => {
 
       const availableBalance = Math.max(0, totalRevenue - totalPaidOut - totalApproved - totalPending);
 
-      console.log('✅ [Affiliate] AvailableBalance:', availableBalance, 'TotalRevenue:', totalRevenue);
       setAffiliateBalance(availableBalance); // Available Balance
       setTotalEarned(totalRevenue); // Total Revenue
       // keep pending credits disabled in UI for now
       hasLoadedBalanceForUser.current = uid;
     } catch (error: any) {
-      console.error('Error loading affiliate balance:', error);
+      // Error handling without logging
     } finally {
       setLoadingBalance(false);
       isLoadingBalanceRef.current = false;
@@ -147,15 +134,10 @@ const PaymentManagement: React.FC = () => {
       isLoadingRequestsRef.current = true;
       setLoadingRequests(true);
       const requests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
-      console.groupCollapsed('🔎 [Affiliate][Requests][Loader] fetch result');
-      console.log('userId:', uid);
-      console.log('fetched.length:', requests.length);
-      console.log('first:', requests[0]);
-      console.groupEnd();
       setAffiliatePaymentRequests(requests);
       hasLoadedRequestsForUser.current = null; // disable cache to always refresh on demand
     } catch (error: any) {
-      console.error('Error loading affiliate payment requests:', error);
+      // Error handling without logging
     } finally {
       setLoadingRequests(false);
       isLoadingRequestsRef.current = false;
