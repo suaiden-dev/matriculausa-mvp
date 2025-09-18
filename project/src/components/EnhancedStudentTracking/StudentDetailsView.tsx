@@ -42,12 +42,14 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
         user_id_param: studentUserId
       });
       if (error) {
+        console.error('Error loading student package fees:', error);
       } else if (packageFees && packageFees.length > 0) {
         setStudentPackageFees(packageFees[0]);
       } else {
         setStudentPackageFees(null);
       }
     } catch (error) {
+      console.error('Error loading student package fees:', error);
     }
   };
   
@@ -275,6 +277,13 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               const appStatus = (studentDetails as any)?.status || (studentDetails as any)?.application_status as string | undefined;
                               const documentsStatus = (studentDetails as any)?.documents_status as string | undefined;
                               
+                              // Debug logs
+                              console.log('🔍 [ENROLLMENT_STATUS] Debug:', {
+                                acceptanceStatus,
+                                appStatus,
+                                documentsStatus,
+                                studentDetails: studentDetails
+                              });
                               
                               // Para usuários com aplicação de bolsa: verificar status da aplicação
                               // Para usuários sem aplicação de bolsa: verificar documents_status
@@ -284,7 +293,8 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
                               const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
-                            
+                              
+                              console.log('🔍 [ENROLLMENT_STATUS] Result:', { isEnrolled, label });
                               
                               return (
                                 <div className="flex items-center space-x-2">
@@ -539,11 +549,19 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         {studentDetails?.is_application_fee_paid && (
                           <span className="text-xs text-slate-500">
                             {(() => {
+                              console.log('🔍 [STUDENT_DETAILS_VIEW] Application Fee Debug:', {
+                                hasScholarship: !!studentDetails?.scholarship,
+                                applicationFeeAmount: studentDetails?.scholarship?.application_fee_amount,
+                                isApplicationFeePaid: studentDetails?.is_application_fee_paid,
+                                defaultFee: getFeeAmount('application_fee')
+                              });
                               
                               if (studentDetails?.scholarship?.application_fee_amount) {
                                 const amount = Number(studentDetails.scholarship.application_fee_amount);
+                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using dynamic amount (already in dollars):', amount);
                                 return formatFeeAmount(amount);
                               } else {
+                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using default amount:', getFeeAmount('application_fee'));
                                 return formatFeeAmount(getFeeAmount('application_fee'));
                               }
                             })()}

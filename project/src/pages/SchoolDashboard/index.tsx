@@ -21,6 +21,7 @@ import EmailConfiguration from './EmailConfiguration';
 import EmailInbox from './EmailInbox';
 import EmailCompose from './EmailCompose';
 import WhatsAppConnection from './WhatsAppConnection';
+import MicrosoftEmailIntegration from '../../components/Microsoft/MicrosoftEmailIntegration';
 import ConnectWhatsApp from './ConnectWhatsApp';
 import UniversityRewardsDashboard from './UniversityRewardsDashboard';
 
@@ -53,6 +54,7 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="email/config" element={<EmailConfiguration />} />
             <Route path="email/inbox" element={<EmailInbox />} />
             <Route path="email/compose" element={<EmailCompose />} />
+            <Route path="microsoft-email" element={<MicrosoftEmailIntegration />} />
             <Route path="ai-solutions" element={<AISolutions />} />
                     <Route path="stripe-connect" element={<StripeConnect />} />
         <Route path="stripe-connect/callback" element={<StripeConnectCallback />} />

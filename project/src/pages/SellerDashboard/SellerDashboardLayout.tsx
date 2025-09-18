@@ -90,6 +90,7 @@ const SellerDashboardLayout: React.FC<SellerDashboardLayoutProps> = ({
       setSidebarOpen(false);
       await logout();
     } catch (error) {
+      console.error('Error during logout:', error);
       setSidebarOpen(false);
     }
   };
