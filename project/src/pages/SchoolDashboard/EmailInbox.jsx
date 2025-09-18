@@ -10,7 +10,7 @@ import {
   PencilSquareIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
-// emailService removido - funcionalidade desabilitada
+import { supabase } from '../../lib/supabase';
 
 const EmailInbox = () => {
   const [searchParams] = useSearchParams();
@@ -33,34 +33,139 @@ const EmailInbox = () => {
   useEffect(() => {
     if (selectedConfig) {
       loadEmails();
-      
-      // Interface apenas - funcionalidade removida
-
-      return () => {
-        // Interface apenas - funcionalidade removida
-      };
     }
   }, [selectedConfig, filter, page]);
 
   const loadConfigurations = async () => {
-    // Interface apenas - funcionalidade removida
-    setConfigurations([]);
+    try {
+      console.log('🔍 Carregando configurações de email...');
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('❌ Erro de autenticação:', authError);
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { data, error } = await supabase
+        .from('email_configurations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erro ao carregar configurações:', error);
+        throw error;
+      }
+
+      console.log('✅ Configurações carregadas:', data);
+      setConfigurations(data || []);
+      
+      // Se configId foi passado via URL, selecionar automaticamente
+      if (configId && data?.find(c => c.id === configId)) {
+        setSelectedConfig(configId);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar configurações:', error);
+      setConfigurations([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadEmails = async () => {
-    // Interface apenas - funcionalidade removida
-    setEmails([]);
-    setLoading(false);
+    if (!selectedConfig) {
+      setEmails([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('📧 Carregando emails para configuração:', selectedConfig);
+      setLoading(true);
+
+      let query = supabase
+        .from('received_emails')
+        .select('*')
+        .eq('email_config_id', selectedConfig)
+        .eq('is_deleted', false)
+        .order('received_date', { ascending: false })
+        .limit(20 * page);
+
+      // Aplicar filtros
+      if (filter === 'read') {
+        query = query.eq('is_read', true);
+      } else if (filter === 'unread') {
+        query = query.eq('is_read', false);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Erro ao carregar emails:', error);
+        throw error;
+      }
+
+      console.log('✅ Emails carregados:', data?.length || 0);
+      setEmails(data || []);
+    } catch (error) {
+      console.error('❌ Erro ao carregar emails:', error);
+      setEmails([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSync = async () => {
-    // Interface apenas - funcionalidade removida
-    alert('Funcionalidade de sincronização foi removida. Esta é apenas uma interface visual.');
+    if (!selectedConfig) return;
+    
+    try {
+      console.log('🔄 Sincronizando emails...');
+      setSyncing(true);
+      
+      // Recarregar emails
+      await loadEmails();
+      
+      console.log('✅ Sincronização concluída');
+    } catch (error) {
+      console.error('❌ Erro na sincronização:', error);
+      alert('Erro ao sincronizar emails');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const markAsRead = async (emailId, isRead = true) => {
-    // Interface apenas - funcionalidade removida
-    alert('Funcionalidade de marcação foi removida. Esta é apenas uma interface visual.');
+    try {
+      console.log('📧 Marcando email como lido:', emailId, isRead);
+      
+      const { error } = await supabase
+        .from('received_emails')
+        .update({ is_read: isRead })
+        .eq('id', emailId);
+
+      if (error) {
+        console.error('❌ Erro ao marcar email:', error);
+        throw error;
+      }
+
+      // Atualizar estado local
+      setEmails(prevEmails => 
+        prevEmails.map(email => 
+          email.id === emailId ? { ...email, is_read: isRead } : email
+        )
+      );
+
+      // Atualizar email selecionado se for o mesmo
+      if (selectedEmail?.id === emailId) {
+        setSelectedEmail(prev => prev ? { ...prev, is_read: isRead } : null);
+      }
+
+      console.log('✅ Email marcado como lido');
+    } catch (error) {
+      console.error('❌ Erro ao marcar email como lido:', error);
+      alert('Erro ao marcar email como lido');
+    }
   };
 
   const formatDate = (dateString) => {
@@ -91,7 +196,7 @@ const EmailInbox = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/email')}
+            onClick={() => navigate('/school/dashboard/email')}
             className="p-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
             <ArrowLeftIcon className="h-6 w-6" />
@@ -112,7 +217,7 @@ const EmailInbox = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/email/compose?config=${selectedConfig}`)}
+            onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}`)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
           >
             <PencilSquareIcon className="h-5 w-5" />
@@ -320,7 +425,7 @@ const EmailInbox = () => {
 
                 <div className="mt-6 pt-4 border-t border-gray-200">
                   <button
-                    onClick={() => navigate(`/email/compose?config=${selectedConfig}&reply=${selectedEmail.id}`)}
+                    onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}&reply=${selectedEmail.id}`)}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                   >
                     Responder

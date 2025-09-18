@@ -1,11 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeftIcon,
   PaperAirplaneIcon,
-  DocumentIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
+
+interface EmailConfiguration {
+  id: string;
+  name: string;
+  email_address: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: boolean;
+  smtp_auth_user: string;
+  smtp_auth_pass: string;
+}
+
+interface ReceivedEmail {
+  id: string;
+  from_name: string;
+  from_address: string;
+  subject: string;
+  text_content: string;
+  received_date: string;
+}
+
+interface FormData {
+  to_addresses: string[];
+  cc_addresses: string[];
+  bcc_addresses: string[];
+  subject: string;
+  text_content: string;
+  html_content: string;
+  reply_to: string;
+}
 
 const EmailCompose = () => {
   const [searchParams] = useSearchParams();
@@ -13,12 +43,12 @@ const EmailCompose = () => {
   const configId = searchParams.get('config');
   const replyToId = searchParams.get('reply');
   
-  const [configurations, setConfigurations] = useState([]);
+  const [configurations, setConfigurations] = useState<EmailConfiguration[]>([]);
   const [selectedConfig, setSelectedConfig] = useState(configId || '');
   const [loading, setLoading] = useState(false);
-  const [originalEmail, setOriginalEmail] = useState(null);
+  const [originalEmail, setOriginalEmail] = useState<ReceivedEmail | null>(null);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     to_addresses: [''],
     cc_addresses: [''],
     bcc_addresses: [''],
@@ -36,16 +66,75 @@ const EmailCompose = () => {
   }, []);
 
   const loadConfigurations = async () => {
-    // Interface apenas - funcionalidade removida
-    setConfigurations([]);
+    try {
+      console.log('🔍 Carregando configurações de email...');
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('❌ Erro de autenticação:', authError);
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { data, error } = await supabase
+        .from('email_configurations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Erro ao carregar configurações:', error);
+        throw error;
+      }
+
+      console.log('✅ Configurações carregadas:', data);
+      setConfigurations(data || []);
+      
+      // Se configId foi passado via URL, selecionar automaticamente
+      if (configId && data?.find(c => c.id === configId)) {
+        setSelectedConfig(configId);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar configurações:', error);
+      setConfigurations([]);
+    }
   };
 
   const loadOriginalEmail = async () => {
-    // Interface apenas - funcionalidade removida
-    setOriginalEmail(null);
+    if (!replyToId) return;
+    
+    try {
+      console.log('📧 Carregando email original:', replyToId);
+      
+      const { data, error } = await supabase
+        .from('received_emails')
+        .select('*')
+        .eq('id', replyToId)
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao carregar email original:', error);
+        throw error;
+      }
+
+      console.log('✅ Email original carregado:', data);
+      setOriginalEmail(data);
+      
+      // Preencher campos para resposta
+      setFormData(prev => ({
+        ...prev,
+        to_addresses: [data.from_address],
+        subject: data.subject?.startsWith('Re: ') ? data.subject : `Re: ${data.subject || ''}`,
+        text_content: `\n\n--- Mensagem original ---\n${data.text_content || ''}`,
+        reply_to: data.from_address
+      }));
+    } catch (error) {
+      console.error('❌ Erro ao carregar email original:', error);
+      setOriginalEmail(null);
+    }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -53,33 +142,33 @@ const EmailCompose = () => {
     }));
   };
 
-  const handleArrayChange = (field, index, value) => {
+  const handleArrayChange = (field: keyof Pick<FormData, 'to_addresses' | 'cc_addresses' | 'bcc_addresses'>, index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].map((item, i) => i === index ? value : item)
     }));
   };
 
-  const addEmailField = (field) => {
+  const addEmailField = (field: keyof Pick<FormData, 'to_addresses' | 'cc_addresses' | 'bcc_addresses'>) => {
     setFormData(prev => ({
       ...prev,
       [field]: [...prev[field], '']
     }));
   };
 
-  const removeEmailField = (field, index) => {
+  const removeEmailField = (field: keyof Pick<FormData, 'to_addresses' | 'cc_addresses' | 'bcc_addresses'>, index: number) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index)
     }));
   };
 
-  const validateEmails = (emails) => {
+  const validateEmails = (emails: string[]) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emails.filter(email => email.trim()).every(email => emailRegex.test(email.trim()));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedConfig) {
@@ -114,29 +203,103 @@ const EmailCompose = () => {
     setLoading(true);
 
     try {
-      // Interface apenas - funcionalidade de envio removida
-      console.log('Email data:', {
-        config_id: selectedConfig,
-        to_addresses: toEmails,
-        cc_addresses: ccEmails.length > 0 ? ccEmails : undefined,
-        bcc_addresses: bccEmails.length > 0 ? bccEmails : undefined,
-        subject: formData.subject,
-        text_content: formData.text_content,
-        html_content: formData.html_content || undefined,
-        reply_to: formData.reply_to || undefined
-      });
+      console.log('📧 Enviando email...');
       
-      alert('Funcionalidade de envio de email foi removida. Esta é apenas uma interface visual.');
-      navigate('/email');
+      // Buscar configuração selecionada
+      const config = configurations.find(c => c.id === selectedConfig);
+      if (!config) {
+        throw new Error('Configuração de email não encontrada');
+      }
+
+      // Preparar dados para o endpoint
+      const emailData: any = {
+        host: config.smtp_host,
+        port: config.smtp_port,
+        secure: config.smtp_secure,
+        user: config.smtp_auth_user,
+        password: config.smtp_auth_pass,
+        to: toEmails.join(', '), // Converter array para string separada por vírgula
+        subject: formData.subject,
+        text: formData.text_content.trim() || undefined,
+        html: formData.html_content.trim() || undefined
+      };
+
+      // Adicionar CC e BCC se existirem
+      if (ccEmails.length > 0) {
+        emailData.cc = ccEmails.join(', ');
+      }
+      if (bccEmails.length > 0) {
+        emailData.bcc = bccEmails.join(', ');
+      }
+
+      console.log('📤 Dados do email:', emailData);
+
+      // Enviar email via endpoint
+      const response = await fetch('https://4a7505bb5c9f.ngrok-free.app/send-smtp?key=7D127C861C1D6CB5B12C3FE3189D8', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify(emailData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro no servidor: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Email enviado com sucesso:', result);
+
+      // Salvar email enviado no banco de dados
+      await saveSentEmail(config, toEmails, ccEmails, bccEmails);
+
+      alert('Email enviado com sucesso!');
+      navigate('/school/dashboard/email/inbox');
+      
     } catch (error) {
-      console.error('Erro ao enviar email:', error);
-      alert('Erro ao enviar email');
+      console.error('❌ Erro ao enviar email:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert('Erro ao enviar email: ' + errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderEmailFields = (field, label, placeholder) => (
+  const saveSentEmail = async (config: EmailConfiguration, toEmails: string[], ccEmails: string[], bccEmails: string[]) => {
+    try {
+      console.log('💾 Salvando email enviado no banco...');
+      
+      const emailData = {
+        email_config_id: config.id,
+        to_addresses: toEmails,
+        cc_addresses: ccEmails.length > 0 ? ccEmails : null,
+        bcc_addresses: bccEmails.length > 0 ? bccEmails : null,
+        subject: formData.subject,
+        text_content: formData.text_content.trim() || null,
+        html_content: formData.html_content.trim() || null,
+        reply_to: formData.reply_to || null,
+        sent_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('sent_emails')
+        .insert([emailData]);
+
+      if (error) {
+        console.error('❌ Erro ao salvar email enviado:', error);
+        // Não falhar o envio por causa disso
+      } else {
+        console.log('✅ Email enviado salvo no banco');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar email enviado:', error);
+      // Não falhar o envio por causa disso
+    }
+  };
+
+  const renderEmailFields = (field: keyof Pick<FormData, 'to_addresses' | 'cc_addresses' | 'bcc_addresses'>, label: string, placeholder: string) => (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
         {label}
@@ -178,7 +341,7 @@ const EmailCompose = () => {
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
-          onClick={() => navigate('/email')}
+          onClick={() => navigate('/school/dashboard/email/inbox')}
           className="p-2 text-gray-600 hover:text-gray-800 transition-colors"
         >
           <ArrowLeftIcon className="h-6 w-6" />
@@ -334,7 +497,7 @@ const EmailCompose = () => {
         <div className="flex justify-between">
           <button
             type="button"
-            onClick={() => navigate('/email')}
+            onClick={() => navigate('/school/dashboard/email/inbox')}
             className="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           >
             Cancelar

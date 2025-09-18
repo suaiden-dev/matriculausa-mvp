@@ -13,3 +13,4 @@ COMMENT ON COLUMN application_messages.updated_at IS 'Timestamp when the message
 
 -- Create index for better performance on updated_at queries
 CREATE INDEX IF NOT EXISTS idx_application_messages_updated_at ON application_messages(updated_at);
+
