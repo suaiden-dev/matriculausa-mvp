@@ -2030,6 +2030,8 @@ const StudentDetails: React.FC = () => {
               <ApplicationChat
                 messages={chat.messages}
                 onSend={(text: string, file?: File) => chat.sendMessage(text, file || null)}
+                onEdit={chat.editMessage}
+                onDelete={chat.deleteMessage}
                 loading={chat.loading}
                 isSending={chat.isSending}
                 error={chat.error}

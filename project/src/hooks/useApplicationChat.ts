@@ -217,6 +217,85 @@ export const useApplicationChat = (applicationId?: string) => {
     }
   }, [user, applicationId]);
 
+  const editMessage = useCallback(async (messageId: string, newText: string) => {
+    if (!user) return;
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      const { data, error } = await supabase.functions.invoke('edit-application-message', {
+        method: 'POST',
+        body: {
+          message_id: messageId,
+          text: newText
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (error) {
+        console.error('Error editing message:', error);
+        setError(error.message || 'Failed to edit message');
+        return;
+      }
+
+      // Atualizar mensagem localmente
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, message: newText }
+          : msg
+      ));
+
+      console.log('✅ Message edited successfully');
+    } catch (err) {
+      console.error('Error editing message:', err);
+      setError('Failed to edit message');
+    }
+  }, [user]);
+
+  const deleteMessage = useCallback(async (messageId: string) => {
+    if (!user) return;
+
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      const { data, error } = await supabase.functions.invoke('delete-application-message', {
+        method: 'POST',
+        body: {
+          message_id: messageId
+        },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (error) {
+        console.error('Error deleting message:', error);
+        setError(error.message || 'Failed to delete message');
+        return;
+      }
+
+      // Remover mensagem localmente
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+
+      console.log('✅ Message deleted successfully');
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      setError('Failed to delete message');
+    }
+  }, [user]);
+
   // Mark messages as read when user views the chat
   useEffect(() => {
     if (user && messages.length > 0) {
@@ -362,7 +441,7 @@ export const useApplicationChat = (applicationId?: string) => {
     }
   };
 
-  return { 
+  return {
     messages, 
     loading, 
     isSending, 
@@ -370,6 +449,8 @@ export const useApplicationChat = (applicationId?: string) => {
     sendMessage, 
     markAsRead,
     markAllAsRead,
+    editMessage,
+    deleteMessage,
     refetchMessages: fetchMessages 
   };
 }; 
