@@ -376,16 +376,16 @@ const EB3JobsLanding: React.FC = () => {
   });
 
   const categories = [
-    { id: 'all', name: 'Todas as Vagas', count: jobs.length },
-    { id: 'healthcare', name: 'Saúde', count: jobs.filter(j => j.category === 'healthcare').length },
-    { id: 'hospitality', name: 'Hospitalidade', count: jobs.filter(j => j.category === 'hospitality').length },
-    { id: 'warehouse', name: 'Logística', count: jobs.filter(j => j.category === 'warehouse').length }
+    { id: 'all', name: 'All Jobs', count: jobs.length },
+    { id: 'healthcare', name: 'Healthcare', count: jobs.filter(j => j.category === 'healthcare').length },
+    { id: 'hospitality', name: 'Hospitality', count: jobs.filter(j => j.category === 'hospitality').length },
+    { id: 'warehouse', name: 'Logistics', count: jobs.filter(j => j.category === 'warehouse').length }
   ];
 
   // Extrair localidades únicas
   const locations = Array.from(new Set(jobs.map(job => job.location))).sort();
   const locationOptions = [
-    { id: 'all', name: 'Todas as Localidades', count: jobs.length },
+    { id: 'all', name: 'All Locations', count: jobs.length },
     ...locations.map(location => ({
       id: location,
       name: location,
@@ -396,9 +396,9 @@ const EB3JobsLanding: React.FC = () => {
   return (
     <>
       <SEOHead 
-        title="Vagas EB-3 - Trabalhe e Viva Legalmente nos EUA | MatriculaUSA"
-        description="Oportunidades de emprego EB-3 para residência permanente nos EUA. Vagas em saúde, hospitalidade e logística com Green Card para você e sua família."
-        keywords="EB-3, Green Card, trabalho EUA, residência permanente, vagas emprego, imigração"
+        title="EB-3 Jobs - Work and Live Legally in the USA | MatriculaUSA"
+        description="EB-3 employment opportunities for permanent residence in the USA. Jobs in healthcare, hospitality, and logistics with Green Card for you and your family."
+        keywords="EB-3, Green Card, USA jobs, permanent residence, employment opportunities, immigration"
       />
       
       <div className="bg-white">
@@ -418,7 +418,7 @@ const EB3JobsLanding: React.FC = () => {
                 className="inline-flex items-center bg-white/80 backdrop-blur-sm rounded-full px-6 py-2 mb-8 border border-[#05294E]/20 shadow-lg"
               >
                 <Briefcase className="h-4 w-4 mr-2 text-[#05294E]" />
-                <span className="text-sm font-bold text-slate-700">Oportunidades de Emprego EB-3</span>
+                <span className="text-sm font-bold text-slate-700">EB-3 Employment Opportunities</span>
               </motion.div>
               
               <motion.h1
@@ -427,7 +427,7 @@ const EB3JobsLanding: React.FC = () => {
                 transition={{ duration: 0.6, delay: 0.1 }}
                 className="text-5xl md:text-6xl lg:text-7xl font-black mb-8 leading-tight text-slate-900"
               >
-                Trabalhe e Viva <span className="text-[#05294E]">Legalmente</span> nos EUA
+                Work and Live <span className="text-[#05294E]">Legally</span> in the USA
               </motion.h1>
               
               <motion.p
@@ -436,8 +436,8 @@ const EB3JobsLanding: React.FC = () => {
                 transition={{ duration: 0.6, delay: 0.2 }}
                 className="text-xl md:text-2xl mb-10 text-slate-600 leading-relaxed max-w-4xl mx-auto"
               >
-                Múltiplas oportunidades de emprego em indústrias essenciais nos EUA através do programa <strong>EB-3</strong>, 
-                que oferece <strong>residência permanente (Green Card)</strong> para você e sua família.
+                Multiple employment opportunities in essential industries in the USA through the <strong>EB-3</strong> program, 
+                which offers <strong>permanent residence (Green Card)</strong> for you and your family.
               </motion.p>
 
               <motion.div
@@ -451,11 +451,11 @@ const EB3JobsLanding: React.FC = () => {
                     <Shield className="h-6 w-6 text-amber-600" />
                   </div>
                   <div className="text-left">
-                    <h3 className="text-lg font-bold text-amber-800 mb-2">Informações Importantes</h3>
+                    <h3 className="text-lg font-bold text-amber-800 mb-2">Important Information</h3>
                     <ul className="text-amber-700 space-y-1 text-sm">
-                      <li>• Estas vagas <strong>não são garantidas</strong> e a colocação só é confirmada após sermos contratados</li>
-                      <li>• As posições preenchem rapidamente</li>
-                      <li>• Todos os salários listados são os <strong>valores mínimos estabelecidos pelo PWD</strong></li>
+                      <li>• These positions are <strong>not guaranteed</strong> and placement is only confirmed after we are hired</li>
+                      <li>• Positions fill up quickly</li>
+                      <li>• All listed salaries are the <strong>minimum values established by PWD</strong></li>
                     </ul>
                   </div>
                 </div>
@@ -471,12 +471,12 @@ const EB3JobsLanding: React.FC = () => {
                   onClick={scrollToOffer}
                   className="group bg-[#D0151C] hover:bg-[#B01218] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center"
                 >
-                  Aplicar Agora
+                  Apply Now
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </button>
                 <button className="group bg-white border-2 border-[#05294E] text-[#05294E] px-8 py-4 rounded-2xl text-lg font-bold hover:bg-[#05294E] hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg">
                   <FileText className="mr-2 h-5 w-5" />
-                  Saiba Mais
+                  Learn More
                 </button>
               </motion.div>
             </div>
@@ -491,11 +491,11 @@ const EB3JobsLanding: React.FC = () => {
               <div>
                 <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-6">
                   <Shield className="h-4 w-4 mr-2 text-[#05294E]" />
-                  <span className="text-sm font-bold text-slate-700">O que é EB-3?</span>
+                  <span className="text-sm font-bold text-slate-700">What is EB-3?</span>
                 </div>
                 
                 <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8">
-                  Residência Permanente através do <span className="text-[#05294E]">Trabalho</span>
+                  Permanent Residence through <span className="text-[#05294E]">Work</span>
                 </h2>
                 
                 <div className="space-y-6">
@@ -504,9 +504,9 @@ const EB3JobsLanding: React.FC = () => {
                       <CheckCircle className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-2">Green Card Permanente</h3>
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Permanent Green Card</h3>
                       <p className="text-slate-600 leading-relaxed">
-                        Residência permanente para você e sua família através de emprego qualificado.
+                        Permanent residence for you and your family through qualified employment.
                       </p>
                     </div>
                   </div>
@@ -516,9 +516,9 @@ const EB3JobsLanding: React.FC = () => {
                       <DollarSign className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-2">Salários Competitivos</h3>
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Competitive Salaries</h3>
                       <p className="text-slate-600 leading-relaxed">
-                        Remuneração estável e competitiva em indústrias essenciais dos EUA.
+                        Stable and competitive compensation in essential USA industries.
                       </p>
                     </div>
                   </div>
@@ -528,9 +528,9 @@ const EB3JobsLanding: React.FC = () => {
                       <MapPin className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-2">Nacional</h3>
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Nationwide</h3>
                       <p className="text-slate-600 leading-relaxed">
-                        Oportunidades disponíveis em múltiplos estados dos Estados Unidos.
+                        Opportunities available in multiple states across the United States.
                       </p>
                     </div>
                   </div>
@@ -540,7 +540,7 @@ const EB3JobsLanding: React.FC = () => {
               <div className="relative">
                 <img
                   src="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
-                  alt="Trabalhadores nos EUA"
+                  alt="Workers in the USA"
                   className="rounded-3xl shadow-2xl w-full"
                 />
                 
@@ -550,8 +550,8 @@ const EB3JobsLanding: React.FC = () => {
                       <CheckCircle className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <div className="font-bold text-slate-900">Green Card Aprovado</div>
-                      <div className="text-sm text-slate-500">Residência Permanente</div>
+                      <div className="font-bold text-slate-900">Green Card Approved</div>
+                      <div className="text-sm text-slate-500">Permanent Residence</div>
                     </div>
                   </div>
                 </div>
@@ -566,13 +566,13 @@ const EB3JobsLanding: React.FC = () => {
             <div className="text-center mb-16">
               <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-6">
                 <Briefcase className="h-4 w-4 mr-2 text-[#05294E]" />
-                <span className="text-sm font-bold text-slate-700">Vagas Disponíveis</span>
+                <span className="text-sm font-bold text-slate-700">Available Jobs</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-                Lista de <span className="text-[#05294E]">Oportunidades</span>
+                List of <span className="text-[#05294E]">Opportunities</span>
               </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Última atualização: 8 de setembro de 2025
+                Last updated: September 8, 2025
               </p>
             </div>
 
@@ -600,7 +600,7 @@ const EB3JobsLanding: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                   {/* Location Filter */}
                   <div className="flex flex-wrap gap-2">
-                    <span className="text-sm font-medium text-slate-700 self-center">Localidade:</span>
+                    <span className="text-sm font-medium text-slate-700 self-center">Location:</span>
                     <select
                       value={selectedLocation}
                       onChange={(e) => setSelectedLocation(e.target.value)}
@@ -619,7 +619,7 @@ const EB3JobsLanding: React.FC = () => {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Buscar vagas..."
+                      placeholder="Search jobs..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent min-w-[250px]"
@@ -680,14 +680,14 @@ const EB3JobsLanding: React.FC = () => {
                           onClick={() => setExpandedJob(isExpanded ? null : job.id)}
                           className="flex-1 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors flex items-center justify-center"
                         >
-                          {isExpanded ? 'Menos' : 'Mais'} Detalhes
+                          {isExpanded ? 'Less' : 'More'} Details
                           {isExpanded ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />}
                         </button>
                         <button 
                           onClick={scrollToOffer}
                           className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
                         >
-                          Aplicar
+                          Apply
                         </button>
                       </div>
                     </div>
@@ -703,14 +703,14 @@ const EB3JobsLanding: React.FC = () => {
                         >
                           {job.description && (
                             <div className="mb-4">
-                              <h4 className="font-semibold text-slate-900 mb-2">Descrição:</h4>
+                              <h4 className="font-semibold text-slate-900 mb-2">Description:</h4>
                               <p className="text-slate-600 text-sm">{job.description}</p>
                             </div>
                           )}
                           
                           {job.requirements && job.requirements.length > 0 && (
                             <div>
-                              <h4 className="font-semibold text-slate-900 mb-2">Requisitos:</h4>
+                              <h4 className="font-semibold text-slate-900 mb-2">Requirements:</h4>
                               <ul className="space-y-1">
                                 {job.requirements.map((req, index) => (
                                   <li key={index} className="text-slate-600 text-sm flex items-start">
@@ -732,8 +732,8 @@ const EB3JobsLanding: React.FC = () => {
             {filteredJobs.length === 0 && (
               <div className="text-center py-12">
                 <Briefcase className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Nenhuma vaga encontrada</h3>
-                <p className="text-slate-600">Tente ajustar os filtros ou termo de busca.</p>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">No jobs found</h3>
+                <p className="text-slate-600">Try adjusting the filters or search term.</p>
               </div>
             )}
           </div>
@@ -744,10 +744,10 @@ const EB3JobsLanding: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-20">
               <div className="inline-flex items-center bg-white rounded-full px-6 py-2 mb-6 shadow-lg border border-slate-200">
-                <span className="text-sm font-bold text-slate-700">Benefícios do Programa EB-3</span>
+                <span className="text-sm font-bold text-slate-700">EB-3 Program Benefits</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-                Por que escolher o <span className="text-[#05294E]">EB-3</span>?
+                Why choose <span className="text-[#05294E]">EB-3</span>?
               </h2>
             </div>
 
@@ -756,32 +756,32 @@ const EB3JobsLanding: React.FC = () => {
                 <div className="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Residência Permanente</h3>
-                <p className="text-slate-600">Green Card para você e sua família</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Permanent Residence</h3>
+                <p className="text-slate-600">Green Card for you and your family</p>
               </div>
 
               <div className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200 text-center">
                 <div className="bg-blue-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <DollarSign className="h-8 w-8 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Salários Estáveis</h3>
-                <p className="text-slate-600">Remuneração competitiva e estável</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Stable Salaries</h3>
+                <p className="text-slate-600">Competitive and stable compensation</p>
               </div>
 
               <div className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200 text-center">
                 <div className="bg-orange-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <MapPin className="h-8 w-8 text-orange-600" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Múltiplos Estados</h3>
-                <p className="text-slate-600">Oportunidades em todo o país</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Multiple States</h3>
+                <p className="text-slate-600">Opportunities across the country</p>
               </div>
 
               <div className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200 text-center">
                 <div className="bg-purple-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <Users className="h-8 w-8 text-purple-600" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Crescimento Profissional</h3>
-                <p className="text-slate-600">Estabilidade e crescimento de carreira</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Professional Growth</h3>
+                <p className="text-slate-600">Stability and career growth</p>
               </div>
             </div>
           </div>
@@ -792,10 +792,10 @@ const EB3JobsLanding: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-20">
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-                Como <span className="text-[#05294E]">Funciona</span>
+                How It <span className="text-[#05294E]">Works</span>
               </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Processo simples e transparente para sua jornada rumo ao Green Card
+                Simple and transparent process for your journey to the Green Card
               </p>
             </div>
 
@@ -804,24 +804,24 @@ const EB3JobsLanding: React.FC = () => {
                 <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
                   <span className="text-2xl font-bold text-white">1</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Aplicação</h3>
-                <p className="text-slate-600">Preencha o formulário e nossa equipe entrará em contato para revisar seu perfil</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Application</h3>
+                <p className="text-slate-600">Fill out the form and our team will contact you to review your profile</p>
               </div>
 
               <div className="text-center">
                 <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
                   <span className="text-2xl font-bold text-white">2</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Seleção</h3>
-                <p className="text-slate-600">Avaliamos sua qualificação e conectamos você com as melhores oportunidades</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Selection</h3>
+                <p className="text-slate-600">We evaluate your qualifications and connect you with the best opportunities</p>
               </div>
 
               <div className="text-center">
                 <div className="bg-green-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
                   <span className="text-2xl font-bold text-white">3</span>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">Processo</h3>
-                <p className="text-slate-600">Guiaremos você através de todo o processo de obtenção do Green Card</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Process</h3>
+                <p className="text-slate-600">We will guide you through the entire Green Card acquisition process</p>
               </div>
             </div>
           </div>
@@ -847,10 +847,10 @@ const EB3JobsLanding: React.FC = () => {
                   className="space-y-4"
                 >
                   <div className="text-sm font-bold uppercase tracking-wider text-white/90">
-                    NÃO ESPERE MAIS PELO SEU FUTURO
+                    DON'T WAIT ANY LONGER FOR YOUR FUTURE
                   </div>
                   <h2 className="text-3xl md:text-4xl font-black leading-tight">
-                    Realize Seu Sonho de Trabalhar nos EUA!
+                    Fulfill Your Dream of Working in the USA!
                   </h2>
                 </motion.div>
               </div>
@@ -874,7 +874,7 @@ const EB3JobsLanding: React.FC = () => {
                       <Briefcase className="h-8 w-8 text-white" />
                     </div>
                     <h3 className="text-2xl md:text-3xl font-black text-[#05294E] mb-2">
-                      Pré Candidatura Vagas EB3
+                      EB3 Jobs Pre-Application
                     </h3>
                     <div className="w-16 h-1 bg-[#05294E] mx-auto"></div>
                   </div>
@@ -882,10 +882,10 @@ const EB3JobsLanding: React.FC = () => {
                   {/* Features List */}
                   <div className="space-y-3 mb-6">
                     {[
-                      'Analise de Perfil',
-                      'Consulta com Especialista', 
-                      'Elaboração de estratégia',
-                      'Garantia'
+                      'Profile Analysis',
+                      'Expert Consultation', 
+                      'Strategy Development',
+                      'Guarantee'
                     ].map((feature, index) => (
                       <div key={index} className="flex items-center space-x-3">
                         <CheckCircle className="h-5 w-5 text-[#05294E] flex-shrink-0" />
@@ -904,7 +904,7 @@ const EB3JobsLanding: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-center space-x-2 text-[#05294E] text-sm">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>Reembolso Garantido em Caso de Inelegibilidade</span>
+                      <span>Guaranteed Refund in Case of Ineligibility</span>
                     </div>
                   </div>
 
@@ -914,7 +914,7 @@ const EB3JobsLanding: React.FC = () => {
                       onClick={handleStripeCheckout}
                       className="bg-green-500 hover:bg-green-600 text-white font-black text-lg px-8 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
-                      Inscreva-se Agora!
+                      Sign Up Now!
                     </button>
                   </div>
 
@@ -924,32 +924,32 @@ const EB3JobsLanding: React.FC = () => {
                       <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
                         <Shield className="h-6 w-6 text-[#05294E]" />
                       </div>
-                      <div className="text-xs text-gray-600 font-medium">Checkout Seguro</div>
+                      <div className="text-xs text-gray-600 font-medium">Secure Checkout</div>
                     </div>
                     <div className="text-center">
                       <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
                         <Star className="h-6 w-6 text-[#05294E]" />
                       </div>
-                      <div className="text-xs text-gray-600 font-medium">Satisfação Garantida</div>
+                      <div className="text-xs text-gray-600 font-medium">Satisfaction Guaranteed</div>
                     </div>
                     <div className="text-center">
                       <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
                         <Shield className="h-6 w-6 text-[#05294E]" />
                       </div>
-                      <div className="text-xs text-gray-600 font-medium">Privacidade Protegida</div>
+                      <div className="text-xs text-gray-600 font-medium">Protected Privacy</div>
                     </div>
                   </div>
 
                   {/* Payment Methods */}
                   <div className="text-center">
-                    <div className="text-xs text-gray-500 mb-3">Formas de Pagamento:</div>
+                    <div className="text-xs text-gray-500 mb-3">Payment Methods:</div>
                     <div className="flex flex-wrap justify-center items-center gap-3">
                       <div className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">PIX</div>
                       <div className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">VISA</div>
                       <div className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">Mastercard</div>
                       <div className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">PayPal</div>
                       <div className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">Hipercard</div>
-                      <div className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">Boleto</div>
+                      <div className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">Bank Slip</div>
                     </div>
                   </div>
                   </div>
@@ -969,12 +969,12 @@ const EB3JobsLanding: React.FC = () => {
                       <CheckCircle className="h-6 w-6 text-white" />
                     </div>
                     <h3 className="text-xl md:text-2xl font-black text-white">
-                      Garantia e Segurança
+                      Guarantee and Security
                     </h3>
                   </div>
                   
                   <p className="text-white text-sm leading-relaxed">
-                    Se, após esta avaliação, for determinado que você não atende aos critérios necessários para a aplicação do visto EB-3, nós garantimos o reembolso total do valor investido no processo de pré-candidatura. Isso significa que você pode prosseguir sabendo que seu investimento está protegido.
+                    If, after this evaluation, it is determined that you do not meet the necessary criteria for the EB-3 visa application, we guarantee a full refund of the amount invested in the pre-application process. This means you can proceed knowing that your investment is protected.
                   </p>
                 </motion.div>
               </div>
@@ -988,49 +988,49 @@ const EB3JobsLanding: React.FC = () => {
             <div className="text-center mb-16">
               <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-6">
                 <FileText className="h-4 w-4 mr-2 text-[#05294E]" />
-                <span className="text-sm font-bold text-slate-700">Perguntas Frequentes</span>
+                <span className="text-sm font-bold text-slate-700">Frequently Asked Questions</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-                Dúvidas sobre o <span className="text-[#05294E]">EB-3</span>?
+                Questions about <span className="text-[#05294E]">EB-3</span>?
               </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                Encontre respostas para as principais dúvidas sobre o processo de obtenção do Green Card através do programa EB-3
+                Find answers to the main questions about the Green Card acquisition process through the EB-3 program
               </p>
             </div>
 
             <div className="space-y-4">
               {[
                 {
-                  question: "O que é o visto EB-3 e como funciona?",
-                  answer: "O EB-3 é uma categoria de visto de imigração baseada em emprego que permite que trabalhadores qualificados, profissionais e trabalhadores não qualificados obtenham residência permanente (Green Card) nos Estados Unidos. O processo envolve uma oferta de trabalho permanente de um empregador americano e a comprovação de que não há trabalhadores americanos qualificados disponíveis para a posição."
+                  question: "What is the EB-3 visa and how does it work?",
+                  answer: "The EB-3 is an employment-based immigration visa category that allows skilled workers, professionals, and unskilled workers to obtain permanent residence (Green Card) in the United States. The process involves a permanent job offer from an American employer and proof that there are no qualified American workers available for the position."
                 },
                 {
-                  question: "Quais são os requisitos para se qualificar ao EB-3?",
-                  answer: "Os requisitos variam conforme a subcategoria: 1) Trabalhadores qualificados: Requerem pelo menos 2 anos de experiência ou treinamento; 2) Profissionais: Necessitam de bacharelado ou equivalente; 3) Trabalhadores não qualificados: Podem ter menos de 2 anos de experiência. Todos devem ter uma oferta de trabalho permanente de um empregador americano."
+                  question: "What are the requirements to qualify for EB-3?",
+                  answer: "Requirements vary by subcategory: 1) Skilled workers: Require at least 2 years of experience or training; 2) Professionals: Need a bachelor's degree or equivalent; 3) Unskilled workers: May have less than 2 years of experience. All must have a permanent job offer from an American employer."
                 },
                 {
-                  question: "Quanto tempo leva o processo do EB-3?",
-                  answer: "O tempo total varia de 2 a 4 anos, dependendo do país de origem e da disponibilidade de vagas. O processo inclui: 1) Labor Certification (6-12 meses); 2) Petição I-140 (6-12 meses); 3) Ajuste de status ou processo consular (6-18 meses). Brasileiros geralmente têm tempos de espera menores comparados a outros países."
+                  question: "How long does the EB-3 process take?",
+                  answer: "The total time varies from 2 to 4 years, depending on the country of origin and visa availability. The process includes: 1) Labor Certification (6-12 months); 2) I-140 Petition (6-12 months); 3) Status adjustment or consular process (6-18 months). Brazilians generally have shorter wait times compared to other countries."
                 },
                 {
-                  question: "Posso incluir minha família no processo EB-3?",
-                  answer: "Sim! O EB-3 permite que você inclua seu cônjuge e filhos solteiros menores de 21 anos no processo. Todos receberão Green Cards e terão os mesmos direitos de residência permanente, incluindo permissão para trabalhar e estudar nos Estados Unidos."
+                  question: "Can I include my family in the EB-3 process?",
+                  answer: "Yes! The EB-3 allows you to include your spouse and unmarried children under 21 years old in the process. Everyone will receive Green Cards and have the same permanent residence rights, including permission to work and study in the United States."
                 },
                 {
-                  question: "Qual é o custo total do processo EB-3?",
-                  answer: "Os custos incluem: taxas governamentais (aproximadamente $2.000-3.000), honorários advocatícios ($5.000-15.000), traduções e documentação ($500-1.500), exames médicos ($200-500), e custos de viagem. O empregador geralmente paga as taxas principais, mas alguns custos podem ser compartilhados."
+                  question: "What is the total cost of the EB-3 process?",
+                  answer: "Costs include: government fees (approximately $2,000-3,000), legal fees ($5,000-15,000), translations and documentation ($500-1,500), medical exams ($200-500), and travel costs. The employer usually pays the main fees, but some costs may be shared."
                 },
                 {
-                  question: "Preciso falar inglês fluentemente para o EB-3?",
-                  answer: "O nível de inglês necessário depende da posição específica. Para algumas posições, inglês básico é suficiente, especialmente em trabalhos não qualificados. Para posições profissionais, pode ser necessário inglês intermediário ou avançado. A MatriculaUSA oferece suporte para melhorar suas habilidades linguísticas."
+                  question: "Do I need to speak English fluently for EB-3?",
+                  answer: "The required English level depends on the specific position. For some positions, basic English is sufficient, especially in unskilled jobs. For professional positions, intermediate or advanced English may be required. MatriculaUSA offers support to improve your language skills."
                 },
                 {
-                  question: "O que acontece se eu perder meu emprego após receber o Green Card?",
-                  answer: "Após receber o Green Card, você tem mais flexibilidade. Se perder o emprego, pode procurar outro trabalho na mesma área ou similar. Após 5 anos, pode se naturalizar como cidadão americano. O Green Card EB-3 é permanente e não está vinculado a um empregador específico após a aprovação."
+                  question: "What happens if I lose my job after receiving the Green Card?",
+                  answer: "After receiving the Green Card, you have more flexibility. If you lose your job, you can look for another job in the same or similar field. After 5 years, you can naturalize as an American citizen. The EB-3 Green Card is permanent and is not tied to a specific employer after approval."
                 },
                 {
-                  question: "Posso mudar de emprego durante o processo EB-3?",
-                  answer: "Durante o processo, é possível mudar de emprego, mas requer uma nova petição I-140 com o novo empregador. Isso pode adicionar tempo ao processo. Após receber o Green Card, você tem total liberdade para mudar de emprego sem restrições."
+                  question: "Can I change jobs during the EB-3 process?",
+                  answer: "During the process, it is possible to change jobs, but it requires a new I-140 petition with the new employer. This may add time to the process. After receiving the Green Card, you have complete freedom to change jobs without restrictions."
                 }
               ].map((faq, index) => (
                 <motion.div
@@ -1084,15 +1084,15 @@ const EB3JobsLanding: React.FC = () => {
           <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-8">
               <Briefcase className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Junte-se a milhares de brasileiros</span>
+              <span className="text-sm font-medium">Join thousands of Brazilians</span>
             </div>
             
             <h2 className="text-4xl md:text-6xl font-black mb-6 leading-tight">
-              Pronto para começar sua <span className="text-[#D0151C]">jornada</span>?
+              Ready to start your <span className="text-[#D0151C]">journey</span>?
             </h2>
             
             <p className="text-xl mb-10 text-blue-100 max-w-3xl mx-auto leading-relaxed">
-              Preencha o formulário abaixo e nossa equipe entrará em contato para revisar seu perfil e guiá-lo através do processo.
+              Fill out the form below and our team will contact you to review your profile and guide you through the process.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
@@ -1100,27 +1100,30 @@ const EB3JobsLanding: React.FC = () => {
                 onClick={scrollToOffer}
                 className="group bg-[#D0151C] text-white px-10 py-5 rounded-2xl text-xl font-black hover:bg-[#B01218] transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center justify-center"
               >
-                Aplicar Agora
+                Apply Now
                 <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
               </button>
-              <button className="group bg-transparent border-2 border-white text-white px-10 py-5 rounded-2xl text-xl font-black hover:bg-white hover:text-[#05294E] transition-all duration-300 flex items-center justify-center">
+              <button 
+                onClick={() => window.open('https://wa.me/12136762544', '_blank')}
+                className="group bg-transparent border-2 border-white text-white px-10 py-5 rounded-2xl text-xl font-black hover:bg-white hover:text-[#05294E] transition-all duration-300 flex items-center justify-center"
+              >
                 <Phone className="mr-3 h-6 w-6" />
-                Falar Conosco
+                Contact Us
               </button>
             </div>
             
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center text-blue-100">
               <div className="flex items-center text-sm">
                 <CheckCircle className="h-5 w-5 mr-2 text-green-400" />
-                <span>Processo 100% legal</span>
+                <span>100% legal process</span>
               </div>
               <div className="flex items-center text-sm">
                 <CheckCircle className="h-5 w-5 mr-2 text-green-400" />
-                <span>Suporte especializado</span>
+                <span>Specialized support</span>
               </div>
               <div className="flex items-center text-sm">
                 <CheckCircle className="h-5 w-5 mr-2 text-green-400" />
-                <span>Green Card permanente</span>
+                <span>Permanent Green Card</span>
               </div>
             </div>
           </div>
