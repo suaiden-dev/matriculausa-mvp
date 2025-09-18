@@ -11,6 +11,7 @@ interface ApiMessage {
   message: string;
   sent_at: string;
   read_at?: string | null;
+  updated_at?: string | null;
   attachments?: { file_url: string; file_name?: string; uploaded_at?: string }[];
 }
 
@@ -33,6 +34,7 @@ export const useApplicationChat = (applicationId?: string) => {
         attachments: msg.attachments,
         status: msg.sender_id === user?.id ? status : 'sent',
         readAt: msg.read_at,
+        updatedAt: msg.updated_at,
       };
       
       // Debug log para verificar readAt
@@ -248,7 +250,7 @@ export const useApplicationChat = (applicationId?: string) => {
       // Atualizar mensagem localmente
       setMessages(prev => prev.map(msg => 
         msg.id === messageId 
-          ? { ...msg, message: newText }
+          ? { ...msg, message: newText, updatedAt: new Date().toISOString() }
           : msg
       ));
 

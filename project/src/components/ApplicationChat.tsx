@@ -10,6 +10,7 @@ export interface ChatMessage {
   isOwn: boolean;
   status?: 'pending' | 'sent' | 'error';
   readAt?: string | null;
+  updatedAt?: string | null;
   attachments?: { 
     file_url: string; 
     file_name?: string; 
@@ -459,6 +460,19 @@ const ApplicationChat: React.FC<ApplicationChatProps & {
                 ) : (
                   <div className="text-sm leading-relaxed break-words whitespace-pre-line">
                     {msg.message}
+                    {msg.updatedAt && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-xs text-gray-400 italic">
+                          (edited)
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(msg.updatedAt).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 
