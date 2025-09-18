@@ -6,7 +6,9 @@ import {
   XCircleIcon,
   EyeIcon,
   EyeSlashIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  QuestionMarkCircleIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 
@@ -17,6 +19,7 @@ const EmailConfiguration = () => {
   const [testResults, setTestResults] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [provider, setProvider] = useState('gmail');
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -338,16 +341,26 @@ const EmailConfiguration = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Senha de app
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Senha de app
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowHelpModal(true)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
+                  >
+                    <QuestionMarkCircleIcon className="h-4 w-4" />
+                    <span>Preciso de ajuda</span>
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="app_password"
                     value={formData.app_password}
                     onChange={handleChange}
-                    placeholder="Senha específica para aplicativos"
+                    placeholder="xxxx xxxx xxxx xxxx"
                     className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       errors.app_password ? 'border-red-300' : 'border-gray-200'
                     }`}
@@ -367,25 +380,18 @@ const EmailConfiguration = () => {
                 {errors.app_password && (
                   <p className="text-red-500 text-sm mt-1">{errors.app_password}</p>
                 )}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-                  <p className="text-sm text-blue-800">
-                    <strong>Como obter senha de app:</strong>
-                  </p>
-                  <ul className="text-xs text-blue-700 mt-1 space-y-1">
-                    {provider === 'gmail' ? (
-                      <>
-                        <li>1. Acesse myaccount.google.com</li>
-                        <li>2. Vá em "Segurança" → "Verificação em duas etapas"</li>
-                        <li>3. Role até "Senhas de app" e gere uma nova</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>1. Acesse account.yahoo.com</li>
-                        <li>2. Vá em "Segurança da conta" → "Gerar senha de app"</li>
-                        <li>3. Digite "Email" como nome do app</li>
-                      </>
-                    )}
-                  </ul>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+                  <div className="flex items-start space-x-2">
+                    <ExclamationTriangleIcon className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-amber-800 font-medium">
+                        Importante: Use senha de app, não sua senha normal
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Clique em "Preciso de ajuda" acima para ver o passo a passo completo
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -450,6 +456,192 @@ const EmailConfiguration = () => {
           </div>
         </form>
       </div>
+
+      {/* Modal de Ajuda para Senha de App */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Como criar uma senha de app {provider === 'gmail' ? 'no Gmail' : 'no Yahoo'}
+                </h3>
+                <button
+                  onClick={() => setShowHelpModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {provider === 'gmail' ? (
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-blue-900 mb-2">Primeiro: Ative a verificação em 2 etapas</h4>
+                        <p className="text-sm text-blue-800 mb-3">
+                          A verificação em 2 etapas precisa estar ativa para criar senhas de app.
+                        </p>
+                        <div className="bg-white rounded-lg p-3 border border-blue-200">
+                          <p className="text-sm text-gray-700 mb-2"><strong>Acesse:</strong></p>
+                          <code className="bg-gray-100 px-2 py-1 rounded text-sm">myaccount.google.com</code>
+                          <p className="text-sm text-gray-700 mt-2">
+                            → Clique em <strong>"Segurança"</strong> (no menu lateral)<br/>
+                            → Encontre <strong>"Verificação em duas etapas"</strong><br/>
+                            → Clique em <strong>"Começar"</strong> e siga os passos
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-green-100 text-green-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-green-900 mb-2">Segundo: Crie a senha de app</h4>
+                        <p className="text-sm text-green-800 mb-3">
+                          Agora você pode gerar uma senha específica para este sistema.
+                        </p>
+                        <div className="bg-white rounded-lg p-3 border border-green-200">
+                          <p className="text-sm text-gray-700 mb-2">
+                            <strong>Na mesma página de Segurança:</strong>
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            → Use a barra de pesquisa e digite <strong>"senhas de app"</strong><br/>
+                            → Clique em <strong>"Senhas de app"</strong><br/>
+                            → No campo "Nome do app", digite <strong>"MatriculaUSA"</strong><br/>
+                            → Clique em <strong>"Criar"</strong> para gerar sua senha
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-purple-900 mb-2">Terceiro: Copie a senha</h4>
+                        <p className="text-sm text-purple-800 mb-3">
+                          O Google vai mostrar uma senha de 16 caracteres (com espaços).
+                        </p>
+                        <div className="bg-white rounded-lg p-3 border border-purple-200">
+                          <p className="text-sm text-gray-700 mb-2">
+                            <strong>Exemplo de senha gerada:</strong>
+                          </p>
+                          <code className="bg-gray-100 px-2 py-1 rounded text-sm">abcd efgh ijkl mnop</code>
+                          <p className="text-sm text-gray-700 mt-2">
+                            → <strong>Remova todos os espaços</strong> da senha gerada<br/>
+                            → Cole a senha sem espaços no campo "Senha de app"<br/>
+                            → Exemplo: <code className="bg-gray-100 px-2 py-1 rounded text-xs">abcdefghijklmnop</code><br/>
+                            → Não use sua senha normal do Gmail!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-blue-900 mb-2">Primeiro: Acesse sua conta Yahoo</h4>
+                        <div className="bg-white rounded-lg p-3 border border-blue-200">
+                          <p className="text-sm text-gray-700 mb-2"><strong>Acesse:</strong></p>
+                          <code className="bg-gray-100 px-2 py-1 rounded text-sm">account.yahoo.com</code>
+                          <p className="text-sm text-gray-700 mt-2">
+                            → Faça login com sua conta Yahoo<br/>
+                            → Clique em <strong>"Segurança da conta"</strong> no menu lateral
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-green-100 text-green-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-green-900 mb-2">Segundo: Gere a senha de app</h4>
+                        <div className="bg-white rounded-lg p-3 border border-green-200">
+                          <p className="text-sm text-gray-700">
+                            → Procure por <strong>"Gerar senha de app"</strong><br/>
+                            → Clique em <strong>"Gerar senha de app"</strong><br/>
+                            → Digite <strong>"Email"</strong> como nome do aplicativo<br/>
+                            → Clique em <strong>"Gerar"</strong>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-purple-900 mb-2">Terceiro: Use a senha gerada</h4>
+                        <div className="bg-white rounded-lg p-3 border border-purple-200">
+                          <p className="text-sm text-gray-700 mb-2">
+                            <strong>O Yahoo vai mostrar uma senha única:</strong>
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            → <strong>Copie essa senha gerada</strong><br/>
+                            → Cole no campo "Senha de app" aqui no sistema<br/>
+                            → Não use sua senha normal do Yahoo!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-6">
+                <div className="flex items-start space-x-2">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 mb-1">Dicas importantes:</p>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      <li>• A senha de app é diferente da sua senha normal</li>
+                      <li>• Você pode gerar várias senhas de app para diferentes serviços</li>
+                      <li>• Se esquecer a senha, gere uma nova (a antiga para de funcionar)</li>
+                      <li>• Mantenha a senha em local seguro</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowHelpModal(false)}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Entendi, fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
