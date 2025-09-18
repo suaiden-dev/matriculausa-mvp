@@ -68,7 +68,6 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
       }
       return value;
     } catch (error) {
-      console.warn(`Error accessing field ${field}:`, error);
       return fallback;
     }
   };
@@ -100,7 +99,6 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
   useEffect(() => {
     const loadPerformanceData = async () => {
       if (!sellerProfile?.referral_code) {
-        console.log('No referral code found:', sellerProfile);
         return;
       }
 
@@ -108,37 +106,21 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
         setLoading(true);
         setError(null);
 
-        console.log('Loading performance data for referral code:', sellerProfile.referral_code);
-
         const { data, error: rpcError } = await supabase.rpc(
           'get_seller_individual_performance',
           { seller_referral_code_param: sellerProfile.referral_code }
         );
-
-        console.log('RPC response:', { data, error: rpcError });
 
         if (rpcError) {
           throw new Error(`Failed to load performance data: ${rpcError.message}`);
         }
 
         if (data && data.length > 0) {
-          console.log('Performance data loaded:', data[0]);
-          console.log('Data structure:', {
-            total_students: data[0].total_students,
-            total_revenue: data[0].total_revenue,
-            monthly_students: data[0].monthly_students,
-            conversion_rate: data[0].conversion_rate,
-            ranking_position: data[0].ranking_position,
-            monthly_data: data[0].monthly_data,
-            monthly_goals: data[0].monthly_goals,
-            achievements: data[0].achievements
-          });
           setPerformanceData(data[0]);
         } else {
           throw new Error('No performance data found');
         }
       } catch (err: any) {
-        console.error('Error loading performance data:', err);
         setError(err.message);
       } finally {
         setLoading(false);

@@ -1834,6 +1834,7 @@
       "tabs": {
         "welcome": "Bem-vindo",
         "details": "Detalhes",
+        "chat": "Chat",
         "i20": "Taxa de Controle I-20",
         "documents": "Documentos"
       },
@@ -1851,6 +1852,11 @@
           "title": "Ver Detalhes da Aplicação",
           "description": "Veja todas as informações da sua bolsa, documentos enviados e seu status atual (aguardando carta de aceitação, matriculado, etc). Mantenha-se atualizado com seu processo a qualquer momento.",
           "button": "Ver Detalhes da Aplicação"
+        },
+        "chat": {
+          "title": "Chat com a Universidade",
+          "description": "Comunique-se diretamente com a equipe da universidade para tirar dúvidas e acompanhar seu processo.",
+          "button": "Abrir Chat"
         },
         "i20ControlFee": {
           "title": "Pagar Taxa de Controle I-20",
@@ -1908,7 +1914,12 @@
         "applicationSubmitted": "Aplicação enviada",
         "applicationUpdated": "Aplicação atualizada",
         "quickActions": "Ações Rápidas",
-        "manageDocuments": "Gerenciar Documentos"
+        "manageDocuments": "Gerenciar Documentos",
+        "chat": "Chat"
+      },
+      "chat": {
+        "title": "Centro de Comunicação",
+        "subtitle": "Chat com {{universityName}}"
       },
       "i20ControlFee": {
         "title": "Taxa de Controle I-20",
@@ -2308,7 +2319,7 @@
     "securePayment": "Pagamento Seguro",
     "redirectToStripe": "Redirecionando para o Stripe",
     "closeModal": "Fechar modal",
-    "securePaymentViaStripe": "Pagamento seguro via Stripe",
+    "securePaymentViaStripe": "Pagamento seguro",
     "referralCode": "Código de Referência",
     "yourReferralCode": "Seu Código de Referência",
     "enterReferralCode": "Digite seu código de referência para obter desconto",
@@ -2341,7 +2352,18 @@
     "readingTerms": "Por favor, leia os termos antes de aceitar",
     "acceptContractTerms": "Aceito os termos e condições do contrato",
     "cancel": "Cancelar",
-    "acceptTerms": "Aceitar Termos"
+    "acceptTerms": "Aceitar Termos",
+    "proceedWithPayment": "Seguir com pagamento",
+    "iHaveACode": "Tenho um código",
+    "back": "Voltar",
+    "mustEnterValidCode": "Você precisa inserir um código válido para continuar",
+    "selectionProcessPayment": "Pagamento do Processo Seletivo",
+    "stepByStepGuide": {
+      "step1": "Leia e aceite os termos e condições do contrato.",
+      "step2": "Se tiver um código, toque em \"Tenho um código\" para inserir e validar.",
+      "step3": "Toque em ‘Seguir com pagamento’ para escolher o método e concluir.",
+      "step4": "Após pagar, explore bolsas e universidades e aplique facilmente ao processo seletivo."
+    }
   },
   "footer": {
     "company": {

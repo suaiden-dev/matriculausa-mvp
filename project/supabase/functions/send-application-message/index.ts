@@ -52,7 +52,21 @@ Deno.serve(async (req) => {
 
     const { data: appData, error: appError } = await supabase
       .from('scholarship_applications')
-      .select('student_id, scholarships(universities(user_id))')
+      .select(`
+        student_id, 
+        scholarships(
+          universities(
+            user_id,
+            name,
+            contact,
+            payment_contact_email
+          )
+        ),
+        user_profiles!student_id(
+          full_name,
+          email
+        )
+      `)
       .eq('id', application_id)
       .single();
 
@@ -63,6 +77,11 @@ Deno.serve(async (req) => {
 
     const studentProfileId = appData.student_id;
     const universityUserId = appData.scholarships?.universities?.user_id;
+    const universityName = appData.scholarships?.universities?.name;
+    const universityContact = appData.scholarships?.universities?.contact;
+    const universityEmail = universityContact?.email || appData.scholarships?.universities?.payment_contact_email;
+    const studentName = appData.user_profiles?.full_name;
+    const studentEmail = appData.user_profiles?.email;
 
     // Buscar o user_id do estudante (auth.users.id) a partir do user_profiles
     const { data: studentProfile, error: studentProfileError } = await supabase
@@ -109,23 +128,36 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to send message: ${msgError?.message}`);
     }
 
+    let attachments: any[] = [];
     if (file_url) {
-      const { error: attachError } = await supabase
+      const { data: attachmentData, error: attachError } = await supabase
         .from('application_message_attachments')
         .insert({
           message_id: newMessage.id,
           file_url,
           file_name: file_name || null,
-        });
+        })
+        .select()
+        .single();
       if (attachError) {
         // Log the error, but don't fail the whole request
         console.error('[send-application-message] Falha ao salvar anexo:', attachError.message);
+      } else {
+        attachments = [attachmentData];
       }
     }
     
+    // A notificação por email será enviada via cron job que roda a cada hora
+    // verificando mensagens não lidas há mais de 1 hora
+
     // The client expects the full message object for optimistic updates
-    console.log('[send-application-message] Mensagem enviada com sucesso', newMessage);
-    return new Response(JSON.stringify(newMessage), {
+    const responseMessage = {
+      ...newMessage,
+      attachments: attachments
+    };
+    
+    console.log('[send-application-message] Mensagem enviada com sucesso', responseMessage);
+    return new Response(JSON.stringify(responseMessage), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

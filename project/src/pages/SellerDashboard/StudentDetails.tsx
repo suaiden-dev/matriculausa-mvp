@@ -12,6 +12,12 @@ import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 
+// Silencia logs apenas neste arquivo, sem alterar a lógica
+// Evita poluir o console em produção mantendo o código intacto
+const __noop = (..._args: unknown[]) => {};
+// Somente escopo local deste módulo
+const console = { ...globalThis.console, log: __noop, warn: __noop, error: __noop, info: __noop, debug: __noop } as Console;
+
 interface StudentInfo {
   student_id: string;
   full_name: string;

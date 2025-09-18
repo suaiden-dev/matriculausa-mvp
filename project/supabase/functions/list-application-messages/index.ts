@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     // Busca as mensagens e seus anexos
     const { data: messages, error: msgError } = await supabase
       .from('application_messages')
-      .select(`id, sender_id, recipient_id, message, sent_at, is_read, application_id, attachments:application_message_attachments(id, file_url, file_name, uploaded_at)`)
+      .select(`id, sender_id, recipient_id, message, sent_at, is_read, read_at, updated_at, application_id, attachments:application_message_attachments(id, file_url, file_name, uploaded_at)`)
       .eq('application_id', application_id)
       .order('sent_at', { ascending: true });
 

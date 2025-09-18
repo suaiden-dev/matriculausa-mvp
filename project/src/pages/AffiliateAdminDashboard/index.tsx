@@ -71,7 +71,6 @@ const AffiliateAdminDashboard: React.FC = () => {
       
       // Force refresh - clear cache
       if (forceRefresh) {
-        console.log('🔄 Force refresh - clearing cache');
         setStudents([]);
         setSellers([]);
         setStats({
@@ -89,7 +88,6 @@ const AffiliateAdminDashboard: React.FC = () => {
 
       // Verificar se o usuário é affiliate_admin através do role no perfil
       if (userRole !== 'affiliate_admin') {
-        console.error('❌ User role is not affiliate_admin:', userRole);
         throw new Error('Usuário não tem permissão de affiliate admin');
       }
 
@@ -98,7 +96,6 @@ const AffiliateAdminDashboard: React.FC = () => {
         .rpc('get_admin_analytics_fixed', { admin_user_id: userId });
 
       if (analyticsError) {
-        console.error('❌ Error loading analytics data:', analyticsError);
         throw new Error(`Failed to load analytics data: ${analyticsError.message}`);
       }
 
@@ -107,7 +104,6 @@ const AffiliateAdminDashboard: React.FC = () => {
         .rpc('get_admin_sellers_analytics_fixed', { admin_user_id: userId });
 
       if (sellersError) {
-        console.error('❌ Error loading sellers data:', sellersError);
         throw new Error(`Failed to load sellers data: ${sellersError.message}`);
       }
 
@@ -116,7 +112,6 @@ const AffiliateAdminDashboard: React.FC = () => {
         .rpc('get_admin_students_analytics', { admin_user_id: userId });
 
       if (studentsError) {
-        console.error('Error loading students data:', studentsError);
         throw new Error(`Failed to load students data: ${studentsError.message}`);
       }
 
@@ -135,7 +130,6 @@ const AffiliateAdminDashboard: React.FC = () => {
       };
 
       // Processar vendedores
-      console.log('🔍 Raw sellers data:', sellersData);
       const processedSellers = (sellersData || []).map((seller: any) => ({
         id: seller.seller_id,
         name: seller.seller_name || 'Nome não disponível',
@@ -147,7 +141,6 @@ const AffiliateAdminDashboard: React.FC = () => {
         avg_revenue_per_student: seller.avg_revenue_per_student || 0,
         is_active: seller.is_active
       }));
-      console.log('🔍 Processed sellers:', processedSellers);
 
       // Processar estudantes
       const processedStudents = (studentsData || []).map((student: any) => ({
@@ -181,7 +174,6 @@ const AffiliateAdminDashboard: React.FC = () => {
       setSellers(processedSellers);
 
     } catch (error: any) {
-      console.error('Error loading affiliate admin data:', error);
       setError(error.message);
     } finally {
       setLoading(false);
