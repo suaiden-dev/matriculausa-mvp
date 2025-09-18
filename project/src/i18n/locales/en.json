@@ -2375,9 +2375,9 @@
           "details": "Select your university and redeem the discount"
         },
         "step4": {
-          "title": "Contact Your University",
-          "description": "Contact your university's admissions office to apply the redeemed discount",
-          "details": "Present your discount code to get the reduction on your fees"
+          "title": "Redeem Your Tuition Discount",
+          "description": "Redeem your discount directly at your chosen university during the enrollment process",
+          "details": "The university receives notification and automatically applies the discount to your tuition"
         }
       },
       "calculator": {

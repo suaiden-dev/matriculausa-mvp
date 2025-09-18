@@ -2440,9 +2440,9 @@
           "details": "Selecione sua universidade e resgate o desconto"
         },
         "step4": {
-          "title": "Entre em Contato com Sua Universidade",
-          "description": "Entre em contato com a secretaria de sua universidade para aplicar o desconto resgatado",
-          "details": "Apresente seu código de desconto para obter a redução na sua mensalidade"
+          "title": "Resgate seu Desconto na Tuition",
+          "description": "Resgate seu desconto diretamente na universidade escolhida durante o processo de matrícula",
+          "details": "A universidade recebe notificação e aplica automaticamente o desconto na sua tuition"
         }
       },
       "calculator": {
