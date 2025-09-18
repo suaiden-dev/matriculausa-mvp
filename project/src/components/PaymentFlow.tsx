@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StripeCheckout } from './StripeCheckout';
 import { ZellePaymentFlow } from './ZellePaymentFlow';
@@ -38,6 +38,8 @@ export const PaymentFlow: React.FC<PaymentFlowProps> = ({
   const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'zelle' | null>(null);
 
   const handleStartPayment = () => {
+    // Sempre reiniciar a seleção do método ao iniciar o fluxo novamente
+    setSelectedMethod(null);
     setShowMethodSelector(true);
   };
 
@@ -55,6 +57,12 @@ export const PaymentFlow: React.FC<PaymentFlowProps> = ({
     setShowMethodSelector(false);
     setSelectedMethod(null);
   };
+
+  // Reiniciar seleção quando o produto ou tipo de taxa mudarem
+  useEffect(() => {
+    setSelectedMethod(null);
+    setShowMethodSelector(false);
+  }, [productId, feeType]);
 
   const getAmount = () => {
     return feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee');

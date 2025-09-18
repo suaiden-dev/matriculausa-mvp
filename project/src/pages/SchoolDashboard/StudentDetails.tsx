@@ -5,7 +5,9 @@ import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
+import ApplicationChat from '@/components/ApplicationChat';
 import { useAuth } from '../../hooks/useAuth';
+import { useApplicationChat } from '../../hooks/useApplicationChat';
 import { FileText, UserCircle, CheckCircle2 } from 'lucide-react';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
 
@@ -34,7 +36,11 @@ const DOCUMENTS_INFO = [
 
 const TABS = [
   { id: 'details', label: 'Details', icon: UserCircle },
-  // { id: 'chat', label: 'Chat', icon: MessageCircle },
+  { id: 'chat', label: 'Chat', icon: () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  )},
   { id: 'documents', label: 'Documents', icon: FileText },
   // { id: 'review', label: 'Review', icon: FileText }, // Removida a aba Review
 ];
@@ -75,6 +81,9 @@ const StudentDetails: React.FC = () => {
 
   const [isFileSelecting, setIsFileSelecting] = useState(false);
 
+  // Hook do chat com tempo real e persistência
+  const chat = useApplicationChat(applicationId);
+
   // Estados para o modal de nova solicitação de documento
   const [newDocumentRequest, setNewDocumentRequest] = useState({
     title: '',
@@ -83,6 +92,7 @@ const StudentDetails: React.FC = () => {
     attachment: null as File | null
   });
   const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
+
 
   useEffect(() => {
     if (applicationId) {
@@ -121,6 +131,7 @@ const StudentDetails: React.FC = () => {
       setAcceptanceLetterFile(null);
     }
   }, [activeTab]);
+
 
   const fetchApplicationDetails = async () => {
     if (!applicationId) return;
@@ -1967,6 +1978,11 @@ const StudentDetails: React.FC = () => {
                 <div className="p-6">
                   <div className="space-y-3">
                     {[
+                      { label: 'Chat', tab: 'chat', icon: () => (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      )},
                       { label: 'Documents', tab: 'documents', icon: FileText }
                     ].map((action) => (
                       <button
@@ -1987,30 +2003,33 @@ const StudentDetails: React.FC = () => {
             </div>
           </div>
       )}
-      {/* {activeTab === 'chat' && (
+      {activeTab === 'chat' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-gradient-to-r from-[#05294E] to-[#0a4a7a] px-6 py-4">
             <h2 className="text-xl font-semibold text-white flex items-center">
-              <MessageCircle className="w-6 h-6 mr-3" />
+              <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
               Communication Center
             </h2>
-                                    <p className="text-slate-200 text-sm mt-1">Chat with {student?.full_name || 'Student'}</p>
+            <p className="text-slate-200 text-sm mt-1">Chat with {application?.user_profiles?.full_name || 'Student'}</p>
           </div>
           <div className="p-6">
             <div className="flex-1 flex flex-col">
               <ApplicationChat
                 messages={chat.messages}
-                onSend={chat.sendMessage as any}
+                onSend={(text: string, file?: File) => chat.sendMessage(text, file || null)}
                 loading={chat.loading}
                 isSending={chat.isSending}
                 error={chat.error}
                 currentUserId={user?.id || ''}
                 messageContainerClassName="gap-6 py-4"
+                onMarkAllAsRead={chat.markAllAsRead}
               />
             </div>
           </div>
         </div>
-      )} */}
+      )}
         {activeTab === 'documents' && (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
             <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">
