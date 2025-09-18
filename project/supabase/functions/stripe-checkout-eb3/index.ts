@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       customer_email: user?.email || email,
       line_items: [
         {
-          price: 'price_1S8mHNKdCh3y3bmYL2w0C3h6', // Preço fixo para EB-3
+          price: 'price_1S8lZcKdCh3y3bmYEIffe1Hy', // Preço fixo para EB-3
           quantity: 1,
         },
       ],
