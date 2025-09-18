@@ -48,10 +48,66 @@ Deno.serve(async (req) => {
       const userId = session.client_reference_id;
       const feeType = session.metadata?.fee_type;
       const applicationId = session.metadata?.application_id;
+      const paymentType = session.metadata?.payment_type;
 
-      console.log(`Processing successful payment. UserID: ${userId}, FeeType: ${feeType}, ApplicationID: ${applicationId}`);
+      console.log(`Processing successful payment. UserID: ${userId}, FeeType: ${feeType}, ApplicationID: ${applicationId}, PaymentType: ${paymentType}`);
 
-      if (!userId) return corsResponse({ error: 'User ID (client_reference_id) missing in session.' }, 400);
+      // Para pagamentos EB-3, não exige userId obrigatório
+      if (!userId && paymentType !== 'eb3_pre_candidatura') {
+        return corsResponse({ error: 'User ID (client_reference_id) missing in session.' }, 400);
+      }
+
+      // Se for pagamento EB-3, processar de forma diferente
+      if (paymentType === 'eb3_pre_candidatura') {
+        console.log('Processing: EB-3 Pre-candidatura payment');
+        
+        // Salvar pagamento EB-3 no banco de dados
+        const paymentData = {
+          session_id: sessionId,
+          payment_intent_id: session.payment_intent,
+          amount: session.amount_total || 47700, // Valor padrão $477.00
+          currency: session.currency || 'usd',
+          status: 'paid',
+          customer_email: session.customer_email,
+          customer_name: session.customer_details?.name,
+          customer_phone: session.customer_details?.phone,
+          user_id: userId || null,
+          user_profile_id: session.metadata?.user_profile_id || null,
+          stripe_customer_id: session.customer,
+          payment_method: session.payment_method_types?.[0] || 'card',
+          metadata: {
+            payment_type: 'eb3_pre_candidatura',
+            service: 'Pré Candidatura Vagas EB3',
+            source: session.metadata?.source || 'eb3_jobs_landing',
+            timestamp: session.metadata?.timestamp || new Date().toISOString(),
+            ...session.metadata
+          }
+        };
+
+        console.log('Saving EB-3 payment to database:', paymentData);
+
+        const { data: savedPayment, error: saveError } = await supabase
+          .from('eb3_payments')
+          .insert([paymentData])
+          .select()
+          .single();
+
+        if (saveError) {
+          console.error('Error saving EB-3 payment:', saveError);
+          // Mesmo com erro de salvamento, retornar sucesso para o usuário
+          // O pagamento foi processado pelo Stripe
+        } else {
+          console.log('EB-3 payment saved successfully:', savedPayment);
+        }
+
+        return corsResponse({ 
+          status: 'complete', 
+          message: 'EB-3 payment processed successfully',
+          payment_type: 'eb3_pre_candidatura',
+          session_id: sessionId,
+          payment_id: savedPayment?.id
+        }, 200);
+      }
 
       // Buscar o perfil do usuário para obter o student_id correto
       const { data: userProfile, error: profileError } = await supabase

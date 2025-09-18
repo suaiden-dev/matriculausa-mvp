@@ -841,6 +841,123 @@ async function handleCheckoutSessionCompleted(session) {
     // --- FIM DA NOTIFICAÇÃO ---
     }
   }
+  
+  // Processar pagamentos EB-3
+  if (paymentType === 'eb3_pre_candidatura') {
+    console.log('[stripe-webhook] Processando pagamento EB-3...');
+    
+    // Chamar a edge function verify-stripe-session para processar o pagamento EB-3
+    try {
+      const verifyResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/verify-stripe-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+        },
+        body: JSON.stringify({
+          sessionId: session.id
+        })
+      });
+      
+      if (verifyResponse.ok) {
+        const verifyResult = await verifyResponse.json();
+        console.log('[stripe-webhook] Pagamento EB-3 processado com sucesso:', verifyResult);
+        
+        // Enviar notificação para n8n após processamento bem-sucedido do EB-3
+        try {
+          const n8nPayload = {
+            tipo_notf: 'Pagamento EB-3 Pré-candidatura Processado',
+            email_aluno: session.customer_email || session.customer_details?.email || '',
+            nome_aluno: session.customer_details?.name || 'Cliente EB-3',
+            session_id: session.id,
+            payment_intent_id: session.payment_intent,
+            amount: session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00',
+            currency: session.currency || 'usd',
+            payment_status: session.payment_status,
+            payment_method: session.payment_method_types?.[0] || 'card',
+            stripe_customer_id: session.customer,
+            payment_type: 'eb3_pre_candidatura',
+            service: 'Pré Candidatura Vagas EB3',
+            source: metadata?.source || 'eb3_jobs_landing',
+            timestamp: new Date().toISOString(),
+            o_que_enviar: `Pagamento EB-3 de $${session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00'} processado com sucesso. Cliente: ${session.customer_details?.name || 'Cliente EB-3'} (${session.customer_email || session.customer_details?.email || 'email não informado'})`
+          };
+          
+          console.log('[NOTIFICAÇÃO EB-3] Enviando para webhook n8n:', n8nPayload);
+          
+          const n8nResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3'
+            },
+            body: JSON.stringify(n8nPayload)
+          });
+          
+          const n8nText = await n8nResponse.text();
+          console.log('[NOTIFICAÇÃO EB-3] Resposta do n8n:', n8nResponse.status, n8nText);
+          
+          if (n8nResponse.ok) {
+            console.log('[NOTIFICAÇÃO EB-3] Notificação enviada com sucesso para n8n');
+          } else {
+            console.warn('[NOTIFICAÇÃO EB-3] Erro ao enviar notificação para n8n:', n8nResponse.status);
+          }
+        } catch (n8nError) {
+          console.error('[NOTIFICAÇÃO EB-3] Erro ao enviar notificação para n8n:', n8nError);
+        }
+
+        // Enviar notificação para admin após processamento bem-sucedido do EB-3
+        try {
+          const adminNotificationPayload = {
+            tipo_notf: "Pagamento EB-3 Pré-candidatura Processado - Notificação Admin",
+            email_admin: "admin@suaiden.com",
+            nome_admin: "Admin MatriculaUSA",
+            email_aluno: session.customer_email || session.customer_details?.email || '',
+            nome_aluno: session.customer_details?.name || 'Cliente EB-3',
+            session_id: session.id,
+            payment_intent_id: session.payment_intent,
+            amount: session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00',
+            currency: session.currency || 'usd',
+            payment_status: session.payment_status,
+            payment_method: session.payment_method_types?.[0] || 'card',
+            stripe_customer_id: session.customer,
+            payment_type: 'eb3_pre_candidatura',
+            service: 'Pré Candidatura Vagas EB3',
+            source: metadata?.source || 'eb3_jobs_landing',
+            timestamp: new Date().toISOString(),
+            o_que_enviar: `Novo pagamento EB-3 de $${session.amount_total ? (session.amount_total / 100).toFixed(2) : '477.00'} processado com sucesso. Cliente: ${session.customer_details?.name || 'Cliente EB-3'} (${session.customer_email || session.customer_details?.email || 'email não informado'}) - Fonte: ${metadata?.source || 'eb3_jobs_landing'}`
+          };
+          
+          console.log('[NOTIFICAÇÃO EB-3 ADMIN] Enviando notificação para admin:', adminNotificationPayload);
+          
+          const adminResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3'
+            },
+            body: JSON.stringify(adminNotificationPayload)
+          });
+          
+          const adminText = await adminResponse.text();
+          console.log('[NOTIFICAÇÃO EB-3 ADMIN] Resposta do webhook admin:', adminResponse.status, adminText);
+          
+          if (adminResponse.ok) {
+            console.log('[NOTIFICAÇÃO EB-3 ADMIN] Notificação para admin enviada com sucesso');
+          } else {
+            console.warn('[NOTIFICAÇÃO EB-3 ADMIN] Erro ao enviar notificação para admin:', adminResponse.status);
+          }
+        } catch (adminError) {
+          console.error('[NOTIFICAÇÃO EB-3 ADMIN] Erro ao enviar notificação para admin:', adminError);
+        }
+      } else {
+        const errorText = await verifyResponse.text();
+        console.error('[stripe-webhook] Erro ao processar pagamento EB-3:', errorText);
+      }
+    } catch (verifyError) {
+      console.error('[stripe-webhook] Erro ao chamar verify-stripe-session para EB-3:', verifyError);
+    }
+  }
   return new Response(JSON.stringify({
     received: true
   }), {
