@@ -30,6 +30,8 @@ import ApplicationFeeCancel from './pages/ApplicationFeeCancel';
 import PaymentErrorPage from './pages/PaymentErrorPage';
 import ApplicationFeeError from './pages/StudentDashboard/ApplicationFeeError';
 import MatriculaRewardsLanding from './pages/MatriculaRewardsLanding';
+import EB3JobsLanding from './pages/EB3JobsLanding';
+import EB3SuccessPage from './pages/EB3SuccessPage';
 import I20ControlFeeSuccess from './pages/StudentDashboard/I20ControlFeeSuccess';
 import I20ControlFeeError from './pages/StudentDashboard/I20ControlFeeError';
 import SupportCenter from './pages/SupportCenter';
@@ -99,6 +101,8 @@ const AppContent = () => {
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
+          <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
+          <Route path="/eb3-success" element={<EB3SuccessPage />} />
           {/* Student Routes */}
           <Route path="/student/terms" element={<StudentTermsAcceptance />} />
           <Route path="/student/dashboard/*" element={<StudentDashboard />} />
