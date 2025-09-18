@@ -10,7 +10,8 @@ const I20DeadlineTimer: React.FC<I20DeadlineTimerProps> = ({ deadline, hasPaid }
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isExpired, setIsExpired] = useState(false);
 
-  // Debug log removido em produção
+  // Debug log
+  console.log('🔍 [I20_DEADLINE_TIMER] Props received:', { deadline, hasPaid });
 
   // Don't render if deadline is null or already paid
   if (!deadline || hasPaid) {

@@ -214,7 +214,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       path: '/school/dashboard/ai-solutions',
       badge: null,
       dropdown: [
-        { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
+        { id: 'inbox', label: 'Gmail Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
+        { id: 'microsoft-email', label: 'Microsoft Email', icon: Mail, path: '/school/dashboard/microsoft-email', badge: null },
         { id: 'whatsapp', label: 'WhatsApp AI', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
       ]
     }

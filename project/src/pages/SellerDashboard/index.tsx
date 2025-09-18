@@ -90,6 +90,7 @@ const SellerDashboard: React.FC = () => {
       setError(null);
       
       // Forçar refresh dos dados
+      console.log('🔄 [SELLER_DASHBOARD] Carregando dados do seller...');
 
       // Search for seller profile
       let seller: any = null;
@@ -196,7 +197,8 @@ const SellerDashboard: React.FC = () => {
       const profileIds = baseStudents.map((s: any) => s.profile_id).filter(Boolean);
       const userIds = baseStudents.map((s: any) => s.id).filter(Boolean);
 
-      
+      console.log('🔍 [SELLER] Profile IDs to fetch:', profileIds);
+      console.log('🔍 [SELLER] User IDs to fetch:', userIds);
 
       const [userProfilesResp, schAppsResp] = await Promise.all([
         supabase
@@ -209,13 +211,14 @@ const SellerDashboard: React.FC = () => {
           .in('student_id', profileIds)
       ]);
 
-      
+      console.log('🔍 [SELLER] User profiles response:', userProfilesResp);
+      console.log('🔍 [SELLER] Scholarship apps response:', schAppsResp);
 
       if (userProfilesResp.error) {
-        
+        console.warn('[SELLER] Falha ao carregar user_profiles para flags:', userProfilesResp.error);
       }
       if (schAppsResp.error) {
-        
+        console.warn('[SELLER] Falha ao carregar scholarship_applications:', schAppsResp.error);
       }
 
       const profileIdToFlags = new Map<string, any>();
@@ -248,6 +251,16 @@ const SellerDashboard: React.FC = () => {
           scholarship_fee_paid_date: null // Não temos data de pagamento, apenas flags
         };
         
+        // Log específico para a Kiara
+        if (s.email === 'kiara4854@uorak.com') {
+          console.log('🔍 [SELLER] Kiara data merge:', {
+            original: s,
+            profileFlags,
+            scholarshipFlags,
+            final: result
+          });
+        }
+        
         return result;
       });
 
@@ -269,24 +282,39 @@ const SellerDashboard: React.FC = () => {
           seller_referral_code_param: seller.referral_code
         });
 
-      
+      console.log('🔍 Performance data:', { performanceData, performanceError });
+      console.log('🔍 Students data:', { studentsData: processedStudents });
+      console.log('🔍 Seller referral code:', seller.referral_code);
+      console.log('🔍 Performance data length:', performanceData?.length);
 
       // Always use RPC data if available, fallback to calculated values only if no data
       if (performanceData && performanceData.length > 0) {
         // Use real data from RPC function
         const performance = performanceData[0];
+        console.log('🔍 Using RPC data:', { performance, performanceData });
         setStats({
           totalStudents: Number(performance.total_students) || 0,
           totalRevenue: Number(performance.total_revenue) || 0,
           monthlyStudents: Number(performance.monthly_students) || 0,
           conversionRate: Number(performance.conversion_rate) || 0
         });
-        
+        console.log('🔍 Stats set from RPC:', {
+          totalStudents: Number(performance.total_students) || 0,
+          totalRevenue: Number(performance.total_revenue) || 0,
+          monthlyStudents: Number(performance.monthly_students) || 0,
+          conversionRate: Number(performance.conversion_rate) || 0
+        });
+        console.log('🔍 Raw performance data:', performance);
+        console.log('🔍 Total revenue raw:', performance.total_revenue);
+        console.log('🔍 Total revenue converted:', Number(performance.total_revenue));
       } else {
+        console.error('Error loading performance data:', performanceError);
         // Fallback to calculated values if RPC fails
         const totalStudents = processedStudents.length;
         const totalRevenue = processedStudents.reduce((sum: number, s: any) => sum + (s.total_paid || 0), 0);
-        
+        console.log('🔍 Fallback calculation:', { totalStudents, totalRevenue, studentsData: processedStudents });
+        console.log('🔍 Individual student totals:', processedStudents.map((s: any) => ({ name: s.full_name, total_paid: s.total_paid })));
+        console.log('🔍 Using fallback calculation - RPC failed or no data');
         
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
@@ -307,6 +335,7 @@ const SellerDashboard: React.FC = () => {
       setStudents(processedStudents);
 
     } catch (error: any) {
+      console.error('Error loading seller data:', error);
       setError(error.message);
     } finally {
       setLoading(false);

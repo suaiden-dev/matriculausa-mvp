@@ -36,6 +36,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
       // Se não temos studentId, não podemos buscar aplicação específica
       if (!studentId) {
+        console.log('⚠️ [DOCUMENTS VIEW] No studentId provided, cannot fetch specific application');
         setRealScholarshipApplication(null);
         return;
       }
@@ -43,6 +44,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       if (studentDocuments && studentDocuments.length > 0) {
         setLoadingApplication(true);
         try {
+          console.log('🔍 [DOCUMENTS VIEW] Searching for application for specific student:', studentId);
           
           // Buscar o id da tabela user_profiles usando o user_id (studentId)
           const { data: profileData, error: profileError } = await supabase
@@ -52,10 +54,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             .single();
           
           if (profileError || !profileData) {
+            console.error('❌ [DOCUMENTS VIEW] Error loading profile for student:', studentId, profileError);
             setRealScholarshipApplication(null);
             return;
           }
           
+          console.log('🔍 [DOCUMENTS VIEW] Found profile_id for student:', profileData.id);
           
           let applications: any[] = [];
           let error: any = null;
@@ -153,11 +157,16 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
           if (!error && applications && applications.length > 0) {
             const app = applications[0];
+            console.log('🔍 [DOCUMENTS VIEW] Found application for student:', app);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter URL:', app.acceptance_letter_url);
+            console.log('🔍 [DOCUMENTS VIEW] Acceptance letter status:', app.acceptance_letter_status);
             setRealScholarshipApplication(app);
           } else {
+            console.log('❌ [DOCUMENTS VIEW] No application found for student:', studentId, 'profile_id:', profileData.id);
             setRealScholarshipApplication(null);
           }
         } catch (err) {
+          console.error('❌ [DOCUMENTS VIEW] Error fetching application:', err);
           setRealScholarshipApplication(null);
         } finally {
           setLoadingApplication(false);

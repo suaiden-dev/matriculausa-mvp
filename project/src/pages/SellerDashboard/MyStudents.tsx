@@ -89,26 +89,32 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     if (!studentUserId || studentPackageFees[studentUserId]) return;
     
     try {
+      console.log('🔍 [MY_STUDENTS] Buscando taxas do pacote para estudante:', studentUserId);
+      
       const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
         user_id_param: studentUserId
       });
       
       if (error) {
+        console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
         return;
       }
       
       if (packageFees && packageFees.length > 0) {
+        console.log('✅ [MY_STUDENTS] Taxas do pacote encontradas para', studentUserId, ':', packageFees[0]);
         setStudentPackageFees(prev => ({
           ...prev,
           [studentUserId]: packageFees[0]
         }));
       } else {
+        console.log('ℹ️ [MY_STUDENTS] Estudante sem pacote:', studentUserId);
         setStudentPackageFees(prev => ({
           ...prev,
           [studentUserId]: null
         }));
       }
     } catch (error) {
+      console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
     }
   };
   
@@ -149,6 +155,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           setUniversities(universitiesData);
         }
       } catch (error) {
+        console.warn('Could not load universities:', error);
       }
     };
 
@@ -166,6 +173,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         });
       }
     });
+    console.log(students)
     return Array.from(uniqueUniversities.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [students]);
 
@@ -311,6 +319,17 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
   // Função para determinar quais taxas estão faltando para um aluno
   const getMissingFees = (student: Student) => {
+    // Debug para verificar os dados do estudante
+    if (student.email === 'kiara4854@uorak.com') {
+      console.log('Student data:', {
+        has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+        has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+        is_application_fee_paid: student.is_application_fee_paid,
+        scholarship_fee_paid_date: student.scholarship_fee_paid_date,
+        i20_deadline: student.i20_deadline
+      });
+    }
     const missingFees = [];
     
     // Verificar Selection Process Fee (primeira taxa a ser paga)

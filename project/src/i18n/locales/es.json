@@ -1177,11 +1177,6 @@
           "description": "Ve toda la información de tu beca, documentos cargados y tu estado actual (esperando carta de aceptación, matriculado, etc). Mantente al día con tu proceso en cualquier momento.",
           "button": "Ver Detalles de la Aplicación"
         },
-        "chat": {
-          "title": "Chat con la Universidad",
-          "description": "Comunícate directamente con el equipo de la universidad para hacer preguntas y seguir tu proceso.",
-          "button": "Abrir Chat"
-        },
         "i20ControlFee": {
           "title": "Pagar Tarifa de Control I-20",
           "description": "Después de recibir tu carta de aceptación, podrás pagar la Tarifa de Control I-20. Esta tarifa es necesaria para la emisión de tu documento I-20, esencial para tu visa F-1. Tienes 10 días para pagar después de que sea liberada.",
@@ -1238,12 +1233,7 @@
         "applicationSubmitted": "Aplicación enviada",
         "applicationUpdated": "Aplicación actualizada",
         "quickActions": "Acciones Rápidas",
-        "manageDocuments": "Gestionar Documentos",
-        "chat": "Chat"
-      },
-      "chat": {
-        "title": "Centro de Comunicación",
-        "subtitle": "Chat con {{universityName}}"
+        "manageDocuments": "Gestionar Documentos"
       },
       "i20ControlFee": {
         "title": "Tarifa de Control I-20",
@@ -1966,7 +1956,6 @@
       "tabs": {
         "welcome": "Bienvenido",
         "details": "Detalles",
-        "chat": "Chat",
         "i20": "Tarifa de Control I-20",
         "documents": "Documentos"
       },
@@ -1984,11 +1973,6 @@
           "title": "Ver Detalles de la Aplicación",
           "description": "Ve toda la información de tu beca, documentos cargados y tu estado actual (esperando carta de aceptación, matriculado, etc). Mantente al día con tu proceso en cualquier momento.",
           "button": "Ver Detalles de la Aplicación"
-        },
-        "chat": {
-          "title": "Chat con la Universidad",
-          "description": "Comunícate directamente con el equipo de la universidad para hacer preguntas y seguir tu proceso.",
-          "button": "Abrir Chat"
         },
         "i20ControlFee": {
           "title": "Pagar Tarifa de Control I-20",
@@ -2046,12 +2030,7 @@
         "applicationSubmitted": "Aplicación enviada",
         "applicationUpdated": "Aplicación actualizada",
         "quickActions": "Acciones Rápidas",
-        "manageDocuments": "Gestionar Documentos",
-        "chat": "Chat"
-      },
-      "chat": {
-        "title": "Centro de Comunicación",
-        "subtitle": "Chat con {{universityName}}"
+        "manageDocuments": "Gestionar Documentos"
       },
       "i20ControlFee": {
         "title": "Tarifa de Control I-20",
@@ -2449,7 +2428,7 @@
     "securePayment": "Pago Seguro",
     "redirectToStripe": "Redirigiendo a Stripe",
     "closeModal": "Cerrar modal",
-    "securePaymentViaStripe": "Pago seguro",
+    "securePaymentViaStripe": "Pago seguro vía Stripe",
     "referralCode": "Código de Referencia",
     "yourReferralCode": "Tu Código de Referencia",
     "enterReferralCode": "Ingresa tu código de referencia para obtener descuento",
@@ -2482,18 +2461,7 @@
     "readingTerms": "Por favor, lee los términos antes de aceptar",
     "acceptContractTerms": "Acepto los términos y condiciones del contrato",
     "cancel": "Cancelar",
-    "acceptTerms": "Aceptar Términos",
-    "proceedWithPayment": "Seguir con el pago",
-    "iHaveACode": "Tengo un código",
-    "back": "Volver",
-    "mustEnterValidCode": "Debes ingresar un código válido para continuar",
-    "selectionProcessPayment": "Pago del Proceso de Selección",
-    "stepByStepGuide": {
-      "step1": "Lee y acepta los términos y condiciones del contrato.",
-      "step2": "Si tienes un código, toca \"Tengo un código\" para ingresar y validar.",
-      "step3": "Toca ‘Seguir con el pago’ para elegir método y completar.",
-      "step4": "Después del pago, explora becas y universidades y aplica fácilmente al proceso de selección."
-    }
+    "acceptTerms": "Aceptar Términos"
   },
   "footer": {
     "company": {
