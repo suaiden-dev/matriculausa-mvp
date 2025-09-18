@@ -87,8 +87,6 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       return;
     }
     // Este método será chamado pelo PreCheckoutModal após a verificação dos termos
-    // Reiniciar método previamente selecionado para sempre mostrar o seletor
-    setSelectedPaymentMethod(null);
     setShowPaymentMethodSelector(true);
   };
 
@@ -99,8 +97,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       onError?.('You must be logged in to checkout');
       return;
     }
-    // Para scholarship fee, ir direto para seleção de método de pagamento, sempre resetando seleção anterior
-    setSelectedPaymentMethod(null);
+    // Para scholarship fee, ir direto para seleção de método de pagamento
     setShowPaymentMethodSelector(true);
   };
 
@@ -216,7 +213,6 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
     // IMPORTANTE: Sempre mostrar o seletor de método de pagamento
     console.log('🔍 [StripeCheckout] 🎯 Mostrando seletor de método de pagamento...');
-    setSelectedPaymentMethod(null);
     setShowPaymentMethodSelector(true);
     console.log('🔍 [StripeCheckout] ✅ showPaymentMethodSelector definido como true');
     
@@ -283,12 +279,6 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       console.log('🔍 [StripeCheckout] 🎯 PaymentMethodSelector deve estar visível agora!');
     }
   }, [showPaymentMethodSelector]);
-
-  // Resetar seleção ao mudar produto/tipo de taxa para evitar reuso indevido
-  useEffect(() => {
-    setSelectedPaymentMethod(null);
-    setShowPaymentMethodSelector(false);
-  }, [productId, feeType]);
 
   const handleCheckout = async () => {
     setLoading(true);

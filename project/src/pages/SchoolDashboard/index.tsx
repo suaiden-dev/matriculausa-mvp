@@ -18,6 +18,7 @@ import AISolutions from './AISolutions';
 
 import Inbox from './Inbox';
 import WhatsAppConnection from './WhatsAppConnection';
+import MicrosoftEmailIntegration from '../../components/Microsoft/MicrosoftEmailIntegration';
 import ConnectWhatsApp from './ConnectWhatsApp';
 import UniversityRewardsDashboard from './UniversityRewardsDashboard';
 
@@ -46,6 +47,7 @@ export const SchoolDashboard: React.FC = () => {
             <Route path="analytics" element={<PaymentManagement />} />
             <Route path="global-document-requests" element={<UniversityGlobalDocumentRequests />} />
             <Route path="inbox" element={<Inbox />} />
+            <Route path="microsoft-email" element={<MicrosoftEmailIntegration />} />
             <Route path="ai-solutions" element={<AISolutions />} />
                     <Route path="stripe-connect" element={<StripeConnect />} />
         <Route path="stripe-connect/callback" element={<StripeConnectCallback />} />

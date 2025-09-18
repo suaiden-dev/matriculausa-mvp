@@ -187,7 +187,7 @@ const EmailConnectionManager: React.FC = () => {
       }
 
       // Criar URL de autorização do Microsoft manualmente
-      const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID;
+      const microsoftClientId = import.meta.env.VITE_AZURE_CLIENT_ID;
       
       // Usar URL dinâmica baseada no ambiente atual
       const redirectUri = `${window.location.origin}/email-oauth-callback`;

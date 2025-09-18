@@ -21,14 +21,24 @@ const EmailOAuthCallback: React.FC = () => {
           console.error('❌ Erro no OAuth:', error);
           setStatus('error');
           setMessage(`Erro no OAuth: ${error}`);
-          setTimeout(() => navigate('/school/dashboard/inbox'), 3000);
+          // Redirecionar para a página correta baseada no provider
+          const provider = state ? state.split('_')[0] : 'google';
+          const redirectPath = provider === 'microsoft' 
+            ? '/school/dashboard/microsoft-email' 
+            : '/school/dashboard/inbox';
+          setTimeout(() => navigate(redirectPath), 3000);
           return;
         }
 
         if (!code || !state) {
           setStatus('error');
           setMessage('Parâmetros OAuth inválidos');
-          setTimeout(() => navigate('/school/dashboard/inbox'), 3000);
+          // Redirecionar para a página correta baseada no provider
+          const provider = state ? state.split('_')[0] : 'google';
+          const redirectPath = provider === 'microsoft' 
+            ? '/school/dashboard/microsoft-email' 
+            : '/school/dashboard/inbox';
+          setTimeout(() => navigate(redirectPath), 3000);
           return;
         }
 
@@ -121,8 +131,11 @@ const EmailOAuthCallback: React.FC = () => {
             setStatus('success');
             setMessage(`${provider} conectado com sucesso! Redirecionando...`);
             
-            // Redirecionar para inbox após 2 segundos
-            setTimeout(() => navigate('/school/dashboard/inbox'), 2000);
+            // Redirecionar para a página correta baseada no provider
+            const redirectPath = provider === 'microsoft' 
+              ? '/school/dashboard/microsoft-email' 
+              : '/school/dashboard/inbox';
+            setTimeout(() => navigate(redirectPath), 2000);
           }
         } else {
           setStatus('error');
@@ -133,7 +146,14 @@ const EmailOAuthCallback: React.FC = () => {
         console.error('Erro ao processar OAuth:', err);
         setStatus('error');
         setMessage(`Erro ao processar OAuth: ${err.message}`);
-        setTimeout(() => navigate('/school/dashboard/inbox'), 3000);
+        // Redirecionar para a página correta baseada no provider
+        const urlParams = new URLSearchParams(window.location.search);
+        const state = urlParams.get('state');
+        const provider = state ? state.split('_')[0] : 'google';
+        const redirectPath = provider === 'microsoft' 
+          ? '/school/dashboard/microsoft-email' 
+          : '/school/dashboard/inbox';
+        setTimeout(() => navigate(redirectPath), 3000);
       }
     };
 
@@ -174,7 +194,16 @@ const EmailOAuthCallback: React.FC = () => {
           
           {status === 'error' && (
             <button
-              onClick={() => navigate('/school/dashboard/inbox')}
+              onClick={() => {
+                // Redirecionar para a página correta baseada no provider
+                const urlParams = new URLSearchParams(window.location.search);
+                const state = urlParams.get('state');
+                const provider = state ? state.split('_')[0] : 'google';
+                const redirectPath = provider === 'microsoft' 
+                  ? '/school/dashboard/microsoft-email' 
+                  : '/school/dashboard/inbox';
+                navigate(redirectPath);
+              }}
               className="px-4 py-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] text-white rounded-lg hover:from-[#041f3f] hover:to-[#b01218] transition-all duration-300"
             >
               Voltar ao Dashboard
