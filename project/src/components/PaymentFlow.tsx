@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StripeCheckout } from './StripeCheckout';
 import { ZellePaymentFlow } from './ZellePaymentFlow';
 import { PaymentMethodChoice } from './PaymentMethodChoice';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 
 interface PaymentFlowProps {
   productId: string;
@@ -29,7 +31,9 @@ export const PaymentFlow: React.FC<PaymentFlowProps> = ({
   studentProcessType,
   beforeCheckout,
 }) => {
+  const { t } = useTranslation();
   const { getFeeAmount } = useFeeConfig();
+  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [showMethodSelector, setShowMethodSelector] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'zelle' | null>(null);
 
@@ -101,10 +105,13 @@ export const PaymentFlow: React.FC<PaymentFlowProps> = ({
     <>
       {/* Botão Principal */}
       <button
-        onClick={handleStartPayment}
-        className={className}
+        onClick={isBlocked && pendingPayment ? undefined : handleStartPayment}
+        disabled={paymentBlockedLoading || (isBlocked && pendingPayment)}
+        className={`${className} ${(paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        {buttonText}
+        {paymentBlockedLoading ? 'Checking...' : 
+         (isBlocked && pendingPayment) ? t('zelleCheckout.processing') : 
+         buttonText}
       </button>
 
       {/* Seletor de Método de Pagamento */}

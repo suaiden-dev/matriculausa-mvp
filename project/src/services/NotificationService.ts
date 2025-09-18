@@ -211,7 +211,37 @@ class NotificationService {
       nome_bolsa: scholarshipTitle,
       nome_universidade: universityName,
       email_universidade: universityEmail,
-      o_que_enviar: message
+      o_que_enviar: message,
+      payment_id: paymentId || ''
+    };
+  }
+
+  /**
+   * Cria payload para notificar admin sobre universidade pendente para aprovação
+   */
+  static createUniversityPendingApprovalPayload(
+    universityName: string,
+    universityEmail: string,
+    contactName: string,
+    contactPosition: string,
+    location: string,
+    website: string
+  ): NotificationPayload {
+    const message = `Nova universidade "${universityName}" finalizou o registro inicial e está pendente para aprovação. Dados: Contato: ${contactName} (${contactPosition}), Email: ${universityEmail}, Localização: ${location}, Website: ${website}. Acesse o painel admin para revisar e aprovar.`;
+
+    return {
+      tipo_notf: 'Universidade pendente para aprovação',
+      email_aluno: 'admin@suaiden.com', // Email do admin da plataforma
+      nome_aluno: 'Admin Matrícula USA', // Nome do admin da plataforma
+      nome_bolsa: '', // Não aplicável para notificação de admin
+      nome_universidade: universityName,
+      email_universidade: universityEmail,
+      o_que_enviar: message,
+      contact_name: contactName,
+      contact_position: contactPosition,
+      location: location,
+      website: website,
+      notification_target: 'admin'
     };
   }
 }

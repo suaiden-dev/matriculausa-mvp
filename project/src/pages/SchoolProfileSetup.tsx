@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building, MapPin, Phone, Users, CheckCircle, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import NotificationService from '../services/NotificationService';
 
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -226,6 +227,29 @@ const SchoolProfileSetup: React.FC = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Enviar notificação para o admin sobre universidade pendente para aprovação
+      try {
+        const notificationPayload = NotificationService.createUniversityPendingApprovalPayload(
+          formData.name,
+          user.email || '',
+          formData.contact.email || user.email || '',
+          'University Contact', // Posição do contato
+          formData.location,
+          formData.website
+        );
+
+        const notificationResult = await NotificationService.sendUniversityNotification(notificationPayload);
+        
+        if (notificationResult.success) {
+          console.log('✅ [SCHOOL PROFILE] Notificação enviada para admin com sucesso');
+        } else {
+          console.error('❌ [SCHOOL PROFILE] Erro ao enviar notificação para admin:', notificationResult.error);
+        }
+      } catch (notificationError) {
+        console.error('❌ [SCHOOL PROFILE] Erro ao enviar notificação para admin:', notificationError);
+        // Não bloquear o fluxo se a notificação falhar
+      }
 
       navigate('/school/dashboard');
     } catch (error) {

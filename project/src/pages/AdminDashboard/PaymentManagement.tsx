@@ -92,12 +92,12 @@ const PaymentManagement = (): React.JSX.Element => {
     monthlyGrowth: 0
   });
 
-  // Filtros
+  // Filtros - Padrão: mostrar apenas pagamentos aprovados
   const [filters, setFilters] = useState({
     search: '',
     university: 'all',
     feeType: 'all',
-    status: 'all',
+    status: 'paid', // Padrão: mostrar apenas pagamentos aprovados
     dateFrom: '',
     dateTo: ''
   });
@@ -1628,6 +1628,7 @@ const PaymentManagement = (): React.JSX.Element => {
           // Fallback para valor padrão do sistema (converter dólares para centavos)
           applicationFee = Math.round(getFeeAmount('application_fee') * 100);
         }
+        
 
         paymentRecords.push({
           id: `${app.id}-selection`,
@@ -1703,9 +1704,23 @@ const PaymentManagement = (): React.JSX.Element => {
       }
 
       // Processar pagamentos Zelle (apenas para usuários sem aplicação)
+      // Agrupar pagamentos Zelle por usuário para evitar duplicação
+      const zellePaymentsByUser: { [userId: string]: any[] } = {};
       zellePayments?.forEach((zellePayment: any) => {
         const student = zellePayment.user_profiles;
-        const packageData = packageDataMap[student?.scholarship_package_id];
+        if (student?.user_id) {
+          if (!zellePaymentsByUser[student.user_id]) {
+            zellePaymentsByUser[student.user_id] = [];
+          }
+          zellePaymentsByUser[student.user_id].push(zellePayment);
+        }
+      });
+
+      // Processar cada usuário apenas uma vez
+      Object.keys(zellePaymentsByUser).forEach(userId => {
+        const userZellePayments = zellePaymentsByUser[userId];
+        const firstPayment = userZellePayments[0];
+        const student = firstPayment.user_profiles;
 
         if (!student) {
           console.log('⚠️ Skipping Zelle payment due to missing student data');
@@ -1730,51 +1745,50 @@ const PaymentManagement = (): React.JSX.Element => {
           return;
         }
 
-        // Obter valores dinâmicos do pacote ou usar valores padrão do sistema
-        const i20ControlFee = packageData?.i20_control_fee ? 
-          Math.round(packageData.i20_control_fee * 100) : Math.round(getFeeAmount('i20_control_fee') * 100);
-        const scholarshipFee = packageData?.scholarship_fee ? 
-          Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100);
-        // Application Fee dinâmico baseado na bolsa específica
-        let applicationFee: number;
-        if (scholarship?.application_fee_amount) {
-          // O valor no banco está em centavos, usar diretamente
-          applicationFee = scholarship.application_fee_amount;
-        } else {
-          // Fallback para valor padrão do sistema (converter dólares para centavos)
-          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-        }
 
-        console.log('💰 Processing Zelle payment for:', studentName, 'Fee type:', zellePayment.fee_type_global);
+        console.log('💰 Processing Zelle payments for:', studentName, 'Total payments:', userZellePayments.length);
 
-        // Criar registros de pagamento baseados no tipo de taxa paga via Zelle
-        if (zellePayment.fee_type_global === 'selection_process') {
+        // Verificar quais taxas foram pagas via Zelle
+        const paidFeeTypes = new Set(userZellePayments.map(payment => {
+          // Mapear fee_type para fee_type_global quando necessário
+          if (payment.fee_type === 'application_fee') return 'application';
+          if (payment.fee_type === 'selection_process_fee') return 'selection_process';
+          if (payment.fee_type === 'scholarship_fee') return 'scholarship';
+          if (payment.fee_type === 'i20_control_fee') return 'i20_control_fee';
+          return payment.fee_type_global;
+        }));
+
+        // Criar registros de pagamento baseados nos tipos de taxa pagos via Zelle
+        if (paidFeeTypes.has('selection_process')) {
+          const selectionPayment = userZellePayments.find(p => p.fee_type_global === 'selection_process' || p.fee_type === 'selection_process_fee');
           paymentRecords.push({
-            id: `zelle-${zellePayment.id}-selection`,
+            id: `zelle-${selectionPayment.id}-selection`,
             student_id: student.id,
             student_name: studentName,
             student_email: studentEmail,
-            university_id: '00000000-0000-0000-0000-000000000000', // Placeholder para usuários sem aplicação
+            university_id: '00000000-0000-0000-0000-000000000000',
             university_name: 'No University Selected',
-            scholarship_id: '00000000-0000-0000-0000-000000000000', // Placeholder
+            scholarship_id: '00000000-0000-0000-0000-000000000000',
             scholarship_title: 'No Scholarship Selected',
             fee_type: 'selection_process',
-            amount: Math.round(parseFloat(zellePayment.amount) * 100), // Converter para centavos
+            amount: Math.round(parseFloat(selectionPayment.amount) * 100),
             status: 'paid',
-            payment_date: zellePayment.admin_approved_at || zellePayment.created_at,
-            created_at: zellePayment.created_at,
-            payment_proof_url: zellePayment.screenshot_url,
-            admin_notes: zellePayment.admin_notes,
+            payment_date: selectionPayment.admin_approved_at || selectionPayment.created_at,
+            created_at: selectionPayment.created_at,
+            payment_proof_url: selectionPayment.screenshot_url,
+            admin_notes: selectionPayment.admin_notes,
             zelle_status: 'approved',
-            reviewed_by: zellePayment.admin_approved_by,
-            reviewed_at: zellePayment.admin_approved_at
+            reviewed_by: selectionPayment.admin_approved_by,
+            reviewed_at: selectionPayment.admin_approved_at
           });
         }
 
-        // Adicionar outras taxas como pending se não foram pagas via Zelle
-        if (zellePayment.fee_type_global !== 'application') {
+        if (paidFeeTypes.has('application')) {
+          const applicationPayment = userZellePayments.find(p => p.fee_type_global === 'application' || p.fee_type === 'application_fee');
+          // Para Application Fee, usar o valor real pago via Zelle (dinâmico por bolsa)
+          const applicationAmount = Math.round(parseFloat(applicationPayment.amount) * 100);
           paymentRecords.push({
-            id: `zelle-${zellePayment.id}-application`,
+            id: `zelle-${applicationPayment.id}-application`,
             student_id: student.id,
             student_name: studentName,
             student_email: studentEmail,
@@ -1783,16 +1797,22 @@ const PaymentManagement = (): React.JSX.Element => {
             scholarship_id: '00000000-0000-0000-0000-000000000000',
             scholarship_title: 'No Scholarship Selected',
             fee_type: 'application',
-            amount: applicationFee,
-            status: student.is_application_fee_paid ? 'paid' : 'pending',
-            payment_date: student.is_application_fee_paid ? zellePayment.created_at : undefined,
-            created_at: zellePayment.created_at
+            amount: applicationAmount, // Converter dólares para centavos
+            status: 'paid',
+            payment_date: applicationPayment.admin_approved_at || applicationPayment.created_at,
+            created_at: applicationPayment.created_at,
+            payment_proof_url: applicationPayment.screenshot_url,
+            admin_notes: applicationPayment.admin_notes,
+            zelle_status: 'approved',
+            reviewed_by: applicationPayment.admin_approved_by,
+            reviewed_at: applicationPayment.admin_approved_at
           });
         }
 
-        if (zellePayment.fee_type_global !== 'scholarship') {
+        if (paidFeeTypes.has('scholarship')) {
+          const scholarshipPayment = userZellePayments.find(p => p.fee_type_global === 'scholarship' || p.fee_type === 'scholarship_fee');
           paymentRecords.push({
-            id: `zelle-${zellePayment.id}-scholarship`,
+            id: `zelle-${scholarshipPayment.id}-scholarship`,
             student_id: student.id,
             student_name: studentName,
             student_email: studentEmail,
@@ -1801,16 +1821,22 @@ const PaymentManagement = (): React.JSX.Element => {
             scholarship_id: '00000000-0000-0000-0000-000000000000',
             scholarship_title: 'No Scholarship Selected',
             fee_type: 'scholarship',
-            amount: scholarshipFee,
-            status: student.is_scholarship_fee_paid ? 'paid' : 'pending',
-            payment_date: student.is_scholarship_fee_paid ? zellePayment.created_at : undefined,
-            created_at: zellePayment.created_at
+            amount: Math.round(parseFloat(scholarshipPayment.amount) * 100),
+            status: 'paid',
+            payment_date: scholarshipPayment.admin_approved_at || scholarshipPayment.created_at,
+            created_at: scholarshipPayment.created_at,
+            payment_proof_url: scholarshipPayment.screenshot_url,
+            admin_notes: scholarshipPayment.admin_notes,
+            zelle_status: 'approved',
+            reviewed_by: scholarshipPayment.admin_approved_by,
+            reviewed_at: scholarshipPayment.admin_approved_at
           });
         }
 
-        if (zellePayment.fee_type_global !== 'i20_control_fee') {
+        if (paidFeeTypes.has('i20_control_fee')) {
+          const i20Payment = userZellePayments.find(p => p.fee_type_global === 'i20_control_fee' || p.fee_type === 'i20_control_fee');
           paymentRecords.push({
-            id: `zelle-${zellePayment.id}-i20`,
+            id: `zelle-${i20Payment.id}-i20`,
             student_id: student.id,
             student_name: studentName,
             student_email: studentEmail,
@@ -1819,10 +1845,15 @@ const PaymentManagement = (): React.JSX.Element => {
             scholarship_id: '00000000-0000-0000-0000-000000000000',
             scholarship_title: 'No Scholarship Selected',
             fee_type: 'i20_control_fee',
-            amount: i20ControlFee,
-            status: student.has_paid_i20_control_fee ? 'paid' : 'pending',
-            payment_date: student.has_paid_i20_control_fee ? zellePayment.created_at : undefined,
-            created_at: zellePayment.created_at
+            amount: Math.round(parseFloat(i20Payment.amount) * 100),
+            status: 'paid',
+            payment_date: i20Payment.admin_approved_at || i20Payment.created_at,
+            created_at: i20Payment.created_at,
+            payment_proof_url: i20Payment.screenshot_url,
+            admin_notes: i20Payment.admin_notes,
+            zelle_status: 'approved',
+            reviewed_by: i20Payment.admin_approved_by,
+            reviewed_at: i20Payment.admin_approved_at
           });
         }
       });
@@ -1855,6 +1886,16 @@ const PaymentManagement = (): React.JSX.Element => {
           return;
         }
 
+        // Verificar se o usuário já foi processado via Zelle (para evitar duplicação)
+        const hasZellePayment = zellePayments?.some(payment => 
+          payment.user_profiles?.user_id === stripeUser.user_id
+        );
+
+        if (hasZellePayment) {
+          console.log('⚠️ Skipping Stripe user for', studentName, '- user already processed via Zelle');
+          return;
+        }
+
         // Obter valores dinâmicos do pacote ou usar valores padrão
         const selectionProcessFee = packageData?.selection_process_fee ? 
           Math.round(packageData.selection_process_fee * 100) : Math.round(getFeeAmount('selection_process') * 100);
@@ -1862,15 +1903,8 @@ const PaymentManagement = (): React.JSX.Element => {
           Math.round(packageData.i20_control_fee * 100) : Math.round(getFeeAmount('i20_control_fee') * 100);
         const scholarshipFee = packageData?.scholarship_fee ? 
           Math.round(packageData.scholarship_fee * 100) : Math.round(getFeeAmount('scholarship_fee') * 100);
-        // Application Fee dinâmico baseado na bolsa específica
-        let applicationFee: number;
-        if (scholarship?.application_fee_amount) {
-          // O valor no banco está em centavos, usar diretamente
-          applicationFee = scholarship.application_fee_amount;
-        } else {
-          // Fallback para valor padrão do sistema (converter dólares para centavos)
-          applicationFee = Math.round(getFeeAmount('application_fee') * 100);
-        }
+        // Application Fee - para usuários Stripe, usar valor padrão do sistema
+        const applicationFee = Math.round(getFeeAmount('application_fee') * 100);
 
         console.log('💳 Processing Stripe user for:', studentName);
 
