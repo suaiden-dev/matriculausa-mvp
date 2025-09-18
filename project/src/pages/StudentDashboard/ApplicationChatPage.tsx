@@ -39,6 +39,17 @@ const ApplicationChatPage: React.FC = () => {
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { formatFeeAmount, getFeeAmount } = useFeeConfig(user?.id);
 
+  // Debug: Log de informações de autenticação e rota
+  useEffect(() => {
+    console.log('🔍 [ApplicationChatPage] Debug Info:', {
+      applicationId,
+      user: user ? { id: user.id, email: user.email, role: user.role } : null,
+      userProfile: userProfile ? { id: userProfile.id, full_name: userProfile.full_name } : null,
+      currentPath: window.location.pathname,
+      searchParams: window.location.search
+    });
+  }, [applicationId, user, userProfile]);
+
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
   const [i20Error, setI20Error] = useState<string | null>(null);

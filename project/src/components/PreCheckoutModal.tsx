@@ -634,11 +634,11 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
                   {
                     feeType !== 'selection_process' && (
                       <div>
-                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
-                        <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full">
-                          <Lock className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentViaStripe')}</span>
-                        </div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">{productName}</h3>
+                  <div className="inline-flex items-center space-x-2 bg-blue-100 px-3 py-1 rounded-full">
+                    <Lock className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700">{t('preCheckoutModal.securePaymentViaStripe')}</span>
+                  </div>
                       </div>
                   )}
                   
