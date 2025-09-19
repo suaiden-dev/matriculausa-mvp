@@ -638,14 +638,7 @@ const EmailManagement = () => {
 
         {/* Email Configurations List */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="border-b border-slate-200 px-4 sm:px-6 py-4">
-            <h2 className="text-lg font-medium text-slate-900">
-              Email Accounts
-            </h2>
-            <p className="text-sm text-slate-600 mt-1">
-              Configure and manage your email accounts
-            </p>
-          </div>
+
 
           {configurations.length === 0 ? (
             <div className="text-center py-16">
@@ -892,26 +885,6 @@ const EmailManagement = () => {
                           <ArrowPathIcon 
                             className={`h-4 w-4 ${syncing[config.id] ? 'animate-spin' : ''}`} 
                           />
-                        </button>
-
-                        {/* Account Status Toggle */}
-                        <button
-                          onClick={() => toggleAccountStatus(config.id, config.is_active)}
-                          disabled={actionLoading[`status_${config.id}`]}
-                          className={`p-2 rounded-full transition-colors ${
-                            actionLoading[`status_${config.id}`] 
-                              ? 'bg-slate-100' 
-                              : 'hover:bg-slate-100'
-                          }`}
-                          title={`${config.is_active ? 'Deactivate' : 'Activate'} account`}
-                        >
-                          <div className={`w-3 h-3 rounded-full ${
-                            actionLoading[`status_${config.id}`] 
-                              ? 'bg-slate-400 animate-pulse' 
-                              : config.is_active 
-                              ? 'bg-green-500' 
-                              : 'bg-red-500'
-                          }`} />
                         </button>
 
                         {/* Sync Toggle */}
