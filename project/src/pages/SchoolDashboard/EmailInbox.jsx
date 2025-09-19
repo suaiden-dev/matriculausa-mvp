@@ -172,20 +172,49 @@ const EmailInbox = () => {
         data = sentData || [];
         error = sentError;
 
+        console.log('📤 Dados brutos de sent_emails:', data);
+        console.log('📤 Primeiro email raw:', data[0]);
+
         // Transformar dados de sent_emails para formato compatível com received_emails
-        data = data.map(email => ({
-          ...email,
-          received_date: email.sent_at, // Usar sent_at como received_date para compatibilidade
-          from_address: selectedConfigData?.email_address, // Email do remetente
-          from_name: selectedConfigData?.name, // Nome da configuração
-          is_read: true, // Emails enviados são considerados lidos
-          is_flagged: false, // Por padrão não marcados
-          is_deleted: false,
-          is_archived: false,
-          is_spam: false,
-          // Converter to_addresses array para string para exibição
-          to_display: Array.isArray(email.to_addresses) ? email.to_addresses.join(', ') : email.to_addresses
-        }));
+        data = data.map(email => {
+          console.log('📤 Processando email:', {
+            id: email.id,
+            sent_at: email.sent_at,
+            created_at: email.created_at,
+            sent_at_type: typeof email.sent_at,
+            created_at_type: typeof email.created_at
+          });
+          
+          // Função para validar e obter data segura
+          const getSafeDate = (dateString) => {
+            if (!dateString) return null;
+            
+            const date = new Date(dateString);
+            const timestamp = date.getTime();
+            
+            // Verificar se é uma data válida e não é 1970 (timestamp 0)
+            if (isNaN(timestamp) || timestamp === 0 || timestamp < 946684800000) { // 946684800000 = 2000-01-01
+              console.warn('📤 Data inválida detectada:', dateString, 'usando fallback');
+              return null;
+            }
+            
+            return dateString;
+          };
+          
+          return {
+            ...email,
+            received_date: getSafeDate(email.sent_at) || getSafeDate(email.created_at) || 'No time specified',
+            from_address: selectedConfigData?.email_address, // Email do remetente
+            from_name: selectedConfigData?.name, // Nome da configuração
+            is_read: true, // Emails enviados são considerados lidos
+            is_flagged: false, // Por padrão não marcados
+            is_deleted: false,
+            is_archived: false,
+            is_spam: false,
+            // Converter to_addresses array para string para exibição
+            to_display: Array.isArray(email.to_addresses) ? email.to_addresses.join(', ') : email.to_addresses
+          };
+        });
       } else {
         // Para outras pastas, usar received_emails
         let query = supabase
@@ -446,7 +475,19 @@ const EmailInbox = () => {
   };
 
   const formatDate = (dateString) => {
+    // Verificar se é a string de fallback
+    if (dateString === 'No time specified') {
+      return 'No time specified';
+    }
+    
     const date = new Date(dateString);
+    const timestamp = date.getTime();
+    
+    // Verificar se é uma data válida
+    if (isNaN(timestamp) || timestamp === 0 || timestamp < 946684800000) { // 946684800000 = 2000-01-01
+      return 'No time specified';
+    }
+    
     const now = new Date();
     const diffTime = now - date;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));

@@ -652,40 +652,6 @@ const EmailManagement = () => {
                 Add your first email account to start sending and receiving messages.
               </p>
               
-              {/* Debug info - development only */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left max-w-lg mx-auto">
-                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Debug Info:</h4>
-                  <p className="text-xs text-yellow-700">
-                    Check the browser console for detailed logs about configuration search.
-                  </p>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    If you created a configuration but it doesn't appear here, it might be an authentication or RLS issue.
-                  </p>
-                  <button
-                    onClick={async () => {
-                      const { data: { user } } = await supabase.auth.getUser();
-                      
-                      // Test direct query
-                      const { data, error } = await supabase
-                        .from('email_configurations')
-                        .select('*');
-                      
-                      // Test query by user_id
-                      if (user) {
-                        const { data: userConfigs, error: userError } = await supabase
-                          .from('email_configurations')
-                          .select('*')
-                          .eq('user_id', user.id);
-                      }
-                    }}
-                    className="mt-2 px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
-                  >
-                    Debug Test
-                  </button>
-                </div>
-              )}
-              
               <button
                 onClick={() => navigate('/school/dashboard/email/config')}
                 className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl transform hover:scale-105"
