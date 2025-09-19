@@ -65,17 +65,16 @@ const EmailConfigurationContent = () => {
       try {
         const response = await instance.handleRedirectPromise();
         if (response) {
-          console.log('Microsoft redirect auth success:', response);
           setMicrosoftAccount(response.account);
           
-          // Auto-preencher dados do formulário
+          // Auto-fill form data
           setFormData(prev => ({
             ...prev,
             name: prev.name || `Microsoft - ${response.account.name}`,
             email_address: response.account.username
           }));
           
-          // Limpar erro de Microsoft se existir
+          // Clear Microsoft error if exists
           if (errors.microsoft) {
             setErrors(prev => ({ ...prev, microsoft: '' }));
           }
@@ -84,26 +83,19 @@ const EmailConfigurationContent = () => {
           sessionStorage.removeItem('msalRedirectOrigin');
         }
       } catch (error) {
-        console.error('Redirect handling error:', error);
-        
-        // Tratamento específico para erros de CORS/SPA
-        let errorMessage = 'Erro ao processar autenticação Microsoft';
+        // Specific error handling for CORS/SPA
+        let errorMessage = 'Error processing Microsoft authentication';
         
         if (error.message?.includes('CORS') || error.message?.includes('post_request_failed')) {
-          errorMessage = 'Erro de configuração Azure: O redirect URI deve ser configurado como SPA (Single Page Application) no Azure Portal, não como Web. Veja AZURE_SPA_CONFIGURATION_FIX.md para instruções.';
+          errorMessage = 'Azure configuration error: The redirect URI must be configured as SPA (Single Page Application) in Azure Portal, not as Web. See AZURE_SPA_CONFIGURATION_FIX.md for instructions.';
         } else if (error.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
-          errorMessage = 'Requisição bloqueada pelo navegador. Verifique se o redirect URI está configurado corretamente como SPA no Azure Portal.';
+          errorMessage = 'Request blocked by browser. Check if the redirect URI is correctly configured as SPA in Azure Portal.';
         }
         
         setErrors(prev => ({
           ...prev,
           microsoft: errorMessage
         }));
-        
-        // Log additional debug info
-        console.log('Debug Info - Current URL:', window.location.href);
-        console.log('Debug Info - Redirect URI:', import.meta.env.VITE_AZURE_REDIRECT_URI);
-        console.log('Debug Info - Client ID:', import.meta.env.VITE_AZURE_CLIENT_ID);
       }
     };
     
@@ -154,25 +146,22 @@ const EmailConfigurationContent = () => {
         };
         
         const response = await instance.acquireTokenSilent(silentRequest);
-        console.log('Microsoft silent auth success:', response);
         
         setMicrosoftAccount(response.account);
         
-        // Auto-preencher dados do formulário
+        // Auto-fill form data
         setFormData(prev => ({
           ...prev,
           name: prev.name || `Microsoft - ${response.account.name}`,
           email_address: response.account.username
         }));
         
-        // Limpar erro de Microsoft se existir
+        // Clear Microsoft error if exists
         if (errors.microsoft) {
           setErrors(prev => ({ ...prev, microsoft: '' }));
         }
         
       } catch (silentError) {
-        console.log('Silent auth failed, using redirect:', silentError);
-        
         // Store current location to return after redirect
         sessionStorage.setItem('msalRedirectOrigin', window.location.pathname);
         
@@ -181,14 +170,12 @@ const EmailConfigurationContent = () => {
       }
       
     } catch (error) {
-      console.error('Microsoft auth error:', error);
-      
-      let errorMessage = 'Erro na autenticação com Microsoft';
+      let errorMessage = 'Microsoft authentication error';
       
       if (error.errorCode === 'popup_window_error') {
-        errorMessage = 'Erro ao abrir popup. Tente novamente ou permita popups no navegador.';
+        errorMessage = 'Error opening popup. Try again or allow popups in the browser.';
       } else if (error.errorCode === 'user_cancelled') {
-        errorMessage = 'Autenticação cancelada pelo usuário.';
+        errorMessage = 'Authentication cancelled by user.';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -216,7 +203,7 @@ const EmailConfigurationContent = () => {
         email_address: ''
       }));
     } catch (error) {
-      console.error('Microsoft logout error:', error);
+      // Handle logout error silently
     }
   };
 
@@ -228,7 +215,6 @@ const EmailConfigurationContent = () => {
         return;
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
       navigate('/login');
     }
   };
@@ -244,8 +230,7 @@ const EmailConfigurationContent = () => {
         .single();
       
       if (error) {
-        console.error('Erro ao carregar configuração:', error);
-        setErrors({ general: 'Erro ao carregar configuração de email' });
+        setErrors({ general: 'Error loading email configuration' });
         return;
       }
       
@@ -253,13 +238,12 @@ const EmailConfigurationContent = () => {
         setFormData({
           name: config.configuration_name || '',
           email_address: config.email_address || '',
-          app_password: '' // Por segurança, não pré-preenchemos a senha
+          app_password: '' // For security, we don't pre-fill the password
         });
         setProvider(config.provider || 'gmail');
       }
     } catch (error) {
-      console.error('Erro ao carregar configuração:', error);
-      setErrors({ general: 'Erro inesperado ao carregar configuração' });
+      setErrors({ general: 'Unexpected error loading configuration' });
     } finally {
       setLoading(false);
     }
@@ -281,28 +265,28 @@ const EmailConfigurationContent = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.name.trim()) newErrors.name = 'Nome é obrigatório';
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
     
-    // Validações específicas por provider
+    // Provider-specific validations
     if (provider === 'gmail') {
-      if (!formData.email_address.trim()) newErrors.email_address = 'Email é obrigatório';
-      if (!formData.app_password.trim() && !editMode) newErrors.app_password = 'Senha de app é obrigatória';
+      if (!formData.email_address.trim()) newErrors.email_address = 'Email is required';
+      if (!formData.app_password.trim() && !editMode) newErrors.app_password = 'App password is required';
       
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (formData.email_address && !emailRegex.test(formData.email_address)) {
-        newErrors.email_address = 'Email inválido';
+        newErrors.email_address = 'Invalid email';
       }
 
-      // Validar se o email é do Gmail
+      // Validate if email is from Gmail
       if (formData.email_address) {
         const domain = formData.email_address.split('@')[1]?.toLowerCase();
         if (!['gmail.com', 'googlemail.com'].includes(domain)) {
-          newErrors.email_address = 'Email deve ser do Gmail';
+          newErrors.email_address = 'Email must be from Gmail';
         }
       }
     } else if (provider === 'microsoft') {
       if (!microsoftAccount) {
-        newErrors.microsoft = 'É necessário autenticar com Microsoft';
+        newErrors.microsoft = 'Microsoft authentication required';
       }
     }
     
@@ -324,24 +308,23 @@ const EmailConfigurationContent = () => {
       if (!isValidEmail) {
         setTestResults({
           success: false, 
-          error: 'Formato de email inválido' 
+          error: 'Invalid email format' 
         });
         return;
       }
 
-      // Simulação de teste de conectividade
+      // Connectivity test simulation
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       setTestResults({
         success: true, 
-        message: 'Configurações validadas com sucesso!'
+        message: 'Configuration validated successfully!'
       });
       
     } catch (error) {
-      console.error('Erro no teste:', error);
       setTestResults({
         success: false, 
-        error: 'Erro de validação'
+        error: 'Validation error'
       });
     } finally {
       setTesting(false);
@@ -356,16 +339,16 @@ const EmailConfigurationContent = () => {
     setLoading(true);
     
     try {
-      // Obter o usuário atual
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        throw new Error('Usuário não autenticado');
+        throw new Error('User not authenticated');
       }
 
       let configData;
 
       if (provider === 'gmail') {
-        // Configurações Gmail (SMTP/IMAP)
+        // Gmail settings (SMTP/IMAP)
         const gmailConfig = {
           smtp_host: 'smtp.gmail.com',
           smtp_port: 587,
@@ -395,12 +378,12 @@ const EmailConfigurationContent = () => {
           sync_interval_minutes: 3
         };
       } else if (provider === 'microsoft') {
-        // Configurações Microsoft (OAuth)
+        // Microsoft settings (OAuth)
         if (!microsoftAccount) {
-          throw new Error('Conta Microsoft não autenticada');
+          throw new Error('Microsoft account not authenticated');
         }
 
-        // Obter token de acesso
+        // Get access token
         const tokenResponse = await instance.acquireTokenSilent({
           ...loginRequest,
           account: microsoftAccount
@@ -421,14 +404,14 @@ const EmailConfigurationContent = () => {
         };
       }
 
-      // Inserir ou atualizar configuração no banco de dados
+      // Insert or update configuration in database
       let result;
       if (editMode && configId) {
-        // Atualizar configuração existente
+        // Update existing configuration
         const updateData = { ...configData };
-        delete updateData.user_id; // Não atualizamos o user_id
+        delete updateData.user_id; // We don't update user_id
         
-        // Se estamos editando Gmail e não foi fornecida nova senha, não atualizamos as senhas
+        // If we're editing Gmail and no new password was provided, don't update passwords
         if (provider === 'gmail' && !formData.app_password.trim()) {
           delete updateData.smtp_auth_pass;
           delete updateData.imap_auth_pass;
@@ -438,11 +421,11 @@ const EmailConfigurationContent = () => {
           .from('email_configurations')
           .update(updateData)
           .eq('id', configId)
-          .eq('user_id', user.id) // Segurança: só atualizar se for do usuário
+          .eq('user_id', user.id) // Security: only update if it belongs to the user
           .select()
           .single();
       } else {
-        // Inserir nova configuração
+        // Insert new configuration
         result = await supabase
           .from('email_configurations')
           .insert([configData])
@@ -454,20 +437,19 @@ const EmailConfigurationContent = () => {
         throw result.error;
       }
 
-      // Sucesso
-      alert(editMode ? 'Configuração atualizada com sucesso!' : 'Conta de email configurada com sucesso!');
+      // Success
+      alert(editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!');
       navigate('/school/dashboard/email');
       
     } catch (error) {
-      console.error('Erro ao salvar:', error);
       
-      // Tratamento de erros específicos
-      let errorMessage = 'Erro ao salvar configuração';
+      // Specific error handling
+      let errorMessage = 'Error saving configuration';
       
       if (error.code === '23505') {
-        errorMessage = 'Já existe uma configuração com este nome ou email';
+        errorMessage = 'A configuration with this name or email already exists';
       } else if (error.code === '23503') {
-        errorMessage = 'Erro de referência - usuário não encontrado';
+        errorMessage = 'Reference error - user not found';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -947,7 +929,7 @@ const EmailConfigurationContent = () => {
         </form>
       </div>
 
-      {/* Modal de Ajuda para Senha de App */}
+      {/* Help Modal for App Password */}
       {showHelpModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -974,17 +956,17 @@ const EmailConfigurationContent = () => {
                         1
                       </div>
                       <div>
-                        <h4 className="font-medium text-blue-900 mb-2">Primeiro: Ative a verificação em 2 etapas</h4>
+                        <h4 className="font-medium text-blue-900 mb-2">First: Enable 2-step verification</h4>
                         <p className="text-sm text-blue-800 mb-3">
-                          A verificação em 2 etapas precisa estar ativa para criar senhas de app.
+                          2-step verification must be active to create app passwords.
                         </p>
                         <div className="bg-white rounded-lg p-3 border border-blue-200">
-                          <p className="text-sm text-gray-700 mb-2"><strong>Acesse:</strong></p>
+                          <p className="text-sm text-gray-700 mb-2"><strong>Access:</strong></p>
                           <code className="bg-gray-100 px-2 py-1 rounded text-sm">myaccount.google.com</code>
                           <p className="text-sm text-gray-700 mt-2">
-                            → Clique em <strong>"Segurança"</strong> (no menu lateral)<br/>
-                            → Encontre <strong>"Verificação em duas etapas"</strong><br/>
-                            → Clique em <strong>"Começar"</strong> e siga os passos
+                            → Click on <strong>"Security"</strong> (in the side menu)<br/>
+                            → Find <strong>"2-Step Verification"</strong><br/>
+                            → Click <strong>"Get started"</strong> and follow the steps
                           </p>
                         </div>
                       </div>
@@ -997,19 +979,19 @@ const EmailConfigurationContent = () => {
                         2
                       </div>
                       <div>
-                        <h4 className="font-medium text-green-900 mb-2">Segundo: Crie a senha de app</h4>
+                        <h4 className="font-medium text-green-900 mb-2">Second: Create app password</h4>
                         <p className="text-sm text-green-800 mb-3">
-                          Agora você pode gerar uma senha específica para este sistema.
+                          Now you can generate a specific password for this system.
                         </p>
                         <div className="bg-white rounded-lg p-3 border border-green-200">
                           <p className="text-sm text-gray-700 mb-2">
-                            <strong>Na mesma página de Segurança:</strong>
+                            <strong>On the same Security page:</strong>
                           </p>
                           <p className="text-sm text-gray-700">
-                            → Use a barra de pesquisa e digite <strong>"senhas de app"</strong><br/>
-                            → Clique em <strong>"Senhas de app"</strong><br/>
-                            → No campo "Nome do app", digite <strong>"MatriculaUSA"</strong><br/>
-                            → Clique em <strong>"Criar"</strong> para gerar sua senha
+                            → Use the search bar and type <strong>"app passwords"</strong><br/>
+                            → Click on <strong>"App passwords"</strong><br/>
+                            → In the "App name" field, enter <strong>"MatriculaUSA"</strong><br/>
+                            → Click <strong>"Create"</strong> to generate your password
                           </p>
                         </div>
                       </div>
@@ -1022,20 +1004,20 @@ const EmailConfigurationContent = () => {
                         3
                       </div>
                       <div>
-                        <h4 className="font-medium text-purple-900 mb-2">Terceiro: Copie a senha</h4>
+                        <h4 className="font-medium text-purple-900 mb-2">Third: Copy the password</h4>
                         <p className="text-sm text-purple-800 mb-3">
-                          O Google vai mostrar uma senha de 16 caracteres (com espaços).
+                          Google will show a 16-character password (with spaces).
                         </p>
                         <div className="bg-white rounded-lg p-3 border border-purple-200">
                           <p className="text-sm text-gray-700 mb-2">
-                            <strong>Exemplo de senha gerada:</strong>
+                            <strong>Example of generated password:</strong>
                           </p>
                           <code className="bg-gray-100 px-2 py-1 rounded text-sm">abcd efgh ijkl mnop</code>
                           <p className="text-sm text-gray-700 mt-2">
-                            → <strong>Remova todos os espaços</strong> da senha gerada<br/>
-                            → Cole a senha sem espaços no campo "Senha de app"<br/>
-                            → Exemplo: <code className="bg-gray-100 px-2 py-1 rounded text-xs">abcdefghijklmnop</code><br/>
-                            → Não use sua senha normal do Gmail!
+                            → <strong>Remove all spaces</strong> from the generated password<br/>
+                            → Paste the password without spaces in the "App password" field<br/>
+                            → Example: <code className="bg-gray-100 px-2 py-1 rounded text-xs">abcdefghijklmnop</code><br/>
+                            → Don't use your regular Gmail password!
                           </p>
                         </div>
                       </div>
@@ -1050,13 +1032,13 @@ const EmailConfigurationContent = () => {
                         1
                       </div>
                       <div>
-                        <h4 className="font-medium text-blue-900 mb-2">Primeiro: Acesse sua conta Yahoo</h4>
+                        <h4 className="font-medium text-blue-900 mb-2">First: Access your Yahoo account</h4>
                         <div className="bg-white rounded-lg p-3 border border-blue-200">
-                          <p className="text-sm text-gray-700 mb-2"><strong>Acesse:</strong></p>
+                          <p className="text-sm text-gray-700 mb-2"><strong>Access:</strong></p>
                           <code className="bg-gray-100 px-2 py-1 rounded text-sm">account.yahoo.com</code>
                           <p className="text-sm text-gray-700 mt-2">
-                            → Faça login com sua conta Yahoo<br/>
-                            → Clique em <strong>"Segurança da conta"</strong> no menu lateral
+                            → Log in with your Yahoo account<br/>
+                            → Click on <strong>"Account Security"</strong> in the side menu
                           </p>
                         </div>
                       </div>
@@ -1069,13 +1051,13 @@ const EmailConfigurationContent = () => {
                         2
                       </div>
                       <div>
-                        <h4 className="font-medium text-green-900 mb-2">Segundo: Gere a senha de app</h4>
+                        <h4 className="font-medium text-green-900 mb-2">Second: Generate app password</h4>
                         <div className="bg-white rounded-lg p-3 border border-green-200">
                           <p className="text-sm text-gray-700">
-                            → Procure por <strong>"Gerar senha de app"</strong><br/>
-                            → Clique em <strong>"Gerar senha de app"</strong><br/>
-                            → Digite <strong>"Email"</strong> como nome do aplicativo<br/>
-                            → Clique em <strong>"Gerar"</strong>
+                            → Look for <strong>"Generate app password"</strong><br/>
+                            → Click on <strong>"Generate app password"</strong><br/>
+                            → Enter <strong>"Email"</strong> as the app name<br/>
+                            → Click <strong>"Generate"</strong>
                           </p>
                         </div>
                       </div>
@@ -1088,15 +1070,15 @@ const EmailConfigurationContent = () => {
                         3
                       </div>
                       <div>
-                        <h4 className="font-medium text-purple-900 mb-2">Terceiro: Use a senha gerada</h4>
+                        <h4 className="font-medium text-purple-900 mb-2">Third: Use the generated password</h4>
                         <div className="bg-white rounded-lg p-3 border border-purple-200">
                           <p className="text-sm text-gray-700 mb-2">
-                            <strong>O Yahoo vai mostrar uma senha única:</strong>
+                            <strong>Yahoo will show a unique password:</strong>
                           </p>
                           <p className="text-sm text-gray-700">
-                            → <strong>Copie essa senha gerada</strong><br/>
-                            → Cole no campo "Senha de app" aqui no sistema<br/>
-                            → Não use sua senha normal do Yahoo!
+                            → <strong>Copy this generated password</strong><br/>
+                            → Paste it in the "App password" field here in the system<br/>
+                            → Don't use your regular Yahoo password!
                           </p>
                         </div>
                       </div>
@@ -1109,12 +1091,12 @@ const EmailConfigurationContent = () => {
                 <div className="flex items-start space-x-2">
                   <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900 mb-1">Dicas importantes:</p>
+                    <p className="text-sm font-medium text-gray-900 mb-1">Important tips:</p>
                     <ul className="text-sm text-gray-700 space-y-1">
-                      <li>• A senha de app é diferente da sua senha normal</li>
-                      <li>• Você pode gerar várias senhas de app para diferentes serviços</li>
-                      <li>• Se esquecer a senha, gere uma nova (a antiga para de funcionar)</li>
-                      <li>• Mantenha a senha em local seguro</li>
+                      <li>• App password is different from your regular password</li>
+                      <li>• You can generate multiple app passwords for different services</li>
+                      <li>• If you forget the password, generate a new one (the old one stops working)</li>
+                      <li>• Keep the password in a safe place</li>
                     </ul>
                   </div>
                 </div>

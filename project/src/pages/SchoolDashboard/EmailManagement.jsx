@@ -12,25 +12,22 @@ import {
 import { supabase } from '../../lib/supabase';
 
 const EmailManagement = () => {
-  console.log('🎬 EmailManagement componente renderizado');
-  
   const navigate = useNavigate();
   const [configurations, setConfigurations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
   const [syncing, setSyncing] = useState({});
   const [stats, setStats] = useState({});
   const [actionLoading, setActionLoading] = useState({});
   const [lastSyncUpdate, setLastSyncUpdate] = useState({});
 
   useEffect(() => {
-    console.log('🚀 EmailManagement useEffect executado');
     checkAuthAndLoad();
   }, []);
 
-  // Recarregar dados quando o usuário retornar à tela
+  // Reload data when user returns to screen
   useEffect(() => {
     const handleFocus = () => {
-      console.log('🔄 Foco na janela detectado, recarregando...');
       if (!loading) {
         loadConfigurations();
         loadStats();
@@ -43,89 +40,65 @@ const EmailManagement = () => {
 
   const checkAuthAndLoad = async () => {
     try {
-      console.log('🔐 Verificando autenticação...');
-      
       // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('👤 Usuário autenticado:', user?.id, user?.email);
       
       if (!user) {
-        console.log('❌ Usuário não autenticado, redirecionando para login');
         navigate('/login');
         return;
       }
       
-      console.log('✅ Usuário autenticado, carregando configurações...');
       await loadConfigurations();
       await loadStats();
     } catch (error) {
-      console.error('❌ Erro na verificação de auth:', error);
       navigate('/login');
     }
   };
 
   const loadConfigurations = async () => {
     try {
-      console.log('🔍 Iniciando carregamento de configurações...');
-      
-      // Obter o usuário atual
+      // Get current user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      console.log('👤 Dados de autenticação:', { user: user?.id, email: user?.email, authError });
-      
       if (authError) {
-        console.error('❌ Erro de autenticação:', authError);
-        throw new Error('Erro de autenticação');
+        throw new Error('Authentication error');
       }
       
       if (!user) {
-        console.error('❌ Usuário não autenticado');
-        throw new Error('Usuário não autenticado');
+        throw new Error('User not authenticated');
       }
 
-      console.log('🔍 Buscando configurações para o usuário:', user.id, 'email:', user.email);
-
-      // Buscar configurações do usuário
+      // Get user configurations
       const { data, error } = await supabase
         .from('email_configurations')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      console.log('📊 Resultado da consulta:', { data, error, count: data?.length });
-
       if (error) {
-        console.error('❌ Erro na consulta:', error);
         throw error;
       }
 
-      console.log('✅ Configurações encontradas:', data);
       setConfigurations(data || []);
       
-      // Debug adicional: verificar se há configurações para este email
+      // Additional debug: check if there are configurations for this email
       if (!data || data.length === 0) {
-        console.log('⚠️ Nenhuma configuração encontrada por user_id. Verificando se há configurações para este email...');
-        
         const { data: emailConfigs, error: emailError } = await supabase
           .from('email_configurations')
           .select('*')
           .eq('email_address', user.email);
           
-        console.log('📧 Configurações por email:', { emailConfigs, emailError });
-        
-        // Se encontrou configurações por email, usar elas
+        // If found configurations by email, use them
         if (emailConfigs && emailConfigs.length > 0) {
-          console.log('✅ Usando configurações encontradas por email');
           setConfigurations(emailConfigs);
         }
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar configurações:', error);
       setConfigurations([]);
       
-      // Mostrar erro para o usuário apenas se não for erro de autenticação
-      if (!error.message.includes('autenticado') && !error.message.includes('autenticação')) {
-        alert('Erro ao carregar configurações: ' + (error.message || 'Erro desconhecido'));
+      // Show error to user only if not authentication error
+      if (!error.message.includes('authenticated') && !error.message.includes('Authentication')) {
+        alert('Error loading configurations: ' + (error.message || 'Unknown error'));
       }
     } finally {
       setLoading(false);
@@ -133,6 +106,7 @@ const EmailManagement = () => {
   };
 
   const loadStats = async () => {
+    setLoadingStats(true);
     try {
       // Obter o usuário atual
       const { data: { user } } = await supabase.auth.getUser();
@@ -140,10 +114,10 @@ const EmailManagement = () => {
         return;
       }
 
-      // Buscar configurações do usuário para obter os IDs
+      // Buscar configurações do usuário para obter os IDs e tipos
       const { data: configs } = await supabase
         .from('email_configurations')
-        .select('id')
+        .select('id, provider_type, oauth_access_token, is_active')
         .eq('user_id', user.id);
 
       if (!configs || configs.length === 0) {
@@ -155,24 +129,108 @@ const EmailManagement = () => {
         return;
       }
 
-      const configIds = configs.map(config => config.id);
+      // Separar configurações por tipo
+      const gmailConfigs = configs.filter(config => config.provider_type !== 'microsoft');
+      const microsoftConfigs = configs.filter(config => 
+        config.provider_type === 'microsoft' && 
+        config.is_active && 
+        config.oauth_access_token
+      );
 
-      // Buscar estatísticas de emails recebidos
-      const { data: receivedData } = await supabase
-        .from('received_emails')
-        .select('id, is_read')
-        .in('email_config_id', configIds);
+      // Inicializar contadores
+      let totalReceived = 0;
+      let unreadCount = 0;
+      let totalSent = 0;
 
-      // Buscar estatísticas de emails enviados
-      const { data: sentData } = await supabase
-        .from('sent_emails')
-        .select('id')
-        .in('email_config_id', configIds);
+      console.log(`📊 Loading stats for ${gmailConfigs.length} Gmail + ${microsoftConfigs.length} Microsoft accounts`);
 
-      // Calcular estatísticas
-      const totalReceived = receivedData?.length || 0;
-      const unreadCount = receivedData?.filter(email => !email.is_read).length || 0;
-      const totalSent = sentData?.length || 0;
+      // Buscar estatísticas de contas Gmail/SMTP (dados locais)
+      if (gmailConfigs.length > 0) {
+        const gmailConfigIds = gmailConfigs.map(config => config.id);
+
+        // Buscar estatísticas de emails recebidos
+        const { data: receivedData } = await supabase
+          .from('received_emails')
+          .select('id, is_read')
+          .in('email_config_id', gmailConfigIds);
+
+        // Buscar estatísticas de emails enviados
+        const { data: sentData } = await supabase
+          .from('sent_emails')
+          .select('id')
+          .in('email_config_id', gmailConfigIds);
+
+        // Adicionar aos contadores
+        totalReceived += receivedData?.length || 0;
+        unreadCount += receivedData?.filter(email => !email.is_read).length || 0;
+        totalSent += sentData?.length || 0;
+
+        console.log(`📊 Gmail stats - Received: ${receivedData?.length || 0}, Unread: ${receivedData?.filter(email => !email.is_read).length || 0}, Sent: ${sentData?.length || 0}`);
+      }
+
+      // Buscar estatísticas de contas Microsoft (Microsoft Graph API)
+      for (const microsoftConfig of microsoftConfigs) {
+        try {
+          console.log(`📊 Loading Microsoft stats for: ${microsoftConfig.id}`);
+          
+          // Importar GraphService dinamicamente para evitar problemas de dependências
+          const { default: GraphService } = await import('../../lib/graphService');
+          const graphService = new GraphService(microsoftConfig.oauth_access_token);
+
+          // Buscar pastas de email
+          const foldersResult = await graphService.getMailFolders();
+          const folders = foldersResult.value || [];
+
+          // Encontrar pasta Inbox
+          const inboxFolder = folders.find(folder => 
+            folder.displayName?.toLowerCase().includes('inbox') || 
+            folder.displayName?.toLowerCase().includes('caixa de entrada')
+          );
+
+          // Encontrar pasta Sent
+          const sentFolder = folders.find(folder => 
+            folder.displayName?.toLowerCase().includes('sent') || 
+            folder.displayName?.toLowerCase().includes('enviados')
+          );
+
+          // Buscar emails da Inbox
+          if (inboxFolder) {
+            try {
+              const inboxEmails = await graphService.getEmailsFromFolder(inboxFolder.id, 100);
+              const emails = inboxEmails.value || [];
+              
+              totalReceived += emails.length;
+              unreadCount += emails.filter(email => !email.isRead).length;
+              
+              console.log(`📊 Microsoft Inbox: ${emails.length} total, ${emails.filter(email => !email.isRead).length} unread`);
+            } catch (inboxError) {
+              console.warn(`📊 Error loading Microsoft inbox stats:`, inboxError);
+            }
+          }
+
+          // Buscar emails enviados
+          if (sentFolder) {
+            try {
+              const sentEmails = await graphService.getEmailsFromFolder(sentFolder.id, 100);
+              const sentEmailsData = sentEmails.value || [];
+              
+              totalSent += sentEmailsData.length;
+              
+              console.log(`📊 Microsoft Sent: ${sentEmailsData.length} emails`);
+            } catch (sentError) {
+              console.warn(`📊 Error loading Microsoft sent stats:`, sentError);
+            }
+          }
+
+          // Pequena pausa para evitar rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.warn(`📊 Error loading Microsoft stats for config ${microsoftConfig.id}:`, error);
+        }
+      }
+
+      console.log(`📊 Final stats - Received: ${totalReceived}, Unread: ${unreadCount}, Sent: ${totalSent}`);
 
       setStats({
         total_received: totalReceived,
@@ -180,12 +238,14 @@ const EmailManagement = () => {
         total_sent: totalSent
       });
     } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
+      console.error('📊 Error loading stats:', error);
       setStats({
         total_received: 0,
         unread_count: 0,
         total_sent: 0
       });
+    } finally {
+      setLoadingStats(false);
     }
   };
 
@@ -277,8 +337,6 @@ const EmailManagement = () => {
 
       setActionLoading(prev => ({ ...prev, [`delete_${configId}`]: true }));
 
-      console.log(`🗑️ Deleting configuration: ${config.email_address}`);
-
       // Excluir configuração
       const { error } = await supabase
         .from('email_configurations')
@@ -328,9 +386,7 @@ const EmailManagement = () => {
       
       setActionLoading(prev => ({ ...prev, [`toggle_${configId}`]: true }));
       
-      console.log(`🔄 ${newStatus ? 'Enabling' : 'Disabling'} sync for ${config.email_address}`);
-      
-      // Atualizar status de sincronização
+      // Update sync status
       const { error } = await supabase
         .from('email_configurations')
         .update({ 
@@ -342,19 +398,15 @@ const EmailManagement = () => {
         throw error;
       }
 
-      // Recarregar configurações para mostrar o novo status
+      // Reload configurations to show new status
       await loadConfigurations();
       
       const statusText = newStatus ? 'enabled' : 'disabled';
       const statusEmoji = newStatus ? '✅' : '⏸️';
       
-      console.log(`${statusEmoji} Sync ${statusText} for ${config.email_address}`);
-      
       alert(`${statusEmoji} Sync ${statusText} successfully!\n\nAccount: ${config.name}\nEmail: ${config.email_address}\n\n${newStatus ? 'Your emails will now be automatically synchronized.' : 'Automatic email synchronization has been disabled.'}`);
       
     } catch (error) {
-      console.error('❌ Toggle sync error:', error);
-      
       let errorMessage = 'Failed to update sync settings: ';
       
       if (error.message.includes('permission')) {
@@ -381,9 +433,7 @@ const EmailManagement = () => {
       
       setActionLoading(prev => ({ ...prev, [`status_${configId}`]: true }));
       
-      console.log(`🔄 ${newStatus ? 'Activating' : 'Deactivating'} account ${config.email_address}`);
-      
-      // Atualizar status da conta
+      // Update account status
       const { error } = await supabase
         .from('email_configurations')
         .update({ 
@@ -395,20 +445,16 @@ const EmailManagement = () => {
         throw error;
       }
 
-      // Recarregar configurações para mostrar o novo status
+      // Reload configurations to show new status
       await loadConfigurations();
       await loadStats();
       
       const statusText = newStatus ? 'activated' : 'deactivated';
       const statusEmoji = newStatus ? '🟢' : '🔴';
       
-      console.log(`${statusEmoji} Account ${statusText}: ${config.email_address}`);
-      
       alert(`${statusEmoji} Account ${statusText} successfully!\n\nAccount: ${config.name}\nEmail: ${config.email_address}\n\n${newStatus ? 'The account is now active and ready to use.' : 'The account has been deactivated and will not be used for email operations.'}`);
       
     } catch (error) {
-      console.error('❌ Toggle account status error:', error);
-      
       let errorMessage = 'Failed to update account status: ';
       
       if (error.message.includes('permission')) {
@@ -425,51 +471,40 @@ const EmailManagement = () => {
 
   const handleInboxNavigation = (config) => {
     try {
-      console.log(`📧 Opening inbox for ${config.provider_type} account: ${config.email_address}`);
-      
       if (config.provider_type === 'microsoft') {
         navigate('/school/dashboard/microsoft-email');
       } else {
         navigate(`/school/dashboard/inbox?config=${config.id}`);
       }
     } catch (error) {
-      console.error('❌ Navigation error:', error);
       alert('Failed to open inbox. Please try again.');
     }
   };
 
   const handleComposeNavigation = (config) => {
     try {
-      console.log(`✍️ Opening compose for ${config.provider_type} account: ${config.email_address}`);
-      
-      if (config.provider_type === 'microsoft') {
-        navigate('/school/dashboard/microsoft-email?compose=true');
-      } else {
-        navigate(`/school/dashboard/email/compose?config=${config.id}`);
-      }
+
+      navigate(`/school/dashboard/email/compose?config=${config.id}`);
+
     } catch (error) {
-      console.error('❌ Navigation error:', error);
       alert('Failed to open compose. Please try again.');
     }
   };
 
   const handleSettingsNavigation = (configId) => {
     try {
-      console.log(`⚙️ Opening settings for configuration: ${configId}`);
       navigate(`/school/dashboard/email/config/${configId}`);
     } catch (error) {
-      console.error('❌ Navigation error:', error);
       alert('Failed to open settings. Please try again.');
     }
   };
 
   if (loading) {
-    console.log('⏳ Mostrando tela de carregamento...');
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         <div className="ml-4">
-          <p className="text-gray-600">Carregando configurações...</p>
+          <p className="text-gray-600">Loading configurations...</p>
         </div>
       </div>
     );
@@ -491,9 +526,17 @@ const EmailManagement = () => {
                   Configure and manage your email accounts for seamless communication
                 </p>
                 {configurations.length > 0 && (
-                  <p className="mt-3 text-sm text-slate-500">
-                    {`${configurations.length} account${configurations.length > 1 ? 's' : ''} configured, ${configurations.filter(c => c.is_active).length} active`}
-                  </p>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm text-slate-500">
+                      {`${configurations.length} account${configurations.length > 1 ? 's' : ''} configured, ${configurations.filter(c => c.is_active).length} active`}
+                    </p>
+                    {configurations.some(c => c.provider_type === 'microsoft') && (
+                      <p className="text-xs text-slate-400 flex items-center">
+                        <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                        Statistics include both Gmail and Microsoft accounts
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -518,11 +561,15 @@ const EmailManagement = () => {
                     <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <EnvelopeIcon className="h-4 w-4 text-blue-600" />
+                          {loadingStats ? (
+                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <EnvelopeIcon className="h-4 w-4 text-blue-600" />
+                          )}
                         </div>
                         <div>
                           <p className="text-lg font-semibold text-slate-900">
-                            {stats.total_received || 0}
+                            {loadingStats ? '...' : (stats.total_received || 0)}
                           </p>
                           <p className="text-xs text-slate-600">Received</p>
                         </div>
@@ -532,11 +579,15 @@ const EmailManagement = () => {
                     <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                          <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+                          {loadingStats ? (
+                            <div className="w-3 h-3 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+                          )}
                         </div>
                         <div>
                           <p className="text-lg font-semibold text-slate-900">
-                            {stats.unread_count || 0}
+                            {loadingStats ? '...' : (stats.unread_count || 0)}
                           </p>
                           <p className="text-xs text-slate-600">Unread</p>
                         </div>
@@ -546,11 +597,15 @@ const EmailManagement = () => {
                     <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                          {loadingStats ? (
+                            <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                          )}
                         </div>
                         <div>
                           <p className="text-lg font-semibold text-slate-900">
-                            {stats.total_sent || 0}
+                            {loadingStats ? '...' : (stats.total_sent || 0)}
                           </p>
                           <p className="text-xs text-slate-600">Sent</p>
                         </div>
@@ -562,7 +617,6 @@ const EmailManagement = () => {
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={async () => {
-                        console.log('🔄 Recarregamento manual iniciado...');
                         setLoading(true);
                         await loadConfigurations();
                         await loadStats();
@@ -611,40 +665,36 @@ const EmailManagement = () => {
                 Add your first email account to start sending and receiving messages.
               </p>
               
-              {/* Debug info - apenas em desenvolvimento */}
+              {/* Debug info - development only */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left max-w-lg mx-auto">
                   <h4 className="text-sm font-medium text-yellow-800 mb-2">Debug Info:</h4>
                   <p className="text-xs text-yellow-700">
-                    Verifique o console do navegador para logs detalhados sobre a busca de configurações.
+                    Check the browser console for detailed logs about configuration search.
                   </p>
                   <p className="text-xs text-yellow-700 mt-1">
-                    Se você criou uma configuração mas ela não aparece aqui, pode ser um problema de autenticação ou RLS.
+                    If you created a configuration but it doesn't appear here, it might be an authentication or RLS issue.
                   </p>
                   <button
                     onClick={async () => {
-                      console.log('🔧 Teste de debug iniciado...');
                       const { data: { user } } = await supabase.auth.getUser();
-                      console.log('👤 Usuário atual:', user);
                       
-                      // Testar consulta direta
+                      // Test direct query
                       const { data, error } = await supabase
                         .from('email_configurations')
                         .select('*');
-                      console.log('📊 Todas as configurações:', { data, error });
                       
-                      // Testar consulta por user_id
+                      // Test query by user_id
                       if (user) {
                         const { data: userConfigs, error: userError } = await supabase
                           .from('email_configurations')
                           .select('*')
                           .eq('user_id', user.id);
-                        console.log('👤 Configurações do usuário:', { userConfigs, userError });
                       }
                     }}
                     className="mt-2 px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
                   >
-                    Teste de Debug
+                    Debug Test
                   </button>
                 </div>
               )}

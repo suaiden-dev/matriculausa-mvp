@@ -140,6 +140,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/global-document-requests')) return 'global-docs';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
     if (path.includes('/email')) return 'inbox';
+    if (path.includes('/microsoft-email')) return 'inbox';
     if (path.includes('/student')) return 'students';
     return 'overview';
   };

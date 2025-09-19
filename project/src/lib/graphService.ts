@@ -4,6 +4,7 @@ import rateLimiter from './rateLimiter';
 
 class GraphService {
   private graphClient: Client;
+  private accessToken: string;
 
   constructor(accessToken: string) {
     const authProvider: AuthenticationProvider = {
@@ -13,6 +14,8 @@ class GraphService {
     };
 
     this.graphClient = Client.initWithMiddleware({ authProvider });
+    // Store token for direct HTTP calls
+    this.accessToken = accessToken;
   }
 
   async getUserProfile() {
@@ -190,13 +193,40 @@ class GraphService {
 
   async sendEmail(emailMessage: any) {
     try {
-      await this.graphClient
-        .api('/me/sendMail')
-        .post(emailMessage);
+      console.log('📧 GraphService: Sending email via Microsoft Graph API...');
+      console.log('📧 Email message:', JSON.stringify(emailMessage, null, 2));
+      
+      // Use direct fetch to avoid JWT validation issues with the SDK
+      const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailMessage)
+      });
 
+      console.log('📧 Graph API Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('📧 Graph API Error response:', errorText);
+        
+        // Try to parse error details
+        let errorDetails;
+        try {
+          errorDetails = JSON.parse(errorText);
+        } catch (e) {
+          errorDetails = { error: { message: errorText } };
+        }
+        
+        throw new Error(`Microsoft Graph API error (${response.status}): ${errorDetails.error?.message || errorText}`);
+      }
+
+      console.log('✅ Email sent successfully via Microsoft Graph API');
       return true;
     } catch (error) {
-      console.error('Error sending email:', error);
+      console.error('❌ Error sending email via Graph API:', error);
       throw error;
     }
   }
