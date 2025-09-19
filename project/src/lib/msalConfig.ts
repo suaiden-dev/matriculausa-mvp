@@ -1,20 +1,18 @@
-
-// DEBUG: Log env vars para garantir que estão corretas
-console.log('[MSAL DEBUG] VITE_AZURE_CLIENT_ID:', import.meta.env.VITE_AZURE_CLIENT_ID);
-console.log('[MSAL DEBUG] VITE_AZURE_REDIRECT_URI:', import.meta.env.VITE_AZURE_REDIRECT_URI);
-import { Configuration, RedirectRequest } from '@azure/msal-browser';
-
+import { Configuration } from '@azure/msal-browser';
+import { RedirectRequest } from '@azure/msal-browser';
 // MSAL configuration
 export const msalConfig: Configuration = {
   auth: {
     clientId: import.meta.env.VITE_AZURE_CLIENT_ID || '',
     authority: 'https://login.microsoftonline.com/common',
     redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || window.location.origin,
-    navigateToLoginRequestUrl: false, // Important for SPA
+    postLogoutRedirectUri: window.location.origin,
+    navigateToLoginRequestUrl: false,
   },
   cache: {
     cacheLocation: 'sessionStorage',
     storeAuthStateInCookie: false,
+    secureCookies: false,
   },
   system: {
     windowHashTimeout: 60000,
@@ -47,7 +45,7 @@ export const msalConfig: Configuration = {
 
 // Add scopes here for ID token to be used at Microsoft identity platform endpoints.
 export const loginRequest: RedirectRequest = {
-  scopes: ['User.Read', 'Mail.Read', 'Mail.Send', 'offline_access'],
+  scopes: ['User.Read', 'Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'],
   prompt: 'select_account'
 };
 
@@ -61,5 +59,6 @@ export const graphScopes = import.meta.env.VITE_GRAPH_SCOPES?.split(',') || [
   'User.Read',
   'Mail.Read',
   'Mail.Send',
+  'Mail.ReadWrite',
   'offline_access'
 ];

@@ -3,25 +3,13 @@ import { Client } from '@microsoft/microsoft-graph-client';
 
 export class GraphService {
   constructor(accessToken) {
-    // Create a custom auth provider that properly handles Microsoft access tokens
     const authProvider = {
       getAccessToken: async () => {
-        // Return the access token without any validation
-        // Microsoft Graph SDK will handle the token properly
-        console.log('🔑 GraphService: Providing access token to Microsoft Graph SDK');
         return accessToken;
       },
     };
 
-    // Initialize client with proper configuration for Microsoft access tokens
-    this.graphClient = Client.initWithMiddleware({ 
-      authProvider,
-      // Add additional configuration to handle non-JWT tokens
-      middleware: []
-    });
-    
-    // Store token for direct HTTP calls if needed
-    this.accessToken = accessToken;
+    this.graphClient = Client.initWithMiddleware({ authProvider });
   }
 
   async getUserProfile() {
@@ -123,40 +111,13 @@ export class GraphService {
 
   async sendEmail(emailMessage) {
     try {
-      console.log('📧 GraphService: Sending email via Microsoft Graph API...');
-      console.log('📧 Email message:', JSON.stringify(emailMessage, null, 2));
-      
-      // Use direct fetch to avoid JWT validation issues with the SDK
-      const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailMessage)
-      });
+      await this.graphClient
+        .api('/me/sendMail')
+        .post(emailMessage);
 
-      console.log('📧 Graph API Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('📧 Graph API Error response:', errorText);
-        
-        // Try to parse error details
-        let errorDetails;
-        try {
-          errorDetails = JSON.parse(errorText);
-        } catch (e) {
-          errorDetails = { error: { message: errorText } };
-        }
-        
-        throw new Error(`Microsoft Graph API error (${response.status}): ${errorDetails.error?.message || errorText}`);
-      }
-
-      console.log('✅ Email sent successfully via Microsoft Graph API');
       return true;
     } catch (error) {
-      console.error('❌ Error sending email via Graph API:', error);
+      console.error('Error sending email:', error);
       throw error;
     }
   }

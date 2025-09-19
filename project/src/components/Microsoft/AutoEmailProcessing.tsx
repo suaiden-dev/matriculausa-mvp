@@ -1,12 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Play, Pause, Settings, CheckCircle, XCircle, Clock, Bot } from 'lucide-react';
 import { useAuthToken } from '../../hooks/useAuthToken';
+import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
+
+// Função para extrair email do token MSAL
+const getEmailFromToken = async (token: string): Promise<string> => {
+  try {
+    // Fazer requisição para Microsoft Graph para obter informações do usuário
+    const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ao obter dados do usuário: ${response.status}`);
+    }
+
+    const userData = await response.json();
+    return userData.mail || userData.userPrincipalName || 'unknown@microsoft.com';
+  } catch (error) {
+    console.error('Erro ao obter email do token:', error);
+    return 'unknown@microsoft.com';
+  }
+};
 
 interface ProcessingStatus {
   isActive: boolean;
@@ -18,6 +42,7 @@ interface ProcessingStatus {
 
 const AutoEmailProcessing: React.FC = () => {
   const { getToken, accounts } = useAuthToken();
+  const { connections: microsoftConnections, activeConnection } = useMicrosoftConnection();
   const [status, setStatus] = useState<ProcessingStatus>({
     isActive: false,
     lastProcessed: null,
@@ -83,31 +108,45 @@ const AutoEmailProcessing: React.FC = () => {
     if (!getToken || !accounts.length) return;
 
     try {
+      console.log('🔄 AutoEmailProcessing - Iniciando toggle de processamento...');
       setSaving(true);
       const token = await getToken();
       const { data: { user } } = await supabase.auth.getUser();
       
-      if (!user) return;
+      if (!user) {
+        console.error('❌ Usuário não encontrado');
+        return;
+      }
 
-      // Usar MSAL token diretamente (não precisa de refresh token separado)
       console.log('✅ Token obtido via MSAL, iniciando processamento...');
+      console.log('👤 User ID:', user.id);
 
-      const { error } = await supabase
+      // Obter email do usuário do token MSAL
+      const email = await getEmailFromToken(token);
+      console.log('📧 Email obtido do token:', email);
+      
+      const { data, error } = await supabase
         .from('email_processing_configs')
         .upsert({
           user_id: user.id,
           access_token: token,
           refresh_token: 'msal_token', // MSAL gerencia tokens automaticamente
+          email_address: email, // NOVO: Salvar email do usuário
           is_active: !status.isActive
-        });
+        }, {
+          onConflict: 'user_id,email_address' // Usar o índice único para upsert
+        })
+        .select();
 
       if (error) {
+        console.error('❌ Erro ao salvar configuração:', error);
         throw error;
       }
 
+      console.log('✅ Configuração salva com sucesso:', data);
       setStatus(prev => ({ ...prev, isActive: !prev.isActive }));
     } catch (error) {
-      console.error('Erro ao alterar status:', error);
+      console.error('❌ Erro ao alterar status:', error);
       setStatus(prev => ({ ...prev, error: 'Erro ao alterar status' }));
     } finally {
       setSaving(false);
@@ -171,6 +210,23 @@ const AutoEmailProcessing: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Contas Microsoft conectadas */}
+      {microsoftConnections.length > 0 && (
+        <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded">
+          <div className="text-xs font-medium text-blue-700 mb-1">Contas Conectadas:</div>
+          <div className="space-y-1">
+            {microsoftConnections.map((conn) => (
+              <div key={conn.id} className="flex items-center justify-between">
+                <span className="text-xs text-blue-600 truncate">{conn.email}</span>
+                <div className={`w-2 h-2 rounded-full ${
+                  activeConnection?.email === conn.email ? 'bg-green-500' : 'bg-gray-400'
+                }`}></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Estatísticas compactas */}
       <div className="grid grid-cols-2 gap-2 mb-2">
