@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useMsal } from '@azure/msal-react';
 import { graphScopes } from '../../lib/msalConfig';
 import GraphService from '../../lib/graphService';
+import { PaperClipIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 interface EmailConfiguration {
   id: string;
@@ -25,7 +26,9 @@ interface ReceivedEmail {
   from_address: string;
   subject: string;
   text_content: string;
+  html_content: string;
   received_date: string;
+  attachments?: any[];
 }
 
 interface FormData {
@@ -897,17 +900,90 @@ const EmailCompose = () => {
               <summary className="cursor-pointer p-4 border-b border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 Show original message
               </summary>
-              <div className="p-6 text-sm text-slate-600">
-                <div className="mb-4 pb-4 border-b border-slate-200">
-                  <div className="grid grid-cols-2 gap-4 mb-2">
-                    <div><strong>From:</strong> {originalEmail.from_name || originalEmail.from_address}</div>
-                    <div><strong>Date:</strong> {new Date(originalEmail.received_date).toLocaleString()}</div>
+              <div className="p-6">
+                {/* Email Header */}
+                <div className="mb-6 pb-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-normal text-gray-900">
+                      {originalEmail.subject || 'No subject'}
+                    </h3>
                   </div>
-                  <div><strong>Subject:</strong> {originalEmail.subject}</div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-medium text-blue-700">
+                          {(originalEmail.from_name || originalEmail.from_address).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900">
+                          {originalEmail.from_name || originalEmail.from_address}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {originalEmail.from_address}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <span className="text-sm text-gray-500 flex-shrink-0 ml-4">
+                      {new Date(originalEmail.received_date).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
                 </div>
-                <div className="whitespace-pre-wrap">
-                  {originalEmail.text_content}
+                
+                {/* Email Content */}
+                <div className="prose prose-sm max-w-none">
+                  {originalEmail.html_content ? (
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: originalEmail.html_content }}
+                      className="text-gray-700 leading-relaxed break-words"
+                    />
+                  ) : (
+                    <div className="text-gray-700 whitespace-pre-wrap leading-relaxed break-words">
+                      {originalEmail.text_content || 'No content available'}
+                    </div>
+                  )}
                 </div>
+                
+                {/* Attachments */}
+                {originalEmail.attachments && originalEmail.attachments.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-slate-200">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                      <PaperClipIcon className="h-4 w-4 mr-2" />
+                      Attachments ({originalEmail.attachments.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {originalEmail.attachments.map((attachment, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-slate-50 rounded border"
+                        >
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <DocumentTextIcon className="h-5 w-5 text-slate-500 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {attachment.filename}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {attachment.size ? `${(attachment.size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                              </p>
+                            </div>
+                          </div>
+                          <button className="text-blue-600 hover:text-blue-700 font-medium flex-shrink-0 ml-3 text-sm">
+                            Download
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </details>
           </div>

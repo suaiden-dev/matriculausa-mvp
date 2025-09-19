@@ -8,30 +8,24 @@ import {
   TrashIcon,
   ArrowPathIcon,
   PencilSquareIcon,
-  FunnelIcon
+  FunnelIcon,
+  Cog6ToothIcon,
+  UserIcon,
+  MagnifyingGlassIcon,
+  Bars3Icon,
+  CheckIcon,
+  StarIcon,
+  ClockIcon,
+  TagIcon,
+  XMarkIcon,
+  ChevronDownIcon,
+  EllipsisVerticalIcon,
+  ArchiveBoxIcon,
+  ExclamationTriangleIcon,
+  DocumentTextIcon,
+  PaperClipIcon
 } from '@heroicons/react/24/outline';
-import { 
-  Mail, 
-  Search, 
-  RefreshCw, 
-  Settings, 
-  User, 
-  Plus,
-  InboxIcon,
-  SendIcon,
-  FileText,
-  Archive,
-  AlertTriangle,
-  Trash,
-  Folder,
-  FolderOpen,
-  Loader2,
-  XCircle,
-  Star,
-  Reply,
-  Forward,
-  MoreHorizontal
-} from 'lucide-react';
+import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
@@ -47,6 +41,7 @@ const EmailInbox = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState(null);
+  const [expandedView, setExpandedView] = useState(false);
   const [filter, setFilter] = useState('all'); // all, unread, read
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -183,9 +178,11 @@ const EmailInbox = () => {
     navigate(`/school/dashboard/email/compose?config=${selectedConfig}`);
   };
 
+  // Sidebar navigation items (Gmail style seguindo padrão Microsoft)
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     setSelectedEmail(null);
+    setExpandedView(false);
     
     // Para Gmail, todos os emails ficam na "inbox"
     // Podemos filtrar por diferentes critérios se necessário
@@ -196,51 +193,18 @@ const EmailInbox = () => {
     }
   };
 
-  // Sidebar navigation items (Gmail style seguindo padrão Microsoft)
-  const sidebarNavItems = [
-    {
-      id: 'inbox',
-      label: 'Caixa de Entrada',
-      icon: <InboxIcon className="h-4 w-4" />,
-      color: 'text-blue-600',
-      count: emailCounts.inbox
-    },
-    {
-      id: 'sent',
-      label: 'Itens Enviados',
-      icon: <SendIcon className="h-4 w-4" />,
-      color: 'text-gray-600',
-      count: emailCounts.sent
-    },
-    {
-      id: 'drafts',
-      label: 'Rascunhos',
-      icon: <FileText className="h-4 w-4" />,
-      color: 'text-gray-600',
-      count: emailCounts.drafts
-    },
-    {
-      id: 'archive',
-      label: 'Arquivo Morto',
-      icon: <Archive className="h-4 w-4" />,
-      color: 'text-gray-600',
-      count: emailCounts.archive
-    },
-    {
-      id: 'spam',
-      label: 'Spam',
-      icon: <AlertTriangle className="h-4 w-4" />,
-      color: 'text-red-600',
-      count: emailCounts.spam
-    },
-    {
-      id: 'trash',
-      label: 'Lixeira',
-      icon: <Trash className="h-4 w-4" />,
-      color: 'text-gray-500',
-      count: emailCounts.trash
+  const handleEmailClick = (email) => {
+    setSelectedEmail(email);
+    setExpandedView(true);
+    if (!email.is_read) {
+      markAsRead(email.id);
     }
-  ];
+  };
+
+  const handleBackToList = () => {
+    setExpandedView(false);
+    setSelectedEmail(null);
+  };
 
   const handleSync = async () => {
     if (!selectedConfig) return;
@@ -317,310 +281,279 @@ const EmailInbox = () => {
   const selectedConfigData = configurations.find(c => c.id === selectedConfig);
 
   return (
-    <div className="h-screen flex bg-gray-50">
-      {/* Sidebar Navigation (Microsoft Style) */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        {/* Header com botão Novo Email */}
-        <div className="p-4 border-b border-gray-200">
-          <button
-            onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}`)}
-            disabled={!selectedConfig}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg flex items-center justify-center space-x-2 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="font-medium">Novo Email</span>
-          </button>
-        </div>
+    <div className="h-screen flex flex-col bg-white">
+      {/* Gmail Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-2">
+        <div className="flex items-center justify-between">
+          {/* Left: Menu + Gmail Logo */}
+          <div className="flex items-center space-x-4">
+            <button className="p-2 hover:bg-gray-100 rounded-full">
+              <Bars3Icon className="h-6 w-6 text-gray-600" />
+            </button>
+            <div className="flex items-center space-x-2">
+              <span className="text-xl text-gray-700 font-normal">Gmail</span>
+            </div>
+          </div>
 
-        {/* Account Selector */}
-        <div className="p-4 border-b border-gray-200">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Conta de email
-          </label>
-          <select
-            value={selectedConfig}
-            onChange={(e) => {
-              setSelectedConfig(e.target.value);
-              setPage(1);
-              setSelectedEmail(null);
-            }}
-            className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Selecione uma conta</option>
-            {configurations.map(config => (
-              <option key={config.id} value={config.id}>
-                {config.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          {/* Center: Search Bar */}
+          <div className="flex-1 max-w-2xl mx-8">
+            <div className="relative">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Pesquisar no email"
+                value={searchTerm}
+                onChange={handleSearch}
+                className="w-full pl-10 pr-12 py-3 bg-gray-100 hover:bg-white hover:shadow-md focus:bg-white focus:shadow-md border-0 rounded-full text-base focus:outline-none transition-all"
+              />
+              <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full">
+                <FunnelIcon className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
 
-        {/* Navegação Microsoft Style */}
-        <div className="flex-1 overflow-y-auto">
-          <nav className="p-2">
-            {sidebarNavItems.map((item) => (
+          {/* Right: Settings + User */}
+          <div className="flex items-center space-x-2">
+            <button className="p-2 hover:bg-gray-100 rounded-full">
+              <Cog6ToothIcon className="h-6 w-6 text-gray-600" />
+            </button>
+            <button className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <UserIcon className="h-5 w-5 text-white" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* Gmail Sidebar - Always visible */}
+        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+          {/* Compose Button */}
+          <div className="p-4">
+            <button
+              onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}`)}
+              disabled={!selectedConfig}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-full flex items-center space-x-3 transition-colors shadow-sm hover:shadow-md"
+            >
+              <PencilSquareIcon className="h-5 w-5" />
+              <span className="font-medium">Escrever</span>
+            </button>
+          </div>
+
+          {/* Account Selector */}
+          <div className="px-4 mb-4">
+            <select
+              value={selectedConfig}
+              onChange={(e) => {
+                setSelectedConfig(e.target.value);
+                setPage(1);
+                setSelectedEmail(null);
+                setExpandedView(false);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="">Selecione uma conta</option>
+              {configurations.map(config => (
+                <option key={config.id} value={config.id}>
+                  {config.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Gmail Navigation */}
+          <nav className="px-2 flex-1 overflow-y-auto">
+            {[
+              { id: 'inbox', label: 'Caixa de entrada', icon: EnvelopeIcon, count: emailCounts.inbox },
+              { id: 'starred', label: 'Com estrela', icon: StarIcon, count: 0 },
+              { id: 'snoozed', label: 'Adiados', icon: ClockIcon, count: 0 },
+              { id: 'sent', label: 'Enviados', icon: ArrowPathIcon, count: emailCounts.sent },
+              { id: 'drafts', label: 'Rascunhos', icon: DocumentTextIcon, count: emailCounts.drafts },
+              { id: 'spam', label: 'Spam', icon: ExclamationTriangleIcon, count: emailCounts.spam },
+              { id: 'trash', label: 'Lixeira', icon: TrashIcon, count: emailCounts.trash },
+            ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleTabChange(item.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 flex items-center justify-between transition-colors ${
+                className={`w-full text-left px-4 py-2 rounded-r-full mb-1 flex items-center justify-between transition-colors ${
                   activeTab === item.id
-                    ? 'bg-blue-50 border border-blue-200'
-                    : 'hover:bg-gray-50'
+                    ? 'bg-red-100 text-red-800 font-medium'
+                    : 'hover:bg-gray-100 text-gray-700'
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <span className={item.color}>{item.icon}</span>
-                  <span className={`text-sm font-medium ${
-                    activeTab === item.id ? 'text-blue-700' : 'text-gray-700'
-                  }`}>
-                    {item.label}
-                  </span>
+                <div className="flex items-center space-x-4">
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-sm">{item.label}</span>
                 </div>
                 {item.count > 0 && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    activeTab === item.id
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {item.count}
-                  </span>
+                  <span className="text-sm text-gray-600">{item.count}</span>
                 )}
               </button>
             ))}
+
+            {/* Labels Section */}
+            <div className="px-2 mt-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600 font-medium">Marcadores</span>
+                <button className="text-gray-400 hover:text-gray-600">
+                  <ChevronDownIcon className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-1">
+                {['Importante', 'Trabalho', 'Personal'].map((label) => (
+                  <button
+                    key={label}
+                    className="w-full text-left px-4 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-r-full flex items-center space-x-3"
+                  >
+                    <TagIcon className="h-4 w-4" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </nav>
         </div>
 
-        {/* Footer com info da conta */}
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-              <Mail className="h-4 w-4 text-red-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-700 truncate">Gmail</p>
-              <p className="text-xs text-gray-500 truncate">
-                {selectedConfigData?.email_address || 'Nenhuma conta'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Área principal (Microsoft Layout) */}
-      <div className="flex-1 flex flex-col">
-        {/* Cabeçalho com busca e controles */}
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Pesquisar emails..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Toolbar */}
+          <div className="bg-white border-b border-gray-200 px-4 py-2 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1">
+                {expandedView && (
+                  <button
+                    onClick={handleBackToList}
+                    className="p-2 hover:bg-gray-100 rounded mr-2"
+                    title="Voltar para lista"
+                  >
+                    <ArrowLeftIcon className="h-4 w-4 text-gray-600" />
+                  </button>
+                )}
+                <button className="p-2 hover:bg-gray-100 rounded">
+                  <CheckIcon className="h-4 w-4 text-gray-600" />
+                </button>
+                <button
+                  onClick={handleSync}
+                  disabled={syncing || !selectedConfig}
+                  className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
+                  title="Atualizar"
+                >
+                  <ArrowPathIcon className={`h-4 w-4 text-gray-600 ${syncing ? 'animate-spin' : ''}`} />
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded">
+                  <ArchiveBoxIcon className="h-4 w-4 text-gray-600" />
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded">
+                  <ExclamationTriangleIcon className="h-4 w-4 text-gray-600" />
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded">
+                  <TrashIcon className="h-4 w-4 text-gray-600" />
+                </button>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-3 ml-4">
-              <button
-                onClick={handleSync}
-                disabled={syncing || !selectedConfig}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-                title="Sincronizar"
-              >
-                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              </button>
-              
-              <div className="flex items-center space-x-2">
+
+              <div className="flex items-center space-x-3">
                 <select
                   value={filter}
                   onChange={(e) => {
                     setFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="text-sm border border-gray-300 rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="all">Todos</option>
                   <option value="unread">Não lidos</option>
                   <option value="read">Lidos</option>
                 </select>
+                <span className="text-sm text-gray-500">
+                  1-{emails.length} de {emailCounts.inbox}
+                </span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Conteúdo principal (Lista de emails + Preview) */}
-        <div className="flex-1 flex">
-          {/* Lista de emails (Microsoft Card Style) */}
-          <div className={`${selectedEmail ? 'w-1/3' : 'flex-1'} border-r border-gray-200 bg-white overflow-y-auto`}>
-            {loading && page === 1 ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <RefreshCw className="h-8 w-8 text-blue-500 animate-spin mx-auto mb-2" />
-                  <p className="text-gray-600">Carregando emails...</p>
-                </div>
-              </div>
-            ) : emails.length === 0 ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <Mail className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">
-                    {selectedConfig ? 'Nenhum email encontrado' : 'Selecione uma conta'}
-                  </h3>
-                  <p className="text-gray-500">
-                    {selectedConfig ? 'Tente sincronizar os emails ou verifique os filtros.' : 'Escolha uma conta de email para visualizar as mensagens.'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {emails.map((email) => (
-                  <div
-                    key={email.id}
-                    onClick={() => {
-                      setSelectedEmail(email);
-                      if (!email.is_read) {
-                        markAsRead(email.id);
-                      }
-                    }}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      selectedEmail?.id === email.id
-                        ? 'bg-blue-50 border-r-2 border-blue-500'
-                        : 'hover:bg-gray-50'
-                    } ${!email.is_read ? 'bg-blue-25' : ''}`}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className={`w-3 h-3 rounded-full ${!email.is_read ? 'bg-blue-500' : 'bg-transparent'}`} />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className={`text-sm truncate ${!email.is_read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
-                            {email.from_name || email.from_address}
-                          </h4>
-                          <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                            {formatDate(email.received_date)}
-                          </span>
-                        </div>
-                        
-                        <h5 className={`text-sm mb-1 truncate ${!email.is_read ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
-                          {email.subject || 'Sem assunto'}
-                        </h5>
-                        
-                        <p className="text-xs text-gray-500 line-clamp-2">
-                          {email.text_content?.replace(/\n/g, ' ').substring(0, 100)}...
-                        </p>
-                        
-                        {email.has_attachments && (
-                          <div className="flex items-center mt-2">
-                            <Paperclip className="h-3 w-3 text-gray-400 mr-1" />
-                            <span className="text-xs text-gray-500">Anexo</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Load More */}
-                {emails.length > 0 && emails.length % 20 === 0 && (
-                  <div className="p-4 text-center border-t border-gray-100">
+          {/* Content Area - List and/or Email */}
+          {expandedView && selectedEmail ? (
+            /* Expanded Email View - Full Width */
+            <div className="flex-1 bg-white flex flex-col overflow-hidden">
+              {/* Email Header */}
+              <div className="p-6 border-b border-gray-200 flex-shrink-0">
+                <div className="flex items-start justify-between mb-4">
+                  <h1 className="text-2xl font-normal text-gray-900 flex-1 mr-4 leading-tight">
+                    {selectedEmail.subject || 'Sem assunto'}
+                  </h1>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <button className="p-2 hover:bg-gray-100 rounded">
+                      <StarIcon className="h-5 w-5 text-gray-400" />
+                    </button>
                     <button
-                      onClick={() => setPage(prev => prev + 1)}
-                      disabled={loading}
-                      className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:opacity-50"
+                      onClick={handleBackToList}
+                      className="p-2 hover:bg-gray-100 rounded"
                     >
-                      {loading ? 'Carregando...' : 'Carregar mais emails'}
+                      <XMarkIcon className="h-5 w-5 text-gray-400" />
                     </button>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Visualização do email selecionado (Microsoft Style) */}
-          {selectedEmail && (
-            <div className="flex-1 bg-white flex flex-col">
-              {/* Cabeçalho do email */}
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {selectedEmail.subject || 'Sem assunto'}
-                  </h2>
-                  <button
-                    onClick={() => setSelectedEmail(null)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
                 </div>
                 
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4 flex-1 min-w-0">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-sm font-medium text-red-700">
                         {(selectedEmail.from_name || selectedEmail.from_address).charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900">
                         {selectedEmail.from_name || selectedEmail.from_address}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm text-gray-500">
                         para {selectedConfigData?.email_address}
                       </p>
                     </div>
                   </div>
                   
-                  <div className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-500 flex-shrink-0 ml-4">
                     {new Date(selectedEmail.received_date).toLocaleDateString('pt-BR', {
                       day: 'numeric',
                       month: 'long',
-                      year: 'numeric'
-                    })} às {new Date(selectedEmail.received_date).toLocaleTimeString('pt-BR', {
+                      year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
-                  </div>
+                  </span>
                 </div>
               </div>
               
-              {/* Corpo do email */}
+              {/* Email Content */}
               <div className="flex-1 p-6 overflow-y-auto">
-                <div className="prose prose-sm max-w-none">
+                <div className="prose prose-lg max-w-none">
                   {selectedEmail.html_content ? (
                     <div 
                       dangerouslySetInnerHTML={{ __html: selectedEmail.html_content }}
-                      className="text-gray-700 leading-relaxed"
+                      className="text-gray-700 leading-relaxed break-words"
                     />
                   ) : (
-                    <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    <div className="text-gray-700 whitespace-pre-wrap leading-relaxed break-words">
                       {selectedEmail.text_content || 'Sem conteúdo disponível'}
                     </div>
                   )}
                 </div>
                 
-                {/* Anexos */}
+                {/* Attachments */}
                 {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                      <Paperclip className="h-4 w-4 mr-2" />
+                  <div className="mt-8 pt-8 border-t border-gray-200">
+                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                      <PaperClipIcon className="h-5 w-5 mr-3" />
                       Anexos ({selectedEmail.attachments.length})
                     </h4>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {selectedEmail.attachments.map((attachment, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:shadow-md transition-shadow"
                         >
-                          <div className="flex items-center space-x-3">
-                            <FileText className="h-5 w-5 text-gray-500" />
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <DocumentTextIcon className="h-6 w-6 text-gray-500 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
                                 {attachment.filename}
                               </p>
                               <p className="text-xs text-gray-500">
@@ -628,7 +561,7 @@ const EmailInbox = () => {
                               </p>
                             </div>
                           </div>
-                          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                          <button className="text-blue-600 hover:text-blue-700 font-medium flex-shrink-0 ml-4 px-3 py-1 rounded hover:bg-blue-50 transition-colors">
                             Download
                           </button>
                         </div>
@@ -638,29 +571,253 @@ const EmailInbox = () => {
                 )}
               </div>
               
-              {/* Ações do email (Microsoft Style) */}
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
-                <div className="flex items-center space-x-3">
+              {/* Reply Actions */}
+              <div className="p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+                <div className="flex items-center space-x-4">
                   <button 
                     onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}&reply=${selectedEmail.id}`)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                   >
-                    <Reply className="h-4 w-4" />
-                    <span>Responder</span>
+                    Responder
                   </button>
                   <button 
                     onClick={() => window.open(`mailto:${selectedEmail.from_address}?subject=Fwd: ${selectedEmail.subject}`)}
-                    className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                   >
-                    <Forward className="h-4 w-4" />
-                    <span>Encaminhar</span>
-                  </button>
-                  <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Trash className="h-4 w-4" />
-                    <span>Excluir</span>
+                    Encaminhar
                   </button>
                 </div>
               </div>
+            </div>
+          ) : (
+            /* Email List Container */
+            <div className="flex-1 flex overflow-hidden">
+              {/* Email List */}
+              <div className={`${selectedEmail && !expandedView ? 'w-1/2' : 'w-full'} overflow-y-auto bg-white border-r border-gray-200`}>
+                {loading && page === 1 ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <ArrowPathIcon className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-2" />
+                      <p className="text-gray-600">Carregando emails...</p>
+                    </div>
+                  </div>
+                ) : emails.length === 0 ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <EnvelopeIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-700 mb-2">
+                        {selectedConfig ? 'Nenhum email encontrado' : 'Selecione uma conta'}
+                      </h3>
+                      <p className="text-gray-500">
+                        {selectedConfig ? 'Tente sincronizar os emails ou verifique os filtros.' : 'Escolha uma conta de email para visualizar as mensagens.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {emails.map((email) => (
+                      <div
+                        key={email.id}
+                        onClick={() => handleEmailClick(email)}
+                        className={`px-4 py-3 cursor-pointer transition-colors hover:shadow-sm border-l-4 ${
+                          selectedEmail?.id === email.id && !expandedView
+                            ? 'bg-blue-50 border-l-blue-500'
+                            : !email.is_read
+                            ? 'bg-white border-l-transparent font-medium'
+                            : 'bg-white border-l-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3 w-full">
+                          {/* Checkbox */}
+                          <div className="flex-shrink-0">
+                            <input
+                              type="checkbox"
+                              className="rounded border-gray-300"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          
+                          {/* Star */}
+                          <div className="flex-shrink-0">
+                            <button
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-gray-400 hover:text-yellow-400"
+                            >
+                              <StarIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                          
+                          {/* Sender */}
+                          <div className="w-40 flex-shrink-0">
+                            <span className={`text-sm truncate block ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
+                              {email.from_name || email.from_address}
+                            </span>
+                          </div>
+                          
+                          {/* Subject and Content */}
+                          <div className="flex-1 min-w-0 mr-2">
+                            <div className="flex items-center space-x-2">
+                              <span className={`text-sm ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
+                                {email.subject || 'Sem assunto'}
+                              </span>
+                              <span className="text-gray-500 text-sm flex-shrink-0">-</span>
+                              <span className="text-gray-500 text-sm truncate">
+                                {email.text_content?.replace(/\n/g, ' ').substring(0, 80)}...
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Date and attachments */}
+                          <div className="flex items-center space-x-2 flex-shrink-0">
+                            {email.has_attachments && (
+                              <PaperClipIcon className="h-4 w-4 text-gray-400" />
+                            )}
+                            <span className="text-sm text-gray-500 w-16 text-right">
+                              {formatDate(email.received_date)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Load More */}
+                    {emails.length > 0 && emails.length % 20 === 0 && (
+                      <div className="p-4 text-center">
+                        <button
+                          onClick={() => setPage(prev => prev + 1)}
+                          disabled={loading}
+                          className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:opacity-50"
+                        >
+                          {loading ? 'Carregando...' : 'Carregar mais emails'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Side Email Preview (when not expanded) */}
+              {selectedEmail && !expandedView && (
+                <div className="w-1/2 bg-white flex flex-col overflow-hidden">
+                  {/* Email Header */}
+                  <div className="p-6 border-b border-gray-200 flex-shrink-0">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-normal text-gray-900 truncate mr-4">
+                        {selectedEmail.subject || 'Sem assunto'}
+                      </h2>
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <button 
+                          onClick={() => handleEmailClick(selectedEmail)}
+                          className="p-2 hover:bg-gray-100 rounded"
+                          title="Expandir email"
+                        >
+                          <ArrowPathIcon className="h-4 w-4 text-gray-400 rotate-45" />
+                        </button>
+                        <button className="p-2 hover:bg-gray-100 rounded">
+                          <StarIcon className="h-4 w-4 text-gray-400" />
+                        </button>
+                        <button
+                          onClick={handleBackToList}
+                          className="p-2 hover:bg-gray-100 rounded"
+                        >
+                          <XMarkIcon className="h-4 w-4 text-gray-400" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-medium text-red-700">
+                            {(selectedEmail.from_name || selectedEmail.from_address).charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {selectedEmail.from_name || selectedEmail.from_address}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            para {selectedConfigData?.email_address}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <span className="text-xs text-gray-500 flex-shrink-0 ml-4">
+                        {new Date(selectedEmail.received_date).toLocaleDateString('pt-BR', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Email Content */}
+                  <div className="flex-1 p-4 overflow-y-auto">
+                    <div className="prose prose-sm max-w-none">
+                      {selectedEmail.html_content ? (
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: selectedEmail.html_content }}
+                          className="text-gray-700 leading-relaxed break-words text-sm"
+                        />
+                      ) : (
+                        <div className="text-gray-700 whitespace-pre-wrap leading-relaxed break-words text-sm">
+                          {selectedEmail.text_content || 'Sem conteúdo disponível'}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Attachments */}
+                    {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
+                          <PaperClipIcon className="h-3 w-3 mr-1" />
+                          Anexos ({selectedEmail.attachments.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedEmail.attachments.map((attachment, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs"
+                            >
+                              <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                <DocumentTextIcon className="h-3 w-3 text-gray-500 flex-shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium text-gray-900 truncate">
+                                    {attachment.filename}
+                                  </p>
+                                </div>
+                              </div>
+                              <button className="text-blue-600 hover:text-blue-700 font-medium flex-shrink-0 ml-2">
+                                Download
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Reply Actions */}
+                  <div className="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}&reply=${selectedEmail.id}`)}
+                        className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        Responder
+                      </button>
+                      <button 
+                        onClick={() => window.open(`mailto:${selectedEmail.from_address}?subject=Fwd: ${selectedEmail.subject}`)}
+                        className="px-3 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm"
+                      >
+                        Encaminhar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

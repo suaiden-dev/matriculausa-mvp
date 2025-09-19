@@ -539,17 +539,6 @@ const EmailManagement = () => {
                   </div>
                 )}
               </div>
-
-              <div className="flex items-center space-x-3">
-                <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
-                  <EnvelopeIcon className="w-5 h-5 mr-2" />
-                  {configurations.length} Total
-                </div>
-                <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm">
-                  <CheckCircleIcon className="w-5 h-5 mr-2" />
-                  {configurations.filter(c => c.is_active).length} Active
-                </div>
-              </div>
             </div>
 
             {/* Actions Row */}
