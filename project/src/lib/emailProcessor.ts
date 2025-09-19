@@ -34,14 +34,23 @@ export class EmailProcessor {
         console.log('EmailProcessor - Nenhum email encontrado, retornando array vazio');
         return [];
       }
+
+      // Buscar emails já processados do banco de dados
+      const processedEmailsFromDB = await this.getProcessedEmailsFromDB();
+      const processedMessageIds = new Set(processedEmailsFromDB.map(pe => pe.microsoft_message_id));
+      console.log(`EmailProcessor - Emails já processados no banco: ${processedMessageIds.size}`);
+      
+      // Filtrar apenas emails não processados
+      const unprocessedEmails = newEmails.filter(email => !processedMessageIds.has(email.id));
+      console.log(`EmailProcessor - Emails novos para processar: ${unprocessedEmails.length}`);
       
       const processedEmails: ProcessedEmail[] = [];
       
-      for (const email of newEmails) {
+      for (const email of unprocessedEmails) {
         try {
-          // Verificar se já foi processado
+          // Verificar se já foi processado na memória (dupla verificação)
           if (this.processedEmails.has(email.id)) {
-            console.log(`EmailProcessor - Email ${email.id} já foi processado, pulando...`);
+            console.log(`EmailProcessor - Email ${email.id} já foi processado na memória, pulando...`);
             continue;
           }
 
@@ -156,9 +165,40 @@ export class EmailProcessor {
     this.processedEmails.clear();
   }
 
+  async getProcessedEmailsFromDB(): Promise<{microsoft_message_id: string, status: string, processed_at: string}[]> {
+    try {
+      // Fazer requisição para a Edge Function para buscar emails processados
+      const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-email-polling', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpdHB5bmd1YXNxcXV0dWh6aWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0ODM4NTcsImV4cCI6MjA2NTA1OTg1N30.bSm1LTOZ-GUuglbc14X2mcg0Z7cx93ubZq40hRDERQg',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'get_processed_emails',
+          user_id: 'current_user' // Será substituído pelo userId real quando disponível
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Erro ao buscar emails processados:', response.status);
+        return [];
+      }
+
+      const data = await response.json();
+      return data.processed_emails || [];
+    } catch (error) {
+      console.error('Erro ao buscar emails processados do banco:', error);
+      return [];
+    }
+  }
+
   private async processEmailWithAI(email: any): Promise<{ analysis: any; response?: string }> {
     try {
       console.log('EmailProcessor - Chamando Edge Function para processar email com IA');
+      
+      // Obter usuário atual para enviar user_id
+      const { data: { user } } = await supabase.auth.getUser();
       
       const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-email-polling', {
         method: 'POST',
@@ -173,7 +213,8 @@ export class EmailProcessor {
             from: email.from?.emailAddress?.address,
             bodyPreview: email.bodyPreview,
             body: email.body?.content || email.bodyPreview
-          }
+          },
+          user_id: user?.id // Incluir user_id para buscar prompt da universidade
         })
       });
 
