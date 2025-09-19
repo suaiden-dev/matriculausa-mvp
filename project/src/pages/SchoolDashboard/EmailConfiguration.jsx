@@ -496,18 +496,7 @@ const EmailConfigurationContent = () => {
                   <span className="w-2 h-2 bg-blue-600 rounded-full mr-2"></span>
                   Setup Mode
                 </div>
-                {provider && (
-                  <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium shadow-sm ${
-                    provider === 'microsoft' 
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    <span className="text-xs mr-2">
-                      {provider === 'microsoft' ? 'M' : 'G'}
-                    </span>
-                    {provider === 'microsoft' ? 'Microsoft' : 'Gmail'}
-                  </div>
-                )}
+                
               </div>
             </div>
           </div>
@@ -949,18 +938,18 @@ const EmailConfigurationContent = () => {
               </div>
 
               {provider === 'gmail' ? (
-                <div className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="space-y-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                      <div className="bg-gray-200 text-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
                         1
                       </div>
                       <div>
-                        <h4 className="font-medium text-blue-900 mb-2">First: Enable 2-step verification</h4>
-                        <p className="text-sm text-blue-800 mb-3">
+                        <h4 className="font-medium text-gray-900 mb-2">First: Enable 2-step verification</h4>
+                        <p className="text-sm text-gray-700 mb-3">
                           2-step verification must be active to create app passwords.
                         </p>
-                        <div className="bg-white rounded-lg p-3 border border-blue-200">
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
                           <p className="text-sm text-gray-700 mb-2"><strong>Access:</strong></p>
                           <code className="bg-gray-100 px-2 py-1 rounded text-sm">myaccount.google.com</code>
                           <p className="text-sm text-gray-700 mt-2">
@@ -973,17 +962,17 @@ const EmailConfigurationContent = () => {
                     </div>
                   </div>
 
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="bg-green-100 text-green-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                      <div className="bg-gray-200 text-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
                         2
                       </div>
                       <div>
-                        <h4 className="font-medium text-green-900 mb-2">Second: Create app password</h4>
-                        <p className="text-sm text-green-800 mb-3">
+                        <h4 className="font-medium text-gray-900 mb-2">Second: Create app password</h4>
+                        <p className="text-sm text-gray-700 mb-3">
                           Now you can generate a specific password for this system.
                         </p>
-                        <div className="bg-white rounded-lg p-3 border border-green-200">
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
                           <p className="text-sm text-gray-700 mb-2">
                             <strong>On the same Security page:</strong>
                           </p>
@@ -998,17 +987,17 @@ const EmailConfigurationContent = () => {
                     </div>
                   </div>
 
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                      <div className="bg-gray-200 text-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
                         3
                       </div>
                       <div>
-                        <h4 className="font-medium text-purple-900 mb-2">Third: Copy the password</h4>
-                        <p className="text-sm text-purple-800 mb-3">
+                        <h4 className="font-medium text-gray-900 mb-2">Third: Copy the password</h4>
+                        <p className="text-sm text-gray-700 mb-3">
                           Google will show a 16-character password (with spaces).
                         </p>
-                        <div className="bg-white rounded-lg p-3 border border-purple-200">
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
                           <p className="text-sm text-gray-700 mb-2">
                             <strong>Example of generated password:</strong>
                           </p>
@@ -1025,15 +1014,15 @@ const EmailConfigurationContent = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="space-y-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                      <div className="bg-gray-200 text-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
                         1
                       </div>
                       <div>
-                        <h4 className="font-medium text-blue-900 mb-2">First: Access your Yahoo account</h4>
-                        <div className="bg-white rounded-lg p-3 border border-blue-200">
+                        <h4 className="font-medium text-gray-900 mb-2">First: Access your Yahoo account</h4>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
                           <p className="text-sm text-gray-700 mb-2"><strong>Access:</strong></p>
                           <code className="bg-gray-100 px-2 py-1 rounded text-sm">account.yahoo.com</code>
                           <p className="text-sm text-gray-700 mt-2">
@@ -1045,14 +1034,14 @@ const EmailConfigurationContent = () => {
                     </div>
                   </div>
 
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="bg-green-100 text-green-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                      <div className="bg-gray-200 text-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
                         2
                       </div>
                       <div>
-                        <h4 className="font-medium text-green-900 mb-2">Second: Generate app password</h4>
-                        <div className="bg-white rounded-lg p-3 border border-green-200">
+                        <h4 className="font-medium text-gray-900 mb-2">Second: Generate app password</h4>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
                           <p className="text-sm text-gray-700">
                             → Look for <strong>"Generate app password"</strong><br/>
                             → Click on <strong>"Generate app password"</strong><br/>
@@ -1064,14 +1053,14 @@ const EmailConfigurationContent = () => {
                     </div>
                   </div>
 
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
-                      <div className="bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
+                      <div className="bg-gray-200 text-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold">
                         3
                       </div>
                       <div>
-                        <h4 className="font-medium text-purple-900 mb-2">Third: Use the generated password</h4>
-                        <div className="bg-white rounded-lg p-3 border border-purple-200">
+                        <h4 className="font-medium text-gray-900 mb-2">Third: Use the generated password</h4>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
                           <p className="text-sm text-gray-700 mb-2">
                             <strong>Yahoo will show a unique password:</strong>
                           </p>
@@ -1089,7 +1078,7 @@ const EmailConfigurationContent = () => {
 
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-6">
                 <div className="flex items-start space-x-2">
-                  <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <ExclamationTriangleIcon className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-gray-900 mb-1">Important tips:</p>
                     <ul className="text-sm text-gray-700 space-y-1">
