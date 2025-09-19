@@ -671,7 +671,7 @@ const EmailInbox = () => {
             <button
               onClick={() => navigate('/school/dashboard/email')}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              title="Voltar para Email Management"
+                  title="Back to Email Management"
             >
               <ArrowUturnLeftIcon className="h-5 w-5 text-gray-600" />
             </button>
@@ -680,7 +680,7 @@ const EmailInbox = () => {
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
-              title="Abrir menu"
+              title="Open menu"
             >
               <Bars3Icon className="h-5 w-5 text-gray-600" />
             </button>
@@ -696,7 +696,7 @@ const EmailInbox = () => {
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Pesquisar no email"
+                placeholder="Search in email"
                 value={searchTerm}
                 onChange={handleSearch}
                 className="w-full pl-10 pr-12 py-3 bg-gray-100 hover:bg-white hover:shadow-md focus:bg-white focus:shadow-md border-0 rounded-full text-base focus:outline-none transition-all"
@@ -732,7 +732,7 @@ const EmailInbox = () => {
             <button
               onClick={() => setSidebarOpen(false)}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              title="Fechar menu"
+              title="Close menu"
             >
               <XMarkIcon className="h-5 w-5 text-gray-600" />
             </button>
@@ -746,7 +746,7 @@ const EmailInbox = () => {
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-full flex items-center space-x-3 transition-colors shadow-sm hover:shadow-md"
             >
               <PencilSquareIcon className="h-5 w-5" />
-              <span className="font-medium">Escrever</span>
+              <span className="font-medium">Compose</span>
             </button>
           </div>
 
@@ -762,7 +762,7 @@ const EmailInbox = () => {
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
             >
-              <option value="">Selecione uma conta</option>
+              <option value="">Select an account</option>
               {configurations.map(config => (
                 <option key={config.id} value={config.id}>
                   {config.name}
@@ -774,12 +774,12 @@ const EmailInbox = () => {
           {/* Gmail Navigation */}
           <nav className="px-2 flex-1 overflow-y-auto">
             {[
-              { id: 'inbox', label: 'Caixa de entrada', icon: EnvelopeIcon, count: emailCounts.inbox },
-              { id: 'starred', label: 'Com estrela', icon: StarIcon, count: emailCounts.starred },
-              { id: 'sent', label: 'Enviados', icon: ArrowPathIcon, count: emailCounts.sent },
-              { id: 'archive', label: 'Arquivo', icon: ArchiveBoxIcon, count: emailCounts.archive },
+              { id: 'inbox', label: 'Inbox', icon: EnvelopeIcon, count: emailCounts.inbox },
+              { id: 'starred', label: 'Starred', icon: StarIcon, count: emailCounts.starred },
+              { id: 'sent', label: 'Sent', icon: ArrowPathIcon, count: emailCounts.sent },
+              { id: 'archive', label: 'Archive', icon: ArchiveBoxIcon, count: emailCounts.archive },
               { id: 'spam', label: 'Spam', icon: ExclamationTriangleIcon, count: emailCounts.spam },
-              { id: 'trash', label: 'Lixeira', icon: TrashIcon, count: emailCounts.trash },
+              { id: 'trash', label: 'Trash', icon: TrashIcon, count: emailCounts.trash },
             ].map((item) => (
               <button
                 key={item.id}
@@ -814,7 +814,7 @@ const EmailInbox = () => {
                   <button
                     onClick={handleBackToList}
                     className="p-2 hover:bg-gray-100 rounded mr-2"
-                    title="Voltar para lista"
+                          title="Back to list"
                   >
                     <ArrowLeftIcon className="h-4 w-4 text-gray-600" />
                   </button>
@@ -822,7 +822,7 @@ const EmailInbox = () => {
                 <button 
                   onClick={() => handleSelectAll(!selectAll)}
                   className="p-2 hover:bg-gray-100 rounded"
-                  title={selectAll ? "Desmarcar todos" : "Marcar todos"}
+                  title={selectAll ? "Unselect all" : "Select all"}
                 >
                   <CheckIcon className="h-4 w-4 text-gray-600" />
                 </button>
@@ -830,7 +830,7 @@ const EmailInbox = () => {
                   onClick={handleSync}
                   disabled={syncing || !selectedConfig}
                   className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
-                  title="Atualizar"
+                  title="Refresh"
                 >
                   <ArrowPathIcon className={`h-4 w-4 text-gray-600 ${syncing ? 'animate-spin' : ''}`} />
                 </button>
@@ -838,7 +838,7 @@ const EmailInbox = () => {
                   onClick={() => handleArchiveEmails()}
                   disabled={selectedEmails.size === 0}
                   className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
-                  title="Arquivar emails selecionados"
+                  title="Archive selected emails"
                 >
                   <ArchiveBoxIcon className="h-4 w-4 text-gray-600" />
                 </button>
@@ -846,7 +846,7 @@ const EmailInbox = () => {
                   onClick={() => handleMarkAsSpam()}
                   disabled={selectedEmails.size === 0}
                   className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
-                  title="Marcar como spam"
+                  title="Mark as spam"
                 >
                   <ExclamationTriangleIcon className="h-4 w-4 text-gray-600" />
                 </button>
@@ -854,7 +854,7 @@ const EmailInbox = () => {
                   onClick={() => handleDeleteEmails()}
                   disabled={selectedEmails.size === 0}
                   className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
-                  title="Excluir emails selecionados"
+                  title="Delete selected emails"
                 >
                   <TrashIcon className="h-4 w-4 text-gray-600" />
                 </button>
@@ -863,7 +863,7 @@ const EmailInbox = () => {
               <div className="flex items-center space-x-3">
                 {selectedEmails.size > 0 && (
                   <span className="text-sm text-blue-600 font-medium">
-                    {selectedEmails.size} selecionado{selectedEmails.size > 1 ? 's' : ''}
+                    {selectedEmails.size} selected
                   </span>
                 )}
                 <select
@@ -874,12 +874,12 @@ const EmailInbox = () => {
                   }}
                   className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="all">Todos</option>
-                  <option value="unread">Não lidos</option>
-                  <option value="read">Lidos</option>
+                  <option value="all">All</option>
+                  <option value="unread">Unread</option>
+                  <option value="read">Read</option>
                 </select>
                 <span className="text-sm text-gray-500">
-                  1-{filteredEmails.length} de {emailCounts[activeTab] || 0}
+                  1-{filteredEmails.length} of {emailCounts[activeTab] || 0}
                 </span>
               </div>
             </div>
@@ -893,7 +893,7 @@ const EmailInbox = () => {
               <div className="p-6 border-b border-gray-200 flex-shrink-0">
                 <div className="flex items-start justify-between mb-4">
                   <h1 className="text-2xl font-normal text-gray-900 flex-1 mr-4 leading-tight">
-                    {selectedEmail.subject || 'Sem assunto'}
+                    {selectedEmail.subject || 'No subject'}
                   </h1>
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     <button className="p-2 hover:bg-gray-100 rounded">
@@ -918,14 +918,14 @@ const EmailInbox = () => {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900">
                         {activeTab === 'sent' 
-                          ? (selectedEmail.to_display || 'Destinatário não especificado')
+                          ? (selectedEmail.to_display || 'Recipient not specified')
                           : (selectedEmail.from_name || selectedEmail.from_address)
                         }
                       </p>
                       <p className="text-sm text-gray-500">
                         {activeTab === 'sent' 
-                          ? `de ${selectedConfigData?.email_address}`
-                          : `para ${selectedConfigData?.email_address}`
+                          ? `from ${selectedConfigData?.email_address}`
+                          : `to ${selectedConfigData?.email_address}`
                         }
                       </p>
                     </div>
@@ -953,7 +953,7 @@ const EmailInbox = () => {
                     />
                   ) : (
                     <div className="text-gray-700 whitespace-pre-wrap leading-relaxed break-words">
-                      {selectedEmail.text_content || 'Sem conteúdo disponível'}
+                      {selectedEmail.text_content || 'No content available'}
                     </div>
                   )}
                 </div>
@@ -963,7 +963,7 @@ const EmailInbox = () => {
                   <div className="mt-8 pt-8 border-t border-gray-200">
                     <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                       <PaperClipIcon className="h-5 w-5 mr-3" />
-                      Anexos ({selectedEmail.attachments.length})
+                      Attachments ({selectedEmail.attachments.length})
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {selectedEmail.attachments.map((attachment, index) => (
@@ -978,7 +978,7 @@ const EmailInbox = () => {
                                 {attachment.filename}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {attachment.size ? `${(attachment.size / 1024).toFixed(1)} KB` : 'Tamanho desconhecido'}
+                                {attachment.size ? `${(attachment.size / 1024).toFixed(1)} KB` : 'Unknown size'}
                               </p>
                             </div>
                           </div>
@@ -999,13 +999,13 @@ const EmailInbox = () => {
                     onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}&reply=${selectedEmail.id}`)}
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                   >
-                    Responder
+                    Reply
                   </button>
                   <button 
                     onClick={() => window.open(`mailto:${selectedEmail.from_address}?subject=Fwd: ${selectedEmail.subject}`)}
                     className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                   >
-                    Encaminhar
+                    Forward
                   </button>
                 </div>
               </div>
@@ -1019,7 +1019,7 @@ const EmailInbox = () => {
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
                       <ArrowPathIcon className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-2" />
-                      <p className="text-gray-600">Carregando emails...</p>
+                      <p className="text-gray-600">Loading emails...</p>
                     </div>
                   </div>
                 ) : filteredEmails.length === 0 ? (
@@ -1027,10 +1027,10 @@ const EmailInbox = () => {
                     <div className="text-center">
                       <EnvelopeIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-700 mb-2">
-                        {searchTerm ? 'Nenhum email encontrado para esta pesquisa' : selectedConfig ? 'Nenhum email encontrado' : 'Selecione uma conta'}
+                        {searchTerm ? 'No emails found for this search' : selectedConfig ? 'No emails found' : 'Select an account'}
                       </h3>
                       <p className="text-gray-500">
-                        {searchTerm ? 'Tente pesquisar com outros termos.' : selectedConfig ? 'Tente sincronizar os emails ou verifique os filtros.' : 'Escolha uma conta de email para visualizar as mensagens.'}
+                        {searchTerm ? 'Try searching with other terms.' : selectedConfig ? 'Try syncing emails or check the filters.' : 'Choose an email account to view messages.'}
                       </p>
                     </div>
                   </div>
@@ -1098,10 +1098,10 @@ const EmailInbox = () => {
                               {/* Sender/Recipient - Mobile */}
                               <div className="flex-1 min-w-0">
                                 <span className={`text-sm truncate block ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
-                                  {activeTab === 'sent' 
-                                    ? (email.to_display || 'Destinatário não especificado')
-                                    : (email.from_name || email.from_address)
-                                  }
+                                {activeTab === 'sent' 
+                                  ? (email.to_display || 'Recipient not specified')
+                                  : (email.from_name || email.from_address)
+                                }
                                 </span>
                               </div>
                               
@@ -1119,7 +1119,7 @@ const EmailInbox = () => {
                             {/* Subject and Content - Mobile */}
                             <div className="space-y-1">
                               <div className={`text-sm ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'} line-clamp-1`}>
-                                {email.subject || 'Sem assunto'}
+                                {email.subject || 'No subject'}
                               </div>
                               <div className="text-gray-500 text-xs line-clamp-2">
                                 {email.text_content?.replace(/\n/g, ' ').substring(0, 100)}...
@@ -1141,10 +1141,10 @@ const EmailInbox = () => {
                           {loadingMore ? (
                             <>
                               <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                              Carregando...
+                              Loading...
                             </>
                           ) : (
-                            'Carregar mais emails'
+                            'Load more emails'
                           )}
                         </button>
                       </div>
@@ -1160,13 +1160,13 @@ const EmailInbox = () => {
                   <div className="p-6 border-b border-gray-200 flex-shrink-0">
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-lg font-normal text-gray-900 truncate mr-4">
-                        {selectedEmail.subject || 'Sem assunto'}
+                        {selectedEmail.subject || 'No subject'}
                       </h2>
                       <div className="flex items-center space-x-2 flex-shrink-0">
                         <button 
                           onClick={() => handleEmailClick(selectedEmail)}
                           className="p-2 hover:bg-gray-100 rounded"
-                          title="Expandir email"
+                          title="Expand email"
                         >
                           <ArrowPathIcon className="h-4 w-4 text-gray-400 rotate-45" />
                         </button>
@@ -1192,14 +1192,14 @@ const EmailInbox = () => {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {activeTab === 'sent' 
-                              ? (selectedEmail.to_display || 'Destinatário não especificado')
+                              ? (selectedEmail.to_display || 'Recipient not specified')
                               : (selectedEmail.from_name || selectedEmail.from_address)
                             }
                           </p>
                           <p className="text-xs text-gray-500 truncate">
                             {activeTab === 'sent' 
-                              ? `de ${selectedConfigData?.email_address}`
-                              : `para ${selectedConfigData?.email_address}`
+                              ? `from ${selectedConfigData?.email_address}`
+                              : `to ${selectedConfigData?.email_address}`
                             }
                           </p>
                         </div>
@@ -1226,7 +1226,7 @@ const EmailInbox = () => {
                         />
                       ) : (
                         <div className="text-gray-700 whitespace-pre-wrap leading-relaxed break-words text-sm">
-                          {selectedEmail.text_content || 'Sem conteúdo disponível'}
+                          {selectedEmail.text_content || 'No content available'}
                         </div>
                       )}
                     </div>
@@ -1236,7 +1236,7 @@ const EmailInbox = () => {
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
                           <PaperClipIcon className="h-3 w-3 mr-1" />
-                          Anexos ({selectedEmail.attachments.length})
+                          Attachments ({selectedEmail.attachments.length})
                         </h4>
                         <div className="space-y-2">
                           {selectedEmail.attachments.map((attachment, index) => (
@@ -1269,13 +1269,13 @@ const EmailInbox = () => {
                         onClick={() => navigate(`/school/dashboard/email/compose?config=${selectedConfig}&reply=${selectedEmail.id}`)}
                         className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
                       >
-                        Responder
+                        Reply
                       </button>
                       <button 
                         onClick={() => window.open(`mailto:${selectedEmail.from_address}?subject=Fwd: ${selectedEmail.subject}`)}
                         className="px-3 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm"
                       >
-                        Encaminhar
+                        Forward
                       </button>
                     </div>
                   </div>
