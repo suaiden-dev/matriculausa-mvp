@@ -618,11 +618,11 @@ const EmailCompose = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-3 sm:p-6">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <button
                 onClick={() => navigate('/school/dashboard/email/inbox')}
                 className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
@@ -630,20 +630,20 @@ const EmailCompose = () => {
                 ←
               </button>
               
-              <div>
-                <h1 className="text-2xl font-semibold text-slate-900">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
                   {originalEmail ? 'Reply' : 'New Message'}
                 </h1>
                 {selectedConfigData && (
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1 truncate">
                     From: {selectedConfigData.name} ({selectedConfigData.email_address})
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Account Selector - Moved to header for better UX */}
-            <div className="min-w-64">
+            {/* Account Selector - Responsive */}
+            <div className="w-full sm:min-w-64 sm:w-auto">
               <select
                 value={selectedConfig}
                 onChange={(e) => setSelectedConfig(e.target.value)}
@@ -663,14 +663,16 @@ const EmailCompose = () => {
 
         {/* Original Email Preview - Compact */}
         {originalEmail && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="text-sm min-w-0">
                 <span className="font-medium text-blue-900">Replying to:</span>
-                <span className="text-blue-700 ml-2">{originalEmail.from_name || originalEmail.from_address}</span>
-                <span className="text-blue-600 ml-2">• {originalEmail.subject}</span>
+                <div className="mt-1 sm:mt-0 sm:inline">
+                  <span className="text-blue-700 sm:ml-2 block sm:inline">{originalEmail.from_name || originalEmail.from_address}</span>
+                  <span className="text-blue-600 sm:ml-2 block sm:inline">• {originalEmail.subject}</span>
+                </div>
               </div>
-              <span className="text-xs text-blue-600">
+              <span className="text-xs text-blue-600 flex-shrink-0">
                 {new Date(originalEmail.received_date).toLocaleDateString()}
               </span>
             </div>
@@ -681,11 +683,11 @@ const EmailCompose = () => {
         <form onSubmit={handleSubmit}>
           <div className="bg-white rounded-lg shadow-sm border border-slate-200">
             {/* Email Headers - Compact Layout */}
-            <div className="p-6 border-b border-slate-200 space-y-4">
+            <div className="p-4 sm:p-6 border-b border-slate-200 space-y-4">
               {/* Recipients Row */}
-              <div className="grid grid-cols-12 gap-4 items-start">
-                <label className="col-span-2 text-sm font-medium text-slate-700 pt-2">To</label>
-                <div className="col-span-10">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                <label className="sm:col-span-2 text-sm font-medium text-slate-700 pt-2">To</label>
+                <div className="sm:col-span-10">
                   {formData.to_addresses.map((email, index) => (
                     <div key={index} className="flex gap-2 mb-2">
                       <input
@@ -718,17 +720,17 @@ const EmailCompose = () => {
               </div>
 
               {/* CC/BCC Toggle */}
-              <div className="grid grid-cols-12 gap-4">
-                <div className="col-span-2"></div>
-                <div className="col-span-10">
-                  <div className="flex gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4">
+                <div className="sm:col-span-2"></div>
+                <div className="sm:col-span-10">
+                  <div className="flex flex-wrap gap-3 sm:gap-4">
                     {formData.cc_addresses.length === 0 && (
                       <button
                         type="button"
                         onClick={() => {
                           setFormData(prev => ({ ...prev, cc_addresses: [''] }));
                         }}
-                        className="text-sm text-slate-600 hover:text-slate-800"
+                        className="text-sm text-slate-600 hover:text-slate-800 px-2 py-1 rounded hover:bg-slate-100"
                       >
                         + CC
                       </button>
@@ -739,7 +741,7 @@ const EmailCompose = () => {
                         onClick={() => {
                           setFormData(prev => ({ ...prev, bcc_addresses: [''] }));
                         }}
-                        className="text-sm text-slate-600 hover:text-slate-800"
+                        className="text-sm text-slate-600 hover:text-slate-800 px-2 py-1 rounded hover:bg-slate-100"
                       >
                         + BCC
                       </button>
@@ -750,9 +752,9 @@ const EmailCompose = () => {
 
               {/* CC Fields - Show only if populated */}
               {formData.cc_addresses.length > 0 && (
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-2 text-sm font-medium text-slate-700 pt-2">CC</label>
-                  <div className="col-span-10">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-2 text-sm font-medium text-slate-700 pt-2">CC</label>
+                  <div className="sm:col-span-10">
                     {formData.cc_addresses.map((email, index) => (
                       <div key={index} className="flex gap-2 mb-2">
                         <input
@@ -784,9 +786,9 @@ const EmailCompose = () => {
 
               {/* BCC Fields - Show only if populated */}
               {formData.bcc_addresses.length > 0 && (
-                <div className="grid grid-cols-12 gap-4 items-start">
-                  <label className="col-span-2 text-sm font-medium text-slate-700 pt-2">BCC</label>
-                  <div className="col-span-10">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-start">
+                  <label className="sm:col-span-2 text-sm font-medium text-slate-700 pt-2">BCC</label>
+                  <div className="sm:col-span-10">
                     {formData.bcc_addresses.map((email, index) => (
                       <div key={index} className="flex gap-2 mb-2">
                         <input
@@ -817,9 +819,9 @@ const EmailCompose = () => {
               )}
 
               {/* Subject */}
-              <div className="grid grid-cols-12 gap-4">
-                <label className="col-span-2 text-sm font-medium text-slate-700 pt-2">Subject</label>
-                <div className="col-span-10">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4">
+                <label className="sm:col-span-2 text-sm font-medium text-slate-700 pt-2">Subject</label>
+                <div className="sm:col-span-10">
                   <input
                     type="text"
                     name="subject"
@@ -833,14 +835,14 @@ const EmailCompose = () => {
             </div>
 
             {/* Message Content */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <textarea
                 name="text_content"
                 value={formData.text_content}
                 onChange={handleChange}
-                rows={15}
+                rows={12}
                 placeholder="Type your message here..."
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y text-sm sm:text-base"
                 required
               />
               
@@ -865,13 +867,13 @@ const EmailCompose = () => {
             </div>
 
             {/* Action Bar */}
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 bg-slate-50 rounded-b-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                   <button
                     type="submit"
                     disabled={loading || !selectedConfig}
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg transition-colors disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg transition-colors disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     {loading ? 'Sending...' : 'Send'}
                   </button>
@@ -879,13 +881,13 @@ const EmailCompose = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/school/dashboard/email/inbox')}
-                    className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors text-sm sm:text-base"
                   >
                     Cancel
                   </button>
                 </div>
 
-                <div className="text-sm text-slate-500">
+                <div className="text-xs sm:text-sm text-slate-500 text-center sm:text-right">
                   {formData.text_content.length} characters
                 </div>
               </div>
@@ -895,38 +897,38 @@ const EmailCompose = () => {
 
         {/* Original Email Content - Collapsible */}
         {originalEmail && (
-          <div className="mt-6 bg-white rounded-lg shadow-sm border border-slate-200">
+          <div className="mt-4 sm:mt-6 bg-white rounded-lg shadow-sm border border-slate-200">
             <details className="group">
-              <summary className="cursor-pointer p-4 border-b border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <summary className="cursor-pointer p-3 sm:p-4 border-b border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 Show original message
               </summary>
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {/* Email Header */}
-                <div className="mb-6 pb-4 border-b border-slate-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-normal text-gray-900">
+                <div className="mb-4 sm:mb-6 pb-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <h3 className="text-base sm:text-lg font-normal text-gray-900 break-words">
                       {originalEmail.subject || 'No subject'}
                     </h3>
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-medium text-blue-700">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs sm:text-sm font-medium text-blue-700">
                           {(originalEmail.from_name || originalEmail.from_address).charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
                           {originalEmail.from_name || originalEmail.from_address}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-500 truncate">
                           {originalEmail.from_address}
                         </p>
                       </div>
                     </div>
                     
-                    <span className="text-sm text-gray-500 flex-shrink-0 ml-4">
+                    <span className="text-xs sm:text-sm text-gray-500 flex-shrink-0 sm:ml-4">
                       {new Date(originalEmail.received_date).toLocaleDateString('en-US', {
                         day: 'numeric',
                         month: 'short',
@@ -954,7 +956,7 @@ const EmailCompose = () => {
                 
                 {/* Attachments */}
                 {originalEmail.attachments && originalEmail.attachments.length > 0 && (
-                  <div className="mt-6 pt-4 border-t border-slate-200">
+                  <div className="mt-4 sm:mt-6 pt-4 border-t border-slate-200">
                     <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                       <PaperClipIcon className="h-4 w-4 mr-2" />
                       Attachments ({originalEmail.attachments.length})
@@ -963,10 +965,10 @@ const EmailCompose = () => {
                       {originalEmail.attachments.map((attachment, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-3 bg-slate-50 rounded border"
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 rounded border gap-2 sm:gap-0"
                         >
                           <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            <DocumentTextIcon className="h-5 w-5 text-slate-500 flex-shrink-0" />
+                            <DocumentTextIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500 flex-shrink-0" />
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-900 truncate">
                                 {attachment.filename}
@@ -976,7 +978,7 @@ const EmailCompose = () => {
                               </p>
                             </div>
                           </div>
-                          <button className="text-blue-600 hover:text-blue-700 font-medium flex-shrink-0 ml-3 text-sm">
+                          <button className="text-blue-600 hover:text-blue-700 font-medium flex-shrink-0 text-sm px-2 py-1 rounded hover:bg-blue-50">
                             Download
                           </button>
                         </div>
