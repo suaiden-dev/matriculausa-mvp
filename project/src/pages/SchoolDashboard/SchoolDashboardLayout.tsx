@@ -572,8 +572,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className={`pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full overflow-y-hidden ${location.pathname.includes('/inbox') ? 'bg-white' : ''}`}>
-          <div className={`max-w-7xl ${location.pathname.includes('/inbox') ? 'mx-0' : 'mx-auto'}`}>
+        <main className={`pt-10 ${location.pathname.includes('/inbox') ? 'px-0 pb-0' : 'px-4 sm:px-6 lg:px-8 pb-6'} max-w-full overflow-y-hidden ${location.pathname.includes('/inbox') ? 'bg-white' : ''}`}>
+          <div className={`${location.pathname.includes('/inbox') ? 'max-w-none mx-1 pt-4 px-0' : 'max-w-7xl mx-auto'}`}>
             {/* Welcome Message for Incomplete Profiles */}
             {(!university || !university.profile_completed) && !location.pathname.includes('/profile') && (
               <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">

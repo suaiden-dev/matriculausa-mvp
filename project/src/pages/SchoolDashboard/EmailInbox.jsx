@@ -23,7 +23,8 @@ import {
   ArchiveBoxIcon,
   ExclamationTriangleIcon,
   DocumentTextIcon,
-  PaperClipIcon
+  PaperClipIcon,
+  ArrowUturnLeftIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { format } from 'date-fns';
@@ -47,6 +48,11 @@ const EmailInbox = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [emailCounts, setEmailCounts] = useState({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
   const [activeTab, setActiveTab] = useState('inbox');
+  const [selectedEmails, setSelectedEmails] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [hasMoreEmails, setHasMoreEmails] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     loadConfigurations();
@@ -58,7 +64,14 @@ const EmailInbox = () => {
       // Atualizar contadores quando carregar emails
       updateEmailCounts();
     }
-  }, [selectedConfig, filter, page]);
+  }, [selectedConfig, filter, activeTab]);
+
+  // Separar useEffect para page para evitar loops
+  useEffect(() => {
+    if (selectedConfig && page > 1) {
+      loadEmails(true);
+    }
+  }, [page]);
 
   const loadConfigurations = async () => {
     try {
@@ -70,6 +83,8 @@ const EmailInbox = () => {
         console.error('❌ Erro de autenticação:', authError);
         throw new Error('Usuário não autenticado');
       }
+
+      console.log('👤 Usuário autenticado:', user.id, user.email);
 
       const { data, error } = await supabase
         .from('email_configurations')
@@ -83,10 +98,17 @@ const EmailInbox = () => {
       }
 
       console.log('✅ Configurações carregadas:', data);
+      console.log('📊 Total de configurações encontradas:', data?.length || 0);
+      
+      // Debug: verificar se dev01@suaiden.com está na lista
+      const devConfig = data?.find(c => c.email_address === 'dev01@suaiden.com');
+      console.log('🔍 Configuração dev01@suaiden.com encontrada:', devConfig);
+      
       setConfigurations(data || []);
       
       // Se configId foi passado via URL, selecionar automaticamente
       if (configId && data?.find(c => c.id === configId)) {
+        console.log('🎯 Selecionando configuração via URL:', configId);
         setSelectedConfig(configId);
       }
     } catch (error) {
@@ -97,46 +119,138 @@ const EmailInbox = () => {
     }
   };
 
-  const loadEmails = async () => {
+  const loadEmails = async (loadMore = false) => {
     if (!selectedConfig) {
+      console.log('⚠️ Nenhuma configuração selecionada');
       setEmails([]);
       setLoading(false);
       return;
     }
 
     try {
-      console.log('📧 Carregando emails para configuração:', selectedConfig);
-      setLoading(true);
-
-      let query = supabase
-        .from('received_emails')
-        .select('*')
-        .eq('email_config_id', selectedConfig)
-        .eq('is_deleted', false)
-        .order('received_date', { ascending: false })
-        .limit(20 * page);
-
-      // Aplicar filtros
-      if (filter === 'read') {
-        query = query.eq('is_read', true);
-      } else if (filter === 'unread') {
-        query = query.eq('is_read', false);
+      console.log('📧 Carregando emails para configuração:', selectedConfig, 'Folder:', activeTab, 'Page:', page, 'LoadMore:', loadMore);
+      
+      if (loadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
       }
 
-      const { data, error } = await query;
+      // Debug: verificar se a configuração existe
+      const selectedConfigData = configurations.find(c => c.id === selectedConfig);
+      console.log('🔍 Dados da configuração selecionada:', selectedConfigData);
+
+      let data = [];
+      let error = null;
+      const emailsPerPage = 20;
+      const currentPage = loadMore ? page : 1;
+
+      // Se for pasta de enviados, consultar tabela sent_emails
+      if (activeTab === 'sent') {
+        console.log('📤 Carregando emails enviados...');
+        const sentQuery = supabase
+          .from('sent_emails')
+          .select('*')
+          .eq('email_config_id', selectedConfig)
+          .order('sent_at', { ascending: false })
+          .limit(emailsPerPage * currentPage);
+
+        const { data: sentData, error: sentError } = await sentQuery;
+        data = sentData || [];
+        error = sentError;
+
+        // Transformar dados de sent_emails para formato compatível com received_emails
+        data = data.map(email => ({
+          ...email,
+          received_date: email.sent_at, // Usar sent_at como received_date para compatibilidade
+          from_address: selectedConfigData?.email_address, // Email do remetente
+          from_name: selectedConfigData?.name, // Nome da configuração
+          is_read: true, // Emails enviados são considerados lidos
+          is_flagged: false, // Por padrão não marcados
+          is_deleted: false,
+          is_archived: false,
+          is_spam: false,
+          // Converter to_addresses array para string para exibição
+          to_display: Array.isArray(email.to_addresses) ? email.to_addresses.join(', ') : email.to_addresses
+        }));
+      } else {
+        // Para outras pastas, usar received_emails
+        let query = supabase
+          .from('received_emails')
+          .select('*')
+          .eq('email_config_id', selectedConfig)
+          .order('received_date', { ascending: false })
+          .limit(emailsPerPage * currentPage);
+
+        // Apply folder filter based on activeTab
+        if (activeTab === 'inbox') {
+          // Inbox: emails não arquivados, não deletados e não spam
+          query = query.eq('is_archived', false).eq('is_deleted', false);
+          console.log('📁 Aplicando filtro de inbox (não arquivados, não deletados)');
+        } else if (activeTab === 'starred') {
+          // Starred: emails com estrela, não deletados
+          query = query.eq('is_flagged', true).eq('is_deleted', false);
+          console.log('📁 Aplicando filtro de com estrela');
+        } else if (activeTab === 'archive') {
+          // Archive: emails arquivados mas não deletados
+          query = query.eq('is_archived', true).eq('is_deleted', false);
+          console.log('📁 Aplicando filtro de arquivo');
+        } else if (activeTab === 'spam') {
+          // Spam: emails marcados como spam
+          query = query.eq('is_spam', true).eq('is_deleted', false);
+          console.log('📁 Aplicando filtro de spam');
+        } else if (activeTab === 'trash') {
+          // Trash: emails deletados
+          query = query.eq('is_deleted', true);
+          console.log('📁 Aplicando filtro de lixeira');
+        } else {
+          // Para outras pastas (drafts), por enquanto mostrar inbox
+          query = query.eq('is_archived', false).eq('is_deleted', false);
+          console.log('📁 Aplicando filtro padrão (inbox) para pasta:', activeTab);
+        }
+
+        // Aplicar filtros apenas para received_emails
+        if (filter === 'read') {
+          query = query.eq('is_read', true);
+          console.log('👁️ Aplicando filtro: apenas lidos');
+        } else if (filter === 'unread') {
+          query = query.eq('is_read', false);
+          console.log('👁️ Aplicando filtro: apenas não lidos');
+        }
+
+        console.log('🔍 Executando query de emails...');
+        const result = await query;
+        data = result.data || [];
+        error = result.error;
+      }
 
       if (error) {
         console.error('❌ Erro ao carregar emails:', error);
         throw error;
       }
 
-      console.log('✅ Emails carregados:', data?.length || 0);
-      setEmails(data || []);
+      // Verificar se há mais emails para carregar
+      const hasMore = data.length === emailsPerPage * currentPage;
+      setHasMoreEmails(hasMore);
+
+      console.log('✅ Emails carregados:', data?.length || 0, 'for folder:', activeTab, 'HasMore:', hasMore);
+      console.log('📧 Primeiros 3 emails:', data?.slice(0, 3));
+      
+      if (loadMore) {
+        // Adicionar novos emails à lista existente
+        setEmails(prevEmails => [...prevEmails, ...data]);
+      } else {
+        // Substituir lista de emails
+        setEmails(data || []);
+      }
     } catch (error) {
       console.error('❌ Erro ao carregar emails:', error);
-      setEmails([]);
+      if (!loadMore) {
+        setEmails([]);
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -144,34 +258,60 @@ const EmailInbox = () => {
     if (!selectedConfig) return;
     
     try {
-      const { data, error } = await supabase
-        .from('received_emails')
-        .select('is_read')
-        .eq('email_config_id', selectedConfig)
-        .eq('is_deleted', false);
-
-      if (error) {
-        console.error('❌ Erro ao carregar contadores:', error);
-        return;
-      }
-
       const counts = {
-        inbox: data?.length || 0,
-        sent: 0, // Gmail inbox não tem separação de enviados
+        inbox: 0,
+        sent: 0,
         drafts: 0,
         archive: 0,
         spam: 0,
-        trash: 0
+        trash: 0,
+        starred: 0
       };
 
+      // Get received emails count
+      const { data: receivedData, error: receivedError } = await supabase
+        .from('received_emails')
+        .select('is_deleted, is_archived, is_flagged, is_spam')
+        .eq('email_config_id', selectedConfig);
+
+      if (receivedError) {
+        console.error('❌ Erro ao carregar contadores de received_emails:', receivedError);
+      } else {
+        receivedData?.forEach(email => {
+          if (email.is_deleted) {
+            counts.trash++;
+          } else if (email.is_spam) {
+            counts.spam++;
+          } else if (email.is_archived) {
+            counts.archive++;
+          } else {
+            counts.inbox++;
+          }
+          
+          // Count starred emails (regardless of folder)
+          if (email.is_flagged) {
+            counts.starred++;
+          }
+        });
+      }
+
+      // Get sent emails count
+      const { data: sentData, error: sentError } = await supabase
+        .from('sent_emails')
+        .select('id')
+        .eq('email_config_id', selectedConfig);
+
+      if (sentError) {
+        console.error('❌ Erro ao carregar contadores de sent_emails:', sentError);
+      } else {
+        counts.sent = sentData?.length || 0;
+      }
+
       setEmailCounts(counts);
+      console.log('📊 Email counts updated:', counts);
     } catch (error) {
       console.error('❌ Erro ao atualizar contadores:', error);
     }
-  };
-
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
   };
 
   const handleCompose = () => {
@@ -183,19 +323,30 @@ const EmailInbox = () => {
     setActiveTab(tabId);
     setSelectedEmail(null);
     setExpandedView(false);
+    setPage(1);
+    setSelectedEmails(new Set());
+    setSelectAll(false);
+    setHasMoreEmails(false);
     
-    // Para Gmail, todos os emails ficam na "inbox"
-    // Podemos filtrar por diferentes critérios se necessário
-    if (tabId === 'inbox') {
-      setFilter('all');
-    } else if (tabId === 'unread') {
-      setFilter('unread');
+    // Reset filters when changing tabs
+    setFilter('all');
+    
+    // Em mobile, fechar sidebar ao mudar de aba
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
     }
+    
+    console.log('📁 Changed to folder:', tabId);
   };
 
   const handleEmailClick = (email) => {
     setSelectedEmail(email);
-    setExpandedView(true);
+    // Em mobile, sempre expandir; em desktop, alternar
+    if (window.innerWidth < 1024) {
+      setExpandedView(true);
+    } else {
+      setExpandedView(!expandedView || selectedEmail?.id !== email.id);
+    }
     if (!email.is_read) {
       markAsRead(email.id);
     }
@@ -204,6 +355,19 @@ const EmailInbox = () => {
   const handleBackToList = () => {
     setExpandedView(false);
     setSelectedEmail(null);
+    // Em mobile, fechar sidebar também
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
+
+  // Toggle read/unread status
+  const handleToggleReadStatus = async (emailId, currentReadStatus) => {
+    try {
+      await markAsRead(emailId, !currentReadStatus);
+    } catch (error) {
+      console.error('❌ Error toggling read status:', error);
+    }
   };
 
   const handleSync = async () => {
@@ -222,6 +386,20 @@ const EmailInbox = () => {
       alert('Erro ao sincronizar emails');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (!selectedConfig || loadingMore) return;
+    
+    try {
+      console.log('📧 Carregando mais emails...');
+      setPage(prevPage => prevPage + 1);
+      await loadEmails(true);
+      console.log('✅ Mais emails carregados');
+    } catch (error) {
+      console.error('❌ Erro ao carregar mais emails:', error);
+      alert('Erro ao carregar mais emails');
     }
   };
 
@@ -278,26 +456,220 @@ const EmailInbox = () => {
     }
   };
 
+  // Email selection functions
+  const handleSelectEmail = (emailId, checked) => {
+    setSelectedEmails(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(emailId);
+      } else {
+        newSet.delete(emailId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked) => {
+    setSelectAll(checked);
+    if (checked) {
+      setSelectedEmails(new Set(emails.map(email => email.id)));
+    } else {
+      setSelectedEmails(new Set());
+    }
+  };
+
+  // Star/Favorite functionality
+  const handleToggleStar = async (emailId, isStarred) => {
+    try {
+      const { error } = await supabase
+        .from('received_emails')
+        .update({ is_flagged: !isStarred })
+        .eq('id', emailId);
+
+      if (error) throw error;
+
+      // Update local state
+      setEmails(prev => 
+        prev.map(email => 
+          email.id === emailId 
+            ? { ...email, is_flagged: !isStarred }
+            : email
+        )
+      );
+
+      // Update selected email if it's the same
+      if (selectedEmail?.id === emailId) {
+        setSelectedEmail(prev => prev ? { ...prev, is_flagged: !isStarred } : null);
+      }
+
+      console.log('✅ Email star status updated');
+    } catch (error) {
+      console.error('❌ Error updating star status:', error);
+      alert('Erro ao atualizar status de favorito');
+    }
+  };
+
+  // Archive functionality
+  const handleArchiveEmails = async (emailIds = []) => {
+    const idsToArchive = emailIds.length > 0 ? emailIds : Array.from(selectedEmails);
+    
+    if (idsToArchive.length === 0) {
+      alert('Selecione emails para arquivar');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('received_emails')
+        .update({ is_archived: true })
+        .in('id', idsToArchive);
+
+      if (error) throw error;
+
+      // Remove archived emails from current view
+      setEmails(prev => prev.filter(email => !idsToArchive.includes(email.id)));
+      setSelectedEmails(new Set());
+      setSelectAll(false);
+      
+      // Update counts
+      updateEmailCounts();
+
+      console.log('✅ Emails archived successfully');
+      alert(`${idsToArchive.length} email(s) arquivado(s)`);
+    } catch (error) {
+      console.error('❌ Error archiving emails:', error);
+      alert('Erro ao arquivar emails');
+    }
+  };
+
+  // Mark as spam functionality
+  const handleMarkAsSpam = async (emailIds = []) => {
+    const idsToSpam = emailIds.length > 0 ? emailIds : Array.from(selectedEmails);
+    
+    if (idsToSpam.length === 0) {
+      alert('Selecione emails para marcar como spam');
+      return;
+    }
+
+    if (!confirm(`Marcar ${idsToSpam.length} email(s) como spam?`)) {
+      return;
+    }
+
+    try {
+      // Marcar como spam
+      const { error } = await supabase
+        .from('received_emails')
+        .update({ is_spam: true })
+        .in('id', idsToSpam);
+
+      if (error) throw error;
+
+      // Remove spam emails from current view
+      setEmails(prev => prev.filter(email => !idsToSpam.includes(email.id)));
+      setSelectedEmails(new Set());
+      setSelectAll(false);
+      
+      // Update counts
+      updateEmailCounts();
+
+      console.log('✅ Emails marked as spam');
+      alert(`${idsToSpam.length} email(s) marcado(s) como spam`);
+    } catch (error) {
+      console.error('❌ Error marking as spam:', error);
+      alert('Erro ao marcar como spam');
+    }
+  };
+
+  // Delete functionality
+  const handleDeleteEmails = async (emailIds = []) => {
+    const idsToDelete = emailIds.length > 0 ? emailIds : Array.from(selectedEmails);
+    
+    if (idsToDelete.length === 0) {
+      alert('Selecione emails para excluir');
+      return;
+    }
+
+    if (!confirm(`Excluir ${idsToDelete.length} email(s)? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('received_emails')
+        .update({ is_deleted: true })
+        .in('id', idsToDelete);
+
+      if (error) throw error;
+
+      // Remove deleted emails from current view
+      setEmails(prev => prev.filter(email => !idsToDelete.includes(email.id)));
+      setSelectedEmails(new Set());
+      setSelectAll(false);
+      
+      // Update counts
+      updateEmailCounts();
+
+      console.log('✅ Emails deleted successfully');
+      alert(`${idsToDelete.length} email(s) excluído(s)`);
+    } catch (error) {
+      console.error('❌ Error deleting emails:', error);
+      alert('Erro ao excluir emails');
+    }
+  };
+
+  // Search functionality
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1); // Reset pagination when searching
+  };
+
+  // Filter emails based on search term
+  const filteredEmails = emails.filter(email => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      email.subject?.toLowerCase().includes(searchLower) ||
+      email.from_name?.toLowerCase().includes(searchLower) ||
+      email.from_address?.toLowerCase().includes(searchLower) ||
+      email.text_content?.toLowerCase().includes(searchLower)
+    );
+  });
+
   const selectedConfigData = configurations.find(c => c.id === selectedConfig);
 
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Gmail Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-2">
+      <header className="bg-white border-b border-gray-200 px-2 sm:px-4 py-2">
         <div className="flex items-center justify-between">
-          {/* Left: Menu + Gmail Logo */}
-          <div className="flex items-center space-x-4">
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <Bars3Icon className="h-6 w-6 text-gray-600" />
+          {/* Left: Back Button + Gmail Logo + Menu Button */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <button
+              onClick={() => navigate('/school/dashboard/email')}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              title="Voltar para Email Management"
+            >
+              <ArrowUturnLeftIcon className="h-5 w-5 text-gray-600" />
             </button>
+            
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
+              title="Abrir menu"
+            >
+              <Bars3Icon className="h-5 w-5 text-gray-600" />
+            </button>
+            
             <div className="flex items-center space-x-2">
-              <span className="text-xl text-gray-700 font-normal">Gmail</span>
+              <span className="text-lg sm:text-xl text-gray-700 font-normal">Gmail</span>
             </div>
           </div>
 
-          {/* Center: Search Bar */}
-          <div className="flex-1 max-w-2xl mx-8">
-            <div className="relative">
+          {/* Center: Search Bar - Hidden on mobile, visible on desktop */}
+          <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+            <div className="relative w-full">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
@@ -312,21 +684,37 @@ const EmailInbox = () => {
             </div>
           </div>
 
-          {/* Right: Settings + User */}
-          <div className="flex items-center space-x-2">
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <Cog6ToothIcon className="h-6 w-6 text-gray-600" />
-            </button>
-            <button className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <UserIcon className="h-5 w-5 text-white" />
-            </button>
-          </div>
+          {/* Mobile Search Button */}
+          <button className="md:hidden p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-600" />
+          </button>
         </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Gmail Sidebar - Always visible */}
-        <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Gmail Sidebar - Responsive */}
+        <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-y-0 lg:left-0 h-screen overflow-y-auto ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}>
+          {/* Mobile Close Button */}
+          <div className="lg:hidden flex justify-end p-4 border-b border-gray-200">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              title="Fechar menu"
+            >
+              <XMarkIcon className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
+          
           {/* Compose Button */}
           <div className="p-4">
             <button
@@ -364,10 +752,10 @@ const EmailInbox = () => {
           <nav className="px-2 flex-1 overflow-y-auto">
             {[
               { id: 'inbox', label: 'Caixa de entrada', icon: EnvelopeIcon, count: emailCounts.inbox },
-              { id: 'starred', label: 'Com estrela', icon: StarIcon, count: 0 },
-              { id: 'snoozed', label: 'Adiados', icon: ClockIcon, count: 0 },
+              { id: 'starred', label: 'Com estrela', icon: StarIcon, count: emailCounts.starred },
               { id: 'sent', label: 'Enviados', icon: ArrowPathIcon, count: emailCounts.sent },
               { id: 'drafts', label: 'Rascunhos', icon: DocumentTextIcon, count: emailCounts.drafts },
+              { id: 'archive', label: 'Arquivo', icon: ArchiveBoxIcon, count: emailCounts.archive },
               { id: 'spam', label: 'Spam', icon: ExclamationTriangleIcon, count: emailCounts.spam },
               { id: 'trash', label: 'Lixeira', icon: TrashIcon, count: emailCounts.trash },
             ].map((item) => (
@@ -390,26 +778,7 @@ const EmailInbox = () => {
               </button>
             ))}
 
-            {/* Labels Section */}
-            <div className="px-2 mt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 font-medium">Marcadores</span>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <ChevronDownIcon className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="space-y-1">
-                {['Importante', 'Trabalho', 'Personal'].map((label) => (
-                  <button
-                    key={label}
-                    className="w-full text-left px-4 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-r-full flex items-center space-x-3"
-                  >
-                    <TagIcon className="h-4 w-4" />
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            
           </nav>
         </div>
 
@@ -428,7 +797,11 @@ const EmailInbox = () => {
                     <ArrowLeftIcon className="h-4 w-4 text-gray-600" />
                   </button>
                 )}
-                <button className="p-2 hover:bg-gray-100 rounded">
+                <button 
+                  onClick={() => handleSelectAll(!selectAll)}
+                  className="p-2 hover:bg-gray-100 rounded"
+                  title={selectAll ? "Desmarcar todos" : "Marcar todos"}
+                >
                   <CheckIcon className="h-4 w-4 text-gray-600" />
                 </button>
                 <button
@@ -439,18 +812,38 @@ const EmailInbox = () => {
                 >
                   <ArrowPathIcon className={`h-4 w-4 text-gray-600 ${syncing ? 'animate-spin' : ''}`} />
                 </button>
-                <button className="p-2 hover:bg-gray-100 rounded">
+                <button 
+                  onClick={() => handleArchiveEmails()}
+                  disabled={selectedEmails.size === 0}
+                  className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
+                  title="Arquivar emails selecionados"
+                >
                   <ArchiveBoxIcon className="h-4 w-4 text-gray-600" />
                 </button>
-                <button className="p-2 hover:bg-gray-100 rounded">
+                <button 
+                  onClick={() => handleMarkAsSpam()}
+                  disabled={selectedEmails.size === 0}
+                  className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
+                  title="Marcar como spam"
+                >
                   <ExclamationTriangleIcon className="h-4 w-4 text-gray-600" />
                 </button>
-                <button className="p-2 hover:bg-gray-100 rounded">
+                <button 
+                  onClick={() => handleDeleteEmails()}
+                  disabled={selectedEmails.size === 0}
+                  className="p-2 hover:bg-gray-100 rounded disabled:opacity-50"
+                  title="Excluir emails selecionados"
+                >
                   <TrashIcon className="h-4 w-4 text-gray-600" />
                 </button>
               </div>
 
               <div className="flex items-center space-x-3">
+                {selectedEmails.size > 0 && (
+                  <span className="text-sm text-blue-600 font-medium">
+                    {selectedEmails.size} selecionado{selectedEmails.size > 1 ? 's' : ''}
+                  </span>
+                )}
                 <select
                   value={filter}
                   onChange={(e) => {
@@ -464,7 +857,7 @@ const EmailInbox = () => {
                   <option value="read">Lidos</option>
                 </select>
                 <span className="text-sm text-gray-500">
-                  1-{emails.length} de {emailCounts.inbox}
+                  1-{filteredEmails.length} de {emailCounts[activeTab] || 0}
                 </span>
               </div>
             </div>
@@ -502,10 +895,16 @@ const EmailInbox = () => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900">
-                        {selectedEmail.from_name || selectedEmail.from_address}
+                        {activeTab === 'sent' 
+                          ? (selectedEmail.to_display || 'Destinatário não especificado')
+                          : (selectedEmail.from_name || selectedEmail.from_address)
+                        }
                       </p>
                       <p className="text-sm text-gray-500">
-                        para {selectedConfigData?.email_address}
+                        {activeTab === 'sent' 
+                          ? `de ${selectedConfigData?.email_address}`
+                          : `para ${selectedConfigData?.email_address}`
+                        }
                       </p>
                     </div>
                   </div>
@@ -593,7 +992,7 @@ const EmailInbox = () => {
             /* Email List Container */
             <div className="flex-1 flex overflow-hidden">
               {/* Email List */}
-              <div className={`${selectedEmail && !expandedView ? 'w-1/2' : 'w-full'} overflow-y-auto bg-white border-r border-gray-200`}>
+              <div className={`${selectedEmail && !expandedView ? 'w-1/2 hidden lg:block' : 'w-full'} overflow-y-auto bg-white border-r border-gray-200`}>
                 {loading && page === 1 ? (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
@@ -601,21 +1000,21 @@ const EmailInbox = () => {
                       <p className="text-gray-600">Carregando emails...</p>
                     </div>
                   </div>
-                ) : emails.length === 0 ? (
+                ) : filteredEmails.length === 0 ? (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
                       <EnvelopeIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-700 mb-2">
-                        {selectedConfig ? 'Nenhum email encontrado' : 'Selecione uma conta'}
+                        {searchTerm ? 'Nenhum email encontrado para esta pesquisa' : selectedConfig ? 'Nenhum email encontrado' : 'Selecione uma conta'}
                       </h3>
                       <p className="text-gray-500">
-                        {selectedConfig ? 'Tente sincronizar os emails ou verifique os filtros.' : 'Escolha uma conta de email para visualizar as mensagens.'}
+                        {searchTerm ? 'Tente pesquisar com outros termos.' : selectedConfig ? 'Tente sincronizar os emails ou verifique os filtros.' : 'Escolha uma conta de email para visualizar as mensagens.'}
                       </p>
                     </div>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-100">
-                    {emails.map((email) => (
+                    {filteredEmails.map((email) => (
                       <div
                         key={email.id}
                         onClick={() => handleEmailClick(email)}
@@ -627,68 +1026,104 @@ const EmailInbox = () => {
                             : 'bg-white border-l-transparent'
                         }`}
                       >
-                        <div className="flex items-center space-x-3 w-full">
+                        <div className="flex items-start space-x-2 sm:space-x-3 w-full">
                           {/* Checkbox */}
-                          <div className="flex-shrink-0">
+                          <div className="flex-shrink-0 pt-1">
                             <input
                               type="checkbox"
+                              checked={selectedEmails.has(email.id)}
+                              onChange={(e) => handleSelectEmail(email.id, e.target.checked)}
                               className="rounded border-gray-300"
                               onClick={(e) => e.stopPropagation()}
                             />
                           </div>
                           
-                          {/* Star */}
-                          <div className="flex-shrink-0">
-                            <button
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-gray-400 hover:text-yellow-400"
-                            >
-                              <StarIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                          
-                          {/* Sender */}
-                          <div className="w-40 flex-shrink-0">
-                            <span className={`text-sm truncate block ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
-                              {email.from_name || email.from_address}
-                            </span>
-                          </div>
-                          
-                          {/* Subject and Content */}
-                          <div className="flex-1 min-w-0 mr-2">
-                            <div className="flex items-center space-x-2">
-                              <span className={`text-sm ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
-                                {email.subject || 'Sem assunto'}
-                              </span>
-                              <span className="text-gray-500 text-sm flex-shrink-0">-</span>
-                              <span className="text-gray-500 text-sm truncate">
-                                {email.text_content?.replace(/\n/g, ' ').substring(0, 80)}...
-                              </span>
+                          {/* Mobile Layout */}
+                          <div className="flex-1 min-w-0">
+                            {/* Top Row: Star, Read/Unread, Sender, Date */}
+                            <div className="flex items-center space-x-2 mb-1">
+                              {/* Star */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleStar(email.id, email.is_flagged);
+                                }}
+                                className={`${email.is_flagged ? 'text-yellow-400' : 'text-gray-400'} hover:text-yellow-400 flex-shrink-0`}
+                              >
+                                {email.is_flagged ? (
+                                  <StarSolidIcon className="h-4 w-4" />
+                                ) : (
+                                  <StarIcon className="h-4 w-4" />
+                                )}
+                              </button>
+
+                              {/* Read/Unread Toggle */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleReadStatus(email.id, email.is_read);
+                                }}
+                                className="text-gray-400 hover:text-blue-500 flex-shrink-0"
+                                title={email.is_read ? "Marcar como não lido" : "Marcar como lido"}
+                              >
+                                {email.is_read ? (
+                                  <EnvelopeOpenIcon className="h-4 w-4" />
+                                ) : (
+                                  <EnvelopeIcon className="h-4 w-4" />
+                                )}
+                              </button>
+                              
+                              {/* Sender/Recipient - Mobile */}
+                              <div className="flex-1 min-w-0">
+                                <span className={`text-sm truncate block ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
+                                  {activeTab === 'sent' 
+                                    ? (email.to_display || 'Destinatário não especificado')
+                                    : (email.from_name || email.from_address)
+                                  }
+                                </span>
+                              </div>
+                              
+                              {/* Date and attachments - Mobile */}
+                              <div className="flex items-center space-x-1 flex-shrink-0">
+                                {email.has_attachments && (
+                                  <PaperClipIcon className="h-3 w-3 text-gray-400" />
+                                )}
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(email.received_date)}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          
-                          {/* Date and attachments */}
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            {email.has_attachments && (
-                              <PaperClipIcon className="h-4 w-4 text-gray-400" />
-                            )}
-                            <span className="text-sm text-gray-500 w-16 text-right">
-                              {formatDate(email.received_date)}
-                            </span>
+                            
+                            {/* Subject and Content - Mobile */}
+                            <div className="space-y-1">
+                              <div className={`text-sm ${!email.is_read ? 'font-bold text-gray-900' : 'text-gray-700'} line-clamp-1`}>
+                                {email.subject || 'Sem assunto'}
+                              </div>
+                              <div className="text-gray-500 text-xs line-clamp-2">
+                                {email.text_content?.replace(/\n/g, ' ').substring(0, 100)}...
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     ))}
 
                     {/* Load More */}
-                    {emails.length > 0 && emails.length % 20 === 0 && (
+                    {filteredEmails.length > 0 && hasMoreEmails && (
                       <div className="p-4 text-center">
                         <button
-                          onClick={() => setPage(prev => prev + 1)}
-                          disabled={loading}
-                          className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:opacity-50"
+                          onClick={handleLoadMore}
+                          disabled={loadingMore || loading}
+                          className="text-blue-600 hover:text-blue-800 font-medium text-sm disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
                         >
-                          {loading ? 'Carregando...' : 'Carregar mais emails'}
+                          {loadingMore ? (
+                            <>
+                              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                              Carregando...
+                            </>
+                          ) : (
+                            'Carregar mais emails'
+                          )}
                         </button>
                       </div>
                     )}
@@ -698,7 +1133,7 @@ const EmailInbox = () => {
 
               {/* Side Email Preview (when not expanded) */}
               {selectedEmail && !expandedView && (
-                <div className="w-1/2 bg-white flex flex-col overflow-hidden">
+                <div className="w-1/2 hidden lg:flex bg-white flex-col overflow-hidden">
                   {/* Email Header */}
                   <div className="p-6 border-b border-gray-200 flex-shrink-0">
                     <div className="flex items-center justify-between mb-4">
@@ -734,10 +1169,16 @@ const EmailInbox = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {selectedEmail.from_name || selectedEmail.from_address}
+                            {activeTab === 'sent' 
+                              ? (selectedEmail.to_display || 'Destinatário não especificado')
+                              : (selectedEmail.from_name || selectedEmail.from_address)
+                            }
                           </p>
                           <p className="text-xs text-gray-500 truncate">
-                            para {selectedConfigData?.email_address}
+                            {activeTab === 'sent' 
+                              ? `de ${selectedConfigData?.email_address}`
+                              : `para ${selectedConfigData?.email_address}`
+                            }
                           </p>
                         </div>
                       </div>

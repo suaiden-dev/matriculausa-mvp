@@ -511,15 +511,15 @@ const EmailManagement = () => {
   }
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-4 lg:space-y-8">
       {/* Header + Actions Section */}
       <div className="w-full">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 lg:mb-6">
           <div className="max-w-full mx-auto bg-slate-50">
             {/* Header: title + description + counters */}
-            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-1">
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
                   Email Management
                 </h1>
                 <p className="mt-2 text-sm sm:text-base text-slate-600">
@@ -543,21 +543,21 @@ const EmailManagement = () => {
 
             {/* Actions Row */}
             <div className="border-t border-slate-200 bg-white">
-              <div className="px-4 sm:px-6 lg:px-8 py-4">
+              <div className="px-3 sm:px-6 lg:px-8 py-4">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Stats Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 flex-1">
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                           {loadingStats ? (
-                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                           ) : (
-                            <EnvelopeIcon className="h-4 w-4 text-blue-600" />
+                            <EnvelopeIcon className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                           )}
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold text-slate-900">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base sm:text-lg font-semibold text-slate-900">
                             {loadingStats ? '...' : (stats.total_received || 0)}
                           </p>
                           <p className="text-xs text-slate-600">Received</p>
@@ -565,17 +565,17 @@ const EmailManagement = () => {
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
                           {loadingStats ? (
                             <div className="w-3 h-3 border-2 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
                           ) : (
                             <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
                           )}
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold text-slate-900">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base sm:text-lg font-semibold text-slate-900">
                             {loadingStats ? '...' : (stats.unread_count || 0)}
                           </p>
                           <p className="text-xs text-slate-600">Unread</p>
@@ -583,17 +583,17 @@ const EmailManagement = () => {
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-shadow sm:col-span-2 lg:col-span-1">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                           {loadingStats ? (
                             <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
                           ) : (
                             <div className="w-3 h-3 bg-green-600 rounded-full"></div>
                           )}
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold text-slate-900">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base sm:text-lg font-semibold text-slate-900">
                             {loadingStats ? '...' : (stats.total_sent || 0)}
                           </p>
                           <p className="text-xs text-slate-600">Sent</p>
@@ -603,25 +603,27 @@ const EmailManagement = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
                     <button
                       onClick={async () => {
                         setLoading(true);
                         await loadConfigurations();
                         await loadStats();
                       }}
-                      className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors flex items-center"
+                      className="p-2 sm:px-4 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors flex items-center"
                       title="Refresh data"
                     >
-                      <ArrowPathIcon className="h-5 w-5 text-slate-500" />
+                      <ArrowPathIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" />
+                      <span className="hidden sm:inline ml-2">Refresh</span>
                     </button>
                     
                     <button
                       onClick={() => navigate('/school/dashboard/email/config')}
-                      className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                      className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
                     >
-                      <PlusIcon className="h-5 w-5 mr-2" />
-                      Add Account
+                      <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Add Account</span>
+                      <span className="sm:hidden">Add</span>
                     </button>
                   </div>
                 </div>
@@ -633,7 +635,7 @@ const EmailManagement = () => {
 
         {/* Email Configurations List */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="border-b border-slate-200 px-6 py-4">
+          <div className="border-b border-slate-200 px-4 sm:px-6 py-4">
             <h2 className="text-lg font-medium text-slate-900">
               Email Accounts
             </h2>
@@ -699,9 +701,9 @@ const EmailManagement = () => {
           ) : (
             <div className="divide-y divide-slate-100">
               {configurations.map((config) => (
-                <div key={config.id} className="p-6 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 flex-1">
+                <div key={config.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                       {/* Avatar */}
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                         config.provider_type === 'microsoft' 
@@ -715,13 +717,13 @@ const EmailManagement = () => {
                       
                       {/* Account Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3 mb-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-1">
                           <h3 className="text-base font-medium text-slate-900 truncate">
                             {config.name}
                           </h3>
                           
                           {/* Provider badge */}
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium w-fit ${
                             config.provider_type === 'microsoft' 
                               ? 'bg-blue-100 text-blue-700'
                               : 'bg-red-100 text-red-700'
@@ -730,7 +732,7 @@ const EmailManagement = () => {
                           </span>
                           
                           {/* Status badges */}
-                          <div className="flex items-center space-x-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             {/* Account Status */}
                             <button
                               onClick={() => toggleAccountStatus(config.id, config.is_active)}
@@ -747,17 +749,20 @@ const EmailManagement = () => {
                               {actionLoading[`status_${config.id}`] ? (
                                 <>
                                   <div className="w-2 h-2 bg-slate-400 rounded-full mr-1 animate-pulse"></div>
-                                  Updating...
+                                  <span className="hidden sm:inline">Updating...</span>
+                                  <span className="sm:hidden">...</span>
                                 </>
                               ) : config.is_active ? (
                                 <>
                                   <div className="w-2 h-2 bg-green-600 rounded-full mr-1"></div>
-                                  Active
+                                  <span className="hidden sm:inline">Active</span>
+                                  <span className="sm:hidden">On</span>
                                 </>
                               ) : (
                                 <>
                                   <div className="w-2 h-2 bg-red-600 rounded-full mr-1"></div>
-                                  Inactive
+                                  <span className="hidden sm:inline">Inactive</span>
+                                  <span className="sm:hidden">Off</span>
                                 </>
                               )}
                             </button>
@@ -803,8 +808,36 @@ const EmailManagement = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 sm:ml-4">
                       {/* Quick Actions */}
+                      <div className="flex sm:hidden items-center space-x-2">
+                        <button
+                          onClick={() => handleInboxNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`flex-1 text-sm font-medium py-2 px-3 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Open inbox' : 'Account is inactive'}
+                        >
+                          Inbox
+                        </button>
+                        
+                        <button
+                          onClick={() => handleComposeNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`flex-1 text-sm font-medium py-2 px-3 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Compose email' : 'Account is inactive'}
+                        >
+                          Compose
+                        </button>
+                      </div>
+                      
                       <div className="hidden sm:flex items-center space-x-2 mr-4">
                         <button
                           onClick={() => handleInboxNavigation(config)}
@@ -834,99 +867,101 @@ const EmailManagement = () => {
                       </div>
 
                       {/* Action Buttons */}
-                      <button
-                        onClick={() => handleSync(config.id)}
-                        disabled={syncing[config.id] || !config.is_active}
-                        className={`p-2 rounded-full transition-colors ${
-                          syncing[config.id] 
-                            ? 'bg-blue-100 text-blue-600' 
-                            : config.is_active 
-                            ? 'hover:bg-slate-100 text-slate-600' 
-                            : 'text-slate-400 cursor-not-allowed'
-                        }`}
-                        title={
-                          !config.is_active 
-                            ? 'Account is inactive' 
-                            : syncing[config.id] 
-                            ? 'Syncing...' 
-                            : 'Sync now'
-                        }
-                      >
-                        <ArrowPathIcon 
-                          className={`h-4 w-4 ${syncing[config.id] ? 'animate-spin' : ''}`} 
-                        />
-                      </button>
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                        <button
+                          onClick={() => handleSync(config.id)}
+                          disabled={syncing[config.id] || !config.is_active}
+                          className={`p-2 rounded-full transition-colors ${
+                            syncing[config.id] 
+                              ? 'bg-blue-100 text-blue-600' 
+                              : config.is_active 
+                              ? 'hover:bg-slate-100 text-slate-600' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={
+                            !config.is_active 
+                              ? 'Account is inactive' 
+                              : syncing[config.id] 
+                              ? 'Syncing...' 
+                              : 'Sync now'
+                          }
+                        >
+                          <ArrowPathIcon 
+                            className={`h-4 w-4 ${syncing[config.id] ? 'animate-spin' : ''}`} 
+                          />
+                        </button>
 
-                      {/* Account Status Toggle */}
-                      <button
-                        onClick={() => toggleAccountStatus(config.id, config.is_active)}
-                        disabled={actionLoading[`status_${config.id}`]}
-                        className={`p-2 rounded-full transition-colors ${
-                          actionLoading[`status_${config.id}`] 
-                            ? 'bg-slate-100' 
-                            : 'hover:bg-slate-100'
-                        }`}
-                        title={`${config.is_active ? 'Deactivate' : 'Activate'} account`}
-                      >
-                        <div className={`w-3 h-3 rounded-full ${
-                          actionLoading[`status_${config.id}`] 
-                            ? 'bg-slate-400 animate-pulse' 
-                            : config.is_active 
-                            ? 'bg-green-500' 
-                            : 'bg-red-500'
-                        }`} />
-                      </button>
-
-                      {/* Sync Toggle */}
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={config.sync_enabled}
-                          onChange={() => toggleSync(config.id, config.sync_enabled)}
-                          disabled={actionLoading[`toggle_${config.id}`] || !config.is_active}
-                          className="sr-only"
-                        />
-                        <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                          actionLoading[`toggle_${config.id}`] 
-                            ? 'bg-slate-300' 
-                            : !config.is_active 
-                            ? 'bg-slate-200 opacity-50' 
-                            : config.sync_enabled 
-                            ? 'bg-blue-600' 
-                            : 'bg-slate-200'
-                        }`}>
-                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                            actionLoading[`toggle_${config.id}`] 
-                              ? 'animate-pulse' 
-                              : config.sync_enabled 
-                              ? 'translate-x-5' 
-                              : 'translate-x-1'
+                        {/* Account Status Toggle */}
+                        <button
+                          onClick={() => toggleAccountStatus(config.id, config.is_active)}
+                          disabled={actionLoading[`status_${config.id}`]}
+                          className={`p-2 rounded-full transition-colors ${
+                            actionLoading[`status_${config.id}`] 
+                              ? 'bg-slate-100' 
+                              : 'hover:bg-slate-100'
+                          }`}
+                          title={`${config.is_active ? 'Deactivate' : 'Activate'} account`}
+                        >
+                          <div className={`w-3 h-3 rounded-full ${
+                            actionLoading[`status_${config.id}`] 
+                              ? 'bg-slate-400 animate-pulse' 
+                              : config.is_active 
+                              ? 'bg-green-500' 
+                              : 'bg-red-500'
                           }`} />
-                        </div>
-                      </label>
+                        </button>
 
-                      {/* Settings Button */}
-                      <button
-                        onClick={() => handleSettingsNavigation(config.id)}
-                        className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-                        title="Account settings"
-                      >
-                        <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
-                      </button>
+                        {/* Sync Toggle */}
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={config.sync_enabled}
+                            onChange={() => toggleSync(config.id, config.sync_enabled)}
+                            disabled={actionLoading[`toggle_${config.id}`] || !config.is_active}
+                            className="sr-only"
+                          />
+                          <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                            actionLoading[`toggle_${config.id}`] 
+                              ? 'bg-slate-300' 
+                              : !config.is_active 
+                              ? 'bg-slate-200 opacity-50' 
+                              : config.sync_enabled 
+                              ? 'bg-blue-600' 
+                              : 'bg-slate-200'
+                          }`}>
+                            <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                              actionLoading[`toggle_${config.id}`] 
+                                ? 'animate-pulse' 
+                                : config.sync_enabled 
+                                ? 'translate-x-5' 
+                                : 'translate-x-1'
+                            }`} />
+                          </div>
+                        </label>
 
-                      {/* Delete Button */}
-                      <button
-                        onClick={() => handleDelete(config.id)}
-                        disabled={actionLoading[`delete_${config.id}`]}
-                        className={`p-2 rounded-full transition-colors ${
-                          actionLoading[`delete_${config.id}`] 
-                            ? 'bg-red-100 text-red-400' 
-                            : 'hover:bg-slate-100 text-slate-600 hover:text-red-600'
-                        }`}
-                        title={actionLoading[`delete_${config.id}`] ? 'Deleting...' : 'Delete account'}
-                      >
-                        <TrashIcon className={`h-4 w-4 ${actionLoading[`delete_${config.id}`] ? 'animate-pulse' : ''}`} />
-                      </button>
+                        {/* Settings Button */}
+                        <button
+                          onClick={() => handleSettingsNavigation(config.id)}
+                          className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                          title="Account settings"
+                        >
+                          <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(config.id)}
+                          disabled={actionLoading[`delete_${config.id}`]}
+                          className={`p-2 rounded-full transition-colors ${
+                            actionLoading[`delete_${config.id}`] 
+                              ? 'bg-red-100 text-red-400' 
+                              : 'hover:bg-slate-100 text-slate-600 hover:text-red-600'
+                          }`}
+                          title={actionLoading[`delete_${config.id}`] ? 'Deleting...' : 'Delete account'}
+                        >
+                          <TrashIcon className={`h-4 w-4 ${actionLoading[`delete_${config.id}`] ? 'animate-pulse' : ''}`} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

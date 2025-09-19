@@ -462,24 +462,24 @@ const EmailConfigurationContent = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="space-y-6 lg:space-y-8">
+      <div className="space-y-4 lg:space-y-8">
       {/* Header + Actions Section */}
       <div className="w-full">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 lg:mb-6">
           <div className="max-w-full mx-auto bg-slate-50">
             {/* Header: title + description + back button */}
-            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-center space-x-4 flex-1">
+            <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center space-x-3 sm:space-x-4 flex-1">
                 <button
                   onClick={() => navigate('/school/dashboard/email')}
-                  className="p-3 rounded-full hover:bg-slate-100 transition-colors border border-slate-200 bg-white shadow-sm"
+                  className="p-2 sm:p-3 rounded-full hover:bg-slate-100 transition-colors border border-slate-200 bg-white shadow-sm"
                   title="Back to Email Management"
                 >
-                  <ArrowLeftIcon className="h-5 w-5 text-slate-600" />
+                  <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-600" />
                 </button>
                 
-                <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
                     {editMode ? 'Edit Email Account' : 'Add Email Account'}
                   </h1>
                   <p className="mt-2 text-sm sm:text-base text-slate-600">
@@ -515,11 +515,11 @@ const EmailConfigurationContent = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8">
+        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
           {/* Provider Selection */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="border-b border-slate-200 pb-4 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="border-b border-slate-200 pb-4 mb-4 sm:mb-6">
               <h2 className="text-lg font-medium text-slate-900">
                 Choose your email provider
               </h2>
@@ -528,22 +528,22 @@ const EmailConfigurationContent = () => {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => setProvider('gmail')}
-                className={`p-6 border-2 rounded-xl transition-all text-left hover:shadow-md ${
+                className={`p-4 sm:p-6 border-2 rounded-xl transition-all text-left hover:shadow-md ${
                   provider === 'gmail'
                     ? 'border-red-500 bg-red-50 shadow-md'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-sm">
-                    <span className="text-white font-bold text-lg">G</span>
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <span className="text-white font-bold text-base sm:text-lg">G</span>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 text-lg">Gmail</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 text-base sm:text-lg">Gmail</p>
                     <p className="text-sm text-slate-500">Google Workspace, @gmail.com</p>
                     <div className="flex items-center mt-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
@@ -551,7 +551,7 @@ const EmailConfigurationContent = () => {
                     </div>
                   </div>
                   {provider === 'gmail' && (
-                    <CheckCircleIcon className="h-6 w-6 text-red-500" />
+                    <CheckCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-red-500 flex-shrink-0" />
                   )}
                 </div>
               </button>
@@ -560,7 +560,7 @@ const EmailConfigurationContent = () => {
                 type="button"
                 onClick={() => setProvider('microsoft')}
                 disabled={!isMicrosoftConfigured}
-                className={`p-6 border-2 rounded-xl transition-all text-left relative hover:shadow-md ${
+                className={`p-4 sm:p-6 border-2 rounded-xl transition-all text-left relative hover:shadow-md ${
                   provider === 'microsoft'
                     ? 'border-blue-500 bg-blue-50 shadow-md'
                     : isMicrosoftConfigured
@@ -568,12 +568,12 @@ const EmailConfigurationContent = () => {
                     : 'border-slate-200 opacity-50 cursor-not-allowed bg-slate-50'
                 }`}
               >
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm">
-                    <span className="text-white font-bold text-lg">M</span>
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <span className="text-white font-bold text-base sm:text-lg">M</span>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 text-lg">Microsoft</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 text-base sm:text-lg">Microsoft</p>
                     <p className="text-sm text-slate-500">
                       {isMicrosoftConfigured ? 'Outlook, Hotmail, Office 365' : 'Configuration required'}
                     </p>
@@ -587,10 +587,10 @@ const EmailConfigurationContent = () => {
                     </div>
                   </div>
                   {provider === 'microsoft' && isMicrosoftConfigured && (
-                    <CheckCircleIcon className="h-6 w-6 text-blue-500" />
+                    <CheckCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 flex-shrink-0" />
                   )}
                   {!isMicrosoftConfigured && (
-                    <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500" />
+                    <ExclamationTriangleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500 flex-shrink-0" />
                   )}
                 </div>
               </button>
@@ -617,8 +617,8 @@ const EmailConfigurationContent = () => {
           </div>
 
           {/* Account Information */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="border-b border-slate-200 pb-4 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="border-b border-slate-200 pb-4 mb-4 sm:mb-6">
               <h2 className="text-lg font-medium text-slate-900">
                 Account Information
               </h2>
@@ -627,7 +627,7 @@ const EmailConfigurationContent = () => {
               </p>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Account name
@@ -880,13 +880,13 @@ const EmailConfigurationContent = () => {
           )}
 
           {/* Actions */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+            <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between gap-4">
               <button
                 type="button"
                 onClick={handleTest}
                 disabled={testing}
-                className="w-full sm:w-auto px-6 py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2 text-sm sm:text-base"
               >
                 {testing ? (
                   <>
@@ -901,11 +901,11 @@ const EmailConfigurationContent = () => {
                 )}
               </button>
 
-              <div className="flex items-center space-x-3 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => navigate('/school/dashboard/email')}
-                  className="flex-1 sm:flex-none px-6 py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl font-medium transition-colors"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
                 >
                   Cancel
                 </button>
@@ -913,7 +913,7 @@ const EmailConfigurationContent = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 sm:flex-none bg-gradient-to-r from-[#D0151C] to-red-600 hover:from-[#B01218] hover:to-red-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl transition-all duration-300 font-bold flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#D0151C] to-red-600 hover:from-[#B01218] hover:to-red-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-bold flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm sm:text-base"
                 >
                   {loading && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
                   <span>
