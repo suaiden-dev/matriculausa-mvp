@@ -539,6 +539,22 @@ const EmailManagement = () => {
                   </div>
                 )}
               </div>
+              
+              {/* Refresh Button */}
+              <div className="flex items-center">
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    await loadConfigurations();
+                    await loadStats();
+                  }}
+                  className="p-2 sm:px-4 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors flex items-center"
+                  title="Refresh data"
+                >
+                  <ArrowPathIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" />
+                  <span className="hidden sm:inline ml-2">Refresh</span>
+                </button>
+              </div>
             </div>
 
             {/* Actions Row */}
@@ -603,20 +619,7 @@ const EmailManagement = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center space-x-2 sm:space-x-3">
-                    <button
-                      onClick={async () => {
-                        setLoading(true);
-                        await loadConfigurations();
-                        await loadStats();
-                      }}
-                      className="p-2 sm:px-4 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors flex items-center"
-                      title="Refresh data"
-                    >
-                      <ArrowPathIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500" />
-                      <span className="hidden sm:inline ml-2">Refresh</span>
-                    </button>
-                    
+                  <div className="flex items-center">
                     <button
                       onClick={() => navigate('/school/dashboard/email/config')}
                       className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
