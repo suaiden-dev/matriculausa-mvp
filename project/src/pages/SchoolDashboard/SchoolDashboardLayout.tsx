@@ -139,6 +139,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
     if (path.includes('/whatsapp')) return 'whatsapp';
     if (path.includes('/global-document-requests')) return 'global-docs';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
+    if (path.includes('/email')) return 'inbox';
     if (path.includes('/student')) return 'students';
     return 'overview';
   };
@@ -214,8 +215,7 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       path: '/school/dashboard/ai-solutions',
       badge: null,
       dropdown: [
-        { id: 'inbox', label: 'Gmail Inbox', icon: Mail, path: '/school/dashboard/inbox', badge: null },
-        { id: 'microsoft-email', label: 'Microsoft Email', icon: Mail, path: '/school/dashboard/microsoft-email', badge: null },
+        { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/email', badge: null },
         { id: 'whatsapp', label: 'WhatsApp AI', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
       ]
     }

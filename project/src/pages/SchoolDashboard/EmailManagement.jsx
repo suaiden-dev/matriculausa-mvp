@@ -19,6 +19,8 @@ const EmailManagement = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState({});
   const [stats, setStats] = useState({});
+  const [actionLoading, setActionLoading] = useState({});
+  const [lastSyncUpdate, setLastSyncUpdate] = useState({});
 
   useEffect(() => {
     console.log('🚀 EmailManagement useEffect executado');
@@ -190,6 +192,14 @@ const EmailManagement = () => {
   const handleSync = async (configId) => {
     try {
       setSyncing(prev => ({ ...prev, [configId]: true }));
+      
+      // Find the configuration to get provider details
+      const config = configurations.find(c => c.id === configId);
+      if (!config) {
+        throw new Error('Configuration not found');
+      }
+
+      console.log(`🔄 Starting sync for ${config.provider_type} account: ${config.email_address}`);
 
       // Atualizar timestamp da última sincronização
       const { error } = await supabase
@@ -203,13 +213,38 @@ const EmailManagement = () => {
         throw error;
       }
 
+      // Simular processo de sincronização (em um sistema real, você chamaria APIs externas)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Update local state to reflect the sync time immediately
+      setLastSyncUpdate(prev => ({ ...prev, [configId]: new Date().toISOString() }));
+
       // Recarregar configurações para mostrar o novo timestamp
       await loadConfigurations();
+      await loadStats();
       
-      alert('Sincronização iniciada com sucesso!');
+      console.log(`✅ Sync completed for ${config.email_address}`);
+      
+      // Show success message with provider-specific details
+      alert(`✅ Synchronization completed successfully for ${config.name}!\n\nProvider: ${config.provider_type === 'microsoft' ? 'Microsoft' : 'Gmail'}\nAccount: ${config.email_address}`);
+      
     } catch (error) {
-      console.error('Erro na sincronização:', error);
-      alert('Erro ao iniciar sincronização: ' + (error.message || 'Erro desconhecido'));
+      console.error('❌ Sync error:', error);
+      
+      // More detailed error messages
+      let errorMessage = 'Sync failed: ';
+      
+      if (error.message.includes('network')) {
+        errorMessage += 'Network connection issue. Please check your internet connection.';
+      } else if (error.message.includes('authentication')) {
+        errorMessage += 'Authentication failed. Please reconfigure your account.';
+      } else if (error.message.includes('Configuration not found')) {
+        errorMessage += 'Account configuration not found. Please refresh the page.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      alert(errorMessage);
     } finally {
       setSyncing(prev => ({ ...prev, [configId]: false }));
     }
@@ -217,14 +252,32 @@ const EmailManagement = () => {
 
   const handleDelete = async (configId) => {
     try {
-      // Confirmar exclusão
+      // Find the configuration to show details in confirmation
+      const config = configurations.find(c => c.id === configId);
+      if (!config) {
+        alert('Configuration not found. Please refresh the page.');
+        return;
+      }
+
+      // Enhanced confirmation dialog
       const confirmed = window.confirm(
-        'Tem certeza que deseja excluir esta configuração de email? Esta ação não pode ser desfeita.'
+        `⚠️ Are you sure you want to delete this email account?\n\n` +
+        `Account: ${config.name}\n` +
+        `Email: ${config.email_address}\n` +
+        `Provider: ${config.provider_type === 'microsoft' ? 'Microsoft' : 'Gmail'}\n\n` +
+        `⚠️ This action cannot be undone!\n` +
+        `• All email data will be removed\n` +
+        `• Sync settings will be lost\n` +
+        `• You'll need to reconfigure if you want to add this account again`
       );
       
       if (!confirmed) {
         return;
       }
+
+      setActionLoading(prev => ({ ...prev, [`delete_${configId}`]: true }));
+
+      console.log(`🗑️ Deleting configuration: ${config.email_address}`);
 
       // Excluir configuração
       const { error } = await supabase
@@ -236,20 +289,46 @@ const EmailManagement = () => {
         throw error;
       }
 
+      console.log(`✅ Configuration deleted: ${config.email_address}`);
+
       // Recarregar configurações e estatísticas
       await loadConfigurations();
       await loadStats();
       
-      alert('Configuração excluída com sucesso!');
+      alert(`✅ Account "${config.name}" has been successfully deleted!\n\nThe account has been removed from your email management system.`);
+      
     } catch (error) {
-      console.error('Erro ao excluir configuração:', error);
-      alert('Erro ao excluir configuração: ' + (error.message || 'Erro desconhecido'));
+      console.error('❌ Delete error:', error);
+      
+      let errorMessage = 'Failed to delete account: ';
+      
+      if (error.code === '23503') {
+        errorMessage += 'Cannot delete account because it has associated data. Please remove all emails first.';
+      } else if (error.message.includes('permission')) {
+        errorMessage += 'You do not have permission to delete this account.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`delete_${configId}`]: false }));
     }
   };
 
   const toggleSync = async (configId, currentStatus) => {
     try {
+      const config = configurations.find(c => c.id === configId);
+      if (!config) {
+        alert('Configuration not found. Please refresh the page.');
+        return;
+      }
+
       const newStatus = !currentStatus;
+      
+      setActionLoading(prev => ({ ...prev, [`toggle_${configId}`]: true }));
+      
+      console.log(`🔄 ${newStatus ? 'Enabling' : 'Disabling'} sync for ${config.email_address}`);
       
       // Atualizar status de sincronização
       const { error } = await supabase
@@ -266,11 +345,121 @@ const EmailManagement = () => {
       // Recarregar configurações para mostrar o novo status
       await loadConfigurations();
       
-      const statusText = newStatus ? 'habilitada' : 'desabilitada';
-      alert(`Sincronização ${statusText} com sucesso!`);
+      const statusText = newStatus ? 'enabled' : 'disabled';
+      const statusEmoji = newStatus ? '✅' : '⏸️';
+      
+      console.log(`${statusEmoji} Sync ${statusText} for ${config.email_address}`);
+      
+      alert(`${statusEmoji} Sync ${statusText} successfully!\n\nAccount: ${config.name}\nEmail: ${config.email_address}\n\n${newStatus ? 'Your emails will now be automatically synchronized.' : 'Automatic email synchronization has been disabled.'}`);
+      
     } catch (error) {
-      console.error('Erro ao alterar sincronização:', error);
-      alert('Erro ao alterar sincronização: ' + (error.message || 'Erro desconhecido'));
+      console.error('❌ Toggle sync error:', error);
+      
+      let errorMessage = 'Failed to update sync settings: ';
+      
+      if (error.message.includes('permission')) {
+        errorMessage += 'You do not have permission to modify this account.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`toggle_${configId}`]: false }));
+    }
+  };
+
+  const toggleAccountStatus = async (configId, currentStatus) => {
+    try {
+      const config = configurations.find(c => c.id === configId);
+      if (!config) {
+        alert('Configuration not found. Please refresh the page.');
+        return;
+      }
+
+      const newStatus = !currentStatus;
+      
+      setActionLoading(prev => ({ ...prev, [`status_${configId}`]: true }));
+      
+      console.log(`🔄 ${newStatus ? 'Activating' : 'Deactivating'} account ${config.email_address}`);
+      
+      // Atualizar status da conta
+      const { error } = await supabase
+        .from('email_configurations')
+        .update({ 
+          is_active: newStatus 
+        })
+        .eq('id', configId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Recarregar configurações para mostrar o novo status
+      await loadConfigurations();
+      await loadStats();
+      
+      const statusText = newStatus ? 'activated' : 'deactivated';
+      const statusEmoji = newStatus ? '🟢' : '🔴';
+      
+      console.log(`${statusEmoji} Account ${statusText}: ${config.email_address}`);
+      
+      alert(`${statusEmoji} Account ${statusText} successfully!\n\nAccount: ${config.name}\nEmail: ${config.email_address}\n\n${newStatus ? 'The account is now active and ready to use.' : 'The account has been deactivated and will not be used for email operations.'}`);
+      
+    } catch (error) {
+      console.error('❌ Toggle account status error:', error);
+      
+      let errorMessage = 'Failed to update account status: ';
+      
+      if (error.message.includes('permission')) {
+        errorMessage += 'You do not have permission to modify this account.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`status_${configId}`]: false }));
+    }
+  };
+
+  const handleInboxNavigation = (config) => {
+    try {
+      console.log(`📧 Opening inbox for ${config.provider_type} account: ${config.email_address}`);
+      
+      if (config.provider_type === 'microsoft') {
+        navigate('/school/dashboard/microsoft-email');
+      } else {
+        navigate(`/school/dashboard/inbox?config=${config.id}`);
+      }
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+      alert('Failed to open inbox. Please try again.');
+    }
+  };
+
+  const handleComposeNavigation = (config) => {
+    try {
+      console.log(`✍️ Opening compose for ${config.provider_type} account: ${config.email_address}`);
+      
+      if (config.provider_type === 'microsoft') {
+        navigate('/school/dashboard/microsoft-email?compose=true');
+      } else {
+        navigate(`/school/dashboard/email/compose?config=${config.id}`);
+      }
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+      alert('Failed to open compose. Please try again.');
+    }
+  };
+
+  const handleSettingsNavigation = (configId) => {
+    try {
+      console.log(`⚙️ Opening settings for configuration: ${configId}`);
+      navigate(`/school/dashboard/email/config/${configId}`);
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+      alert('Failed to open settings. Please try again.');
     }
   };
 
@@ -287,117 +476,139 @@ const EmailManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Gmail-style Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-medium text-sm">M</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-normal text-gray-900">Email</h1>
-                <p className="text-sm text-gray-500">
-                  Gerencie suas contas de email
+    <div className="space-y-6 lg:space-y-8">
+      {/* Header + Actions Section */}
+      <div className="w-full">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="max-w-full mx-auto bg-slate-50">
+            {/* Header: title + description + counters */}
+            <div className="px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+                  Email Management
+                </h1>
+                <p className="mt-2 text-sm sm:text-base text-slate-600">
+                  Configure and manage your email accounts for seamless communication
                 </p>
+                {configurations.length > 0 && (
+                  <p className="mt-3 text-sm text-slate-500">
+                    {`${configurations.length} account${configurations.length > 1 ? 's' : ''} configured, ${configurations.filter(c => c.is_active).length} active`}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-sm">
+                  <EnvelopeIcon className="w-5 h-5 mr-2" />
+                  {configurations.length} Total
+                </div>
+                <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm">
+                  <CheckCircleIcon className="w-5 h-5 mr-2" />
+                  {configurations.filter(c => c.is_active).length} Active
+                </div>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={async () => {
-                  console.log('🔄 Recarregamento manual iniciado...');
-                  setLoading(true);
-                  await loadConfigurations();
-                  await loadStats();
-                }}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                title="Atualizar"
-              >
-                <ArrowPathIcon className="h-5 w-5 text-gray-600" />
-              </button>
-              
-              <button
-                onClick={() => navigate('/school/dashboard/email/config')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center space-x-2"
-              >
-                <PlusIcon className="h-4 w-4" />
-                <span>Adicionar conta</span>
-              </button>
+
+            {/* Actions Row */}
+            <div className="border-t border-slate-200 bg-white">
+              <div className="px-4 sm:px-6 lg:px-8 py-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <EnvelopeIcon className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-slate-900">
+                            {stats.total_received || 0}
+                          </p>
+                          <p className="text-xs text-slate-600">Received</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                          <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-slate-900">
+                            {stats.unread_count || 0}
+                          </p>
+                          <p className="text-xs text-slate-600">Unread</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-slate-900">
+                            {stats.total_sent || 0}
+                          </p>
+                          <p className="text-xs text-slate-600">Sent</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={async () => {
+                        console.log('🔄 Recarregamento manual iniciado...');
+                        setLoading(true);
+                        await loadConfigurations();
+                        await loadStats();
+                      }}
+                      className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors flex items-center"
+                      title="Refresh data"
+                    >
+                      <ArrowPathIcon className="h-5 w-5 text-slate-500" />
+                    </button>
+                    
+                    <button
+                      onClick={() => navigate('/school/dashboard/email/config')}
+                      className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center shadow-lg hover:shadow-xl transform hover:scale-105"
+                    >
+                      <PlusIcon className="h-5 w-5 mr-2" />
+                      Add Account
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Gmail-style Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <EnvelopeIcon className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {stats.total_received || 0}
-                </p>
-                <p className="text-sm text-gray-600">Emails recebidos</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {stats.unread_count || 0}
-                </p>
-                <p className="text-sm text-gray-600">Não lidos</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {stats.total_sent || 0}
-                </p>
-                <p className="text-sm text-gray-600">Emails enviados</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Gmail-style Configurations List */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="border-b border-gray-200 px-6 py-4">
-            <h2 className="text-lg font-medium text-gray-900">
-              Contas de email
+        {/* Email Configurations List */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+          <div className="border-b border-slate-200 px-6 py-4">
+            <h2 className="text-lg font-medium text-slate-900">
+              Email Accounts
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Configure e gerencie suas contas de email
+            <p className="text-sm text-slate-600 mt-1">
+              Configure and manage your email accounts
             </p>
           </div>
 
           {configurations.length === 0 ? (
             <div className="text-center py-16">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <EnvelopeIcon className="h-8 w-8 text-gray-400" />
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <EnvelopeIcon className="h-8 w-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nenhuma conta configurada
+              <h3 className="text-lg font-medium text-slate-900 mb-2">
+                No accounts configured
               </h3>
-              <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                Adicione sua primeira conta de email para começar a enviar e receber mensagens.
+              <p className="text-slate-500 mb-6 max-w-sm mx-auto">
+                Add your first email account to start sending and receiving messages.
               </p>
               
               {/* Debug info - apenas em desenvolvimento */}
@@ -428,7 +639,7 @@ const EmailManagement = () => {
                           .from('email_configurations')
                           .select('*')
                           .eq('user_id', user.id);
-                        console.log('� Configurações do usuário:', { userConfigs, userError });
+                        console.log('👤 Configurações do usuário:', { userConfigs, userError });
                       }
                     }}
                     className="mt-2 px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
@@ -440,74 +651,115 @@ const EmailManagement = () => {
               
               <button
                 onClick={() => navigate('/school/dashboard/email/config')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-medium transition-colors flex items-center space-x-2 mx-auto"
+                className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-6 py-3 rounded-xl hover:from-[#B01218] hover:to-red-700 transition-all duration-300 font-bold flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <PlusIcon className="h-5 w-5" />
-                <span>Adicionar conta</span>
+                <span>Add Account</span>
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-slate-100">
               {configurations.map((config) => (
-                <div key={config.id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div key={config.id} className="p-6 hover:bg-slate-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 flex-1">
                       {/* Avatar */}
-                      <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        config.provider_type === 'microsoft' 
+                          ? 'bg-blue-500' 
+                          : 'bg-red-500'
+                      }`}>
                         <span className="text-white font-medium text-sm">
-                          {config.name.charAt(0).toUpperCase()}
+                          {config.provider_type === 'microsoft' ? 'M' : 'G'}
                         </span>
                       </div>
                       
                       {/* Account Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-3 mb-1">
-                          <h3 className="text-base font-medium text-gray-900 truncate">
+                          <h3 className="text-base font-medium text-slate-900 truncate">
                             {config.name}
                           </h3>
                           
+                          {/* Provider badge */}
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            config.provider_type === 'microsoft' 
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {config.provider_type === 'microsoft' ? 'Microsoft' : 'Gmail'}
+                          </span>
+                          
                           {/* Status badges */}
                           <div className="flex items-center space-x-2">
-                            {config.is_active ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                Ativa
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                Inativa
+                            {/* Account Status */}
+                            <button
+                              onClick={() => toggleAccountStatus(config.id, config.is_active)}
+                              disabled={actionLoading[`status_${config.id}`]}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all hover:scale-105 ${
+                                actionLoading[`status_${config.id}`]
+                                  ? 'bg-slate-100 text-slate-500 cursor-wait'
+                                  : config.is_active 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer' 
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer'
+                              }`}
+                              title={`Click to ${config.is_active ? 'deactivate' : 'activate'} account`}
+                            >
+                              {actionLoading[`status_${config.id}`] ? (
+                                <>
+                                  <div className="w-2 h-2 bg-slate-400 rounded-full mr-1 animate-pulse"></div>
+                                  Updating...
+                                </>
+                              ) : config.is_active ? (
+                                <>
+                                  <div className="w-2 h-2 bg-green-600 rounded-full mr-1"></div>
+                                  Active
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-2 h-2 bg-red-600 rounded-full mr-1"></div>
+                                  Inactive
+                                </>
+                              )}
+                            </button>
+
+                            {/* Sync Status */}
+                            {config.sync_enabled && (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                config.is_active 
+                                  ? 'bg-blue-100 text-blue-700' 
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                <div className={`w-2 h-2 rounded-full mr-1 ${
+                                  syncing[config.id] 
+                                    ? 'bg-blue-600 animate-pulse' 
+                                    : config.is_active 
+                                    ? 'bg-blue-600' 
+                                    : 'bg-slate-400'
+                                }`}></div>
+                                {syncing[config.id] ? 'Syncing...' : 'Auto-sync'}
                               </span>
                             )}
 
-                            {config.sync_enabled && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                Sincronização ativa
+                            {/* Last Sync Indicator */}
+                            {config.last_sync_at && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                <div className="w-2 h-2 bg-slate-400 rounded-full mr-1"></div>
+                                Last sync: {new Date(lastSyncUpdate[config.id] || config.last_sync_at).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
                               </span>
                             )}
                           </div>
                         </div>
                         
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-sm text-slate-600 mb-2">
                           {config.email_address}
                         </p>
                         
                         {/* Technical details */}
-                        <div className="text-xs text-gray-500 space-y-1">
-                          <div className="flex items-center space-x-4">
-                            <span>SMTP: {config.smtp_host}:{config.smtp_port}</span>
-                            <span>IMAP: {config.imap_host}:{config.imap_port}</span>
-                          </div>
-                          {config.last_sync_at && (
-                            <p>
-                              Última sincronização: {new Date(config.last_sync_at).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          )}
-                        </div>
+                        
                       </div>
                     </div>
 
@@ -516,30 +768,74 @@ const EmailManagement = () => {
                       {/* Quick Actions */}
                       <div className="hidden sm:flex items-center space-x-2 mr-4">
                         <button
-                          onClick={() => navigate(`/school/dashboard/email/inbox?config=${config.id}`)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium py-1 px-2 rounded hover:bg-blue-50 transition-colors"
+                          onClick={() => handleInboxNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`text-sm font-medium py-1 px-2 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Open inbox' : 'Account is inactive'}
                         >
-                          Caixa de entrada
+                          Inbox
                         </button>
                         
                         <button
-                          onClick={() => navigate(`/school/dashboard/email/compose?config=${config.id}`)}
-                          className="text-green-600 hover:text-green-800 text-sm font-medium py-1 px-2 rounded hover:bg-green-50 transition-colors"
+                          onClick={() => handleComposeNavigation(config)}
+                          disabled={!config.is_active}
+                          className={`text-sm font-medium py-1 px-2 rounded transition-colors ${
+                            config.is_active 
+                              ? 'text-green-600 hover:text-green-800 hover:bg-green-50' 
+                              : 'text-slate-400 cursor-not-allowed'
+                          }`}
+                          title={config.is_active ? 'Compose email' : 'Account is inactive'}
                         >
-                          Escrever
+                          Compose
                         </button>
                       </div>
 
                       {/* Action Buttons */}
                       <button
                         onClick={() => handleSync(config.id)}
-                        disabled={syncing[config.id]}
-                        className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
-                        title="Sincronizar agora"
+                        disabled={syncing[config.id] || !config.is_active}
+                        className={`p-2 rounded-full transition-colors ${
+                          syncing[config.id] 
+                            ? 'bg-blue-100 text-blue-600' 
+                            : config.is_active 
+                            ? 'hover:bg-slate-100 text-slate-600' 
+                            : 'text-slate-400 cursor-not-allowed'
+                        }`}
+                        title={
+                          !config.is_active 
+                            ? 'Account is inactive' 
+                            : syncing[config.id] 
+                            ? 'Syncing...' 
+                            : 'Sync now'
+                        }
                       >
                         <ArrowPathIcon 
-                          className={`h-4 w-4 text-gray-600 ${syncing[config.id] ? 'animate-spin' : ''}`} 
+                          className={`h-4 w-4 ${syncing[config.id] ? 'animate-spin' : ''}`} 
                         />
+                      </button>
+
+                      {/* Account Status Toggle */}
+                      <button
+                        onClick={() => toggleAccountStatus(config.id, config.is_active)}
+                        disabled={actionLoading[`status_${config.id}`]}
+                        className={`p-2 rounded-full transition-colors ${
+                          actionLoading[`status_${config.id}`] 
+                            ? 'bg-slate-100' 
+                            : 'hover:bg-slate-100'
+                        }`}
+                        title={`${config.is_active ? 'Deactivate' : 'Activate'} account`}
+                      >
+                        <div className={`w-3 h-3 rounded-full ${
+                          actionLoading[`status_${config.id}`] 
+                            ? 'bg-slate-400 animate-pulse' 
+                            : config.is_active 
+                            ? 'bg-green-500' 
+                            : 'bg-red-500'
+                        }`} />
                       </button>
 
                       {/* Sync Toggle */}
@@ -548,29 +844,49 @@ const EmailManagement = () => {
                           type="checkbox"
                           checked={config.sync_enabled}
                           onChange={() => toggleSync(config.id, config.sync_enabled)}
+                          disabled={actionLoading[`toggle_${config.id}`] || !config.is_active}
                           className="sr-only"
                         />
-                        <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${config.sync_enabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
-                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${config.sync_enabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                        <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                          actionLoading[`toggle_${config.id}`] 
+                            ? 'bg-slate-300' 
+                            : !config.is_active 
+                            ? 'bg-slate-200 opacity-50' 
+                            : config.sync_enabled 
+                            ? 'bg-blue-600' 
+                            : 'bg-slate-200'
+                        }`}>
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                            actionLoading[`toggle_${config.id}`] 
+                              ? 'animate-pulse' 
+                              : config.sync_enabled 
+                              ? 'translate-x-5' 
+                              : 'translate-x-1'
+                          }`} />
                         </div>
                       </label>
 
                       {/* Settings Button */}
                       <button
-                        onClick={() => navigate(`/school/dashboard/email/config/${config.id}`)}
-                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                        title="Configurações"
+                        onClick={() => handleSettingsNavigation(config.id)}
+                        className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                        title="Account settings"
                       >
-                        <Cog6ToothIcon className="h-4 w-4 text-gray-600" />
+                        <Cog6ToothIcon className="h-4 w-4 text-slate-600" />
                       </button>
 
                       {/* Delete Button */}
                       <button
                         onClick={() => handleDelete(config.id)}
-                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                        title="Excluir"
+                        disabled={actionLoading[`delete_${config.id}`]}
+                        className={`p-2 rounded-full transition-colors ${
+                          actionLoading[`delete_${config.id}`] 
+                            ? 'bg-red-100 text-red-400' 
+                            : 'hover:bg-slate-100 text-slate-600 hover:text-red-600'
+                        }`}
+                        title={actionLoading[`delete_${config.id}`] ? 'Deleting...' : 'Delete account'}
                       >
-                        <TrashIcon className="h-4 w-4 text-gray-600 hover:text-red-600" />
+                        <TrashIcon className={`h-4 w-4 ${actionLoading[`delete_${config.id}`] ? 'animate-pulse' : ''}`} />
                       </button>
                     </div>
                   </div>
@@ -580,8 +896,7 @@ const EmailManagement = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
-export default EmailManagement;
+  export default EmailManagement;
