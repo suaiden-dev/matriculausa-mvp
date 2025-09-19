@@ -26,8 +26,8 @@ async function startAutomaticPolling() {
   try {
     console.log('🚀 INICIANDO POLLING AUTOMÁTICO...');
     
-    // Usar token fixo para o usuário principal
-    const userToken = 'EwB4BMl6BAAUBKgm8k1UswUNwklmy2v7U/S+1fEAARv08Ad07PsKF/6ArEdfvm1I1sQXT9FyXZE3QzKOOvyVLafl75iCphi/25Z8lrUBbVSbRaQAYmjMZfQuxFNNM2m9U0+2Dyb6IClV4uqACXoPLq69T8DUj8HugEl1vO+glRYcxZ2/TCWQpAVtNLxeL1gQEVPApiLp+Ej4ItiqJClnY2EjkuWYeDDc4cRTjT13YZZnBWML1ZocVt2wB/TkmmoLAGZ7v/sg0rl8YmFioMfQ8nIuNSazbt+sJMhiZtqvFhFcn6k5Xsaw/v0+SuNIKkGPE2+7ZXbXVQN3fukbqdli0o3tCaZ9eW9kSCMM5ZdycZw/GFTjys1OSttLGBcx9CMQZgAAEFCAb8ANYrCVJXQyl/1vIKVAA4sLccrDq/ym6FFdDksbOtargL/ugNUbrt7AlAZTSgmwuEmrWwNOsOCbVKltoEvgRxC/oCsk8qC+UrJnM9Sc/kszH3Qv19cl+sst6Tys6WXSA8ZnlJ8CDgDkNBfGN2lTq7UMI1guuAZAGBkM0KbyT4o/x+sj30YixO3tuGwt7aYoNyuUiaZFhQ1ZCIMPoKZ65nKnJOKjXKpsfu06Vi9bzS02bWvMEXBWhKQYgesKXBL1n/c/iz64SFuLjm3a5xteuNJauY997Lzp5O9tCOt/O05gDdkhfjegLRxxLnAB4mEfS6xkkctRJ/tqUWoNH2eewzSvwG5ukwxi7ZD+MU9oK9JbhvimKyfOvfT1N3hiKqmisJF1Vr+ff4WH02HbNX4n43fyCdOaZNqEgGkUo00X1rVu9wOnkLba7RL2a8t+ZqPf2dF3bwfZtuF1QBAsF5fBhSG/IeC6B8NI1eqyP2ARud1rl6N5DuuOZxcPb55+b3LoQoQImYhi1JMKmK+0uLp466tyMkw6DgB8zD16qEguydBtyvwIKkU+IY+jOawJtUwWxNvb9gj9K5RTdd8qe9CJqW4qDcZze2ob1I35jJWdC0TuFSroFC9Xv6XGBsJHK0001L2hU011KFI6sFJFq1TW4tdvrAt1LgSkOwd2idRhVAEEOOH7f4tp/cxDJ35HoYOWxEvPUQzP31Qw0oCf1hQ5Vm6tXGNIq0j+FnC9hM6XOq6iiHAC1mCXAN2MTWYi5Fbg0qAFCIb1x4mPjI/CFaQFCxVO0qI0IaZqHJhUp+w73mTNou0tKI1zJr5jiJMJb8jPzCK4FLbCk/hDTY2wf8KfPDoY9WGWgxyVNpB0H4qDOcPp8qAdFwGVKI4WEbE6F9e5fCaT2442DO2NmIaXh7wefbYFgJ3wYY/H5dqmeZ4tonxSMRJHzIZctFsSMfiEO7h528w/yVnhExWAkhxrPddYxoxU6QhUvo4P2VQsw7TY7H3tzNFMuHMAK4mCv+ouVrmVgMZ/Vfk/HJlX7et3R/NfKSXJ55LKtsOYKSCs0GZ/Rxq43aBflvY0W2R5kQmaiXXJIu6Hwzzbs1nTR4Cyb7Z3WA4kvsgL77hwaERrN0hjdRNiAw==';
+    // Usar token do Microsoft Graph das variáveis de ambiente
+    const userToken = process.env.VITE_MICROSOFT_GRAPH_TOKEN || '';
     const userId = '5682bded-cdbb-4f5e-afcc-bf2a2d8fdd27';
     
     // Buscar userEmail do banco
@@ -45,13 +45,13 @@ async function startAutomaticPolling() {
     
     // Criar EmailProcessor
     const { EmailProcessor } = await import('./emailProcessor.js');
-    emailProcessor = new EmailProcessor(userToken, process.env.GEMINI_API_KEY, userId, userEmail);
+    emailProcessor = new EmailProcessor(userToken, process.env.VITE_GEMINI_API_KEY, userId, userEmail);
     
     // Criar EmailPollingService
     const { EmailPollingService } = await import('./emailPollingService.js');
     pollingService = new EmailPollingService(
       userToken,
-      process.env.GEMINI_API_KEY,
+      process.env.VITE_GEMINI_API_KEY,
       userId,
       userEmail,
       {
@@ -165,13 +165,13 @@ app.post('/api/polling-user', async (req, res) => {
     
     // Criar EmailProcessor real
     const { EmailProcessor } = await import('./emailProcessor.js');
-    emailProcessor = new EmailProcessor(userToken, process.env.GEMINI_API_KEY, userId, userEmail);
+    emailProcessor = new EmailProcessor(userToken, process.env.VITE_GEMINI_API_KEY, userId, userEmail);
     
     // Criar EmailPollingService real
     const { EmailPollingService } = await import('./emailPollingService.js');
     pollingService = new EmailPollingService(
       userToken,
-      process.env.GEMINI_API_KEY,
+      process.env.VITE_GEMINI_API_KEY,
       userId, // Passar userId para o EmailPollingService
       userEmail, // Passar userEmail para o EmailPollingService
       {
@@ -260,7 +260,7 @@ app.put('/api/polling-user', async (req, res) => {
       console.log('🔍 POLLING USER - userEmail encontrado:', userEmail);
       
       const { EmailProcessor } = await import('./emailProcessor.js');
-      emailProcessor = new EmailProcessor(userToken, process.env.GEMINI_API_KEY, userId, userEmail);
+      emailProcessor = new EmailProcessor(userToken, process.env.VITE_GEMINI_API_KEY, userId, userEmail);
     }
     
     // Processar emails reais
