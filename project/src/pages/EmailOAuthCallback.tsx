@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { PublicClientApplication } from '@azure/msal-browser';
+import { msalConfig } from '../lib/msalConfig';
 import { useAuth } from '../hooks/useAuth';
 
 const EmailOAuthCallback: React.FC = () => {
@@ -45,37 +47,45 @@ const EmailOAuthCallback: React.FC = () => {
         // Extrair provider do state
         const provider = state.split('_')[0] as 'google' | 'microsoft';
         
-        // Usar URL dinâmica baseada no ambiente atual
-        const redirectUri = `${window.location.origin}/email-oauth-callback`;
-        
         console.log('🔍 DEBUG: OAuth Callback Environment detection:', {
           hostname: window.location.hostname,
-          redirectUri,
           provider
         });
 
         console.log('✅ OAuth bem-sucedido! Processando...');
         setMessage(`Processando tokens do ${provider}...`);
 
-        // Trocar código por tokens via Edge Function
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exchange-oauth-code`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            code,
-            provider,
-            redirect_uri: redirectUri
-          })
-        });
+        let result;
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (provider === 'microsoft') {
+          // Microsoft agora usa popup, não redirecionamento
+          setStatus('error');
+          setMessage('Microsoft OAuth deve ser feito via popup. Use o botão de conectar.');
+          setTimeout(() => navigate('/school/dashboard/microsoft-email'), 3000);
+          return;
+        } else {
+          // Para Google, usar Edge Function
+          const redirectUri = `${window.location.origin}/email-oauth-callback`;
+          
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/exchange-oauth-code`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              code,
+              provider,
+              redirect_uri: redirectUri
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          result = await response.json();
         }
-
-        const result = await response.json();
 
         if (result.success && result.tokens) {
           // Salvar tokens na tabela
