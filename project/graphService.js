@@ -15,9 +15,7 @@ export class GraphService {
 
     // Initialize client with proper configuration for Microsoft access tokens
     this.graphClient = Client.initWithMiddleware({ 
-      authProvider,
-      // Add additional configuration to handle non-JWT tokens
-      middleware: []
+      authProvider
     });
     
     // Store token for direct HTTP calls if needed

@@ -184,13 +184,13 @@ async function handleStartPolling(headers, body, corsHeaders) {
     
     // Criar EmailProcessor real
     const { EmailProcessor } = await import('./emailProcessor.js');
-    emailProcessor = new EmailProcessor(userToken, process.env.GEMINI_API_KEY, userId, userEmail);
+    emailProcessor = new EmailProcessor(userToken, process.env.VITE_GEMINI_API_KEY, userId, userEmail);
     
     // Criar EmailPollingService real
     const { EmailPollingService } = await import('./emailPollingService.js');
     pollingService = new EmailPollingService(
       userToken,
-      process.env.GEMINI_API_KEY,
+      process.env.VITE_GEMINI_API_KEY,
       userId,
       userEmail,
       {
@@ -289,7 +289,7 @@ async function handleProcessEmails(headers, body, corsHeaders) {
       console.log('🔍 POLLING USER - userEmail encontrado:', userEmail);
       
       const { EmailProcessor } = await import('./emailProcessor.js');
-      emailProcessor = new EmailProcessor(userToken, process.env.GEMINI_API_KEY, userId, userEmail);
+      emailProcessor = new EmailProcessor(userToken, process.env.VITE_GEMINI_API_KEY, userId, userEmail);
     }
     
     // Processar emails reais
