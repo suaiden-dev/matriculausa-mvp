@@ -53,6 +53,19 @@ const EmailInbox = () => {
   const [hasMoreEmails, setHasMoreEmails] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Modal states
+  const [showModal, setShowModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: '',
+    message: '',
+    type: 'info', // info, success, warning, error
+    confirmText: 'OK',
+    cancelText: 'Cancelar',
+    onConfirm: null,
+    onCancel: null,
+    showCancel: false
+  });
 
   useEffect(() => {
     loadConfigurations();
@@ -383,7 +396,6 @@ const EmailInbox = () => {
       console.log('✅ Sincronização concluída');
     } catch (error) {
       console.error('❌ Erro na sincronização:', error);
-      alert('Erro ao sincronizar emails');
     } finally {
       setSyncing(false);
     }
@@ -399,7 +411,6 @@ const EmailInbox = () => {
       console.log('✅ Mais emails carregados');
     } catch (error) {
       console.error('❌ Erro ao carregar mais emails:', error);
-      alert('Erro ao carregar mais emails');
     }
   };
 
@@ -429,10 +440,8 @@ const EmailInbox = () => {
         setSelectedEmail(prev => prev ? { ...prev, is_read: isRead } : null);
       }
 
-      console.log('✅ Email marcado como lido');
     } catch (error) {
       console.error('❌ Erro ao marcar email como lido:', error);
-      alert('Erro ao marcar email como lido');
     }
   };
 
@@ -502,10 +511,8 @@ const EmailInbox = () => {
         setSelectedEmail(prev => prev ? { ...prev, is_flagged: !isStarred } : null);
       }
 
-      console.log('✅ Email star status updated');
     } catch (error) {
       console.error('❌ Error updating star status:', error);
-      alert('Erro ao atualizar status de favorito');
     }
   };
 
@@ -514,7 +521,6 @@ const EmailInbox = () => {
     const idsToArchive = emailIds.length > 0 ? emailIds : Array.from(selectedEmails);
     
     if (idsToArchive.length === 0) {
-      alert('Selecione emails para arquivar');
       return;
     }
 
@@ -534,11 +540,8 @@ const EmailInbox = () => {
       // Update counts
       updateEmailCounts();
 
-      console.log('✅ Emails archived successfully');
-      alert(`${idsToArchive.length} email(s) arquivado(s)`);
     } catch (error) {
       console.error('❌ Error archiving emails:', error);
-      alert('Erro ao arquivar emails');
     }
   };
 
@@ -547,14 +550,18 @@ const EmailInbox = () => {
     const idsToSpam = emailIds.length > 0 ? emailIds : Array.from(selectedEmails);
     
     if (idsToSpam.length === 0) {
-      alert('Selecione emails para marcar como spam');
       return;
     }
 
-    if (!confirm(`Marcar ${idsToSpam.length} email(s) como spam?`)) {
-      return;
-    }
+    showConfirm(
+      'Confirmar ação',
+      `Marcar ${idsToSpam.length} email(s) como spam?`,
+      () => performMarkAsSpam(idsToSpam),
+      'warning'
+    );
+  };
 
+  const performMarkAsSpam = async (idsToSpam) => {
     try {
       // Marcar como spam
       const { error } = await supabase
@@ -572,11 +579,8 @@ const EmailInbox = () => {
       // Update counts
       updateEmailCounts();
 
-      console.log('✅ Emails marked as spam');
-      alert(`${idsToSpam.length} email(s) marcado(s) como spam`);
     } catch (error) {
       console.error('❌ Error marking as spam:', error);
-      alert('Erro ao marcar como spam');
     }
   };
 
@@ -585,14 +589,18 @@ const EmailInbox = () => {
     const idsToDelete = emailIds.length > 0 ? emailIds : Array.from(selectedEmails);
     
     if (idsToDelete.length === 0) {
-      alert('Selecione emails para excluir');
       return;
     }
 
-    if (!confirm(`Excluir ${idsToDelete.length} email(s)? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
+    showConfirm(
+      'Confirmar exclusão',
+      `Excluir ${idsToDelete.length} email(s)? Esta ação não pode ser desfeita.`,
+      () => performDeleteEmails(idsToDelete),
+      'error'
+    );
+  };
 
+  const performDeleteEmails = async (idsToDelete) => {
     try {
       const { error } = await supabase
         .from('received_emails')
@@ -609,11 +617,8 @@ const EmailInbox = () => {
       // Update counts
       updateEmailCounts();
 
-      console.log('✅ Emails deleted successfully');
-      alert(`${idsToDelete.length} email(s) excluído(s)`);
     } catch (error) {
       console.error('❌ Error deleting emails:', error);
-      alert('Erro ao excluir emails');
     }
   };
 
@@ -635,6 +640,24 @@ const EmailInbox = () => {
       email.text_content?.toLowerCase().includes(searchLower)
     );
   });
+
+  // Modal functions - only for confirmations
+  const showConfirm = (title, message, onConfirm, type = 'warning') => {
+    setModalConfig({
+      title,
+      message,
+      type,
+      confirmText: 'Confirmar',
+      cancelText: 'Cancelar',
+      onConfirm: () => {
+        onConfirm();
+        setShowModal(false);
+      },
+      onCancel: () => setShowModal(false),
+      showCancel: true
+    });
+    setShowModal(true);
+  };
 
   const selectedConfigData = configurations.find(c => c.id === selectedConfig);
 
@@ -754,7 +777,6 @@ const EmailInbox = () => {
               { id: 'inbox', label: 'Caixa de entrada', icon: EnvelopeIcon, count: emailCounts.inbox },
               { id: 'starred', label: 'Com estrela', icon: StarIcon, count: emailCounts.starred },
               { id: 'sent', label: 'Enviados', icon: ArrowPathIcon, count: emailCounts.sent },
-              { id: 'drafts', label: 'Rascunhos', icon: DocumentTextIcon, count: emailCounts.drafts },
               { id: 'archive', label: 'Arquivo', icon: ArchiveBoxIcon, count: emailCounts.archive },
               { id: 'spam', label: 'Spam', icon: ExclamationTriangleIcon, count: emailCounts.spam },
               { id: 'trash', label: 'Lixeira', icon: TrashIcon, count: emailCounts.trash },
@@ -1263,6 +1285,55 @@ const EmailInbox = () => {
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex items-center mb-4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                  modalConfig.type === 'error' ? 'bg-red-100' : 'bg-yellow-100'
+                }`}>
+                  <ExclamationTriangleIcon className={`h-5 w-5 ${
+                    modalConfig.type === 'error' ? 'text-red-600' : 'text-yellow-600'
+                  }`} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {modalConfig.title}
+                </h3>
+              </div>
+
+              {/* Modal Body */}
+              <div className="mb-6">
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {modalConfig.message}
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={modalConfig.onCancel}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  {modalConfig.cancelText}
+                </button>
+                <button
+                  onClick={modalConfig.onConfirm}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    modalConfig.type === 'error' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' :
+                    'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500'
+                  }`}
+                >
+                  {modalConfig.confirmText}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
