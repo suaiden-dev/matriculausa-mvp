@@ -67,7 +67,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const { t } = useTranslation();
-  const { isAuthenticated, updateUserProfile, user } = useAuth();
+  const { isAuthenticated, updateUserProfile, user, userProfile } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage } = useDynamicFees();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
@@ -79,7 +79,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     return <p className="text-red-500">Erro: Produto Stripe não encontrado. Contate o suporte.</p>;
   }
 
-  const handlePreCheckoutSuccess = () => {
+  const handlePreCheckoutSuccess = (finalAmount?: number) => {
     console.log('🔍 [StripeCheckout] handlePreCheckoutSuccess chamado');
     if (!isAuthenticated) {
       console.error('🔍 [StripeCheckout] Usuário não autenticado');
@@ -87,6 +87,10 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       return;
     }
     // Este método será chamado pelo PreCheckoutModal após a verificação dos termos
+    // Guardar valor final selecionado (se fornecido) para PaymentMethodSelector
+    if (typeof finalAmount === 'number') {
+      ;(window as any).__checkout_final_amount = finalAmount;
+    }
     setShowPaymentMethodSelector(true);
   };
 
@@ -244,13 +248,23 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       // Redirecionar para a página de checkout do Zelle com valores dinâmicos
       const getDynamicAmount = () => {
         if (feeType === 'selection_process') {
-          return hasSellerPackage ? selectionProcessFee.replace('$', '') : getFeeAmount('selection_process').toString();
+          // Usar valores do useDynamicFees que já incluem dependentes
+          return hasSellerPackage ? selectionProcessFee.replace('$', '') : (() => {
+            const dependents = Number(userProfile?.dependents) || 0;
+            const dependentCost = dependents * 75;
+            return (getFeeAmount('selection_process') + dependentCost).toString();
+          })();
         } else if (feeType === 'application_fee') {
           return getFeeAmount('application_fee').toString(); // Application Fee sempre usa valor da universidade
         } else if (feeType === 'scholarship_fee') {
           return hasSellerPackage ? scholarshipFee.replace('$', '') : getFeeAmount('scholarship_fee').toString();
         } else if (feeType === 'enrollment_fee' || feeType === 'i20_control_fee') {
-          return hasSellerPackage ? i20ControlFee.replace('$', '') : getFeeAmount('i20_control_fee').toString();
+          // Usar valores do useDynamicFees que já incluem dependentes
+          return hasSellerPackage ? i20ControlFee.replace('$', '') : (() => {
+            const dependents = Number(userProfile?.dependents) || 0;
+            const dependentCost = dependents * 75;
+            return (getFeeAmount('i20_control_fee') + dependentCost).toString();
+          })();
         }
         return getFeeAmount('selection_process').toString();
       };
@@ -301,6 +315,8 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-application-fee`;
       } else if (feeType === 'scholarship_fee') {
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
+      } else if (feeType === 'i20_control_fee') {
+        apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-i20-control-fee`;
       }
       console.log('Getting session data...');
       const { data: sessionData } = await supabase.auth.getSession();
@@ -310,26 +326,60 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       if (!token) {
         throw new Error('Usuário não autenticado. Token não encontrado.');
       }
+      // Obter valor final (com dependentes se aplicável)
+      let finalAmount: number;
+      
+      // Se há um valor do PreCheckoutModal, usar ele
+      if ((window as any).__checkout_final_amount && typeof (window as any).__checkout_final_amount === 'number') {
+        finalAmount = (window as any).__checkout_final_amount;
+      } else {
+        // Calcular valor baseado no feeType
+        if (feeType === 'selection_process') {
+          // Usar valores do useDynamicFees que já incluem dependentes
+          finalAmount = hasSellerPackage ? parseFloat(selectionProcessFee.replace('$', '')) : (() => {
+            const dependents = Number(userProfile?.dependents) || 0;
+            const dependentCost = dependents * 75;
+            return getFeeAmount('selection_process') + dependentCost;
+          })();
+        } else if (feeType === 'i20_control_fee') {
+          // Usar valores do useDynamicFees que já incluem dependentes
+          finalAmount = hasSellerPackage ? parseFloat(i20ControlFee.replace('$', '')) : (() => {
+            const dependents = Number(userProfile?.dependents) || 0;
+            const dependentCost = dependents * 75;
+            return getFeeAmount('i20_control_fee') + dependentCost;
+          })();
+        } else if (feeType === 'scholarship_fee') {
+          finalAmount = hasSellerPackage ? parseFloat(scholarshipFee.replace('$', '')) : getFeeAmount('scholarship_fee');
+        } else {
+          finalAmount = getFeeAmount('application_fee');
+        }
+      }
+
+      const requestBody = {
+        price_id: product.priceId,
+        amount: finalAmount, // Incluir valor final calculado
+        success_url: (successUrl || `${window.location.origin}/checkout/success`).replace(/\?.*/, '') + '?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url: cancelUrl || `${window.location.origin}/checkout/cancel`,
+        mode: product.mode,
+        payment_type: paymentType,
+        fee_type: feeType,
+        metadata: {
+          ...metadata,
+          application_id: applicationId,
+          student_process_type: studentProcessType,
+          final_amount: finalAmount, // Incluir no metadata também
+        },
+        scholarships_ids: scholarshipsIds,
+      };
+
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          price_id: product.priceId,
-          success_url: (successUrl || `${window.location.origin}/checkout/success`).replace(/\?.*/, '') + '?session_id={CHECKOUT_SESSION_ID}',
-          cancel_url: cancelUrl || `${window.location.origin}/checkout/cancel`,
-          mode: product.mode,
-          payment_type: paymentType,
-          fee_type: feeType,
-          metadata: {
-            ...metadata,
-            application_id: applicationId,
-            student_process_type: studentProcessType,
-          },
-          scholarships_ids: scholarshipsIds,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -356,7 +406,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     <>
       <button
         onClick={isBlocked && pendingPayment ? undefined : checkActiveDiscount}
-        disabled={disabled || loading || paymentBlockedLoading || (isBlocked && pendingPayment)}
+        disabled={disabled || loading || paymentBlockedLoading || Boolean(isBlocked && pendingPayment)}
         className={`${className} ${(loading || paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {loading ? t('zelleCheckout.processing') : 
@@ -370,10 +420,16 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
         <PreCheckoutModal
           isOpen={showPreCheckoutModal}
           onClose={() => setShowPreCheckoutModal(false)}
-          onProceedToCheckout={handlePreCheckoutSuccess}
+          onProceedToCheckout={(amount, code) => handlePreCheckoutSuccess(amount)}
           feeType={feeType === 'i20_control_fee' ? 'application_fee' : feeType}
           productName={product.name}
-          productPrice={feeType === 'selection_process' ? getFeeAmount('selection_process') : getFeeAmount('application_fee')}
+          productPrice={(feeType === 'selection_process'
+            ? (() => {
+                const dependents = Number(userProfile?.dependents) || 0;
+                const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+                return getFeeAmount('selection_process') + dependentCost;
+              })()
+            : getFeeAmount('application_fee'))}
         />
       )}
 
@@ -425,7 +481,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   selectedMethod={selectedPaymentMethod}
                   onMethodSelect={handlePaymentMethodSelect}
                   feeType={feeType}
-                  amount={getFeeAmount('scholarship_fee')}
+                  amount={(window as any).__checkout_final_amount || getFeeAmount('scholarship_fee')}
                 />
               </div>
             </Dialog.Panel>
@@ -489,7 +545,21 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
                   selectedMethod={selectedPaymentMethod}
                   onMethodSelect={handlePaymentMethodSelect}
                   feeType={feeType}
-                  amount={feeType === 'selection_process' ? getFeeAmount('selection_process') : feeType === 'scholarship_fee' ? getFeeAmount('scholarship_fee') : getFeeAmount('application_fee')}
+                  amount={(window as any).__checkout_final_amount || (feeType === 'selection_process'
+                    ? (() => {
+                        const dependents = Number(userProfile?.dependents) || 0;
+                        const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+                        return getFeeAmount('selection_process') + dependentCost;
+                      })()
+                    : feeType === 'scholarship_fee'
+                    ? getFeeAmount('scholarship_fee')
+                    : feeType === 'i20_control_fee'
+                    ? (() => {
+                        const dependents = Number(userProfile?.dependents) || 0;
+                        const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+                        return getFeeAmount('i20_control_fee') + dependentCost;
+                      })()
+                    : getFeeAmount('application_fee'))}
                 />
               </div>
             </Dialog.Panel>

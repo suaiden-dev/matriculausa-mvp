@@ -32,18 +32,22 @@ export const useDynamicFees = (): DynamicFeeValues => {
       // Verificar se o usuário tem um pacote de vendedor
       const hasSellerPackage = Boolean(
         userProfile?.seller_referral_code && 
-        userProfile?.scholarship_package_id
+        (userProfile as any)?.scholarship_package_id
       );
 
       // Se tem pacote de vendedor, usar valores dinâmicos
-      if (hasSellerPackage && userProfile?.scholarship_package_id) {
-        const userPackage = packages.find(p => p.id === userProfile.scholarship_package_id);
+      if (hasSellerPackage && (userProfile as any)?.scholarship_package_id) {
+        const userPackage = packages.find(p => p.id === (userProfile as any).scholarship_package_id);
         
         if (userPackage) {
+          // Considerar dependentes para Selection Process e I-20 Control Fee
+          const dependents = Number(userProfile?.dependents) || 0;
+          const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+          
           return {
-            selectionProcessFee: `$${userPackage.selection_process_fee}`,
-            scholarshipFee: `$${userPackage.scholarship_fee}`,
-            i20ControlFee: `$${userPackage.i20_control_fee}`,
+            selectionProcessFee: `$${userPackage.selection_process_fee + dependentCost}`,
+            scholarshipFee: `$${userPackage.scholarship_fee}`, // Scholarship fee não tem dependentes
+            i20ControlFee: `$${userPackage.i20_control_fee + dependentCost}`,
             hasSellerPackage: true,
             packageName: userPackage.name,
             packageNumber: userPackage.package_number
