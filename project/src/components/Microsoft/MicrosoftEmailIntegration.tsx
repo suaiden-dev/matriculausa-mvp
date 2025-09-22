@@ -65,36 +65,8 @@ function MicrosoftEmailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen">
       <MicrosoftLoginHandler />
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Mail className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">
-                Microsoft Email Integration
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              {isAuthenticated && (
-                <button
-                  onClick={() => setShowCompose(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Novo Email
-                </button>
-              )}
-              {isAuthenticated && <MicrosoftUserProfile />}
-            </div>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!isAuthenticated ? (
           // Login Screen
@@ -156,15 +128,6 @@ function MicrosoftEmailContent() {
           />
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center text-gray-600">
-            <p>&copy; 2024 Microsoft Email Integration. Desenvolvido com React e Microsoft Graph API.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
