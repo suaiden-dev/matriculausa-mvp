@@ -639,11 +639,11 @@ export default function MicrosoftInbox() {
           <div className="flex items-center gap-2">
             <Mail className="h-8 w-8" />
             <span className="text-xl font-semibold">Outlook</span>
-            {connections.length > 1 && (
+            {/* {connections.length > 1 && (
               <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
                 {connections.length} contas
               </div>
-            )}
+            )} */}
           </div>
         </div>
         
@@ -661,14 +661,14 @@ export default function MicrosoftInbox() {
         </div>
 
         <div className="flex items-center gap-4">
-          <MicrosoftAccountSelector onAccountChange={(email) => {
+          {/* <MicrosoftAccountSelector onAccountChange={(email) => {
             console.log('Account changed to:', email);
             // Limpar cache e recarregar emails quando a conta muda
             setFolderCache({});
             setFolderEmails({});
             setEmailCounts({ inbox: 0, sent: 0, drafts: 0, archive: 0, spam: 0, trash: 0 });
             loadAllFolders();
-          }} />
+          }} /> */}
           <button 
             onClick={loadAllFolders}
             disabled={loadingEmails}
@@ -676,12 +676,12 @@ export default function MicrosoftInbox() {
           >
             <RefreshCw className={`h-5 w-5 ${loadingEmails ? 'animate-spin' : ''}`} />
           </button>
-          <button className="p-2 hover:bg-blue-700 rounded-lg transition-colors">
+          {/* <button className="p-2 hover:bg-blue-700 rounded-lg transition-colors">
             <Settings className="h-5 w-5" />
           </button>
           <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
             <User className="h-5 w-5" />
-          </div>
+          </div> */}
         </div>
       </div>
 

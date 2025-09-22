@@ -1,5 +1,5 @@
 import { Configuration } from '@azure/msal-browser';
-
+import { RedirectRequest } from '@azure/msal-browser';
 // MSAL configuration
 export const msalConfig: Configuration = {
   auth: {
@@ -15,24 +15,38 @@ export const msalConfig: Configuration = {
     secureCookies: false,
   },
   system: {
-    allowRedirectInIframe: false,
-    navigateFrameWait: 5000,
+    windowHashTimeout: 60000,
     iframeHashTimeout: 6000,
     loadFrameTimeout: 0,
     loggerOptions: {
       loggerCallback: (level, message, containsPii) => {
-        if (containsPii) return;
-        console.log(`MSAL: ${level} - ${message}`);
+        if (containsPii) {
+          return;
+        }
+        switch (level) {
+          case 0: // Error
+            console.error(`MSAL Error: ${message}`);
+            break;
+          case 1: // Warning
+            console.warn(`MSAL Warning: ${message}`);
+            break;
+          case 2: // Info
+            console.info(`MSAL Info: ${message}`);
+            break;
+          case 3: // Verbose
+            console.log(`MSAL Verbose: ${message}`);
+            break;
+        }
       },
-      piiLoggingEnabled: false,
-      logLevel: 'Warning' as any,
-    },
+      piiLoggingEnabled: false
+    }
   },
 };
 
 // Add scopes here for ID token to be used at Microsoft identity platform endpoints.
-export const loginRequest = {
+export const loginRequest: RedirectRequest = {
   scopes: ['User.Read', 'Mail.Read', 'Mail.Send', 'Mail.ReadWrite', 'offline_access'],
+  prompt: 'select_account'
 };
 
 // Add the endpoints here for Microsoft Graph API services you'd like to use.

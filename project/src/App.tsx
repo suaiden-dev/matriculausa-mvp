@@ -42,10 +42,6 @@ import ForUniversities from './pages/ForUniversities';
 import ForStudents from './pages/ForStudents';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
-import EmailManagement from './components/email/EmailManagement';
-import EmailConfiguration from './components/email/EmailConfiguration';
-import EmailInbox from './components/email/EmailInbox';
-import EmailCompose from './components/email/EmailCompose';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
@@ -133,11 +129,6 @@ const AppContent = () => {
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
           
-          {/* Email Management Routes */}
-          <Route path="/email" element={<EmailManagement />} />
-          <Route path="/email/config" element={<EmailConfiguration />} />
-          <Route path="/email/inbox" element={<EmailInbox />} />
-          <Route path="/email/compose" element={<EmailCompose />} />
           
           {/* Microsoft Email Integration */}
           <Route path="/microsoft-email" element={<MicrosoftIntegrationPage />} />
