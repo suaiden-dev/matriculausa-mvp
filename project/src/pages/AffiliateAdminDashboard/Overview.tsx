@@ -1,4 +1,6 @@
 import React from 'react';
+import { useState as useStateReact, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -47,6 +49,119 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
       currency: 'USD'
     }).format(amount);
   };
+
+  // Receita derivada: prioriza um possível campo ajustado vindo do backend;
+  // fallback: soma de sellers.total_revenue; fallback final: stats.totalRevenue
+  const derivedTotalRevenue = (() => {
+    const adjustedFromStats = (stats as any)?.totalRevenueAdjusted;
+    if (typeof adjustedFromStats === 'number' && !isNaN(adjustedFromStats)) return adjustedFromStats;
+    if (Array.isArray(sellers) && sellers.length > 0) {
+      const sum = sellers.reduce((acc, s) => acc + (Number(s?.total_revenue) || 0), 0);
+      if (!isNaN(sum)) return sum;
+    }
+    return safeStats.totalRevenue;
+  })();
+
+  // Receita ajustada calculada no cliente (inclui dependentes) para o admin logado
+  const [clientAdjustedRevenue, setClientAdjustedRevenue] = useStateReact<number | null>(null);
+  const [loadingAdjusted, setLoadingAdjusted] = useStateReact<boolean>(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadAdjusted = async () => {
+      try {
+        setLoadingAdjusted(true);
+        const { data: userData } = await supabase.auth.getUser();
+        const currentUserId = userData?.user?.id;
+        if (!currentUserId) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+        // Descobrir affiliate_admin_id
+        const { data: aaList, error: aaErr } = await supabase
+          .from('affiliate_admins')
+          .select('id')
+          .eq('user_id', currentUserId)
+          .limit(1);
+        if (aaErr || !aaList || aaList.length === 0) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+        const affiliateAdminId = aaList[0].id;
+
+        // Buscar sellers vinculados a este affiliate admin
+        const { data: sellers, error: sellersErr } = await supabase
+          .from('sellers')
+          .select('referral_code')
+          .eq('affiliate_admin_id', affiliateAdminId);
+        
+        if (sellersErr || !sellers || sellers.length === 0) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+        
+        const referralCodes = sellers.map(s => s.referral_code);
+        
+        // Buscar perfis de estudantes vinculados via seller_referral_code
+        const { data: profiles, error: profilesErr } = await supabase
+          .from('user_profiles')
+          .select(`
+            id,
+            has_paid_selection_process_fee, 
+            has_paid_i20_control_fee, 
+            dependents, 
+            scholarship_package_id,
+            scholarship_applications!inner(is_scholarship_fee_paid)
+          `)
+          .in('seller_referral_code', referralCodes);
+        if (profilesErr || !profiles) {
+          if (mounted) setClientAdjustedRevenue(null);
+          return;
+        }
+
+        // Buscar todos os packages necessários
+        const packageIds = Array.from(new Set((profiles || []).map(p => p.scholarship_package_id).filter(Boolean)));
+        let packagesMap: Record<string, any> = {};
+        if (packageIds.length > 0) {
+          const { data: packages, error: pkgErr } = await supabase
+            .from('scholarship_packages')
+            .select('id, selection_process_fee, i20_control_fee, scholarship_fee')
+            .in('id', packageIds as string[]);
+          if (!pkgErr && Array.isArray(packages)) {
+            packagesMap = (packages as any[]).reduce((acc, pkg) => {
+              acc[pkg.id] = pkg;
+              return acc;
+            }, {} as Record<string, any>);
+          }
+        }
+
+        // Função auxiliar para obter valores base quando não há pacote
+        const getDefaultFees = () => ({ selection_process_fee: 0, i20_control_fee: 0, scholarship_fee: 0 });
+
+        // Calcular total ajustado considerando dependentes
+        const total = profiles.reduce((sum: number, p: any) => {
+          const deps = Number(p?.dependents || 0);
+          const pkg = p?.scholarship_package_id ? packagesMap[p.scholarship_package_id] : null;
+          const base = pkg || getDefaultFees();
+          // Selection Process: base + (dependents × 75)
+          const selPaid = p?.has_paid_selection_process_fee ? (Number(base.selection_process_fee || 0) + (deps * 75)) : 0;
+          // Scholarship Fee: base (sem dependentes)
+          const schPaid = p?.scholarship_applications?.[0]?.is_scholarship_fee_paid ? Number(base.scholarship_fee || 0) : 0;
+          // I-20 Control: base + (dependents × 75)
+          const i20Paid = p?.has_paid_i20_control_fee ? (Number(base.i20_control_fee || 0) + (deps * 75)) : 0;
+          return sum + selPaid + schPaid + i20Paid;
+        }, 0);
+
+        if (mounted) setClientAdjustedRevenue(total);
+      } catch {
+        if (mounted) setClientAdjustedRevenue(null);
+      } finally {
+        if (mounted) setLoadingAdjusted(false);
+      }
+    };
+    loadAdjusted();
+    return () => { mounted = false; };
+  }, []);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -151,7 +266,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellers = [], onRefresh }) =
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-slate-900">{formatCurrency(safeStats.totalRevenue)}</p>
+                <p className="text-3xl font-bold text-slate-900">{formatCurrency((clientAdjustedRevenue ?? derivedTotalRevenue) as number)}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                   <span className="text-sm font-medium text-emerald-600">

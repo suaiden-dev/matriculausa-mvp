@@ -72,9 +72,9 @@ const PaymentManagement: React.FC = () => {
       isLoadingBalanceRef.current = true;
       setLoadingBalance(true);
 
-      // 1) Receitas das taxas do aluno (exceto application fee) via RPC
+      // 1) Receitas das taxas do aluno (exceto application fee) via RPC com dependentes
       const { data: studentsAnalytics, error: studentsError } = await supabase
-        .rpc('get_admin_students_analytics', { admin_user_id: uid });
+        .rpc('get_admin_students_analytics_with_dependents', { admin_user_id: uid });
 
       if (studentsError) {
         console.error('Error fetching affiliate revenue (RPC):', studentsError);

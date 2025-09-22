@@ -162,9 +162,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       isLoadingRef.current = true;
       setLoading(true);
       
-      // Buscar analytics de estudantes (mesma lógica do Seller Tracking / total_paid)
+      // Buscar analytics de estudantes com dependentes (mesma lógica do Seller Tracking / total_paid)
       const { data: studentsAnalytics, error: studentsError } = await supabase
-        .rpc('get_admin_students_analytics', { admin_user_id: userId });
+        .rpc('get_admin_students_analytics_with_dependents', { admin_user_id: userId });
 
       if (studentsError) {
         console.error('Error fetching students analytics for affiliate overview:', studentsError);
@@ -331,16 +331,24 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const paidScholarship = !!row.is_scholarship_fee_paid;
       const paidApplication = !!row.is_application_fee_paid;
 
-      // Calcular valores baseados nas taxas do pacote ou valores padrão
+      // Calcular valores baseados nas taxas do pacote + dependentes
       let selectionFeeAmount = 0;
       let i20ControlFeeAmount = 0;
       let scholarshipFeeAmount = 0;
       let applicationFeeAmount = 0;
 
-      // Usar taxas do pacote se disponíveis, senão usar valores padrão
-      selectionFeeAmount = row.selection_process_fee || getFeeAmount('selection_process');
-      i20ControlFeeAmount = row.i20_control_fee || getFeeAmount('i20_control_fee');
-      scholarshipFeeAmount = row.scholarship_fee || getFeeAmount('scholarship_fee');
+      // Obter número de dependentes
+      const dependents = Number(row.dependents) || 0;
+      const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+
+      // Usar taxas do pacote + dependentes se disponíveis, senão usar valores padrão + dependentes
+      const baseSelectionFee = row.selection_process_fee || getFeeAmount('selection_process');
+      const baseI20ControlFee = row.i20_control_fee || getFeeAmount('i20_control_fee');
+      const baseScholarshipFee = row.scholarship_fee || getFeeAmount('scholarship_fee');
+      
+      selectionFeeAmount = baseSelectionFee + dependentCost;
+      i20ControlFeeAmount = baseI20ControlFee + dependentCost;
+      scholarshipFeeAmount = baseScholarshipFee; // Scholarship fee não tem dependentes
       applicationFeeAmount = 300; // Application fee fixo
 
       // Registrar eventos baseados nos flags de pagamento
