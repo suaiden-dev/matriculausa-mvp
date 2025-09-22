@@ -112,6 +112,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
+  const [dependents, setDependents] = useState<number>(0);
   
   // Função para buscar taxas do pacote do estudante
   const loadStudentPackageFees = useCallback(async (studentUserId: string) => {
@@ -137,6 +138,22 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     } catch (error) {
       console.error('❌ [STUDENT_DETAILS] Erro ao buscar taxas do pacote:', error);
       setStudentPackageFees(null);
+    }
+  }, []);
+
+  // Buscar dependents do perfil do estudante
+  const loadDependents = useCallback(async (studentUserId: string) => {
+    if (!studentUserId) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) setDependents(Number(data.dependents || 0));
+      else setDependents(0);
+    } catch {
+      setDependents(0);
     }
   }, []);
 
@@ -192,6 +209,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         // Buscar taxas do pacote do estudante
         if (studentInfoData.student_id) {
           loadStudentPackageFees(studentInfoData.student_id);
+          loadDependents(studentInfoData.student_id);
         }
          // Dados do estudante carregados com sucesso
        } else {
@@ -1428,7 +1446,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            {studentInfo?.has_paid_selection_process_fee && (
                              <span className="text-xs text-slate-500">
-                               {studentPackageFees ? formatFeeAmount(studentPackageFees.selection_process_fee) : formatFeeAmount(getFeeAmount('selection_process'))}
+                               {(() => {
+                                 const base = studentPackageFees ? Number(studentPackageFees.selection_process_fee) : Number(getFeeAmount('selection_process'));
+                                 const total = base + (dependents * 150) / 2;
+                                 return formatFeeAmount(total);
+                               })()}
                              </span>
                            )}
                          </div>
@@ -1505,7 +1527,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                            </span>
                            {studentInfo?.has_paid_i20_control_fee && (
                              <span className="text-xs text-slate-500">
-                               {studentPackageFees ? formatFeeAmount(studentPackageFees.i20_control_fee) : formatFeeAmount(getFeeAmount('i-20_control_fee'))}
+                               {(() => {
+                                 const base = studentPackageFees ? Number(studentPackageFees.i20_control_fee) : Number(getFeeAmount('i-20_control_fee'));
+                                 const total = base + (dependents * 150) / 2;
+                                 return formatFeeAmount(total);
+                               })()}
                              </span>
                            )}
                          </div>

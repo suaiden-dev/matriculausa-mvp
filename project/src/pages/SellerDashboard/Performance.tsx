@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Calendar, Award, Target, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface PerformanceProps {
   stats: any;
@@ -27,12 +28,79 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getFeeAmount } = useFeeConfig();
+  const [studentPackageFees, setStudentPackageFees] = useState<{[key: string]: any}>({});
+  const [studentDependents, setStudentDependents] = useState<{[key: string]: number}>({});
+  const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
+  const [adjustedMonthlyData, setAdjustedMonthlyData] = useState<PerformanceData['monthly_data']>([]);
+  const [rpcTotalRevenue, setRpcTotalRevenue] = useState<number>(0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(amount || 0);
+  };
+
+  // Helpers para carregar pacotes e dependentes
+  const loadStudentPackageFees = async (studentUserId: string) => {
+    if (!studentUserId || studentPackageFees[studentUserId]) return;
+    try {
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: studentUserId
+      });
+      if (!error && packageFees && packageFees.length > 0) {
+        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: packageFees[0] }));
+      } else {
+        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
+      }
+    } catch {
+      setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
+    }
+  };
+
+  const loadStudentDependents = async (studentUserId: string) => {
+    if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: Number(data.dependents || 0) }));
+      } else {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+      }
+    } catch {
+      setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+    }
+  };
+
+  useEffect(() => {
+    (students || []).forEach((s: any) => {
+      if (s.id && !studentPackageFees[s.id]) loadStudentPackageFees(s.id);
+      if (s.id && studentDependents[s.id] === undefined) loadStudentDependents(s.id);
+    });
+  }, [students, studentPackageFees, studentDependents]);
+
+  const calculateStudentAdjustedPaid = (student: any): number => {
+    let total = 0;
+    const packageFees = studentPackageFees[student.id];
+    const deps = studentDependents[student.id] || 0;
+    if (student.has_paid_selection_process_fee) {
+      const baseSel = packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
+      total += Number(baseSel) + (deps * 150) / 2;
+    }
+    if (student.is_scholarship_fee_paid) {
+      const baseSch = packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
+      total += Number(baseSch);
+    }
+    if (student.has_paid_i20_control_fee) {
+      const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
+      total += Number(baseI20) + (deps * 150) / 2;
+    }
+    return total;
   };
 
   const getIconComponent = (iconName: string) => {
@@ -133,7 +201,30 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
             monthly_goals: data[0].monthly_goals,
             achievements: data[0].achievements
           });
-          setPerformanceData(data[0]);
+          // Guardar dados originais do RPC
+          const rpcRevenue = getSafeNumber(data[0], 'total_revenue', 0);
+          setRpcTotalRevenue(rpcRevenue);
+          const rpcMonthly = getSafeArray(data[0], 'monthly_data', []);
+          setOriginalMonthlyData(rpcMonthly);
+
+          // Substituir total_revenue pelo valor ajustado calculado via alunos quando disponível
+          let adjustedRevenue = rpcRevenue;
+          try {
+            if (Array.isArray(students) && students.length > 0) {
+              adjustedRevenue = students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
+            }
+          } catch (e) {
+            // fallback mantém o valor original
+          }
+          setPerformanceData({ ...data[0], total_revenue: adjustedRevenue });
+
+          // Ajustar monthly_data proporcionalmente ao fator de ajuste de receita
+          const factor = rpcRevenue > 0 ? (adjustedRevenue / rpcRevenue) : 1;
+          const adjustedMonthly = (rpcMonthly || []).map((m: any) => ({
+            ...m,
+            revenue: Number(m?.revenue || 0) * factor
+          }));
+          setAdjustedMonthlyData(adjustedMonthly);
         } else {
           throw new Error('No performance data found');
         }
@@ -417,7 +508,9 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
 
       {/* Dados Mensais */}
       {(() => {
-        const monthlyData = getSafeArray(performanceData, 'monthly_data', []);
+        const monthlyData = (adjustedMonthlyData && adjustedMonthlyData.length > 0)
+          ? adjustedMonthlyData
+          : getSafeArray(performanceData, 'monthly_data', []);
         if (monthlyData && monthlyData.length > 0) {
           return (
             <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">

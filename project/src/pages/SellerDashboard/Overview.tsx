@@ -1,4 +1,7 @@
 import React from 'react';
+import { supabase } from '../../lib/supabase';
+import { useState as useStateReact, useEffect } from 'react';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 import {
   Users,
   GraduationCap,
@@ -28,6 +31,76 @@ interface OverviewProps {
 
 const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = [], onRefresh, onNavigate }) => {
   const recentStudents = students.slice(0, 5);
+  const { getFeeAmount } = useFeeConfig();
+  const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
+  const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
+
+  // Carregar taxas do pacote (RPC) e dependentes do perfil
+  const loadStudentPackageFees = async (studentUserId: string) => {
+    if (!studentUserId || studentPackageFees[studentUserId]) return;
+    try {
+      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
+        user_id_param: studentUserId
+      });
+      if (!error && packageFees && packageFees.length > 0) {
+        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: packageFees[0] }));
+      } else {
+        setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
+      }
+    } catch {
+      setStudentPackageFees(prev => ({ ...prev, [studentUserId]: null }));
+    }
+  };
+
+  const loadStudentDependents = async (studentUserId: string) => {
+    if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: Number(data.dependents || 0) }));
+      } else {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+      }
+    } catch {
+      setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+    }
+  };
+
+  useEffect(() => {
+    students.forEach((s: any) => {
+      if (s.id && !studentPackageFees[s.id]) loadStudentPackageFees(s.id);
+      if (s.id && studentDependents[s.id] === undefined) loadStudentDependents(s.id);
+    });
+  }, [students, studentPackageFees, studentDependents]);
+
+  const calculateStudentAdjustedPaid = (student: any): number => {
+    let total = 0;
+    const packageFees = studentPackageFees[student.id];
+    const deps = studentDependents[student.id] || 0;
+    if (student.has_paid_selection_process_fee) {
+      const baseSel = packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
+      total += Number(baseSel) + (deps * 150) / 2;
+    }
+    if (student.is_scholarship_fee_paid) {
+      const baseSch = packageFees ? packageFees.scholarship_fee : getFeeAmount('scholarship_fee');
+      total += Number(baseSch);
+    }
+    if (student.has_paid_i20_control_fee) {
+      const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
+      total += Number(baseI20) + (deps * 150) / 2;
+    }
+    // Application fee não entra na receita do seller
+    return total;
+  };
+
+  const adjustedTotalRevenue = React.useMemo(() => {
+    if (!students || students.length === 0) return stats.totalRevenue || 0;
+    return students.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
+  }, [students, studentPackageFees, studentDependents, stats.totalRevenue]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -69,7 +142,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       description: 'Analyze metrics and performance',
       icon: TrendingUp,
       color: 'bg-blue-700',
-      count: formatCurrency(stats.totalRevenue),
+      count: formatCurrency(adjustedTotalRevenue),
       view: 'performance'
     }
   ];
@@ -111,7 +184,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Revenue</p>
-              <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.totalRevenue)}</p>
+              <p className="text-3xl font-bold text-slate-900">{formatCurrency(adjustedTotalRevenue)}</p>
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                 <span className="text-sm font-medium text-emerald-600">
@@ -215,7 +288,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
             <div className="space-y-4">
               {/* Top 3 Students by Revenue */}
               {students
-                .sort((a, b) => (b.total_paid || 0) - (a.total_paid || 0))
+                .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                 .slice(0, 3)
                 .map((student, index) => (
                   <div 
@@ -242,7 +315,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                         <div className="space-y-1">
                           <div className="flex items-center sm:justify-end space-x-2">
                             <span className="text-2xl font-bold text-slate-900 whitespace-nowrap">
-                              {formatCurrency(student.total_paid || 0)}
+                              {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                             </span>
                             <span className="text-sm text-slate-500">revenue</span>
                           </div>
@@ -261,7 +334,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                   <h4 className="text-sm font-medium text-slate-600 mb-3">Other Top Performers</h4>
                   <div className="space-y-3">
                     {students
-                      .sort((a, b) => (b.total_paid || 0) - (a.total_paid || 0))
+                      .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                       .slice(3, 6)
                       .map((student, index) => (
                         <div 
@@ -281,7 +354,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                             <div className="text-left sm:text-right">
                               <div className="flex items-center sm:justify-end space-x-4">
                                 <span className="text-sm text-slate-700 font-medium whitespace-nowrap">
-                                  {formatCurrency(student.total_paid || 0)}
+                                  {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
                                 </span>
                                 <span className="text-xs text-slate-500">
                                   {formatDate(student.created_at)}

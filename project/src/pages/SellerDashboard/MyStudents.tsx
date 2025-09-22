@@ -83,6 +83,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   
   // Estado para armazenar as taxas do pacote de cada estudante
   const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
+  // Estado para dependentes por estudante
+  const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
   
   // Função para buscar taxas do pacote de um estudante
   const loadStudentPackageFees = async (studentUserId: string) => {
@@ -117,6 +119,25 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
     }
   };
+
+  // Buscar dependents do perfil do estudante
+  const loadStudentDependents = async (studentUserId: string) => {
+    if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('dependents')
+        .eq('user_id', studentUserId)
+        .single();
+      if (!error && data) {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: Number(data.dependents || 0) }));
+      } else {
+        setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+      }
+    } catch {
+      setStudentDependents(prev => ({ ...prev, [studentUserId]: 0 }));
+    }
+  };
   
   // Carregar taxas do pacote quando os estudantes mudarem
   useEffect(() => {
@@ -124,8 +145,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (student.id && !studentPackageFees[student.id]) {
         loadStudentPackageFees(student.id);
       }
+      if (student.id && studentDependents[student.id] === undefined) {
+        loadStudentDependents(student.id);
+      }
     });
-  }, [students, studentPackageFees]);
+  }, [students, studentPackageFees, studentDependents]);
   
   // Estado dos filtros
   const [filters, setFilters] = useState<FilterState>({
@@ -334,7 +358,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     
     // Verificar Selection Process Fee (primeira taxa a ser paga)
     if (!student.has_paid_selection_process_fee) {
-      const selectionProcessFee = getFeeAmount('selection_process');
+      const deps = studentDependents[student.id] || 0;
+      const base = studentPackageFees[student.id]?.selection_process_fee ?? getFeeAmount('selection_process');
+      const selectionProcessFee = base + (deps * 150) / 2;
       missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
       return missingFees; // Se não pagou essa, não mostra as outras
     }
@@ -348,7 +374,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     
     // Verificar I20 Control Fee (terceira taxa a ser paga)
     if (!student.has_paid_i20_control_fee) {
-      const i20ControlFee = getFeeAmount('i20_control_fee');
+      const deps = studentDependents[student.id] || 0;
+      const baseI20 = studentPackageFees[student.id]?.i20_control_fee ?? getFeeAmount('i20_control_fee');
+      const i20ControlFee = baseI20 + (deps * 150) / 2;
       missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
     }
     
@@ -390,13 +418,16 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     
     // Buscar taxas do pacote do estudante
     const packageFees = studentPackageFees[student.id];
+    const deps = studentDependents[student.id] || 0;
 
     if (student.has_paid_selection_process_fee) {
-      total += packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
+      const baseSel = packageFees ? packageFees.selection_process_fee : getFeeAmount('selection_process');
+      total += baseSel + (deps * 150) / 2;
     }
     
     if (student.has_paid_i20_control_fee) {
-      total += packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
+      const baseI20 = packageFees ? packageFees.i20_control_fee : getFeeAmount('i20_control_fee');
+      total += baseI20 + (deps * 150) / 2;
     }
     
     if (student.is_scholarship_fee_paid) {
