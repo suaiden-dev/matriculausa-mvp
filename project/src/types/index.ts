@@ -156,6 +156,9 @@ export interface UserProfile {
   enrollment_status?: 'pending' | 'enrolled' | 'rejected' | 'waitlisted';
   avatar_url?: string | null;
   dependents?: number; // New field in user_profiles
+  scholarship_package_id?: string | null; // Package ID for seller students
+  seller_referral_code?: string | null; // Referral code from seller
+  affiliate_code?: string | null; // Friend referral code
 
 }
 

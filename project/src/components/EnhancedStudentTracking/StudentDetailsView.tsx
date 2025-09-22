@@ -34,31 +34,88 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
   // Estado para armazenar as taxas do pacote do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   
+  // Estado para armazenar os dependentes do estudante
+  const [studentDependents, setStudentDependents] = useState<number>(0);
+  
+  // Função para calcular valor com dependentes
+  const calculateFeeWithDependents = (baseFee: number, dependents: number = 0, feeType: 'selection_process' | 'i20_control_fee') => {
+    if (feeType === 'selection_process' || feeType === 'i20_control_fee') {
+      const dependentCost = dependents * 75; // $75 por dependente para cada taxa
+      return baseFee + dependentCost;
+    }
+    return baseFee;
+  };
+  
   // Função para buscar as taxas do pacote do estudante
-  const loadStudentPackageFees = async (studentUserId: string) => {
-    if (!studentUserId) return;
+  const loadStudentPackageFees = async (profileId: string) => {
+    if (!profileId) return;
     try {
-      const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
-        user_id_param: studentUserId
-      });
-      if (error) {
-        console.error('Error loading student package fees:', error);
-      } else if (packageFees && packageFees.length > 0) {
-        setStudentPackageFees(packageFees[0]);
+      // Primeiro, buscar o perfil do estudante
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('scholarship_package_id, dependents')
+        .eq('id', profileId)
+        .single();
+
+      if (profileError) {
+        console.error('Error loading student profile:', profileError);
+        setStudentPackageFees(null);
+        return;
+      }
+
+      console.log('🔍 [StudentDetailsView] Profile data loaded:', profileData);
+      
+      // Atualizar dependentes
+      setStudentDependents(Number(profileData.dependents) || 0);
+      
+      // Se não tem pacote, retornar null
+      if (!profileData.scholarship_package_id) {
+        console.log('🔍 [StudentDetailsView] No scholarship package assigned');
+        setStudentPackageFees(null);
+        return;
+      }
+
+      // Buscar os dados do pacote de bolsa
+      const { data: packageData, error: packageError } = await supabase
+        .from('scholarship_packages')
+        .select('selection_process_fee, i20_control_fee, scholarship_fee, total_paid, scholarship_amount, name')
+        .eq('id', profileData.scholarship_package_id)
+        .eq('is_active', true)
+        .single();
+
+      if (packageError) {
+        console.error('Error loading scholarship package:', packageError);
+        setStudentPackageFees(null);
+        return;
+      }
+
+      if (packageData) {
+        const packageFees = {
+          selection_process_fee: packageData.selection_process_fee,
+          i20_control_fee: packageData.i20_control_fee,
+          scholarship_fee: packageData.scholarship_fee,
+          total_paid: packageData.total_paid,
+          scholarship_amount: packageData.scholarship_amount,
+          package_name: packageData.name
+        };
+        console.log('🔍 [StudentDetailsView] Package fees set:', packageFees);
+        setStudentPackageFees(packageFees);
       } else {
+        console.log('🔍 [StudentDetailsView] No package data found');
         setStudentPackageFees(null);
       }
     } catch (error) {
       console.error('Error loading student package fees:', error);
+      setStudentPackageFees(null);
     }
   };
   
   // Carregar as taxas do pacote quando o componente montar
   useEffect(() => {
-    if (studentDetails?.student_id) {
-      loadStudentPackageFees(studentDetails.student_id);
+    if (studentDetails?.profile_id) {
+      loadStudentPackageFees(studentDetails.profile_id);
     }
-  }, [studentDetails?.student_id]);
+  }, [studentDetails?.profile_id]);
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -277,14 +334,6 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               const appStatus = (studentDetails as any)?.status || (studentDetails as any)?.application_status as string | undefined;
                               const documentsStatus = (studentDetails as any)?.documents_status as string | undefined;
                               
-                              // Debug logs
-                              console.log('🔍 [ENROLLMENT_STATUS] Debug:', {
-                                acceptanceStatus,
-                                appStatus,
-                                documentsStatus,
-                                studentDetails: studentDetails
-                              });
-                              
                               // Para usuários com aplicação de bolsa: verificar status da aplicação
                               // Para usuários sem aplicação de bolsa: verificar documents_status
                               const isEnrolled = appStatus === 'enrolled' || 
@@ -293,8 +342,6 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
                               const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
-                              
-                              console.log('🔍 [ENROLLMENT_STATUS] Result:', { isEnrolled, label });
                               
                               return (
                                 <div className="flex items-center space-x-2">
@@ -529,7 +576,21 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           {studentDetails?.has_paid_selection_process_fee && (
                             <span className="text-xs text-slate-500">
-                              {studentPackageFees ? formatFeeAmount(studentPackageFees.selection_process_fee) : formatFeeAmount(getFeeAmount('selection_process'))}
+                              {(() => {
+                                console.log('🔍 [StudentDetailsView] Selection Process Fee - Dependents:', studentDependents, 'Package Fees:', studentPackageFees);
+                                
+                                if (studentPackageFees) {
+                                  const baseFee = studentPackageFees.selection_process_fee;
+                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
+                                  console.log('🔍 [StudentDetailsView] Selection Process - Base:', baseFee, 'Final:', finalAmount);
+                                  return formatFeeAmount(finalAmount);
+                                } else {
+                                  const baseFee = getFeeAmount('selection_process');
+                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'selection_process');
+                                  console.log('🔍 [StudentDetailsView] Selection Process (no package) - Base:', baseFee, 'Final:', finalAmount);
+                                  return formatFeeAmount(finalAmount);
+                                }
+                              })()}
                             </span>
                           )}
                         </div>
@@ -549,19 +610,10 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                         {studentDetails?.is_application_fee_paid && (
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              console.log('🔍 [STUDENT_DETAILS_VIEW] Application Fee Debug:', {
-                                hasScholarship: !!studentDetails?.scholarship,
-                                applicationFeeAmount: studentDetails?.scholarship?.application_fee_amount,
-                                isApplicationFeePaid: studentDetails?.is_application_fee_paid,
-                                defaultFee: getFeeAmount('application_fee')
-                              });
-                              
                               if (studentDetails?.scholarship?.application_fee_amount) {
                                 const amount = Number(studentDetails.scholarship.application_fee_amount);
-                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using dynamic amount (already in dollars):', amount);
                                 return formatFeeAmount(amount);
                               } else {
-                                console.log('🔍 [STUDENT_DETAILS_VIEW] Using default amount:', getFeeAmount('application_fee'));
                                 return formatFeeAmount(getFeeAmount('application_fee'));
                               }
                             })()}
@@ -601,7 +653,21 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           {studentDetails?.has_paid_i20_control_fee && (
                             <span className="text-xs text-slate-500">
-                              {studentPackageFees ? formatFeeAmount(studentPackageFees.i20_control_fee) : formatFeeAmount(getFeeAmount('i-20_control_fee'))}
+                              {(() => {
+                                console.log('🔍 [StudentDetailsView] I-20 Control Fee - Dependents:', studentDependents, 'Package Fees:', studentPackageFees);
+                                
+                                if (studentPackageFees) {
+                                  const baseFee = studentPackageFees.i20_control_fee;
+                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
+                                  console.log('🔍 [StudentDetailsView] I-20 Control - Base:', baseFee, 'Final:', finalAmount);
+                                  return formatFeeAmount(finalAmount);
+                                } else {
+                                  const baseFee = getFeeAmount('i20_control_fee');
+                                  const finalAmount = calculateFeeWithDependents(baseFee, studentDependents, 'i20_control_fee');
+                                  console.log('🔍 [StudentDetailsView] I-20 Control (no package) - Base:', baseFee, 'Final:', finalAmount);
+                                  return formatFeeAmount(finalAmount);
+                                }
+                              })()}
                             </span>
                           )}
                         </div>

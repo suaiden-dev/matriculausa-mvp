@@ -1,6 +1,7 @@
 // Tipos para estudantes
 export interface StudentInfo {
   student_id: string;
+  profile_id: string;
   full_name: string;
   email: string;
   phone: string;
@@ -26,6 +27,7 @@ export interface StudentInfo {
   student_process_type: string;
   application_status: string;
   documents: any[];
+  dependents?: number;
   scholarship?: {
     application_fee_amount: number;
     scholarship_fee_amount: number;

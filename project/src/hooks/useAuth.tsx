@@ -46,6 +46,7 @@ export interface UserProfile {
   // Referral codes
   affiliate_code?: string | null; // Matricula Rewards code
   seller_referral_code?: string | null; // Seller referral code
+  scholarship_package_id?: string | null; // Package ID for seller students
 
   // Dependentes (campo adicionado no schema user_profiles)
   dependents?: number;
