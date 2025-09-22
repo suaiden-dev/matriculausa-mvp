@@ -155,6 +155,7 @@ export interface UserProfile {
   is_scholarship_fee_paid: boolean;
   enrollment_status?: 'pending' | 'enrolled' | 'rejected' | 'waitlisted';
   avatar_url?: string | null;
+  dependents?: number; // New field in user_profiles
 
 }
 
