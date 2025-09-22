@@ -186,13 +186,17 @@ export default function MicrosoftInbox() {
     if (!getToken) return;
     
     try {
-      // Usar token da conta ativa se disponível, senão usar token padrão
+      // Usar token da conta ativa se disponível e válido (formato JWT com pontos); senão usar MSAL
       let token;
-      if (activeConnection?.access_token) {
-        // console.log('MicrosoftInbox - Usando token da conta ativa:', activeConnection.email_address);
+      const looksLikeJwt = (t: string | undefined) => !!t && t.split('.').length >= 3;
+      if (activeConnection?.access_token && looksLikeJwt(activeConnection.access_token)) {
         token = activeConnection.access_token;
       } else {
-        console.log('MicrosoftInbox - Usando token padrão do MSAL');
+        if (activeConnection?.access_token && !looksLikeJwt(activeConnection.access_token)) {
+          console.warn('MicrosoftInbox - Token salvo não possui formato JWT. Fallback para MSAL.');
+        } else {
+          console.log('MicrosoftInbox - Usando token padrão do MSAL');
+        }
         token = await getToken();
       }
       
@@ -235,13 +239,17 @@ export default function MicrosoftInbox() {
     setFolderErrors(prev => ({ ...prev, [folderKey]: '' }));
     
     try {
-      // Usar token da conta ativa se disponível, senão usar token padrão
+      // Usar token da conta ativa se disponível e válido (formato JWT com pontos); senão usar MSAL
       let token;
-      if (activeConnection?.access_token) {
-        // console.log(`MicrosoftInbox - Usando token da conta ativa para pasta ${folderKey}:`, activeConnection.email_address);
+      const looksLikeJwt = (t: string | undefined) => !!t && t.split('.').length >= 3;
+      if (activeConnection?.access_token && looksLikeJwt(activeConnection.access_token)) {
         token = activeConnection.access_token;
       } else {
-        console.log(`MicrosoftInbox - Usando token padrão do MSAL para pasta ${folderKey}`);
+        if (activeConnection?.access_token && !looksLikeJwt(activeConnection.access_token)) {
+          console.warn(`MicrosoftInbox - Token salvo inválido para ${folderKey}. Fallback para MSAL.`);
+        } else {
+          console.log(`MicrosoftInbox - Usando token padrão do MSAL para pasta ${folderKey}`);
+        }
         token = await getToken();
       }
       

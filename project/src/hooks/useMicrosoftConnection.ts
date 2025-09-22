@@ -64,11 +64,12 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
         return false;
       }
 
-      console.log('🔍 Session found, checking email_connections for user:', session.user.id);
+      console.log('🔍 Session found, checking email_configurations (microsoft) for user:', session.user.id);
       const { data, error } = await supabase
-        .from('email_processing_configs')
-        .select('*')
+        .from('email_configurations')
+        .select('id, user_id, email_address, oauth_access_token, oauth_refresh_token, is_active, created_at, updated_at')
         .eq('user_id', session.user.id)
+        .eq('provider_type', 'microsoft')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -79,17 +80,31 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
 
       if (data && data.length > 0) {
         console.log('✅ Microsoft connections found:', data.length);
-        setConnections(data);
+        const mapped = data.map((row: any) => ({
+          id: row.id,
+          user_id: row.user_id,
+          email_address: row.email_address,
+          access_token: row.oauth_access_token,
+          refresh_token: row.oauth_refresh_token,
+          is_active: row.is_active,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          isConnected: !!row.oauth_access_token,
+        }));
+        setConnections(mapped);
         
         // Restaurar conta ativa do localStorage ou usar a primeira
         const savedActiveEmail = localStorage.getItem(ACTIVE_MICROSOFT_CONNECTION_KEY);
-        const activeConn = savedActiveEmail 
-          ? data.find(conn => conn.email_address === savedActiveEmail)
-          : data[0];
+        let activeConn = savedActiveEmail 
+          ? mapped.find(conn => conn.email_address === savedActiveEmail)
+          : mapped[0];
+        if (!activeConn && mapped.length > 0) {
+          activeConn = mapped[0];
+        }
         
         if (activeConn) {
           console.log('🔄 Setting active connection:', activeConn.email_address);
-          setActiveConnectionState(activeConn);
+          setActiveConnectionState(activeConn as MicrosoftConnection);
           localStorage.setItem(ACTIVE_MICROSOFT_CONNECTION_KEY, activeConn.email_address);
         } else {
           console.log('⚠️ No active connection found');
@@ -244,24 +259,47 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
 
       // Salvar tokens na tabela
       console.log('💾 Salvando conexão no banco de dados...');
-      const { data: connectionData, error: insertError } = await supabase
-        .from('email_processing_configs')
-        .upsert({
-          user_id: session.user.id,
-          email_address: userEmail,
-          access_token: loginResponse.accessToken,
-          refresh_token: 'msal_token',
-          is_active: true
-        }, {
-          onConflict: 'user_id,email_address'
-        })
-        .select()
+      const { data: existingConfig } = await supabase
+        .from('email_configurations')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('email_address', userEmail)
+        .eq('provider_type', 'microsoft')
         .single();
 
-      if (insertError) {
-        console.error('❌ Erro ao salvar conexão:', insertError);
-        throw insertError;
+      let connectionData;
+      if (existingConfig?.id) {
+        const { data: updated, error: updateError } = await supabase
+          .from('email_configurations')
+          .update({
+            oauth_access_token: loginResponse.accessToken,
+            oauth_token_expires_at: null,
+            is_active: true
+          })
+          .eq('id', existingConfig.id)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        connectionData = updated;
+      } else {
+        const { data: inserted, error: insertError } = await supabase
+          .from('email_configurations')
+          .insert([{
+            user_id: session.user.id,
+            name: 'Microsoft Account',
+            email_address: userEmail,
+            provider_type: 'microsoft',
+            oauth_access_token: loginResponse.accessToken,
+            oauth_refresh_token: '',
+            is_active: true
+          }])
+          .select()
+          .single();
+        if (insertError) throw insertError;
+        connectionData = inserted;
       }
+
+      // conexão salva/atualizada com sucesso
 
       console.log('✅ Microsoft connection saved:', connectionData);
       
@@ -290,10 +328,11 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
 
       // Buscar a conexão específica
       const { data: connection, error: fetchError } = await supabase
-        .from('email_processing_configs')
-        .select('*')
+        .from('email_configurations')
+        .select('id')
         .eq('user_id', session.user.id)
         .eq('email_address', email)
+        .eq('provider_type', 'microsoft')
         .single();
 
       if (fetchError || !connection) {
@@ -302,7 +341,7 @@ export const useMicrosoftConnection = (): UseMicrosoftConnectionReturn => {
 
       // Remover a conexão
       const { error: deleteError } = await supabase
-        .from('email_processing_configs')
+        .from('email_configurations')
         .delete()
         .eq('id', connection.id);
 

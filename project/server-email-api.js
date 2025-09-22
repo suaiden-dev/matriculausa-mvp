@@ -26,8 +26,16 @@ async function startAutomaticPolling() {
   try {
     console.log('🚀 INICIANDO POLLING AUTOMÁTICO...');
     
-    // Usar token do Microsoft Graph das variáveis de ambiente
+    // Verificar se há token JWT válido no ambiente
     const userToken = process.env.VITE_MICROSOFT_GRAPH_TOKEN || '';
+    const looksLikeJwt = userToken && userToken.split('.').length === 3;
+    
+    if (!looksLikeJwt) {
+      console.log('⚠️ POLLING AUTOMÁTICO DESATIVADO: Token do .env não é JWT válido');
+      console.log('ℹ️ Para iniciar o polling, use POST /api/polling-user com token MSAL válido do frontend');
+      return;
+    }
+    
     const userId = '5682bded-cdbb-4f5e-afcc-bf2a2d8fdd27';
     
     // Buscar userEmail do banco
@@ -35,9 +43,11 @@ async function startAutomaticPolling() {
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
     
     const { data: config } = await supabase
-      .from('email_processing_configs')
+      .from('email_configurations')
       .select('email_address')
       .eq('user_id', userId)
+      .eq('provider_type', 'microsoft')
+      .eq('is_active', true)
       .single();
     
     const userEmail = config?.email_address || null;
@@ -155,9 +165,11 @@ app.post('/api/polling-user', async (req, res) => {
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
     
     const { data: config } = await supabase
-      .from('email_processing_configs')
+      .from('email_configurations')
       .select('email_address')
       .eq('user_id', userId)
+      .eq('provider_type', 'microsoft')
+      .eq('is_active', true)
       .single();
     
     const userEmail = config?.email_address || null;
@@ -251,9 +263,11 @@ app.put('/api/polling-user', async (req, res) => {
       const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
       
       const { data: config } = await supabase
-        .from('email_processing_configs')
+        .from('email_configurations')
         .select('email_address')
         .eq('user_id', userId)
+        .eq('provider_type', 'microsoft')
+        .eq('is_active', true)
         .single();
       
       const userEmail = config?.email_address || null;
@@ -298,6 +312,6 @@ app.listen(PORT, async () => {
   console.log(`   POST   http://localhost:${PORT}/api/polling-user`);
   console.log(`   PUT    http://localhost:${PORT}/api/polling-user`);
   
-  // Iniciar polling automaticamente
+  // Iniciar polling automaticamente (já verifica token JWT internamente)
   await startAutomaticPolling();
 });

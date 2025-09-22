@@ -180,9 +180,11 @@ async function handleStartPolling(headers, body, corsHeaders) {
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
     
     const { data: config } = await supabase
-      .from('email_processing_configs')
+      .from('email_configurations')
       .select('email_address')
       .eq('user_id', userId)
+      .eq('provider_type', 'microsoft')
+      .eq('is_active', true)
       .single();
     
     const userEmail = config?.email_address || null;
@@ -286,9 +288,11 @@ async function handleProcessEmails(headers, body, corsHeaders) {
       const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
       
       const { data: config } = await supabase
-        .from('email_processing_configs')
+        .from('email_configurations')
         .select('email_address')
         .eq('user_id', userId)
+        .eq('provider_type', 'microsoft')
+        .eq('is_active', true)
         .single();
       
       const userEmail = config?.email_address || null;
