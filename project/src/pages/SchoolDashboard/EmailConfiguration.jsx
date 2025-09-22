@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeftIcon,
@@ -36,6 +36,7 @@ const EmailConfigurationContent = () => {
   const [microsoftAccount, setMicrosoftAccount] = useState(null);
   const [microsoftAuthenticating, setMicrosoftAuthenticating] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const restoredFromRedirectRef = useRef(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -65,12 +66,55 @@ const EmailConfigurationContent = () => {
       try {
         const response = await instance.handleRedirectPromise();
         if (response) {
+          restoredFromRedirectRef.current = true;
+          // Restaurar contexto salvo antes do redirect (provider e nome)
+          let restoredName = '';
+          try {
+            const draftStr = localStorage.getItem('emailConfigDraft');
+            if (draftStr) {
+              const draft = JSON.parse(draftStr);
+              if (draft?.provider) {
+                setProvider(draft.provider);
+              }
+              if (draft?.formName) {
+                restoredName = draft.formName;
+              }
+            }
+          } catch (_) {
+            // ignore parse errors
+          } finally {
+            localStorage.removeItem('emailConfigDraft');
+          }
+
+          // Forçar a visualização da Microsoft após autenticação
+          setProvider('microsoft');
+
+          // Se houver origem salva, navegar de volta
+          const originPath = sessionStorage.getItem('msalRedirectOrigin');
+          if (originPath && window.location.pathname !== originPath) {
+            navigate(originPath, { replace: true });
+          }
+
           setMicrosoftAccount(response.account);
           
-          // Auto-fill form data
+          // Tentar extrair formName também do estado do MSAL, se disponível
+          if (!restoredName && response.state) {
+            try {
+              const stateObj = JSON.parse(response.state);
+              if (stateObj?.formName) {
+                restoredName = stateObj.formName;
+              }
+            } catch (_) {
+              // ignore
+            }
+          }
+
+          // Auto-fill form data (usar local-part do email como sugestão)
+          const localPart = response.account.username?.split('@')[0] || response.account.name || '';
           setFormData(prev => ({
             ...prev,
-            name: prev.name || `Microsoft - ${response.account.name}`,
+            // Priorizar nome restaurado; se ausente, manter o existente; por fim, usar sugestão baseada no e-mail
+            name: restoredName || prev.name || (localPart ? `Microsoft - ${localPart}` : prev.name),
             email_address: response.account.username
           }));
           
@@ -104,8 +148,8 @@ const EmailConfigurationContent = () => {
     // Verificar se já existe uma conta Microsoft autenticada
     if (accounts.length > 0) {
       setMicrosoftAccount(accounts[0]);
-      // Auto-preencher nome se vazio
-      if (!formData.name && accounts[0].name) {
+      // Auto-preencher nome apenas se não acabamos de restaurar via redirect e se o usuário não digitou
+      if (!restoredFromRedirectRef.current && !formData.name && accounts[0].name) {
         setFormData(prev => ({
           ...prev,
           name: `Microsoft - ${accounts[0].name}`
@@ -164,9 +208,25 @@ const EmailConfigurationContent = () => {
       } catch (silentError) {
         // Store current location to return after redirect
         sessionStorage.setItem('msalRedirectOrigin', window.location.pathname);
+        // Salvar contexto atual para restaurar após o redirect
+        try {
+          localStorage.setItem('emailConfigDraft', JSON.stringify({
+            provider: 'microsoft',
+            formName: formData.name || ''
+          }));
+        } catch (_) {
+          // ignore storage errors
+        }
         
         // Use redirect instead of popup
-        await instance.loginRedirect(loginRequest);
+        await instance.loginRedirect({
+          ...loginRequest,
+          state: JSON.stringify({
+            provider: 'microsoft',
+            origin: window.location.pathname,
+            formName: formData.name || ''
+          })
+        });
       }
       
     } catch (error) {
@@ -617,30 +677,7 @@ const EmailConfigurationContent = () => {
             </div>
             
             <div className="space-y-4 sm:space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Account name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder={`My ${provider === 'gmail' ? 'Gmail' : 'Microsoft'} account`}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                    errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center">
-                    <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
-                    {errors.name}
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 mt-1">
-                  Display name to identify this account in the system
-                </p>
-              </div>
+              {/* Account name field moved to after Microsoft section; will render only when applicable */}
 
               {provider === 'microsoft' ? (
                 // Microsoft Authentication Section
@@ -682,12 +719,8 @@ const EmailConfigurationContent = () => {
                         disabled={microsoftAuthenticating}
                         className="w-full flex items-center justify-center space-x-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-xl font-medium transition-colors shadow-sm"
                       >
-                        {microsoftAuthenticating ? (
+                        {microsoftAuthenticating && (
                           <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
-                            <span className="text-blue-600 font-bold text-xs">M</span>
-                          </div>
                         )}
                         <span>
                           {microsoftAuthenticating ? 'Authenticating...' : 'Connect with Microsoft'}
@@ -749,10 +782,64 @@ const EmailConfigurationContent = () => {
                       </div>
                     </div>
                   )}
+                  {/* Microsoft: Account name appears after successful authentication inside Account Information */}
+                  {microsoftAccount && (
+                    <div className="mt-6">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Account name
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder={`My Microsoft account`}
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                          errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      />
+                      {errors.name && (
+                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                          <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                          {errors.name}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-1">
+                        Display name to identify this account in the system
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 // Gmail Fields Section
                 <>
+                  {/* Gmail: Account name in original position, before credentials */}
+                  {provider === 'gmail' && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Account name
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder={`My Gmail account`}
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                          errors.name ? 'border-red-300 bg-red-50' : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      />
+                      {errors.name && (
+                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                          <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                          {errors.name}
+                        </p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-1">
+                        Display name to identify this account in the system
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Email address
@@ -841,7 +928,60 @@ const EmailConfigurationContent = () => {
                 </>
               )}
             </div>
+            {/* Actions inside Account Information */}
+            <div className="pt-4 mt-2">
+              <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between gap-4">
+                {provider === 'gmail' && (
+                  <button
+                    type="button"
+                    onClick={handleTest}
+                    disabled={testing}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2 text-sm sm:text-base"
+                  >
+                    {testing ? (
+                      <>
+                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                        <span>Validating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircleIcon className="h-4 w-4" />
+                        <span>Test configuration</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <div>
+                  
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/school/dashboard/email')}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full sm:w-auto bg-gradient-to-r from-[#D0151C] to-red-600 hover:from-[#B01218] hover:to-red-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-bold flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm sm:text-base"
+                  >
+                    {loading && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+                    <span>
+                      {loading 
+                        ? (editMode ? 'Updating account...' : 'Adding account...') 
+                        : (editMode ? 'Update account' : 'Add account')
+                      }
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+
+          
 
           {/* Test Results */}
           {testResults && (
@@ -868,53 +1008,7 @@ const EmailConfigurationContent = () => {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
-            <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between gap-4">
-              <button
-                type="button"
-                onClick={handleTest}
-                disabled={testing}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2 text-sm sm:text-base"
-              >
-                {testing ? (
-                  <>
-                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                    <span>Validating...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircleIcon className="h-4 w-4" />
-                    <span>Test configuration</span>
-                  </>
-                )}
-              </button>
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => navigate('/school/dashboard/email')}
-                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl font-medium transition-colors text-sm sm:text-base"
-                >
-                  Cancel
-                </button>
-                
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#D0151C] to-red-600 hover:from-[#B01218] hover:to-red-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-bold flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none text-sm sm:text-base"
-                >
-                  {loading && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
-                  <span>
-                    {loading 
-                      ? (editMode ? 'Updating account...' : 'Adding account...') 
-                      : (editMode ? 'Update account' : 'Add account')
-                    }
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
+          
         </form>
       </div>
 
