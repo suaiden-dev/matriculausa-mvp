@@ -179,7 +179,7 @@ const Performance: React.FC<PerformanceProps> = ({ stats, sellerProfile, student
         console.log('Loading performance data for referral code:', sellerProfile.referral_code);
 
         const { data, error: rpcError } = await supabase.rpc(
-          'get_seller_individual_performance',
+          'get_seller_individual_performance_with_dependents',
           { seller_referral_code_param: sellerProfile.referral_code }
         );
 
