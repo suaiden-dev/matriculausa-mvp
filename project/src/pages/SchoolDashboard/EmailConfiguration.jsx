@@ -37,6 +37,7 @@ const EmailConfigurationContent = () => {
   const [microsoftAuthenticating, setMicrosoftAuthenticating] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const restoredFromRedirectRef = useRef(false);
+  const forcedNameRef = useRef('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -45,6 +46,7 @@ const EmailConfigurationContent = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [notification, setNotification] = useState(null); // { type: 'success'|'error'|'info', message: string }
   
   // Check Microsoft configuration
   const isMicrosoftConfigured = !!(
@@ -55,6 +57,22 @@ const EmailConfigurationContent = () => {
   useEffect(() => {
     checkAuth();
     
+    // Forçar provider via query param (ex.: ?provider=microsoft)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qp = params.get('provider');
+      const qn = params.get('name');
+      if (qp === 'microsoft') {
+        setProvider('microsoft');
+      } else if (qp === 'gmail') {
+        setProvider('gmail');
+      }
+      if (qn) {
+        forcedNameRef.current = qn;
+        setFormData(prev => ({ ...prev, name: qn }));
+      }
+    } catch (_) {}
+
     // Se temos configId, significa que estamos em modo de edição
     if (configId) {
       setEditMode(true);
@@ -157,6 +175,15 @@ const EmailConfigurationContent = () => {
       }
     }
   }, [accounts, instance]);
+
+  // Se provider vier via query ou carregamento da config, não permitir fallback automático para Gmail nesta sessão
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const forcedProvider = params.get('provider');
+    if (forcedProvider === 'microsoft' && provider !== 'microsoft') {
+      setProvider('microsoft');
+    }
+  }, [provider]);
 
   const handleMicrosoftAuth = async () => {
     setMicrosoftAuthenticating(true);
@@ -296,11 +323,19 @@ const EmailConfigurationContent = () => {
       
       if (config) {
         setFormData({
-          name: config.configuration_name || '',
+          name: (config.name || config.configuration_name) || '',
           email_address: config.email_address || '',
-          app_password: '' // For security, we don't pre-fill the password
+          app_password: '' // do not prefill app password for Gmail
         });
-        setProvider(config.provider || 'gmail');
+        const providerValue =
+          config.provider ||
+          config.provider_type ||
+          (config.oauth_access_token ? 'microsoft' : 'gmail');
+        setProvider(providerValue);
+        // If a name was forced via query, override after loading from DB
+        if (forcedNameRef.current) {
+          setFormData(prev => ({ ...prev, name: forcedNameRef.current }));
+        }
       }
     } catch (error) {
       setErrors({ general: 'Unexpected error loading configuration' });
@@ -498,7 +533,10 @@ const EmailConfigurationContent = () => {
       }
 
       // Success
-      alert(editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!');
+      setNotification({
+        type: 'success',
+        message: editMode ? 'Configuration updated successfully!' : 'Email account configured successfully!'
+      });
       navigate('/school/dashboard/email');
       
     } catch (error) {
@@ -514,7 +552,7 @@ const EmailConfigurationContent = () => {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      setNotification({ type: 'error', message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -523,6 +561,20 @@ const EmailConfigurationContent = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="space-y-4 lg:space-y-8">
+      {notification && (
+        <div className={`mx-auto max-w-4xl px-3 sm:px-6 lg:px-8`}>
+          <div className={`rounded-xl p-3 sm:p-4 border ${
+            notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+            notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+            'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <div className="flex items-start justify-between">
+              <p className="text-sm sm:text-base font-medium">{notification.message}</p>
+              <button onClick={() => setNotification(null)} className="text-current opacity-70 hover:opacity-100">×</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header + Actions Section */}
       <div className="w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 lg:mb-6">
